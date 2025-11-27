@@ -1,0 +1,59 @@
+{
+  "name": "@teispace/next-maker",
+  "version": "0.1.1",
+  "description": "Create a new Teispace Next.js application with interactive setup.",
+  "keywords": [
+    "nextjs",
+    "react",
+    "typescript",
+    "tailwindcss",
+    "starter",
+    "template",
+    "redux"
+  ],
+  "type": "module",
+  "homepage": "https://github.com/teispace/npm-packages/tree/main/packages/next-maker#readme",
+  "bugs": {
+    "url": "https://github.com/teispace/npm-packages/issues"
+  },
+  "license": "MIT",
+  "author": "Teispace",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teispace/npm-packages.git",
+    "directory": "packages/next-maker"
+  },
+  "scripts": {
+    "build": "tsx build.ts && ../../node_modules/.bin/tsc --emitDeclarationOnly --outDir dist",
+    "start": "node dist/index.js",
+    "dev": "tsx --watch src/index.ts",
+    "test": "jest"
+  },
+  "dependencies": {
+    "commander": "^14.0.2",
+    "enquirer": "^2.4.1",
+    "ora": "^9.0.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "esbuild": "^0.27.0",
+    "tsx": "^4.20.6"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

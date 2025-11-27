@@ -1,0 +1,66 @@
+{
+  "name": "npm-packages",
+  "private": true,
+  "packageManager": "yarn@4.12.0",
+  "version": "0.0.1",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.0.0",
+    "yarn": ">=4.0.0"
+  },
+  "author": "Teispace",
+  "license": "MIT",
+  "homepage": "https://github.com/teispace/npm-packages#readme",
+  "bugs": {
+    "url": "https://github.com/teispace/npm-packages/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teispace/npm-packages.git"
+  },
+  "scripts": {
+    "bootstrap": "yarn install",
+    "build": "yarn workspaces foreach -A -pt run build",
+    "build:packages": "yarn workspaces foreach -A -pt --topological run build",
+    "lint": "eslint .",
+    "clean": "rm -rf node_modules .yarn/cache .build dist **/dist coverage",
+    "prepare": "husky",
+    "postinstall": "husky",
+    "commit": "cz",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "type-check": "tsc --noEmit -p tsconfig.build.json",
+    "validate": "yarn lint && yarn type-check && yarn build",
+    "test": "NODE_OPTIONS='--max-old-space-size=8192' jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:all": "yarn test:cov && yarn test:e2e",
+    "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "test:workspaces": "yarn workspaces foreach -pt run test"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "@eslint/js": "^9.39.1",
+    "@jest/globals": "^30.2.0",
+    "@types/jest": "^30.0.0",
+    "commitizen": "^4.3.1",
+    "cz-conventional-changelog": "^3.3.0",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "globals": "^16.5.0",
+    "husky": "^9.1.7",
+    "jest": "^30.2.0",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.7.0",
+    "ts-jest": "^29.4.5",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.0"
+  }
+}

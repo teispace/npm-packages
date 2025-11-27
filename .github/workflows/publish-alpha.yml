@@ -1,0 +1,203 @@
+name: Publish Alpha
+
+on:
+  push:
+    branches:
+      - alpha
+
+jobs:
+  publish-alpha:
+    name: Publish Alpha Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Detect changed packages
+        id: changed
+        run: |
+          # Get list of changed files compared to main branch
+          git fetch origin main:main || git fetch origin main
+
+          # Get all packages
+          PACKAGES=$(ls -d packages/*/ 2>/dev/null | sed 's:/$::')
+
+          if [ -z "$PACKAGES" ]; then
+            echo "No packages found"
+            echo "changed_packages=[]" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          CHANGED=()
+
+          # Check each package for changes
+          for package_dir in $PACKAGES; do
+            if [ -f "$package_dir/package.json" ]; then
+              # Check if this package has changes compared to main
+              CHANGES=$(git diff --name-only origin/main...HEAD -- "$package_dir" 2>/dev/null || echo "")
+
+              if [ -n "$CHANGES" ]; then
+                PACKAGE_NAME=$(jq -r '.name' "$package_dir/package.json")
+                IS_PRIVATE=$(jq -r '.private // false' "$package_dir/package.json")
+
+                if [ "$IS_PRIVATE" = "false" ]; then
+                  echo "✅ Package has changes: $PACKAGE_NAME ($package_dir)"
+                  CHANGED+=("$package_dir")
+                else
+                  echo "⏭️ Skipping private package: $PACKAGE_NAME"
+                fi
+              fi
+            fi
+          done
+
+          # Output changed packages as JSON array
+          if [ ${#CHANGED[@]} -gt 0 ]; then
+            CHANGED_JSON=$(printf '%s\n' "${CHANGED[@]}" | jq -R . | jq -s -c .)
+            echo "changed_packages<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGED_JSON" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "Changed packages: $CHANGED_JSON"
+          else
+            echo "changed_packages=[]" >> $GITHUB_OUTPUT
+            echo "No packages with changes detected"
+          fi
+
+      - name: Build all packages
+        if: steps.changed.outputs.changed_packages != '[]'
+        run: yarn build
+
+      - name: Version and publish changed packages
+        if: steps.changed.outputs.changed_packages != '[]'
+        id: publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          CHANGED_PACKAGES: ${{ steps.changed.outputs.changed_packages }}
+        run: |
+          # Get current date for alpha identifier
+          export ALPHA_VERSION=$(date +%Y%m%d%H%M%S)
+          echo "Alpha version timestamp: $ALPHA_VERSION"
+
+          CHANGED_DIRS=$(echo "$CHANGED_PACKAGES" | jq -r '.[]')
+
+          if [ -z "$CHANGED_DIRS" ]; then
+            echo "No packages to publish"
+            echo "published_packages=[]" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          PUBLISHED=()
+
+          # Configure npm authentication
+          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+
+          # Version and publish each changed package
+          for package_dir in $CHANGED_DIRS; do
+            if [ -f "$package_dir/package.json" ]; then
+              cd "$package_dir"
+
+              PACKAGE_NAME=$(jq -r '.name' package.json)
+              PACKAGE_VERSION=$(jq -r '.version' package.json)
+              NEW_VERSION="${PACKAGE_VERSION}-alpha.${ALPHA_VERSION}"
+
+              echo "📦 Processing $PACKAGE_NAME"
+              echo "   Current version: $PACKAGE_VERSION"
+              echo "   New version: $NEW_VERSION"
+
+              # Update version
+              npm version $NEW_VERSION --no-git-tag-version
+
+              # Publish to npm with alpha tag
+              npm publish --access public --tag alpha
+
+              PUBLISHED+=("{\"name\":\"$PACKAGE_NAME\",\"version\":\"$NEW_VERSION\",\"path\":\"$package_dir\"}")
+
+              echo "✅ Successfully published $PACKAGE_NAME@$NEW_VERSION"
+
+              cd - > /dev/null
+            fi
+          done
+
+          # Output published packages as JSON array
+          if [ ${#PUBLISHED[@]} -gt 0 ]; then
+            PUBLISHED_JSON=$(printf '%s\n' "${PUBLISHED[@]}" | jq -s -c '.')
+            echo "published_packages<<EOF" >> $GITHUB_OUTPUT
+            echo "$PUBLISHED_JSON" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "published_packages=[]" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Git Tags
+        if: steps.publish.outputs.published_packages != '[]'
+        env:
+          PUBLISHED_PACKAGES: ${{ steps.publish.outputs.published_packages }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Parse published packages and create tags
+          PUBLISHED=$(echo "$PUBLISHED_PACKAGES" | jq -r '.[] | "\(.name)@\(.version)"')
+
+          for tag in $PUBLISHED; do
+            echo "Creating tag: $tag"
+            git tag -a "$tag" -m "Release $tag" 2>/dev/null || echo "Tag already exists"
+          done
+
+          git push origin --tags || echo "Failed to push tags (might already exist)"
+
+      - name: Comment on commit
+        if: steps.publish.outputs.published_packages != '[]'
+        uses: actions/github-script@v7
+        env:
+          PUBLISHED_PACKAGES: ${{ steps.publish.outputs.published_packages }}
+        with:
+          script: |
+            const publishedPackages = JSON.parse(process.env.PUBLISHED_PACKAGES || '[]');
+
+            if (publishedPackages.length === 0) {
+              console.log('No packages were published');
+              return;
+            }
+
+            const packageList = publishedPackages.map(pkg => {
+              const npmUrl = `https://www.npmjs.com/package/${pkg.name}/v/${pkg.version}`;
+              return `📦 **${pkg.name}@${pkg.version}**\n🔗 [View on NPM](${npmUrl}) | Install: \`npm install ${pkg.name}@alpha\``;
+            }).join('\n\n');
+
+            const body = [
+              '🚀 Successfully published alpha releases!',
+              '',
+              packageList,
+              '',
+              `_Only packages with changes were published_`
+            ].join('\n');
+
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body
+            });
+
+      - name: No changes detected
+        if: steps.changed.outputs.changed_packages == '[]'
+        run: |
+          echo "ℹ️ No package changes detected compared to main branch"
+          echo "Skipping alpha release"

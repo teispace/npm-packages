@@ -1,0 +1,157 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      paths_released: ${{ steps.release.outputs.paths_released }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run release-please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    needs: release-please
+    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build all packages
+        run: yarn build
+
+      - name: Check NPM_TOKEN
+        run: |
+          if [ -z "${{ secrets.NPM_TOKEN }}" ]; then
+            echo "❌ NPM_TOKEN secret is not set"
+            exit 1
+          else
+            echo "✅ NPM_TOKEN secret is available"
+          fi
+
+      - name: Configure npm authentication
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Detect and publish released packages
+        id: publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PATHS_RELEASED: ${{ needs.release-please.outputs.paths_released }}
+        run: |
+          echo "Paths released: $PATHS_RELEASED"
+
+          # Parse the paths_released JSON array
+          RELEASED_PATHS=$(echo "$PATHS_RELEASED" | jq -r '.[]' 2>/dev/null || echo "")
+
+          if [ -z "$RELEASED_PATHS" ]; then
+            echo "⚠️ No paths released, skipping publish"
+            echo "published_packages=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          PUBLISHED=()
+
+          # Publish each released package
+          for package_path in $RELEASED_PATHS; do
+            if [ -f "$package_path/package.json" ]; then
+              PACKAGE_NAME=$(jq -r '.name' "$package_path/package.json")
+              PACKAGE_VERSION=$(jq -r '.version' "$package_path/package.json")
+              IS_PRIVATE=$(jq -r '.private // false' "$package_path/package.json")
+
+              if [ "$IS_PRIVATE" = "true" ]; then
+                echo "⏭️ Skipping private package: $PACKAGE_NAME"
+                continue
+              fi
+
+              echo "📦 Publishing $PACKAGE_NAME@$PACKAGE_VERSION from $package_path"
+
+              cd "$package_path"
+              npm publish --access public
+              cd - > /dev/null
+
+              PUBLISHED+=("{\"name\":\"$PACKAGE_NAME\",\"version\":\"$PACKAGE_VERSION\",\"path\":\"$package_path\"}")
+
+              echo "✅ Successfully published $PACKAGE_NAME@$PACKAGE_VERSION"
+            else
+              echo "⚠️ No package.json found in $package_path"
+            fi
+          done
+
+          # Output published packages as JSON array
+          if [ ${#PUBLISHED[@]} -gt 0 ]; then
+            PUBLISHED_JSON=$(printf '%s\n' "${PUBLISHED[@]}" | jq -s '.')
+            echo "published_packages=$PUBLISHED_JSON" >> $GITHUB_OUTPUT
+          else
+            echo "published_packages=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on release
+        if: steps.publish.outputs.published_packages != ''
+        uses: actions/github-script@v7
+        env:
+          PUBLISHED_PACKAGES: ${{ steps.publish.outputs.published_packages }}
+        with:
+          script: |
+            const publishedPackages = JSON.parse(process.env.PUBLISHED_PACKAGES || '[]');
+
+            if (publishedPackages.length === 0) {
+              console.log('No packages were published');
+              return;
+            }
+
+            const packageList = publishedPackages.map(pkg => {
+              const npmUrl = `https://www.npmjs.com/package/${pkg.name}/v/${pkg.version}`;
+              return `📦 **${pkg.name}@${pkg.version}**\n🔗 [View on NPM](${npmUrl}) | Install: \`npm install ${pkg.name}\``;
+            }).join('\n\n');
+
+            const body = [
+              '✅ Successfully published packages to NPM!',
+              '',
+              packageList,
+              ''
+            ].join('\n');
+
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body
+            });

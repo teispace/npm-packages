@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["DOM", "ES2022"],
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noImplicitAny": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@teispace/*": ["packages/*/src"]
+    }
+  },
+  "include": ["packages/*/src", "packages/*/types", "scripts", "tools"],
+  "exclude": ["node_modules", "dist", "build", "coverage"]
+}

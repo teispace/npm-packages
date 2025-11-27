@@ -1,0 +1,13 @@
+echo '🚀 Running comprehensive checks before push...'
+
+# Run full validation (lint, type-check, build)
+echo '🔍 Running full validation suite...'
+yarn validate
+
+if [ $? -ne 0 ]; then
+    echo '❌ Validation failed. Please fix the errors before pushing.'
+    echo '💡 Run "yarn validate" locally to see all errors.'
+    exit 1
+fi
+
+echo '✅ All checks passed! Pushing to remote... 🎉'
