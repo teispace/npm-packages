@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/teispace/npm-packages/compare/next-maker-v0.1.1...next-maker-v0.2.0) (2025-11-27)
+
+
+### Features
+
+* initial monorepo setup with multi-package release workflows ([70c369b](https://github.com/teispace/npm-packages/commit/70c369b6694fedd68485167f8f5c252bb59d2354))
+
 ## [0.1.1](https://github.com/teispace/npm-packages/compare/next-maker-v0.1.0...next-maker-v0.1.1) (2025-11-27)
 
 
