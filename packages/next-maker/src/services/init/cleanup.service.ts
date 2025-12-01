@@ -38,6 +38,8 @@ const cleanupHttpClient = async (projectPath: string, answers: ProjectPrompts): 
 
     if (keepSecureStorage) {
       await writeFile(path.join(httpUtilsPath, 'index.ts'), "export * from './token-store';\n");
+      // token-store.ts does not use client-utils, so we can remove it
+      await deleteFile(path.join(projectPath, PROJECT_PATHS.CLIENT_UTILS));
     } else {
       await deleteDirectory(httpUtilsPath);
       const utilsIndexPath = path.join(projectPath, PROJECT_PATHS.UTILS_INDEX);
@@ -45,6 +47,15 @@ const cleanupHttpClient = async (projectPath: string, answers: ProjectPrompts): 
         let content = await readFile(utilsIndexPath);
         content = content.replace(/export \* from '\.\/http';\n/, '');
         await writeFile(utilsIndexPath, content);
+      }
+
+      // Remove app-apis.ts if no client and no secure storage (likely no auth)
+      await deleteFile(path.join(projectPath, PROJECT_PATHS.APP_APIS));
+      const configIndexPath = path.join(projectPath, PROJECT_PATHS.CONFIG_INDEX);
+      if (fileExists(configIndexPath)) {
+        let content = await readFile(configIndexPath);
+        content = content.replace(/export \* from '\.\/app-apis';\n/, '');
+        await writeFile(configIndexPath, content);
       }
     }
 
@@ -59,16 +70,20 @@ const cleanupHttpClient = async (projectPath: string, answers: ProjectPrompts): 
 
     // Remove errors and types
     await deleteDirectory(path.join(projectPath, PROJECT_PATHS.ERRORS_DIR));
-    await deleteDirectory(path.join(projectPath, PROJECT_PATHS.UTILITY_TYPES_DIR));
-    await deleteDirectory(path.join(projectPath, PROJECT_PATHS.COMMON_TYPES_DIR));
 
-    // Update types/index.ts
-    const typesIndexPath = path.join(projectPath, PROJECT_PATHS.TYPES_INDEX);
-    if (fileExists(typesIndexPath)) {
-      let content = await readFile(typesIndexPath);
-      content = content.replace(/export \* from '\.\/utility';\n/, '');
-      content = content.replace(/export \* from '\.\/common';\n/, '');
-      await writeFile(typesIndexPath, content);
+    // Only remove common types if we don't keep secure storage (TokenStore needs common/http.types.ts)
+    if (!keepSecureStorage) {
+      await deleteDirectory(path.join(projectPath, PROJECT_PATHS.COMMON_TYPES_DIR));
+      await deleteDirectory(path.join(projectPath, PROJECT_PATHS.UTILITY_TYPES_DIR));
+
+      // Update types/index.ts
+      const typesIndexPath = path.join(projectPath, PROJECT_PATHS.TYPES_INDEX);
+      if (fileExists(typesIndexPath)) {
+        let content = await readFile(typesIndexPath);
+        content = content.replace(/export \* from '\.\/utility';\n/, '');
+        content = content.replace(/export \* from '\.\/common';\n/, '');
+        await writeFile(typesIndexPath, content);
+      }
     }
   } else if (answers.httpClient === 'axios') {
     await deleteDirectory(path.join(projectPath, PROJECT_PATHS.FETCH_CLIENT));
