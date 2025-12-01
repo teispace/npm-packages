@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.0](https://github.com/teispace/npm-packages/compare/next-maker-v0.1.1...next-maker-v0.2.0) (2025-12-01)
+
+
+### Features
+
+* initial monorepo setup with multi-package release workflows ([70c369b](https://github.com/teispace/npm-packages/commit/70c369b6694fedd68485167f8f5c252bb59d2354))
+
+
+### Miscellaneous Chores
+
+* **next-maker:** remove test subproject reference ([fe549f9](https://github.com/teispace/npm-packages/commit/fe549f956fa21ce9b859c2a94e5dab1565405949))
+* **next-maker:** revert typing changes and allow any in eslint ([315e2f3](https://github.com/teispace/npm-packages/commit/315e2f3e7bc2f80cf0816d3c71432c1cfbd73798))
+* **release:** merge alpha into beta ([cd53b76](https://github.com/teispace/npm-packages/commit/cd53b76fa53f97af31e5e88b733dd81743bda94c))
+
 ## [0.1.1](https://github.com/teispace/npm-packages/compare/next-maker-v0.1.0...next-maker-v0.1.1) (2025-11-27)
 
 
