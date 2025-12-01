@@ -4,6 +4,18 @@ echo '🏗️👷 Checking your code before committing...'
 
 # Run lint-staged on staged files (fast)
 echo '🔍 Linting and formatting staged files...'
+
+echo '🧹 Running Prettier across repository (auto-formatting)...'
+yarn format
+if [ $? -ne 0 ]; then
+    echo '❌ Prettier failed. Aborting commit.'
+    exit 1
+fi
+
+# Stage any formatting changes so lint-staged sees them
+git add -A
+
+echo '🔍 Linting and formatting staged files...'
 yarn lint-staged
 
 if [ $? -ne 0 ]; then
