@@ -40,14 +40,16 @@
   },
   "dependencies": {
     "commander": "^14.0.2",
+    "degit": "^2.8.4",
     "enquirer": "^2.4.1",
     "ora": "^9.0.0",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
+    "@types/degit": "^2.8.6",
     "@types/node": "^24.10.1",
     "esbuild": "^0.27.0",
-    "tsx": "^4.20.6"
+    "tsx": "^4.21.0"
   },
   "engines": {
     "node": ">=20.0.0"
