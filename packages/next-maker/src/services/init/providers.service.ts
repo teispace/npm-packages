@@ -1,28 +1,31 @@
 import path from 'node:path';
 import { writeFile } from '../../core/files';
 import { ProjectPrompts } from '../../prompts/create-app.prompt';
+import { PROJECT_PATHS } from '../../config/paths';
 
-export class ProvidersService {
-  async generateRootProvider(projectPath: string, answers: ProjectPrompts): Promise<void> {
-    const imports: string[] = [];
-    const providers: string[] = [];
+export const generateRootProvider = async (
+  projectPath: string,
+  answers: ProjectPrompts,
+): Promise<void> => {
+  const imports: string[] = [];
+  const providers: string[] = [];
 
-    if (answers.redux) {
-      imports.push("import { StoreProvider } from '@/providers';");
-      providers.push('StoreProvider');
-    }
+  if (answers.redux) {
+    imports.push("import { StoreProvider } from '@/providers';");
+    providers.push('StoreProvider');
+  }
 
-    if (answers.darkMode) {
-      imports.push("import { CustomThemeProvider } from '@/providers';");
-      providers.push('CustomThemeProvider');
-    }
+  if (answers.darkMode) {
+    imports.push("import { CustomThemeProvider } from '@/providers';");
+    providers.push('CustomThemeProvider');
+  }
 
-    if (answers.i18n) {
-      imports.push("import { NextIntlClientProvider, AbstractIntlMessages } from 'next-intl';");
-      imports.push("import { SupportedLocale } from '@/types/i18n';");
-    }
+  if (answers.i18n) {
+    imports.push("import { NextIntlClientProvider, AbstractIntlMessages } from 'next-intl';");
+    imports.push("import { SupportedLocale } from '@/types/i18n';");
+  }
 
-    let rootProviderContent = `'use client';
+  let rootProviderContent = `'use client';
 ${imports.join('\n')}
 
 export const RootProvider = ({
@@ -35,43 +38,46 @@ export const RootProvider = ({
   return (
 `;
 
-    // Build the nesting
-    let content = '{children}';
+  // Build the nesting
+  let content = '{children}';
 
-    if (answers.i18n) {
-      content = `<NextIntlClientProvider locale={locale} messages={messages}>
+  if (answers.i18n) {
+    content = `<NextIntlClientProvider locale={locale} messages={messages}>
           ${content}
         </NextIntlClientProvider>`;
-    }
+  }
 
-    if (answers.darkMode) {
-      content = `<CustomThemeProvider>
+  if (answers.darkMode) {
+    content = `<CustomThemeProvider>
         ${content}
       </CustomThemeProvider>`;
-    }
+  }
 
-    if (answers.redux) {
-      content = `<StoreProvider>
+  if (answers.redux) {
+    content = `<StoreProvider>
       ${content}
     </StoreProvider>`;
-    }
+  }
 
-    // If no providers are wrapped, ensure we return a valid JSX element (Fragment)
-    if (content === '{children}') {
-      content = `<>{children}</>`;
-    }
+  // If no providers are wrapped, ensure we return a valid JSX element (Fragment)
+  if (content === '{children}') {
+    content = `<>{children}</>`;
+  }
 
-    rootProviderContent += `    ${content}
+  rootProviderContent += `    ${content}
   );
 };
 `;
 
-    await writeFile(path.join(projectPath, 'src/providers/RootProvider.tsx'), rootProviderContent);
-  }
+  await writeFile(path.join(projectPath, PROJECT_PATHS.ROOT_PROVIDER), rootProviderContent);
+};
 
-  async generateLayout(projectPath: string, answers: ProjectPrompts): Promise<void> {
-    if (!answers.i18n) {
-      const basicLayout = `import type { Metadata } from 'next';
+export const generateLayout = async (
+  projectPath: string,
+  answers: ProjectPrompts,
+): Promise<void> => {
+  if (!answers.i18n) {
+    const basicLayout = `import type { Metadata } from 'next';
 import '@/styles/globals.css';
 import { Livvic } from 'next/font/google';
 import { RootProvider } from '@/providers';
@@ -104,9 +110,9 @@ export default function RootLayout({
   );
 }
 `;
-      await writeFile(path.join(projectPath, 'src/app/layout.tsx'), basicLayout);
+    await writeFile(path.join(projectPath, PROJECT_PATHS.ROOT_LAYOUT), basicLayout);
 
-      const basicPage = `export default function Home() {
+    const basicPage = `export default function Home() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-24">
       <h1 className="text-4xl font-bold">Welcome to ${answers.projectName}</h1>
@@ -115,7 +121,6 @@ export default function RootLayout({
   );
 }
 `;
-      await writeFile(path.join(projectPath, 'src/app/page.tsx'), basicPage);
-    }
+    await writeFile(path.join(projectPath, PROJECT_PATHS.ROOT_PAGE), basicPage);
   }
-}
+};

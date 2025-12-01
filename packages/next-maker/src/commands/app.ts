@@ -7,11 +7,11 @@ import { deleteDirectory, fileExists } from '../core/files';
 import { initializeGit, addRemote } from '../core/git';
 import { installDependencies, runScript } from '../core/package-manager';
 import { log, printBanner } from '../config';
-import { TemplateService } from '../services/init/template.service';
-import { ConfigService } from '../services/init/config.service';
-import { CleanupService } from '../services/init/cleanup.service';
-import { ProvidersService } from '../services/init/providers.service';
-import { DevToolsService } from '../services/init/devtools.service';
+import { cloneTemplate } from '../services/init/template.service';
+import { configurePackageJson } from '../services/init/config.service';
+import { cleanupFeatures } from '../services/init/cleanup.service';
+import { generateRootProvider, generateLayout } from '../services/init/providers.service';
+import { setupDevTools } from '../services/init/devtools.service';
 
 export const registerAppCommand = (program: Command) => {
   program
@@ -38,31 +38,49 @@ const createApp = async (initialName?: string): Promise<void> => {
 
   const spinner = startSpinner('Initializing project...');
 
-  // Initialize Services
-  const templateService = new TemplateService();
-  const configService = new ConfigService();
-  const cleanupService = new CleanupService();
-  const providersService = new ProvidersService();
-  const devToolsService = new DevToolsService();
+  // Cleanup helper
+  const performCleanup = async () => {
+    if (fileExists(projectPath)) {
+      spinner.stop(); // Stop spinner if running
+      console.log(pc.yellow(`\nCleaning up: Deleting directory ${answers.projectName}...`));
+      try {
+        await deleteDirectory(projectPath);
+        console.log(pc.green('Cleanup successful.'));
+      } catch (cleanupErr) {
+        console.error(pc.red(`Failed to clean up directory ${answers.projectName}:`), cleanupErr);
+      }
+    }
+  };
+
+  // Signal handler
+  const handleSignal = async () => {
+    console.log(pc.red('\nProcess interrupted. Cleaning up...'));
+    await performCleanup();
+    process.exit(1);
+  };
+
+  // Register signal listeners
+  process.on('SIGINT', handleSignal);
+  process.on('SIGTERM', handleSignal);
 
   try {
     // 1. Clone template
-    await templateService.cloneTemplate(projectPath);
+    await cloneTemplate(projectPath);
 
     // 2. Update package.json
-    await configService.configurePackageJson(projectPath, answers);
+    await configurePackageJson(projectPath, answers);
 
     // 3. Customize Features (Cleanup)
-    await cleanupService.cleanupFeatures(projectPath, answers);
+    await cleanupFeatures(projectPath, answers);
 
     // 4. Generate Code (Providers, Layout)
     spinner.text = 'Generating code...';
-    await providersService.generateRootProvider(projectPath, answers);
-    await providersService.generateLayout(projectPath, answers);
+    await generateRootProvider(projectPath, answers);
+    await generateLayout(projectPath, answers);
 
     // 5. Setup DevTools & Community Files
     spinner.text = 'Setting up developer tools...';
-    await devToolsService.setupDevTools(projectPath, answers);
+    await setupDevTools(projectPath, answers);
 
     // 6. Initialize Git
     spinner.text = 'Initializing Git...';
@@ -80,6 +98,10 @@ const createApp = async (initialName?: string): Promise<void> => {
     await runScript(projectPath, answers.packageManager, 'format');
     await runScript(projectPath, answers.packageManager, 'lint:fix');
 
+    // Remove signal listeners on success
+    process.off('SIGINT', handleSignal);
+    process.off('SIGTERM', handleSignal);
+
     spinner.succeed(pc.green(`Project ${answers.projectName} created successfully!`));
     log('');
     log('To get started:');
@@ -93,16 +115,7 @@ const createApp = async (initialName?: string): Promise<void> => {
   } catch (err) {
     spinner.fail('Failed to create project.');
     console.error(err);
-    // Cleanup: Delete the created directory if it exists
-    if (fileExists(projectPath)) {
-      spinner.text = 'Cleaning up...';
-      try {
-        await deleteDirectory(projectPath);
-        console.log(pc.yellow(`\nCleaned up: Deleted directory ${answers.projectName}`));
-      } catch (cleanupErr) {
-        console.error(pc.red(`\nFailed to clean up directory ${answers.projectName}:`), cleanupErr);
-      }
-    }
+    await performCleanup();
     process.exit(1);
   }
 };

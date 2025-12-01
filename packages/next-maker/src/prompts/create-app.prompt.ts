@@ -44,6 +44,12 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
       message: 'What is the project name?',
       initial: initialName || 'my-app',
       skip: !!initialName,
+      validate: (value: string) => {
+        if (!/^[a-z0-9-_]+$/.test(value)) {
+          return 'Project name must be lowercase and contain only alphanumeric characters, hyphens, and underscores.';
+        }
+        return true;
+      },
     },
     {
       type: 'input',
@@ -62,12 +68,24 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
       name: 'version',
       message: 'Version:',
       initial: '0.1.0',
+      validate: (value: string) => {
+        if (!/^\d+\.\d+\.\d+$/.test(value)) {
+          return 'Version must be a valid semantic version (x.y.z).';
+        }
+        return true;
+      },
     },
     {
       type: 'input',
       name: 'email',
       message: 'Support email:',
       initial: 'support@example.com',
+      validate: (value: string) => {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          return 'Please enter a valid email address.';
+        }
+        return true;
+      },
     },
     {
       type: 'input',
@@ -80,22 +98,40 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
       name: 'packageManager',
       message: 'Which package manager would you like to use?',
       choices: ['npm', 'yarn', 'pnpm', 'bun'],
-      initial: 0,
+      initial: 1,
     },
     {
       type: 'input',
       name: 'gitRemote',
       message: 'Git remote origin URL (optional):',
+      validate: (value: string) => {
+        if (value && !/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(value)) {
+          return 'Please enter a valid URL.';
+        }
+        return true;
+      },
     },
     {
       type: 'input',
       name: 'gitIssues',
       message: 'Git issues URL (optional):',
+      validate: (value: string) => {
+        if (value && !/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(value)) {
+          return 'Please enter a valid URL.';
+        }
+        return true;
+      },
     },
     {
       type: 'input',
       name: 'gitHomepage',
       message: 'Project homepage URL (optional):',
+      validate: (value: string) => {
+        if (value && !/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(value)) {
+          return 'Please enter a valid URL.';
+        }
+        return true;
+      },
     },
     {
       type: 'confirm',
@@ -172,6 +208,12 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
         const answers = this.state?.answers ?? this.enquirer?.answers ?? {};
         return !answers.docker;
       },
+      validate: (value: string) => {
+        if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(value)) {
+          return 'Invalid Docker container name.';
+        }
+        return true;
+      },
     },
     {
       type: 'input',
@@ -182,6 +224,12 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
         const answers = this.state?.answers ?? this.enquirer?.answers ?? {};
         return !answers.docker;
       },
+      validate: (value: string) => {
+        if (!/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/.test(value)) {
+          return 'Invalid Docker image name (must be lowercase).';
+        }
+        return true;
+      },
     },
     {
       type: 'input',
@@ -191,6 +239,12 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
       skip: function (this: PromptContext) {
         const answers = this.state?.answers ?? this.enquirer?.answers ?? {};
         return !answers.docker;
+      },
+      validate: (value: string) => {
+        if (!/^[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}$/.test(value)) {
+          return 'Invalid Docker image tag.';
+        }
+        return true;
       },
     },
     {
