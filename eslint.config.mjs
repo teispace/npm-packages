@@ -19,6 +19,12 @@ export default defineConfig([
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ['**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
     plugins: {
       prettier: eslintPluginPrettier,
     },
