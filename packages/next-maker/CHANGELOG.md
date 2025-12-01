@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.1](https://github.com/teispace/npm-packages/compare/next-maker-v0.2.0...next-maker-v0.2.1) (2025-12-01)
+
+
+### Miscellaneous Chores
+
+* **next-maker:** add init services, update prompts, and fix release output ([9d6ff31](https://github.com/teispace/npm-packages/commit/9d6ff3130e9101febe135f597e8889c59f301c05))
+* **release:** merge alpha into beta ([ca76516](https://github.com/teispace/npm-packages/commit/ca765167a31dead9dad6af387cb55f34a723ac15))
+* **release:** merge beta into main ([1f86bc1](https://github.com/teispace/npm-packages/commit/1f86bc1954dae1ed4536db0b9ca6f9adbc94771f))
+* **sync:** merge origin/main into main before push ([8e329a2](https://github.com/teispace/npm-packages/commit/8e329a2df1f88e36ed03cab5e6d59ac788b0994a))
+
+
+### Continuous Integration
+
+* **release:** use heredoc for published_packages output to avoid GITHUB_OUTPUT parse errors ([befde1b](https://github.com/teispace/npm-packages/commit/befde1be30d00ac4cd56d04d493e362902df54a2))
+
 ## [0.2.0](https://github.com/teispace/npm-packages/compare/next-maker-v0.1.1...next-maker-v0.2.0) (2025-12-01)
 
 
