@@ -53,6 +53,9 @@ export function error(message: string): void {
   print(`✖ ${message}`, 'red');
 }
 
+// Alias for error
+export const logError = error;
+
 // Print warning message
 export function warning(message: string): void {
   print(`⚠ ${message}`, 'yellow');

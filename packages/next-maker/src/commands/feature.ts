@@ -1,12 +1,145 @@
 import { Command } from 'commander';
 import pc from 'picocolors';
-import { log } from '../config';
+import path from 'node:path';
+import { log, logError, spinner } from '../config';
+import { promptForFeatureDetails } from '../prompts/feature.prompt';
+import { detectProjectSetup, featureExists } from '../services/feature/detection.service';
+import { generateFeatureStructure } from '../services/feature/templates.service';
+import { registerFeatureInRootReducer } from '../services/feature/registration.service';
+
+interface FeatureCommandOptions {
+  skipStore?: boolean;
+  store?: 'persist' | 'no-persist';
+  skipService?: boolean;
+  service?: 'axios' | 'fetch';
+}
 
 export const registerFeatureCommand = (program: Command) => {
   program
     .command('feature [name]')
     .description('Generate a new feature module')
-    .action(async () => {
-      log(pc.yellow('Feature generation will be available soon!'));
+    .option('--skip-store', 'Skip Redux store generation')
+    .option('--store <type>', 'Generate Redux store with persistence option (persist|no-persist)')
+    .option('--skip-service', 'Skip API service generation')
+    .option('--service <client>', 'Generate API service with specific HTTP client (axios|fetch)')
+    .action(async (name: string | undefined, options: FeatureCommandOptions) => {
+      try {
+        const projectPath = process.cwd();
+
+        // Validate store option
+        if (options.store && !['persist', 'no-persist'].includes(options.store)) {
+          logError('Invalid --store option. Use: persist or no-persist');
+          process.exit(1);
+        }
+
+        // Validate service option
+        if (options.service && !['axios', 'fetch'].includes(options.service)) {
+          logError('Invalid --service option. Use: axios or fetch');
+          process.exit(1);
+        }
+
+        // Validate conflicting options
+        if (options.skipStore && options.store) {
+          logError('Cannot use --skip-store and --store together');
+          process.exit(1);
+        }
+
+        if (options.skipService && options.service) {
+          logError('Cannot use --skip-service and --service together');
+          process.exit(1);
+        }
+
+        log(pc.cyan('\n🎯 Feature Generator\n'));
+
+        // Step 1: Detect project setup
+        spinner.start('Detecting project setup...');
+        const detection = await detectProjectSetup(projectPath);
+        spinner.succeed('Project setup detected');
+
+        log(pc.dim(`  Redux: ${detection.hasRedux ? '✓' : '✗'}`));
+        log(pc.dim(`  HTTP Client: ${detection.httpClient}`));
+        log(pc.dim(`  i18n: ${detection.hasI18n ? '✓' : '✗'}\n`));
+
+        // Step 2: Prompt for feature details
+        const featureOptions = await promptForFeatureDetails(
+          name,
+          detection.hasRedux,
+          detection.httpClient,
+          options.skipStore,
+          options.store,
+          options.skipService,
+          options.service,
+        );
+
+        // Step 3: Check if feature already exists
+        const exists = await featureExists(projectPath, featureOptions.featureName);
+        if (exists) {
+          logError(`Feature '${featureOptions.featureName}' already exists!`);
+          process.exit(1);
+        }
+
+        // Step 4: Generate feature structure
+        spinner.start('Generating feature files...');
+        const featurePath = path.join(projectPath, 'src', 'features', featureOptions.featureName);
+
+        await generateFeatureStructure({
+          featureName: featureOptions.featureName,
+          featurePath,
+          createStore: featureOptions.createStore,
+          persistStore: featureOptions.persistStore,
+          createService: featureOptions.createService,
+          httpClient: featureOptions.selectedHttpClient,
+        });
+
+        spinner.succeed('Feature files generated');
+
+        // Step 5: Register in rootReducer if store was created
+        if (featureOptions.createStore && detection.hasRedux) {
+          spinner.start('Registering feature in rootReducer...');
+          await registerFeatureInRootReducer(
+            projectPath,
+            featureOptions.featureName,
+            featureOptions.persistStore,
+          );
+          spinner.succeed('Feature registered in rootReducer');
+        }
+
+        // Success message
+        log(pc.green(`\n✨ Feature '${featureOptions.featureName}' created successfully!\n`));
+        log(pc.dim('Generated files:'));
+        log(pc.dim(`  📂 src/features/${featureOptions.featureName}/`));
+        log(pc.dim(`     ├── components/`));
+        log(pc.dim(`     ├── hooks/`));
+        log(pc.dim(`     ├── types/`));
+        if (featureOptions.createStore) log(pc.dim(`     ├── store/`));
+        if (featureOptions.createService) log(pc.dim(`     ├── services/`));
+        log(pc.dim(`     └── index.ts\n`));
+
+        log(pc.cyan('Next steps:'));
+        log(
+          pc.dim(
+            `  1. Import and use the feature: import { ${featureOptions.featureName} } from '@/features/${featureOptions.featureName}'`,
+          ),
+        );
+        if (featureOptions.createStore) {
+          log(
+            pc.dim(
+              `  2. Customize your Redux slice in: src/features/${featureOptions.featureName}/store/`,
+            ),
+          );
+        }
+        if (featureOptions.createService) {
+          log(
+            pc.dim(
+              `  3. Add API methods in: src/features/${featureOptions.featureName}/services/${featureOptions.featureName}.service.ts`,
+            ),
+          );
+        }
+        log('');
+      } catch (error) {
+        spinner.fail('Feature generation failed');
+        logError(`${error}`);
+        process.exit(1);
+      }
     });
 };
