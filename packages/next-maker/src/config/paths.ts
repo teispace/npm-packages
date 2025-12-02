@@ -57,6 +57,29 @@ export const PROJECT_PATHS = {
   ERRORS_DIR: 'src/lib/errors',
   UTILITY_TYPES_DIR: 'src/types/utility',
   COMMON_TYPES_DIR: 'src/types/common',
+  HTTP_TYPES: 'src/types/common/http.types.ts',
   GITHUB_DIR: '.github',
   HUSKY_DIR: '.husky',
+  STORE_PROVIDER: 'src/providers/StoreProvider.tsx',
+  THEME_PROVIDER: 'src/providers/CustomThemeProvider.tsx',
+  COUNTER_COMPONENT: 'src/features/counter/components/Counter.tsx',
+  LOCALE_PAGE: 'src/app/[locale]/page.tsx',
+
+  // Config files
+  COMMITLINT_CONFIG: 'commitlint.config.mjs',
+  LINTSTAGED_RC: '.lintstagedrc.mjs',
+  CZRC: '.czrc',
+  DOCKERIGNORE: '.dockerignore',
+  DOCKERFILE: 'Dockerfile',
+  DOCKER_COMPOSE: 'docker-compose.yml',
+
+  // GitHub
+  GITHUB_WORKFLOWS: '.github/workflows',
+  GITHUB_ISSUE_TEMPLATE: 'ISSUE_TEMPLATE',
+  GITHUB_PR_TEMPLATE: 'PULL_REQUEST_TEMPLATE.md',
+
+  // Community files
+  CODE_OF_CONDUCT: 'CODE_OF_CONDUCT.md',
+  CONTRIBUTING: 'CONTRIBUTING.md',
+  SECURITY: 'SECURITY.md',
 } as const;

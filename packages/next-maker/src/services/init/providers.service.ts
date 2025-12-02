@@ -100,8 +100,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning={true}>
-      <body className={\`\${livvic.variable} bg-light dark:bg-dark antialiased\`}>
+    <html lang="en" suppressHydrationWarning={${answers.darkMode ? 'true' : 'false'}}>
+      <body className={\`\${livvic.variable} ${answers.darkMode ? 'bg-light dark:bg-dark ' : ''}antialiased\`}>
         <RootProvider>
           {children}
         </RootProvider>
@@ -112,11 +112,15 @@ export default function RootLayout({
 `;
     await writeFile(path.join(projectPath, PROJECT_PATHS.ROOT_LAYOUT), basicLayout);
 
-    const basicPage = `export default function Home() {
+    // Generate page.tsx with Counter if Redux is enabled
+    const counterImport = answers.redux ? "import { Counter } from '@/features/counter';\n\n" : '';
+    const counterComponent = answers.redux ? '\n      <Counter />' : '';
+
+    const basicPage = `${counterImport}export default function Home() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-24">
       <h1 className="text-4xl font-bold">Welcome to ${answers.projectName}</h1>
-      <p className="mt-4 text-xl">Get started by editing src/app/page.tsx</p>
+      <p className="mt-4 text-xl">Get started by editing src/app/page.tsx</p>${counterComponent}
     </div>
   );
 }

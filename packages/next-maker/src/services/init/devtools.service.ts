@@ -28,8 +28,8 @@ export const setupDevTools = async (
 const setupPreCommitHooks = async (projectPath: string, answers: ProjectPrompts): Promise<void> => {
   if (!answers.preCommitHooks) {
     await deleteDirectory(path.join(projectPath, PROJECT_PATHS.HUSKY_DIR));
-    await deleteFile(path.join(projectPath, 'commitlint.config.mjs'));
-    await deleteFile(path.join(projectPath, '.lintstagedrc.mjs'));
+    await deleteFile(path.join(projectPath, PROJECT_PATHS.COMMITLINT_CONFIG));
+    await deleteFile(path.join(projectPath, PROJECT_PATHS.LINTSTAGED_RC));
 
     await updateJson(path.join(projectPath, PROJECT_PATHS.PACKAGE_JSON), (pkg) => {
       delete pkg.devDependencies[PACKAGES.HUSKY];
@@ -47,7 +47,7 @@ const setupPreCommitHooks = async (projectPath: string, answers: ProjectPrompts)
 
 const setupCommitizen = async (projectPath: string, answers: ProjectPrompts): Promise<void> => {
   if (!answers.commitizen) {
-    await deleteFile(path.join(projectPath, '.czrc'));
+    await deleteFile(path.join(projectPath, PROJECT_PATHS.CZRC));
 
     await updateJson(path.join(projectPath, PROJECT_PATHS.PACKAGE_JSON), (pkg) => {
       delete pkg.devDependencies[PACKAGES.COMMITIZEN];
@@ -64,7 +64,7 @@ const setupCommitizen = async (projectPath: string, answers: ProjectPrompts): Pr
 
 const setupCiCd = async (projectPath: string, answers: ProjectPrompts): Promise<void> => {
   if (!answers.ci) {
-    await deleteDirectory(path.join(projectPath, '.github/workflows'));
+    await deleteDirectory(path.join(projectPath, PROJECT_PATHS.GITHUB_WORKFLOWS));
   }
 };
 
@@ -74,11 +74,11 @@ const setupGithubTemplates = async (
 ): Promise<void> => {
   const githubPath = path.join(projectPath, PROJECT_PATHS.GITHUB_DIR);
   if (!answers.keepTemplates) {
-    await deleteDirectory(path.join(githubPath, 'ISSUE_TEMPLATE'));
-    await deleteFile(path.join(githubPath, 'PULL_REQUEST_TEMPLATE.md'));
+    await deleteDirectory(path.join(githubPath, PROJECT_PATHS.GITHUB_ISSUE_TEMPLATE));
+    await deleteFile(path.join(githubPath, PROJECT_PATHS.GITHUB_PR_TEMPLATE));
   } else {
-    const issueTemplatePath = path.join(githubPath, 'ISSUE_TEMPLATE');
-    const prTemplatePath = path.join(githubPath, 'PULL_REQUEST_TEMPLATE.md');
+    const issueTemplatePath = path.join(githubPath, PROJECT_PATHS.GITHUB_ISSUE_TEMPLATE);
+    const prTemplatePath = path.join(githubPath, PROJECT_PATHS.GITHUB_PR_TEMPLATE);
 
     const replacePlaceholders = (content: string) => {
       return content
@@ -113,7 +113,11 @@ const setupGithubTemplates = async (
 };
 
 const setupCommunityFiles = async (projectPath: string, answers: ProjectPrompts): Promise<void> => {
-  const allCommunityFiles = ['CODE_OF_CONDUCT.md', 'CONTRIBUTING.md', 'SECURITY.md'];
+  const allCommunityFiles = [
+    PROJECT_PATHS.CODE_OF_CONDUCT,
+    PROJECT_PATHS.CONTRIBUTING,
+    PROJECT_PATHS.SECURITY,
+  ];
   for (const file of allCommunityFiles) {
     if (!answers.communityFiles.includes(file)) {
       await deleteFile(path.join(projectPath, file));
@@ -123,9 +127,9 @@ const setupCommunityFiles = async (projectPath: string, answers: ProjectPrompts)
 
 const setupDocker = async (projectPath: string, answers: ProjectPrompts): Promise<void> => {
   if (!answers.docker) {
-    await deleteFile(path.join(projectPath, 'Dockerfile'));
-    await deleteFile(path.join(projectPath, 'docker-compose.yml'));
-    await deleteFile(path.join(projectPath, '.dockerignore'));
+    await deleteFile(path.join(projectPath, PROJECT_PATHS.DOCKERFILE));
+    await deleteFile(path.join(projectPath, PROJECT_PATHS.DOCKER_COMPOSE));
+    await deleteFile(path.join(projectPath, PROJECT_PATHS.DOCKERIGNORE));
 
     const envPath = path.join(projectPath, PROJECT_PATHS.ENV_EXAMPLE);
     if (fileExists(envPath)) {

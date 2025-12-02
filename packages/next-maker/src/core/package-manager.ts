@@ -19,7 +19,8 @@ export const runScript = async (
   manager: PackageManager,
   script: string,
 ): Promise<void> => {
-  const command = `${manager} run ${script}`;
+  // npm requires 'run' keyword, but yarn/pnpm/bun don't
+  const command = manager === 'npm' ? `${manager} run ${script}` : `${manager} ${script}`;
   try {
     await execAsync(command, { cwd });
   } catch (error) {
