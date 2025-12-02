@@ -129,6 +129,24 @@ const cleanupRedux = async (projectPath: string, answers: ProjectPrompts): Promi
       componentsIndexContent = componentsIndexContent.replace(/export \* from '\.\/Count';\n?/, '');
       await writeFile(componentsIndexPath, componentsIndexContent);
     }
+
+    // Cleanup usage in pages
+    const pagesToClean = [
+      path.join(projectPath, PROJECT_PATHS.ROOT_PAGE),
+      path.join(projectPath, 'src/app/[locale]/page.tsx'),
+    ];
+
+    for (const pagePath of pagesToClean) {
+      if (fileExists(pagePath)) {
+        let content = await readFile(pagePath);
+        content = content.replace(
+          /import\s+\{\s*Count\s*\}\s+from\s+['"]@\/components['"];\n?/,
+          '',
+        );
+        content = content.replace(/<Count\s*\/>\n?/g, '');
+        await writeFile(pagePath, content);
+      }
+    }
   }
 };
 
@@ -188,6 +206,22 @@ const cleanupI18n = async (projectPath: string, answers: ProjectPrompts): Promis
         'export default nextConfig;',
       );
       await writeFile(nextConfigPath, configContent);
+    }
+
+    // Cleanup Count.tsx if it exists (Redux enabled)
+    const countComponentPath = path.join(projectPath, 'src/components/Count.tsx');
+    if (fileExists(countComponentPath)) {
+      let content = await readFile(countComponentPath);
+      content = content.replace(
+        /import\s+\{\s*useTranslations\s*\}\s+from\s+['"]next-intl['"];\n?/,
+        '',
+      );
+      content = content.replace(/const\s+t\s*=\s*useTranslations\(['"]Count['"]\);\n?/, '');
+      content = content.replace(/\{t\(['"]increment['"]\)\}/g, "{'Increment'}");
+      content = content.replace(/\{t\(['"]decrement['"]\)\}/g, "{'Decrement'}");
+      content = content.replace(/\{t\(['"]incrementByAmount['"]\)\}/g, "{'Increment by Amount'}");
+      content = content.replace(/\{t\(['"]reset['"]\)\}/g, "{'Reset'}");
+      await writeFile(countComponentPath, content);
     }
   }
 };
