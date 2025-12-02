@@ -44,6 +44,16 @@ export const generateFeatureStructure = async (
   }
 };
 
+export const getProjectPathFromFeaturePath = (featurePath: string): string => {
+  // Extract project root from feature path
+  // featurePath format: /path/to/project/src/features/featureName
+  const srcIndex = featurePath.indexOf('/src/features');
+  if (srcIndex === -1) {
+    throw new Error('Could not determine project path from feature path');
+  }
+  return featurePath.substring(0, srcIndex);
+};
+
 const generateComponentFile = async (options: FeatureGenerationOptions): Promise<void> => {
   const { featureName, featurePath } = options;
   const componentName = kebabToPascal(featureName);
@@ -214,78 +224,26 @@ const generateServiceFile = async (options: FeatureGenerationOptions): Promise<v
   let content: string;
 
   if (httpClient === 'axios') {
-    content = `import { axiosClient } from '@/lib/utils/http';
+    content = `import { AppApis } from '@/lib/config';
+import { axiosClient } from '@/lib/utils/http';
+import { ResultAsync } from '@/types';
 
 export const ${camelName}Service = {
-  // Add your API methods here
-  // Example:
-  // getAll: async () => {
-  //   const result = await axiosClient.get<YourType[]>('/${featureName}');
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // getById: async (id: string) => {
-  //   const result = await axiosClient.get<YourType>(\`/${featureName}/\${id}\`);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // create: async (data: YourCreateType) => {
-  //   const result = await axiosClient.post<YourType>('/${featureName}', data);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // update: async (id: string, data: YourUpdateType) => {
-  //   const result = await axiosClient.put<YourType>(\`/${featureName}/\${id}\`, data);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // delete: async (id: string) => {
-  //   const result = await axiosClient.delete<void>(\`/${featureName}/\${id}\`);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
+  getAll: (): ResultAsync<string> => {
+    return axiosClient.get<string>(AppApis.${camelName}.getAll);
+  },
 };
 `;
   } else {
     // fetch
-    content = `import { fetchClient } from '@/lib/utils/http';
+    content = `import { AppApis } from '@/lib/config';
+import { fetchClient } from '@/lib/utils/http';
+import { ResultAsync } from '@/types';
 
 export const ${camelName}Service = {
-  // Add your API methods here
-  // Example:
-  // getAll: async () => {
-  //   const result = await fetchClient.get<YourType[]>('/${featureName}');
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // getById: async (id: string) => {
-  //   const result = await fetchClient.get<YourType>(\`/${featureName}/\${id}\`);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // create: async (data: YourCreateType) => {
-  //   const result = await fetchClient.post<YourType>('/${featureName}', data);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // update: async (id: string, data: YourUpdateType) => {
-  //   const result = await fetchClient.put<YourType>(\`/${featureName}/\${id}\`, data);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // delete: async (id: string) => {
-  //   const result = await fetchClient.delete<void>(\`/${featureName}/\${id}\`);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
+  getAll: (): ResultAsync<string> => {
+    return fetchClient.get<string>(AppApis.${camelName}.getAll);
+  },
 };
 `;
   }

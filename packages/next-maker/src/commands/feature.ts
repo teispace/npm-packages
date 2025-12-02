@@ -6,6 +6,7 @@ import { promptForFeatureDetails } from '../prompts/feature.prompt';
 import { detectProjectSetup, featureExists } from '../services/feature/detection.service';
 import { generateFeatureStructure } from '../services/feature/templates.service';
 import { registerFeatureInRootReducer } from '../services/feature/registration.service';
+import { registerApiEndpoints } from '../services/common/api-registration.service';
 
 interface FeatureCommandOptions {
   skipStore?: boolean;
@@ -98,7 +99,17 @@ export const registerFeatureCommand = (program: Command) => {
 
         spinner.succeed('Feature files generated');
 
-        // Step 5: Register in rootReducer if store was created
+        // Step 5: Register API endpoints if service was created
+        if (featureOptions.createService) {
+          spinner.start('Registering API endpoints...');
+          await registerApiEndpoints({
+            serviceName: featureOptions.featureName,
+            projectPath,
+          });
+          spinner.succeed('API endpoints registered');
+        }
+
+        // Step 6: Register in rootReducer if store was created
         if (featureOptions.createStore && detection.hasRedux) {
           spinner.start('Registering feature in rootReducer...');
           await registerFeatureInRootReducer(
