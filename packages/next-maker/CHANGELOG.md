@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.2](https://github.com/teispace/npm-packages/compare/next-maker-v0.2.1...next-maker-v0.2.2) (2025-12-02)
+
+
+### Miscellaneous Chores
+
+* **cleanup:** remove unused client-utils and app-apis during cleanup process ([866baf4](https://github.com/teispace/npm-packages/commit/866baf41c32369bc7ca65dbe44fd7db0034c091f))
+* **next-maker:** release alpha ([afbcfca](https://github.com/teispace/npm-packages/commit/afbcfca48fde7c19162c9aec8dd4aed0c4e8075c))
+* **release:** merge alpha into beta ([d52f1f2](https://github.com/teispace/npm-packages/commit/d52f1f210745859d87701a42d629af9bc68d9e92))
+
 ## [0.2.1](https://github.com/teispace/npm-packages/compare/next-maker-v0.2.0...next-maker-v0.2.1) (2025-12-01)
 
 
