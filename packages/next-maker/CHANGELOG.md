@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.0](https://github.com/teispace/npm-packages/compare/next-maker-v0.2.2...next-maker-v0.3.0) (2025-12-02)
+
+
+### Features
+
+* **next-maker:** add custom path and fix feature generation ([33c2ca0](https://github.com/teispace/npm-packages/commit/33c2ca09b592fa4a1e6e0c6c606b63c5db3d451b))
+* **next-maker:** implement feature generation command ([0127837](https://github.com/teispace/npm-packages/commit/0127837d97e849dfc7fe875c167604d0997d7093))
+* **next-maker:** implement slice and service generation commands ([59a12e4](https://github.com/teispace/npm-packages/commit/59a12e4b80521ee5fbabb74a09508bd085cc52aa))
+* **next-maker:** optimize prompts and add .env copy feature ([e2ecefe](https://github.com/teispace/npm-packages/commit/e2ecefe7139c335adf34131dee3cebe7ba9eebb2))
+
+
+### Bug Fixes
+
+* **next-maker:** add Counter component to page.tsx when Redux enabled and cleanup i18n/axios types ([87bc69d](https://github.com/teispace/npm-packages/commit/87bc69d96824353cfdfce1af9b6bcf1bda789ff6))
+* **next-maker:** correct script execution for yarn/pnpm/bun ([e633a31](https://github.com/teispace/npm-packages/commit/e633a31237c5ac9450cb35da6dd6edc10e5f1ea5))
+* **next-maker:** remove dark mode styles when dark theme is not selected ([3ad53e5](https://github.com/teispace/npm-packages/commit/3ad53e53de8faf04f7d769051908e7e10f391581))
+
 ## [0.2.2](https://github.com/teispace/npm-packages/compare/next-maker-v0.2.1...next-maker-v0.2.2) (2025-12-02)
 
 
