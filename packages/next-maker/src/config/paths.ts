@@ -48,6 +48,8 @@ export const PROJECT_PATHS = {
   HTTP_UTILS: 'src/lib/utils/http',
   AXIOS_CLIENT: 'src/lib/utils/http/axios-client',
   FETCH_CLIENT: 'src/lib/utils/http/fetch-client',
+  CLIENT_UTILS: 'src/lib/utils/http/client-utils.ts',
+  APP_APIS: 'src/lib/config/app-apis.ts',
   STORAGE_SERVICE: 'src/services/storage',
   COUNTER_FEATURE: 'src/features/counter',
   I18N_DIR: 'src/i18n',
