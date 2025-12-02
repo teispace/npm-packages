@@ -34,6 +34,7 @@ export interface ProjectPrompts {
   ci: boolean;
   preCommitHooks: boolean;
   commitizen: boolean;
+  copyEnv: boolean;
 }
 
 export const promptForProjectDetails = async (initialName?: string): Promise<ProjectPrompts> => {
@@ -88,12 +89,6 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
       },
     },
     {
-      type: 'input',
-      name: 'company',
-      message: 'Company name:',
-      initial: 'Teispace',
-    },
-    {
       type: 'select',
       name: 'packageManager',
       message: 'Which package manager would you like to use?',
@@ -103,32 +98,14 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
     {
       type: 'input',
       name: 'gitRemote',
-      message: 'Git remote origin URL (optional):',
+      message: 'GitHub repository URL (optional):',
       validate: (value: string) => {
-        if (value && !/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(value)) {
-          return 'Please enter a valid URL.';
-        }
-        return true;
-      },
-    },
-    {
-      type: 'input',
-      name: 'gitIssues',
-      message: 'Git issues URL (optional):',
-      validate: (value: string) => {
-        if (value && !/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(value)) {
-          return 'Please enter a valid URL.';
-        }
-        return true;
-      },
-    },
-    {
-      type: 'input',
-      name: 'gitHomepage',
-      message: 'Project homepage URL (optional):',
-      validate: (value: string) => {
-        if (value && !/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(value)) {
-          return 'Please enter a valid URL.';
+        if (!value) return true;
+        // GitHub URL patterns: https://github.com/user/repo or git@github.com:user/repo.git
+        const httpsPattern = /^https:\/\/github\.com\/[\w-]+\/[\w.-]+$/;
+        const sshPattern = /^git@github\.com:[\w-]+\/[\w.-]+\.git$/;
+        if (!httpsPattern.test(value) && !sshPattern.test(value)) {
+          return 'Please enter a valid GitHub repository URL (e.g., https://github.com/user/repo)';
         }
         return true;
       },
@@ -137,14 +114,14 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
       type: 'confirm',
       name: 'keepTemplates',
       message: 'Do you want to keep GitHub issue and pull request templates?',
-      initial: true,
+      initial: false,
     },
     {
       type: 'select',
       name: 'httpClient',
       message: 'Which HTTP client do you want to use?',
       choices: ['axios', 'fetch', 'both', 'none'],
-      initial: 0,
+      initial: 1,
     },
     {
       type: 'confirm',
@@ -185,7 +162,7 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
         { name: 'CONTRIBUTING.md', value: 'CONTRIBUTING.md' },
         { name: 'SECURITY.md', value: 'SECURITY.md' },
       ],
-      initial: ['CODE_OF_CONDUCT.md', 'CONTRIBUTING.md', 'SECURITY.md'],
+      initial: [],
     },
     {
       type: 'confirm',
@@ -197,7 +174,7 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
       type: 'confirm',
       name: 'docker',
       message: 'Do you want to include Docker configuration?',
-      initial: true,
+      initial: false,
     },
     {
       type: 'input',
@@ -251,7 +228,7 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
       type: 'confirm',
       name: 'ci',
       message: 'Do you want to include GitHub Actions (CI/CD)?',
-      initial: true,
+      initial: false,
     },
     {
       type: 'confirm',
@@ -265,7 +242,25 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
       message: 'Do you want to setup Commitizen?',
       initial: true,
     },
+    {
+      type: 'confirm',
+      name: 'copyEnv',
+      message: 'Want to copy .env.example to .env?',
+      initial: true,
+    },
   ] as any);
+
+  // Set company to be the same as author
+  response.company = response.author;
+
+  // Generate git URLs from gitRemote if provided
+  if (response.gitRemote && !response.gitHomepage) {
+    const baseUrl = response.gitRemote
+      .replace('git@github.com:', 'https://github.com/')
+      .replace(/\.git$/, '');
+    response.gitHomepage = `${baseUrl}#readme`;
+    response.gitIssues = `${baseUrl}/issues`;
+  }
 
   return response;
 };
