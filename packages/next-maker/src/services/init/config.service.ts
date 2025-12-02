@@ -11,6 +11,33 @@ export const configurePackageJson = async (
 ): Promise<void> => {
   const spinner = startSpinner('Configuring package.json...');
   try {
+    // Generate URLs from GitHub repository URL if provided
+    let gitRemote = answers.gitRemote;
+    let gitHomepage = answers.gitHomepage;
+    let gitIssues = answers.gitIssues;
+
+    if (answers.gitRemote) {
+      // Convert SSH to HTTPS if needed
+      if (answers.gitRemote.startsWith('git@github.com:')) {
+        gitRemote = answers.gitRemote
+          .replace('git@github.com:', 'https://github.com/')
+          .replace(/\.git$/, '');
+      }
+
+      // Generate homepage and issues URLs if not provided
+      if (!gitHomepage) {
+        gitHomepage = `${gitRemote.replace(/\.git$/, '')}#readme`;
+      }
+      if (!gitIssues) {
+        gitIssues = `${gitRemote.replace(/\.git$/, '')}/issues`;
+      }
+
+      // Add .git suffix for repository URL if not present
+      if (!gitRemote.endsWith('.git')) {
+        gitRemote = `${gitRemote}.git`;
+      }
+    }
+
     await updateJson(path.join(projectPath, PROJECT_PATHS.PACKAGE_JSON), (pkg) => {
       pkg.name = answers.projectName;
       pkg.version = answers.version;
@@ -21,9 +48,9 @@ export const configurePackageJson = async (
       // and let the user's environment handle it.
       delete pkg.packageManager;
 
-      if (answers.gitHomepage) pkg.homepage = answers.gitHomepage;
-      if (answers.gitIssues) pkg.bugs = { url: answers.gitIssues };
-      if (answers.gitRemote) pkg.repository = { type: 'git', url: answers.gitRemote };
+      if (gitHomepage) pkg.homepage = gitHomepage;
+      if (gitIssues) pkg.bugs = { url: gitIssues };
+      if (gitRemote) pkg.repository = { type: 'git', url: gitRemote };
 
       // Remove dependencies based on choices
       if (!answers.redux) {

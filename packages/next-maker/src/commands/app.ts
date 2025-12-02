@@ -98,6 +98,17 @@ const createApp = async (initialName?: string): Promise<void> => {
     await runScript(projectPath, answers.packageManager, 'format');
     await runScript(projectPath, answers.packageManager, 'lint:fix');
 
+    // 9. Copy .env.example to .env if requested
+    if (answers.copyEnv) {
+      spinner.text = 'Creating .env file...';
+      const envExamplePath = path.join(projectPath, '.env.example');
+      const envPath = path.join(projectPath, '.env');
+      if (fileExists(envExamplePath)) {
+        const fs = await import('node:fs/promises');
+        await fs.copyFile(envExamplePath, envPath);
+      }
+    }
+
     // Remove signal listeners on success
     process.off('SIGINT', handleSignal);
     process.off('SIGTERM', handleSignal);
