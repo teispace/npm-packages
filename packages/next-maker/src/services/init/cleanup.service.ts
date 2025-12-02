@@ -90,11 +90,42 @@ const cleanupHttpClient = async (projectPath: string, answers: ProjectPrompts): 
     let content = await readFile(path.join(httpUtilsPath, 'index.ts'));
     content = content.replace(/export .* from '\.\/fetch-client';\n/g, '');
     await writeFile(path.join(httpUtilsPath, 'index.ts'), content);
+
+    // Remove FetchClientOptions and ExtendedRequestInit from http.types.ts
+    const httpTypesPath = path.join(projectPath, PROJECT_PATHS.HTTP_TYPES);
+    if (fileExists(httpTypesPath)) {
+      let typesContent = await readFile(httpTypesPath);
+      // Remove FetchClientOptions interface
+      typesContent = typesContent.replace(
+        /export interface FetchClientOptions \{[\s\S]*?\}\n\n/,
+        '',
+      );
+      // Remove ExtendedRequestInit interface
+      typesContent = typesContent.replace(
+        /export interface ExtendedRequestInit extends RequestInit \{[\s\S]*?\}\n\n/,
+        '',
+      );
+      await writeFile(httpTypesPath, typesContent);
+    }
   } else if (answers.httpClient === 'fetch') {
     await deleteDirectory(path.join(projectPath, PROJECT_PATHS.AXIOS_CLIENT));
     let content = await readFile(path.join(httpUtilsPath, 'index.ts'));
     content = content.replace(/export .* from '\.\/axios-client';\n/g, '');
     await writeFile(path.join(httpUtilsPath, 'index.ts'), content);
+
+    // Remove axios module declaration and AxiosClientOptions from http.types.ts
+    const httpTypesPath = path.join(projectPath, PROJECT_PATHS.HTTP_TYPES);
+    if (fileExists(httpTypesPath)) {
+      let typesContent = await readFile(httpTypesPath);
+      // Remove axios module declaration
+      typesContent = typesContent.replace(/declare module 'axios' \{[\s\S]*?\}\n\n/, '');
+      // Remove AxiosClientOptions interface
+      typesContent = typesContent.replace(
+        /export interface AxiosClientOptions \{[\s\S]*?\}\n\n/,
+        '',
+      );
+      await writeFile(httpTypesPath, typesContent);
+    }
   }
 };
 
@@ -112,8 +143,7 @@ const cleanupRedux = async (projectPath: string, answers: ProjectPrompts): Promi
   if (!answers.redux) {
     await deleteDirectory(path.join(projectPath, PROJECT_PATHS.STORE));
     await deleteDirectory(path.join(projectPath, PROJECT_PATHS.COUNTER_FEATURE));
-    await deleteFile(path.join(projectPath, 'src/providers/StoreProvider.tsx'));
-    await deleteFile(path.join(projectPath, 'src/components/Count.tsx'));
+    await deleteFile(path.join(projectPath, PROJECT_PATHS.STORE_PROVIDER));
 
     const providersIndexPath = path.join(projectPath, PROJECT_PATHS.PROVIDERS_INDEX);
     let providersIndexContent = await readFile(providersIndexPath);
@@ -123,27 +153,20 @@ const cleanupRedux = async (projectPath: string, answers: ProjectPrompts): Promi
     );
     await writeFile(providersIndexPath, providersIndexContent);
 
-    const componentsIndexPath = path.join(projectPath, PROJECT_PATHS.COMPONENTS_INDEX);
-    if (fileExists(componentsIndexPath)) {
-      let componentsIndexContent = await readFile(componentsIndexPath);
-      componentsIndexContent = componentsIndexContent.replace(/export \* from '\.\/Count';\n?/, '');
-      await writeFile(componentsIndexPath, componentsIndexContent);
-    }
-
     // Cleanup usage in pages
     const pagesToClean = [
       path.join(projectPath, PROJECT_PATHS.ROOT_PAGE),
-      path.join(projectPath, 'src/app/[locale]/page.tsx'),
+      path.join(projectPath, PROJECT_PATHS.LOCALE_PAGE),
     ];
 
     for (const pagePath of pagesToClean) {
       if (fileExists(pagePath)) {
         let content = await readFile(pagePath);
         content = content.replace(
-          /import\s+\{\s*Count\s*\}\s+from\s+['"]@\/components['"];\n?/,
+          /import\s+\{\s*Counter\s*\}\s+from\s+['"]@\/features\/counter['"];\n?/,
           '',
         );
-        content = content.replace(/<Count\s*\/>\n?/g, '');
+        content = content.replace(/<Counter\s*\/>\n?/g, '');
         await writeFile(pagePath, content);
       }
     }
@@ -152,7 +175,7 @@ const cleanupRedux = async (projectPath: string, answers: ProjectPrompts): Promi
 
 const cleanupDarkMode = async (projectPath: string, answers: ProjectPrompts): Promise<void> => {
   if (!answers.darkMode) {
-    await deleteFile(path.join(projectPath, 'src/providers/CustomThemeProvider.tsx'));
+    await deleteFile(path.join(projectPath, PROJECT_PATHS.THEME_PROVIDER));
     const providersIndexPath = path.join(projectPath, PROJECT_PATHS.PROVIDERS_INDEX);
     let providersIndexContent = await readFile(providersIndexPath);
     providersIndexContent = providersIndexContent.replace(
@@ -208,20 +231,20 @@ const cleanupI18n = async (projectPath: string, answers: ProjectPrompts): Promis
       await writeFile(nextConfigPath, configContent);
     }
 
-    // Cleanup Count.tsx if it exists (Redux enabled)
-    const countComponentPath = path.join(projectPath, 'src/components/Count.tsx');
-    if (fileExists(countComponentPath)) {
-      let content = await readFile(countComponentPath);
+    // Cleanup Counter.tsx if Redux is enabled - remove i18n from Counter component
+    const counterComponentPath = path.join(projectPath, PROJECT_PATHS.COUNTER_COMPONENT);
+    if (fileExists(counterComponentPath)) {
+      let content = await readFile(counterComponentPath);
       content = content.replace(
-        /import\s+\{\s*useTranslations\s*\}\s+from\s+['"]next-intl['"];\n?/,
+        /import\s+\{\s*useTranslations\s*\}\s+from\s+['"]next-intl['"];\n/,
         '',
       );
-      content = content.replace(/const\s+t\s*=\s*useTranslations\(['"]Count['"]\);\n?/, '');
-      content = content.replace(/\{t\(['"]increment['"]\)\}/g, "{'Increment'}");
-      content = content.replace(/\{t\(['"]decrement['"]\)\}/g, "{'Decrement'}");
-      content = content.replace(/\{t\(['"]incrementByAmount['"]\)\}/g, "{'Increment by Amount'}");
-      content = content.replace(/\{t\(['"]reset['"]\)\}/g, "{'Reset'}");
-      await writeFile(countComponentPath, content);
+      content = content.replace(/\s*const\s+t\s*=\s*useTranslations\(['"]Count['"]\);\n/, '');
+      content = content.replace(/\{t\('currentCount',\s*\{\s*count:\s*value\s*\}\)\}/g, '{value}');
+      content = content.replace(/\{t\(['"]increment['"]\)\}/g, 'Increment');
+      content = content.replace(/\{t\(['"]decrement['"]\)\}/g, 'Decrement');
+      content = content.replace(/\{t\(['"]reset['"]\)\}/g, 'Reset');
+      await writeFile(counterComponentPath, content);
     }
   }
 };
