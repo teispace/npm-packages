@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/teispace/npm-packages/compare/next-maker-v0.3.0...next-maker-v0.4.0) (2025-12-02)
+
+
+### Features
+
+* **next-maker:** add API endpoint registration for services and features ([8db4f36](https://github.com/teispace/npm-packages/commit/8db4f36a6037a63129b4a94c7905200668715ebc))
+
 ## [0.3.0](https://github.com/teispace/npm-packages/compare/next-maker-v0.2.2...next-maker-v0.3.0) (2025-12-02)
 
 
