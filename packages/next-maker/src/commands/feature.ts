@@ -12,6 +12,7 @@ interface FeatureCommandOptions {
   store?: 'persist' | 'no-persist';
   skipService?: boolean;
   service?: 'axios' | 'fetch';
+  path?: string;
 }
 
 export const registerFeatureCommand = (program: Command) => {
@@ -22,6 +23,7 @@ export const registerFeatureCommand = (program: Command) => {
     .option('--store <type>', 'Generate Redux store with persistence option (persist|no-persist)')
     .option('--skip-service', 'Skip API service generation')
     .option('--service <client>', 'Generate API service with specific HTTP client (axios|fetch)')
+    .option('--path <path>', 'Custom path for feature generation (default: src/features)')
     .action(async (name: string | undefined, options: FeatureCommandOptions) => {
       try {
         const projectPath = process.cwd();
@@ -71,16 +73,19 @@ export const registerFeatureCommand = (program: Command) => {
           options.service,
         );
 
-        // Step 3: Check if feature already exists
-        const exists = await featureExists(projectPath, featureOptions.featureName);
+        // Step 3: Determine feature path
+        const basePath = options.path || path.join('src', 'features');
+        const featurePath = path.join(projectPath, basePath, featureOptions.featureName);
+
+        // Check if feature already exists
+        const exists = await featureExists(projectPath, featureOptions.featureName, basePath);
         if (exists) {
-          logError(`Feature '${featureOptions.featureName}' already exists!`);
+          logError(`Feature '${featureOptions.featureName}' already exists at ${basePath}!`);
           process.exit(1);
         }
 
         // Step 4: Generate feature structure
         spinner.start('Generating feature files...');
-        const featurePath = path.join(projectPath, 'src', 'features', featureOptions.featureName);
 
         await generateFeatureStructure({
           featureName: featureOptions.featureName,
@@ -100,14 +105,16 @@ export const registerFeatureCommand = (program: Command) => {
             projectPath,
             featureOptions.featureName,
             featureOptions.persistStore,
+            basePath,
           );
           spinner.succeed('Feature registered in rootReducer');
         }
 
         // Success message
+        const displayPath = path.join(basePath, featureOptions.featureName);
         log(pc.green(`\n✨ Feature '${featureOptions.featureName}' created successfully!\n`));
         log(pc.dim('Generated files:'));
-        log(pc.dim(`  📂 src/features/${featureOptions.featureName}/`));
+        log(pc.dim(`  📂 ${displayPath}/`));
         log(pc.dim(`     ├── components/`));
         log(pc.dim(`     ├── hooks/`));
         log(pc.dim(`     ├── types/`));
@@ -116,22 +123,19 @@ export const registerFeatureCommand = (program: Command) => {
         log(pc.dim(`     └── index.ts\n`));
 
         log(pc.cyan('Next steps:'));
+        const importPath = basePath.replace(/^src\//, '@/');
         log(
           pc.dim(
-            `  1. Import and use the feature: import { ${featureOptions.featureName} } from '@/features/${featureOptions.featureName}'`,
+            `  1. Import and use the feature: import { ${featureOptions.featureName} } from '${importPath}/${featureOptions.featureName}'`,
           ),
         );
         if (featureOptions.createStore) {
-          log(
-            pc.dim(
-              `  2. Customize your Redux slice in: src/features/${featureOptions.featureName}/store/`,
-            ),
-          );
+          log(pc.dim(`  2. Customize your Redux slice in: ${displayPath}/store/`));
         }
         if (featureOptions.createService) {
           log(
             pc.dim(
-              `  3. Add API methods in: src/features/${featureOptions.featureName}/services/${featureOptions.featureName}.service.ts`,
+              `  3. Add API methods in: ${displayPath}/services/${featureOptions.featureName}.service.ts`,
             ),
           );
         }

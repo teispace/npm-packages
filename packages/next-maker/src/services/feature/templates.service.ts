@@ -79,18 +79,26 @@ const generateHookFile = async (options: FeatureGenerationOptions): Promise<void
   if (createStore) {
     content = `'use client';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { select${componentName}State } from '../store/${featureName}.selectors';
+import { select${componentName}State, setLoading, setError } from '../store/${featureName}.selectors';
 
 export const ${hookName} = () => {
   const dispatch = useAppDispatch();
   const state = useAppSelector(select${componentName}State);
 
-  // Add your actions here
-  // const handleAction = () => dispatch(someAction());
+  const handleSetLoading = (loading: boolean) => {
+    dispatch(setLoading(loading));
+    console.log('Loading state updated:', loading);
+  };
+
+  const handleSetError = (error: string | null) => {
+    dispatch(setError(error));
+    console.log('Error state updated:', error);
+  };
 
   return {
     state,
-    // Add your methods here
+    setLoading: handleSetLoading,
+    setError: handleSetError,
   } as const;
 };
 `;
@@ -146,17 +154,20 @@ export const ${camelName}Slice = createSlice({
   name: '${camelName}',
   initialState,
   reducers: {
-    // Add your reducers here
-    // Example:
-    // setLoading: (state, action: PayloadAction<boolean>) => {
-    //   state.loading = action.payload;
-    // },
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.loading = action.payload;
+    },
+    setError: (state, action: PayloadAction<string | null>) => {
+      state.error = action.payload;
+    },
+    resetState: (state) => {
+      state.loading = false;
+      state.error = null;
+    },
   },
 });
 
-export const {
-  // Export your actions here
-} = ${camelName}Slice.actions;
+export const { setLoading, setError, resetState } = ${camelName}Slice.actions;
 
 export const ${camelName}Reducer = ${camelName}Slice.reducer;
 `;
@@ -167,6 +178,7 @@ export const ${camelName}Reducer = ${camelName}Slice.reducer;
   const selectorsContent = `import { RootState } from '@/store/rootReducer';
 
 export const select${componentName}State = (state: RootState) => state.${camelName};
+export { setLoading, setError, resetState } from './${featureName}.slice';
 `;
 
   await writeFile(path.join(featurePath, 'store', `${featureName}.selectors.ts`), selectorsContent);
@@ -202,92 +214,77 @@ const generateServiceFile = async (options: FeatureGenerationOptions): Promise<v
   let content: string;
 
   if (httpClient === 'axios') {
-    content = `import axios from 'axios';
-
-// Configure your axios instance
-const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api',
-});
+    content = `import { axiosClient } from '@/lib/utils/http';
 
 export const ${camelName}Service = {
   // Add your API methods here
   // Example:
   // getAll: async () => {
-  //   const response = await apiClient.get('/${featureName}');
-  //   return response.data;
+  //   const result = await axiosClient.get<YourType[]>('/${featureName}');
+  //   if (result.isErr()) throw result.error;
+  //   return result.value;
   // },
   //
   // getById: async (id: string) => {
-  //   const response = await apiClient.get(\`/${featureName}/\${id}\`);
-  //   return response.data;
+  //   const result = await axiosClient.get<YourType>(\`/${featureName}/\${id}\`);
+  //   if (result.isErr()) throw result.error;
+  //   return result.value;
   // },
   //
-  // create: async (data: any) => {
-  //   const response = await apiClient.post('/${featureName}', data);
-  //   return response.data;
+  // create: async (data: YourCreateType) => {
+  //   const result = await axiosClient.post<YourType>('/${featureName}', data);
+  //   if (result.isErr()) throw result.error;
+  //   return result.value;
   // },
   //
-  // update: async (id: string, data: any) => {
-  //   const response = await apiClient.put(\`/${featureName}/\${id}\`, data);
-  //   return response.data;
+  // update: async (id: string, data: YourUpdateType) => {
+  //   const result = await axiosClient.put<YourType>(\`/${featureName}/\${id}\`, data);
+  //   if (result.isErr()) throw result.error;
+  //   return result.value;
   // },
   //
   // delete: async (id: string) => {
-  //   const response = await apiClient.delete(\`/${featureName}/\${id}\`);
-  //   return response.data;
+  //   const result = await axiosClient.delete<void>(\`/${featureName}/\${id}\`);
+  //   if (result.isErr()) throw result.error;
+  //   return result.value;
   // },
 };
 `;
   } else {
     // fetch
-    content = `const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-
-// Helper function for fetch requests
-const fetchAPI = async (endpoint: string, options?: RequestInit) => {
-  const response = await fetch(\`\${API_URL}\${endpoint}\`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-    ...options,
-  });
-
-  if (!response.ok) {
-    throw new Error(\`HTTP error! status: \${response.status}\`);
-  }
-
-  return response.json();
-};
+    content = `import { fetchClient } from '@/lib/utils/http';
 
 export const ${camelName}Service = {
   // Add your API methods here
   // Example:
   // getAll: async () => {
-  //   return fetchAPI('/${featureName}');
+  //   const result = await fetchClient.get<YourType[]>('/${featureName}');
+  //   if (result.isErr()) throw result.error;
+  //   return result.value;
   // },
   //
   // getById: async (id: string) => {
-  //   return fetchAPI(\`/${featureName}/\${id}\`);
+  //   const result = await fetchClient.get<YourType>(\`/${featureName}/\${id}\`);
+  //   if (result.isErr()) throw result.error;
+  //   return result.value;
   // },
   //
-  // create: async (data: any) => {
-  //   return fetchAPI('/${featureName}', {
-  //     method: 'POST',
-  //     body: JSON.stringify(data),
-  //   });
+  // create: async (data: YourCreateType) => {
+  //   const result = await fetchClient.post<YourType>('/${featureName}', data);
+  //   if (result.isErr()) throw result.error;
+  //   return result.value;
   // },
   //
-  // update: async (id: string, data: any) => {
-  //   return fetchAPI(\`/${featureName}/\${id}\`, {
-  //     method: 'PUT',
-  //     body: JSON.stringify(data),
-  //   });
+  // update: async (id: string, data: YourUpdateType) => {
+  //   const result = await fetchClient.put<YourType>(\`/${featureName}/\${id}\`, data);
+  //   if (result.isErr()) throw result.error;
+  //   return result.value;
   // },
   //
   // delete: async (id: string) => {
-  //   return fetchAPI(\`/${featureName}/\${id}\`, {
-  //     method: 'DELETE',
-  //   });
+  //   const result = await fetchClient.delete<void>(\`/${featureName}/\${id}\`);
+  //   if (result.isErr()) throw result.error;
+  //   return result.value;
   // },
 };
 `;

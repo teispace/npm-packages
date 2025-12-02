@@ -39,7 +39,7 @@ export const promptForFeatureDetails = async (
   }
 
   // Redux store questions
-  if (hasRedux && skipStore === undefined) {
+  if (hasRedux && skipStore === undefined && storeOption === undefined) {
     questions.push({
       type: 'confirm',
       name: 'createStore',
@@ -61,7 +61,12 @@ export const promptForFeatureDetails = async (
   }
 
   // HTTP service questions
-  if (httpClient && httpClient !== 'none' && skipService === undefined) {
+  if (
+    httpClient &&
+    httpClient !== 'none' &&
+    skipService === undefined &&
+    serviceClient === undefined
+  ) {
     questions.push({
       type: 'confirm',
       name: 'createService',
@@ -69,7 +74,7 @@ export const promptForFeatureDetails = async (
       initial: true,
     });
 
-    if (httpClient === 'both' && !serviceClient) {
+    if (httpClient === 'both') {
       questions.push({
         type: 'select',
         name: 'selectedHttpClient',
@@ -103,7 +108,12 @@ export const promptForFeatureDetails = async (
           ? false
           : (answers.persistStore as boolean) || false,
     httpClient: httpClient || 'none',
-    createService: skipService === true ? false : (answers.createService as boolean) || false,
+    createService:
+      skipService === true
+        ? false
+        : serviceClient !== undefined
+          ? true
+          : (answers.createService as boolean) || false,
     selectedHttpClient:
       serviceClient ||
       (answers.selectedHttpClient as 'axios' | 'fetch' | undefined) ||

@@ -33,13 +33,22 @@ export const detectProjectSetup = async (projectPath: string): Promise<ProjectDe
     // Check for i18n
     hasI18n = !!dependencies['next-intl'];
 
-    // Check if fetch service exists (custom implementation)
-    const fetchServicePath = path.join(projectPath, 'src', 'services', 'api', 'fetch.service.ts');
+    // Check if axios client exists
+    const axiosClientPath = path.join(projectPath, 'src', 'lib', 'utils', 'http', 'axios-client');
     try {
-      await access(fetchServicePath);
+      await access(axiosClientPath);
+      hasAxios = hasAxios && true; // Confirm axios is both installed and client exists
+    } catch {
+      hasAxios = false; // Axios client doesn't exist
+    }
+
+    // Check if fetch client exists
+    const fetchClientPath = path.join(projectPath, 'src', 'lib', 'utils', 'http', 'fetch-client');
+    try {
+      await access(fetchClientPath);
       hasFetch = true;
     } catch {
-      // Fetch service doesn't exist, but that's ok
+      hasFetch = false; // Fetch client doesn't exist
     }
 
     // Determine HTTP client setup
@@ -64,8 +73,12 @@ export const detectProjectSetup = async (projectPath: string): Promise<ProjectDe
   }
 };
 
-export const featureExists = async (projectPath: string, featureName: string): Promise<boolean> => {
-  const featurePath = path.join(projectPath, 'src', 'features', featureName);
+export const featureExists = async (
+  projectPath: string,
+  featureName: string,
+  basePath: string = path.join('src', 'features'),
+): Promise<boolean> => {
+  const featurePath = path.join(projectPath, basePath, featureName);
   try {
     await access(featurePath);
     return true;

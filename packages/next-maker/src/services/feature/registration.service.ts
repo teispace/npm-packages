@@ -6,6 +6,7 @@ export const registerFeatureInRootReducer = async (
   projectPath: string,
   featureName: string,
   withPersist: boolean,
+  basePath: string = path.join('src', 'features'),
 ): Promise<void> => {
   const rootReducerPath = path.join(projectPath, 'src', 'store', 'rootReducer.ts');
 
@@ -16,10 +17,13 @@ export const registerFeatureInRootReducer = async (
     const reducerName = `${camelName}Reducer`;
     const importName = withPersist ? `${camelName}PersistConfig` : '';
 
+    // Convert path to import alias format (src/features -> @/features)
+    const importPath = basePath.replace(/^src\//, '@/');
+
     // Add import statement
     const importStatement = withPersist
-      ? `import { ${reducerName}, ${importName} } from '@/features/${featureName}/store';`
-      : `import { ${reducerName} } from '@/features/${featureName}/store';`;
+      ? `import { ${reducerName}, ${importName} } from '${importPath}/${featureName}/store';`
+      : `import { ${reducerName} } from '${importPath}/${featureName}/store';`;
 
     // Find the last import statement
     const importRegex = /import\s+.*\s+from\s+['"].*['"];?\n/g;
