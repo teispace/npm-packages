@@ -187,8 +187,21 @@ const cleanupDarkMode = async (projectPath: string, answers: ProjectPrompts): Pr
     const globalsCssPath = path.join(projectPath, PROJECT_PATHS.GLOBALS_CSS);
     if (fileExists(globalsCssPath)) {
       let cssContent = await readFile(globalsCssPath);
-      cssContent = cssContent.replace(/@custom-variant dark \(.*?\);\n?/, '');
+      // Remove dark mode custom variant
+      cssContent = cssContent.replace(/@custom-variant dark \(.*?\);\n\n/, '');
+      // Remove dark and light color definitions
+      cssContent = cssContent.replace(/@theme \{[\s\S]*?\}\n/, '');
       await writeFile(globalsCssPath, cssContent);
+    }
+
+    // Remove dark mode classes from layout if not using i18n
+    if (!answers.i18n) {
+      const layoutPath = path.join(projectPath, PROJECT_PATHS.ROOT_LAYOUT);
+      if (fileExists(layoutPath)) {
+        let layoutContent = await readFile(layoutPath);
+        layoutContent = layoutContent.replace(/bg-light dark:bg-dark /g, '');
+        await writeFile(layoutPath, layoutContent);
+      }
     }
   }
 };

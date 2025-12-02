@@ -100,8 +100,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning={true}>
-      <body className={\`\${livvic.variable} bg-light dark:bg-dark antialiased\`}>
+    <html lang="en" suppressHydrationWarning={${answers.darkMode ? 'true' : 'false'}}>
+      <body className={\`\${livvic.variable} ${answers.darkMode ? 'bg-light dark:bg-dark ' : ''}antialiased\`}>
         <RootProvider>
           {children}
         </RootProvider>
