@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.2.0...next-maker-v1.3.0) (2025-12-03)
+
+
+### Features
+
+* add internationalization (i18n) setup and related utilities ([3715396](https://github.com/teispace/npm-packages/commit/3715396fac2d5b7c30109f0ff5e8e0d7f86d1a46))
+
 ## [1.2.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.1.0...next-maker-v1.2.0) (2025-12-03)
 
 
