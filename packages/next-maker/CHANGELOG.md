@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.1.0...next-maker-v1.2.0) (2025-12-03)
+
+
+### Features
+
+* add Redux Toolkit setup command and related utilities ([f72dd00](https://github.com/teispace/npm-packages/commit/f72dd00aa4f94f1285075b8d51dff0f97ba0c281))
+
 ## [1.1.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.0.1...next-maker-v1.1.0) (2025-12-03)
 
 
