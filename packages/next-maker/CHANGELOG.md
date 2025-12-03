@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.3.0...next-maker-v1.4.0) (2025-12-03)
+
+
+### Features
+
+* implement HTTP client setup with fetch and axios options ([623bb5b](https://github.com/teispace/npm-packages/commit/623bb5b12e71bad7278515c7e8fe615eaf1d6aa1))
+
 ## [1.3.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.2.0...next-maker-v1.3.0) (2025-12-03)
 
 
