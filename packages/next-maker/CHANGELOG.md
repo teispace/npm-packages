@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.0.0...next-maker-v1.0.1) (2025-12-03)
+
+
+### Code Refactoring
+
+* remove dark theme, http client, i18n, and redux setup services ([ea5d98c](https://github.com/teispace/npm-packages/commit/ea5d98cd4792909b769849d134def4c3fe6505cd))
+
 ## [1.0.0](https://github.com/teispace/npm-packages/compare/next-maker-v0.4.0...next-maker-v1.0.0) (2025-12-03)
 
 
