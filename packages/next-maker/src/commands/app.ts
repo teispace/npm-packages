@@ -4,7 +4,7 @@ import pc from 'picocolors';
 import { startSpinner } from '../config/spinner';
 import { promptForProjectDetails } from '../prompts/create-app.prompt';
 import { deleteDirectory, fileExists } from '../core/files';
-import { initializeGit, addRemote } from '../core/git';
+import { initializeGit } from '../core/git';
 import { installDependencies, runScript } from '../core/package-manager';
 import { log, printBanner } from '../config';
 import { cloneTemplate } from '../services/init/template.service';
@@ -84,10 +84,8 @@ const createApp = async (initialName?: string): Promise<void> => {
 
     // 6. Initialize Git
     spinner.text = 'Initializing Git...';
-    await initializeGit(projectPath);
-    if (answers.gitRemote) {
-      await addRemote(projectPath, answers.gitRemote);
-    }
+    // Pass gitRemote to initialize git with remote if provided
+    await initializeGit(projectPath, answers.gitRemote);
 
     // 7. Install Dependencies
     spinner.text = 'Installing dependencies...';

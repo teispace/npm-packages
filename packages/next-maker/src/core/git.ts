@@ -3,11 +3,17 @@ import { promisify } from 'node:util';
 
 const execAsync = promisify(exec);
 
-export const initializeGit = async (cwd: string): Promise<void> => {
+export const initializeGit = async (cwd: string, gitRemote?: string): Promise<void> => {
   try {
+    // Initialize git repository
     await execAsync('git init', { cwd });
     await execAsync('git add .', { cwd });
     await execAsync('git commit -m "Initial commit from @teispace/next-maker"', { cwd });
+
+    // Add remote origin if GitHub URL is provided
+    if (gitRemote) {
+      await execAsync(`git remote add origin ${gitRemote}`, { cwd });
+    }
   } catch (error) {
     // Ignore error if git is not installed or fails
     console.warn('Failed to initialize git repository', error);

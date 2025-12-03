@@ -38,3 +38,49 @@ export const getPackageManager = (): PackageManager => {
   }
   return 'npm';
 };
+
+export const detectPackageManager = async (cwd: string): Promise<PackageManager> => {
+  const { existsSync } = await import('node:fs');
+  const path = await import('node:path');
+
+  // Check for lock files
+  if (existsSync(path.join(cwd, 'pnpm-lock.yaml'))) return 'pnpm';
+  if (existsSync(path.join(cwd, 'yarn.lock'))) return 'yarn';
+  if (existsSync(path.join(cwd, 'bun.lockb'))) return 'bun';
+  if (existsSync(path.join(cwd, 'package-lock.json'))) return 'npm';
+
+  // Fallback to environment variable
+  return getPackageManager();
+};
+
+export const installPackages = async (
+  cwd: string,
+  manager: PackageManager,
+  packages: string[],
+): Promise<void> => {
+  if (packages.length === 0) return;
+
+  const installCommand = getInstallCommand(manager);
+  const command = `${installCommand} ${packages.join(' ')}`;
+
+  try {
+    await execAsync(command, { cwd });
+  } catch (error) {
+    throw new Error(`Failed to install packages with ${manager}: ${error}`);
+  }
+};
+
+const getInstallCommand = (manager: PackageManager): string => {
+  switch (manager) {
+    case 'npm':
+      return 'npm install';
+    case 'yarn':
+      return 'yarn add';
+    case 'pnpm':
+      return 'pnpm add';
+    case 'bun':
+      return 'bun add';
+    default:
+      return 'npm install';
+  }
+};
