@@ -11,6 +11,11 @@ export const writeFile = async (filePath: string, content: string): Promise<void
   await fs.writeFile(filePath, content, 'utf-8');
 };
 
+export const copyFile = async (source: string, destination: string): Promise<void> => {
+  await fs.mkdir(path.dirname(destination), { recursive: true });
+  await fs.copyFile(source, destination);
+};
+
 export const deleteFile = async (filePath: string): Promise<void> => {
   if (existsSync(filePath)) {
     await fs.unlink(filePath);

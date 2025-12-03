@@ -84,3 +84,8 @@ const getInstallCommand = (manager: PackageManager): string => {
       return 'npm install';
   }
 };
+
+export const installPackage = async (cwd: string, packageName: string): Promise<void> => {
+  const manager = await detectPackageManager(cwd);
+  await installPackages(cwd, manager, [packageName]);
+};

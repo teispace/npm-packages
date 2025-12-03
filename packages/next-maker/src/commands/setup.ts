@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import pc from 'picocolors';
 import Enquirer from 'enquirer';
 import { log, logError, spinner } from '../config';
+import { setupDarkTheme } from '../services/setup/dark-theme';
 
 const { prompt } = Enquirer;
 
@@ -41,6 +42,11 @@ export const registerSetupCommand = (program: Command) => {
             },
           ]);
 
+          if (setupChoice.feature === 'Dark Theme') {
+            await setupDarkTheme(process.cwd());
+            return;
+          }
+
           if (setupChoice.feature === 'Cancel') {
             log(pc.yellow('Setup cancelled.'));
             return;
@@ -55,8 +61,7 @@ export const registerSetupCommand = (program: Command) => {
             log(pc.dim('This feature will be available in a future update.'));
           }
           if (options.darkTheme) {
-            log(pc.yellow('\n⚠️  Dark Theme setup is not implemented yet.'));
-            log(pc.dim('This feature will be available in a future update.'));
+            await setupDarkTheme(process.cwd());
           }
           if (options.redux) {
             log(pc.yellow('\n⚠️  Redux Toolkit setup is not implemented yet.'));
