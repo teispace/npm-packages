@@ -3,6 +3,7 @@ import pc from 'picocolors';
 import Enquirer from 'enquirer';
 import { log, logError, spinner } from '../config';
 import { setupDarkTheme } from '../services/setup/dark-theme';
+import { setupRedux } from '../services/setup/redux';
 
 const { prompt } = Enquirer;
 
@@ -16,14 +17,16 @@ interface SetupOptions {
 export const registerSetupCommand = (program: Command) => {
   program
     .command('setup')
-    .description('Setup additional features for your Next.js project')
+    .description('Setup features in an existing Next.js project')
     .option('--http-client <type>', 'Setup HTTP client (axios|fetch|both)')
-    .option('--dark-theme', 'Setup dark theme support')
-    .option('--redux', 'Setup Redux Toolkit with persistence')
+    .option('--dark-theme', 'Setup Dark Theme (Tailwind + next-themes)')
+    .option('--redux', 'Setup Redux Toolkit')
     .option('--i18n', 'Setup next-intl for internationalization')
     .action(async (options: SetupOptions) => {
       try {
         log(pc.cyan('\n🔧 Setup Wizard\n'));
+
+        let feature: string | undefined;
 
         // If no options provided, show interactive menu
         if (!options.httpClient && !options.darkTheme && !options.redux && !options.i18n) {
@@ -33,27 +36,29 @@ export const registerSetupCommand = (program: Command) => {
               name: 'feature',
               message: 'What would you like to setup?',
               choices: [
-                'HTTP Client (Axios/Fetch)',
                 'Dark Theme',
                 'Redux Toolkit',
+                'HTTP Client (Axios/Fetch)',
                 'Internationalization (next-intl)',
                 'Cancel',
               ],
             },
           ]);
+          feature = setupChoice.feature;
 
-          if (setupChoice.feature === 'Dark Theme') {
-            await setupDarkTheme(process.cwd());
-            return;
-          }
-
-          if (setupChoice.feature === 'Cancel') {
+          if (feature === 'Cancel') {
             log(pc.yellow('Setup cancelled.'));
             return;
           }
 
-          log(pc.yellow(`\n⚠️  ${setupChoice.feature} setup is not implemented yet.`));
-          log(pc.dim('This feature will be available in a future update.'));
+          if (feature === 'Dark Theme') {
+            await setupDarkTheme(process.cwd());
+          } else if (feature === 'Redux Toolkit') {
+            await setupRedux(process.cwd());
+          } else {
+            log(pc.yellow(`\n⚠️  ${feature} setup is not implemented yet.`));
+            log(pc.dim('This feature will be available in a future update.'));
+          }
         } else {
           // Direct setup via flags
           if (options.httpClient) {
@@ -64,8 +69,7 @@ export const registerSetupCommand = (program: Command) => {
             await setupDarkTheme(process.cwd());
           }
           if (options.redux) {
-            log(pc.yellow('\n⚠️  Redux Toolkit setup is not implemented yet.'));
-            log(pc.dim('This feature will be available in a future update.'));
+            await setupRedux(process.cwd());
           }
           if (options.i18n) {
             log(pc.yellow('\n⚠️  Internationalization setup is not implemented yet.'));
