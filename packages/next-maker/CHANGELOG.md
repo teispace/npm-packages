@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/teispace/npm-packages/compare/next-maker-v0.4.0...next-maker-v1.0.0) (2025-12-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* Major CLI redesign with new setup command and improved feature management
+
+### Features
+
+* add post-initialization setup command and modernize CLI architecture ([ae6a5d6](https://github.com/teispace/npm-packages/commit/ae6a5d657fafe3973ac83c67628721809ebb8080))
+
 ## [0.4.0](https://github.com/teispace/npm-packages/compare/next-maker-v0.3.0...next-maker-v0.4.0) (2025-12-02)
 
 
