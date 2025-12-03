@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.0.1...next-maker-v1.1.0) (2025-12-03)
+
+
+### Features
+
+* implement dark theme setup and related utilities ([0468de1](https://github.com/teispace/npm-packages/commit/0468de18bf9526cc87d71800da6cd04d8e9a60bd))
+
 ## [1.0.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.0.0...next-maker-v1.0.1) (2025-12-03)
 
 
