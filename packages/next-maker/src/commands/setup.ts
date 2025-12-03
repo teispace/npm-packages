@@ -4,6 +4,7 @@ import Enquirer from 'enquirer';
 import { log, logError, spinner } from '../config';
 import { setupDarkTheme } from '../services/setup/dark-theme';
 import { setupRedux } from '../services/setup/redux';
+import { setupI18n } from '../services/setup/i18n';
 
 const { prompt } = Enquirer;
 
@@ -55,6 +56,8 @@ export const registerSetupCommand = (program: Command) => {
             await setupDarkTheme(process.cwd());
           } else if (feature === 'Redux Toolkit') {
             await setupRedux(process.cwd());
+          } else if (feature === 'Internationalization (next-intl)') {
+            await setupI18n(process.cwd());
           } else {
             log(pc.yellow(`\n⚠️  ${feature} setup is not implemented yet.`));
             log(pc.dim('This feature will be available in a future update.'));
@@ -72,8 +75,7 @@ export const registerSetupCommand = (program: Command) => {
             await setupRedux(process.cwd());
           }
           if (options.i18n) {
-            log(pc.yellow('\n⚠️  Internationalization setup is not implemented yet.'));
-            log(pc.dim('This feature will be available in a future update.'));
+            await setupI18n(process.cwd());
           }
         }
       } catch (error) {
