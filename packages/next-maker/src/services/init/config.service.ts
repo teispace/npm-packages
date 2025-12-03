@@ -48,9 +48,17 @@ export const configurePackageJson = async (
       // and let the user's environment handle it.
       delete pkg.packageManager;
 
-      if (gitHomepage) pkg.homepage = gitHomepage;
-      if (gitIssues) pkg.bugs = { url: gitIssues };
-      if (gitRemote) pkg.repository = { type: 'git', url: gitRemote };
+      // Handle git-related fields based on whether GitHub URL was provided
+      if (answers.gitRemote) {
+        if (gitHomepage) pkg.homepage = gitHomepage;
+        if (gitIssues) pkg.bugs = { url: gitIssues };
+        if (gitRemote) pkg.repository = { type: 'git', url: gitRemote };
+      } else {
+        // If no GitHub URL provided, remove template's git-related fields
+        delete pkg.homepage;
+        delete pkg.bugs;
+        delete pkg.repository;
+      }
 
       // Remove dependencies based on choices
       if (!answers.redux) {

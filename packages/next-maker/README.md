@@ -24,22 +24,36 @@ next-maker <command> [name] [options]
 Generate a complete Next.js application with production-ready configuration.
 
 ```bash
+npx @teispace/next-maker init [project-name]
+# or
 npx @teispace/next-maker app [project-name]
 # or simply
 npx @teispace/next-maker [project-name]
 ```
 
-**Features included:**
+**Interactive Setup:**
+
+During initialization, you'll be prompted to configure:
+
+- 📦 **Package Manager** (npm, yarn, pnpm, bun)
+- 🔗 **GitHub Repository** (optional - configures remote origin)
+- 🌐 **HTTP Client** (axios, fetch, both, or none)
+- 🌙 **Dark Mode** (next-themes integration)
+- 🔄 **Redux Toolkit** (with redux-persist)
+- 🌍 **Internationalization** (next-intl)
+- 📋 **Community Files** (CODE_OF_CONDUCT, CONTRIBUTING, etc.)
+- 🐳 **Docker** support
+- 🔧 **CI/CD** configuration
+- 🎯 **Pre-commit hooks** (Husky)
+
+**Core Features:**
 
 - ⚡ Next.js 15+ with App Router
 - 🔷 TypeScript (strict mode)
 - 🎨 Tailwind CSS v4
-- 🔄 Redux Toolkit with redux-persist
-- 🌐 next-intl for internationalization
-- 📡 AxiosClient & FetchClient (Result pattern)
+- 📡 Result-based HTTP clients
 - 🏗️ Feature-based DDD architecture
 - 🎯 ESLint + Prettier configured
-- 🐳 Docker support
 
 **Example:**
 
@@ -49,7 +63,88 @@ npx @teispace/next-maker my-awesome-app
 
 ---
 
-### 2. Generate a Feature Module
+### 2. Setup Additional Features
+
+Add features to your existing Next.js project after initialization.
+
+```bash
+npx @teispace/next-maker setup [options]
+```
+
+**Options:**
+
+- `--http-client <type>` - Setup HTTP client (axios|fetch|both)
+- `--dark-theme` - Setup dark theme support (next-themes)
+- `--redux` - Setup Redux Toolkit with persistence
+- `--i18n` - Setup next-intl for internationalization
+
+**Features:**
+
+Each setup command:
+
+- ✅ Checks if already configured (exits gracefully)
+- 📁 Copies necessary files from template
+- 🔧 Updates configuration files
+- 📦 Installs required packages
+- 🔗 Integrates with existing providers
+
+**Examples:**
+
+```bash
+# Interactive menu
+npx @teispace/next-maker setup
+
+# Add HTTP clients
+npx @teispace/next-maker setup --http-client both
+
+# Add dark mode
+npx @teispace/next-maker setup --dark-theme
+
+# Add Redux
+npx @teispace/next-maker setup --redux
+
+# Add internationalization
+npx @teispace/next-maker setup --i18n
+```
+
+**What Gets Setup:**
+
+**HTTP Client:**
+
+- Copies axios-client and/or fetch-client to `src/lib/utils/http/`
+- Updates `src/lib/utils/http/index.ts` with exports
+- Installs axios package (if selected)
+
+**Dark Theme:**
+
+- Copies `CustomThemeProvider.tsx` to `src/providers/`
+- Adds `@custom-variant dark` to `src/styles/globals.css`
+- Adds CSS variables `--color-dark` and `--color-light`
+- Updates layout.tsx with `bg-light dark:bg-dark` classes
+- Integrates with RootProvider
+- Installs next-themes package
+
+**Redux Toolkit:**
+
+- Copies store configuration to `src/store/`
+- Creates hooks, persistor, and rootReducer
+- Copies `StoreProvider.tsx` to `src/providers/`
+- Integrates with RootProvider
+- Installs @reduxjs/toolkit, react-redux, redux-persist
+
+**Internationalization:**
+
+- Copies i18n directory (`routing.ts`, `request.ts`, `navigation.ts`, `translations/`)
+- Copies `types/i18n.ts` and `lib/config/app-locales.ts`
+- Creates/updates `src/proxy.ts` (middleware)
+- Updates `next.config.ts` with createNextIntlPlugin
+- Updates RootProvider with NextIntlClientProvider
+- Creates `[locale]` route structure
+- Installs next-intl package
+
+---
+
+### 3. Generate a Feature Module
 
 Create a complete feature module following Domain-Driven Design principles.
 
@@ -100,7 +195,7 @@ npx @teispace/next-maker feature auth --store persist --service fetch --path src
 
 ---
 
-### 3. Generate a Redux Slice
+### 4. Generate a Redux Slice
 
 Create a Redux Toolkit slice with persistence support.
 
@@ -142,7 +237,7 @@ npx @teispace/next-maker slice theme --no-persist --path src/store/slices
 
 ---
 
-### 4. Generate an API Service
+### 5. Generate an API Service
 
 Create an API service with HTTP client integration.
 
@@ -185,7 +280,7 @@ npx @teispace/next-maker service analytics --axios --path src/api/services
 ### Quick Start - New Project
 
 ```bash
-# Create a new Next.js app
+# Create a new Next.js app with interactive setup
 npx @teispace/next-maker my-project
 
 # Navigate to the project
@@ -196,6 +291,24 @@ npx @teispace/next-maker feature auth --store persist --service axios
 
 # Start development server
 npm run dev
+```
+
+### Setup Existing Project
+
+```bash
+# Add features to existing Next.js project
+
+# Add HTTP clients if you initially selected 'none'
+npx @teispace/next-maker setup --http-client both
+
+# Add dark mode support
+npx @teispace/next-maker setup --dark-theme
+
+# Add Redux state management
+npx @teispace/next-maker setup --redux
+
+# Add internationalization
+npx @teispace/next-maker setup --i18n
 ```
 
 ### Feature-Based Development
@@ -220,6 +333,8 @@ npx @teispace/next-maker service metrics --fetch --path features/dashboard/servi
 npx @teispace/next-maker --help
 
 # Command-specific help
+npx @teispace/next-maker init --help
+npx @teispace/next-maker setup --help
 npx @teispace/next-maker feature --help
 npx @teispace/next-maker slice --help
 npx @teispace/next-maker service --help
@@ -228,6 +343,17 @@ npx @teispace/next-maker service --help
 ---
 
 ## Key Features
+
+### 🚀 Post-Installation Setup
+
+Add features to your project anytime with the `setup` command:
+
+- HTTP clients (axios/fetch) even if you initially chose "none"
+- Dark theme with automatic CSS and layout updates
+- Redux Toolkit with complete store configuration
+- Internationalization with routing and middleware
+- Smart detection prevents duplicate setups
+- Automatic package installation
 
 ### 🏗️ Feature-First Architecture
 
@@ -239,6 +365,7 @@ All generators follow a feature-based DDD approach by default, organizing code b
 - Correct import paths for any custom location
 - Optional redux-persist configuration
 - Demo actions included (setLoading, setError, resetState)
+- Can be added post-initialization via `setup --redux`
 
 ### 📡 HTTP Client Support
 
@@ -246,6 +373,23 @@ All generators follow a feature-based DDD approach by default, organizing code b
 - **FetchClient**: Same Result pattern with native fetch
 - Auto-detects available clients
 - Type-safe API calls with generics
+- Can be added later via `setup --http-client`
+
+### 🌙 Dark Mode Support
+
+- next-themes integration with CustomThemeProvider
+- Automatic CSS variable setup (`--color-dark`, `--color-light`)
+- Tailwind CSS v4 custom variant (`@custom-variant dark`)
+- Layout className updates (`bg-light dark:bg-dark`)
+- Can be added via `setup --dark-theme`
+
+### 🌍 Internationalization
+
+- next-intl with routing middleware
+- Translation management system
+- Locale type safety
+- [locale] route structure
+- Can be added via `setup --i18n`
 
 ### 🎯 Intelligent Path Handling
 
@@ -259,9 +403,10 @@ All commands support `--path` for custom locations:
 ### ✅ Built-in Validations
 
 - Checks for required dependencies (Redux, HTTP clients)
-- Prevents duplicate generation
+- Prevents duplicate generation and setups
 - Validates naming conventions (kebab-case)
 - Ensures consistent project structure
+- Validates GitHub repository URLs
 
 ---
 
@@ -274,6 +419,26 @@ All commands support:
 - `[name]` - Resource name (kebab-case, prompted if omitted)
 - `--path <path>` - Custom generation path
 - `--help` - Show command help
+
+### Init/App Options
+
+Interactive prompts guide you through:
+
+- Project name, description, version
+- Package manager selection
+- GitHub repository (optional)
+- HTTP client selection
+- Dark mode, Redux, i18n toggles
+- Docker, CI/CD, pre-commit hooks
+
+### Setup Options
+
+```bash
+--http-client <type>         # Setup HTTP client (axios|fetch|both)
+--dark-theme                 # Setup dark theme support
+--redux                      # Setup Redux Toolkit
+--i18n                       # Setup internationalization
+```
 
 ### Feature Options
 
@@ -377,10 +542,18 @@ yarn build
 
 ```bash
 # Test app generation
-node dist/index.js app test-project
+node dist/index.js init test-project
+
+# Navigate to test project
+cd test-project
+
+# Test setup commands
+node ../dist/index.js setup --http-client both
+node ../dist/index.js setup --dark-theme
+node ../dist/index.js setup --redux
+node ../dist/index.js setup --i18n
 
 # Test feature generation
-cd test-project
 node ../dist/index.js feature auth --store persist --service axios
 
 # Test slice generation
