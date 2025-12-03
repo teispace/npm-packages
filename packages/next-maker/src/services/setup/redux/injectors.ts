@@ -16,6 +16,14 @@ export const updateRootProvider = async (projectPath: string): Promise<void> => 
   if (fileExists(rootProviderPath)) {
     let rootProviderContent = await readFile(rootProviderPath);
 
+    // Handle 'use client'
+    const useClientDirective = "'use client';";
+    const hasUseClient = rootProviderContent.includes(useClientDirective);
+
+    if (hasUseClient) {
+      rootProviderContent = rootProviderContent.replace(useClientDirective, '').trim();
+    }
+
     // Add import
     if (!rootProviderContent.includes('StoreProvider')) {
       rootProviderContent = rootProviderContent.replace(
@@ -37,16 +45,20 @@ export const updateRootProvider = async (projectPath: string): Promise<void> => 
       }
     }
 
+    // Re-add 'use client' at the top
+    if (hasUseClient) {
+      rootProviderContent = useClientDirective + '\n' + rootProviderContent;
+    }
+
     // Wrap children
     // We want StoreProvider to be the outermost (or close to it)
     if (!rootProviderContent.includes('<StoreProvider>')) {
-      const returnMatch = rootProviderContent.match(/return \(\s*([\s\S]*?)\s*\);/);
+      const returnMatch = rootProviderContent.match(/return\s*(?:\(\s*)?([\s\S]*?)(?:\s*\))?;/);
       if (returnMatch) {
+        const existingJsx = returnMatch[1];
         rootProviderContent = rootProviderContent.replace(
-          /return \(\s*<([^>]+)([^>]*)>([\s\S]*)<\/\1>\s*\);/,
-          (match, tag, attrs, content) => {
-            return `return (\n    <StoreProvider>\n      <${tag}${attrs}>${content}</${tag}>\n    </StoreProvider>\n  );`;
-          },
+          returnMatch[0],
+          `return (\n    <StoreProvider>\n      ${existingJsx}\n    </StoreProvider>\n  );`,
         );
         await writeFile(rootProviderPath, rootProviderContent);
       }

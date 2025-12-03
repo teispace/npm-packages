@@ -16,6 +16,14 @@ export const updateRootProvider = async (projectPath: string): Promise<void> => 
   if (fileExists(rootProviderPath)) {
     let rootProviderContent = await readFile(rootProviderPath);
 
+    // Handle 'use client'
+    const useClientDirective = "'use client';";
+    const hasUseClient = rootProviderContent.includes(useClientDirective);
+
+    if (hasUseClient) {
+      rootProviderContent = rootProviderContent.replace(useClientDirective, '').trim();
+    }
+
     // Add import if missing
     if (!rootProviderContent.includes('CustomThemeProvider')) {
       rootProviderContent = rootProviderContent.replace(
@@ -36,6 +44,11 @@ export const updateRootProvider = async (projectPath: string): Promise<void> => 
       }
     }
 
+    // Re-add 'use client' at the top
+    if (hasUseClient) {
+      rootProviderContent = useClientDirective + '\n' + rootProviderContent;
+    }
+
     // Wrap children
     if (!rootProviderContent.includes('<CustomThemeProvider>')) {
       if (rootProviderContent.includes('<StoreProvider>')) {
@@ -48,13 +61,13 @@ export const updateRootProvider = async (projectPath: string): Promise<void> => 
           '</CustomThemeProvider>\n    </StoreProvider>',
         );
       } else {
-        const returnMatch = rootProviderContent.match(/return \(\s*([\s\S]*?)\s*\);/);
+        // Match return statement with or without parentheses
+        const returnMatch = rootProviderContent.match(/return\s*(?:\(\s*)?([\s\S]*?)(?:\s*\))?;/);
         if (returnMatch) {
+          const existingJsx = returnMatch[1];
           rootProviderContent = rootProviderContent.replace(
-            /return \(\s*<([^>]+)([^>]*)>([\s\S]*)<\/\1>\s*\);/,
-            (match, tag, attrs, content) => {
-              return `return (\n    <CustomThemeProvider>\n      <${tag}${attrs}>${content}</${tag}>\n    </CustomThemeProvider>\n  );`;
-            },
+            returnMatch[0],
+            `return (\n    <CustomThemeProvider>\n      ${existingJsx}\n    </CustomThemeProvider>\n  );`,
           );
         }
       }

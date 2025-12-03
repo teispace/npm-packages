@@ -97,17 +97,47 @@ import { NextIntlClientProvider, AbstractIntlMessages } from 'next-intl';
 
     // Wrap with NextIntlClientProvider
     if (!content.includes('<NextIntlClientProvider')) {
-      const returnMatch = content.match(/return \(\s*([\s\S]*?)\s*\);/);
+      const returnMatch = content.match(/return\s*(?:\(\s*)?([\s\S]*?)(?:\s*\))?;/);
       if (returnMatch) {
         // We want NextIntlClientProvider to be inside CustomThemeProvider if possible, or just wrap children
         // But usually it wraps everything inside the provider
         // Let's wrap the inner content
-        content = content.replace(/return \(\s*<([^>]+)([^>]*)>([\s\S]*)<\/\1>\s*\);/, (match) => {
-          return match.replace(
-            /\{children\}/,
+        const existingJsx = returnMatch[1];
+
+        // We need to be careful. If existingJsx contains {children}, we want to wrap THAT.
+        // But replacing {children} might be safer if we can find it.
+        // However, if we just wrap the whole thing, it might be double wrapping if not careful.
+        // But here we are wrapping the *returned JSX*.
+
+        // Wait, the previous logic was:
+        // content = content.replace(/return \(\s*<([^>]+)([^>]*)>([\s\S]*)<\/\1>\s*\);/, (match) => {
+        //   return match.replace(
+        //     /\{children\}/,
+        //     `<NextIntlClientProvider locale={locale} messages={messages}>\n          {children}\n        </NextIntlClientProvider>`,
+        //   );
+        // });
+
+        // The previous logic tried to find {children} inside the returned JSX and wrap IT.
+        // This is different from dark-theme/redux which wrap the *entire* returned JSX.
+        // Why? Because NextIntlClientProvider should be close to children?
+        // Or maybe just to avoid wrapping other providers?
+
+        // If I use the new regex, I get the whole JSX.
+        // I can try to replace {children} inside it.
+
+        if (existingJsx.includes('{children}')) {
+          const newJsx = existingJsx.replace(
+            '{children}',
             `<NextIntlClientProvider locale={locale} messages={messages}>\n          {children}\n        </NextIntlClientProvider>`,
           );
-        });
+          content = content.replace(returnMatch[0], `return (\n    ${newJsx}\n  );`);
+        } else {
+          // Fallback: wrap the whole thing if {children} not found (unlikely)
+          content = content.replace(
+            returnMatch[0],
+            `return (\n    <NextIntlClientProvider locale={locale} messages={messages}>\n      ${existingJsx}\n    </NextIntlClientProvider>\n  );`,
+          );
+        }
       }
     }
 
