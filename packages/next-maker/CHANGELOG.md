@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.2](https://github.com/teispace/npm-packages/compare/next-maker-v1.5.1...next-maker-v1.5.2) (2025-12-04)
+
+
+### Miscellaneous Chores
+
+* update dependencies for prettier, ts-jest, and typescript-eslint ([2def6c9](https://github.com/teispace/npm-packages/commit/2def6c940855f70d6c47627e86366388a82e1e28))
+
 ## [1.5.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.5.0...next-maker-v1.5.1) (2025-12-04)
 
 
