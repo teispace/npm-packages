@@ -1,53 +1,32 @@
 import path from 'node:path';
 import { fileExists, readFile, writeFile } from '../../../core/files';
 import { PROJECT_PATHS } from '../../../config/paths';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execAsync = promisify(exec);
 
 export const updateHttpIndex = async (
   projectPath: string,
-  clientType: 'fetch' | 'axios',
+  clients: ('fetch' | 'axios')[],
 ): Promise<void> => {
   const httpIndexPath = path.join(projectPath, PROJECT_PATHS.HTTP_UTILS, 'index.ts');
   if (fileExists(httpIndexPath)) {
     let content = await readFile(httpIndexPath);
 
-    if (clientType === 'fetch') {
-      content = content.replace(/export .* from '\.\/axios-client';\n?/g, '');
-      if (!content.includes('fetch-client')) {
-        content += "export * from './fetch-client';\n";
-      }
-    } else {
-      content = content.replace(/export .* from '\.\/fetch-client';\n?/g, '');
-      if (!content.includes('axios-client')) {
-        content += "export * from './axios-client';\n";
-      }
+    // Remove all client exports first
+    content = content.replace(/export .* from '\.\/axios-client';?\n?/g, '');
+    content = content.replace(/export .* from '\.\/fetch-client';?\n?/g, '');
+
+    // Add exports for active clients
+    if (clients.includes('fetch') && !content.includes('fetch-client')) {
+      content += "export * from './fetch-client';\n";
+    }
+    if (clients.includes('axios') && !content.includes('axios-client')) {
+      content += "export * from './axios-client';\n";
     }
 
     await writeFile(httpIndexPath, content);
-  }
-};
-
-export const updateHttpTypes = async (
-  projectPath: string,
-  clientType: 'fetch' | 'axios',
-): Promise<void> => {
-  const httpTypesPath = path.join(projectPath, PROJECT_PATHS.HTTP_TYPES);
-  if (fileExists(httpTypesPath)) {
-    let content = await readFile(httpTypesPath);
-
-    if (clientType === 'fetch') {
-      // Remove Axios stuff
-      content = content.replace(/declare module 'axios' \{[\s\S]*?\}\n\n?/g, '');
-      content = content.replace(/export interface AxiosClientOptions \{[\s\S]*?\}\n\n?/g, '');
-    } else {
-      // Remove Fetch stuff
-      content = content.replace(/export interface FetchClientOptions \{[\s\S]*?\}\n\n?/g, '');
-      content = content.replace(
-        /export interface ExtendedRequestInit extends RequestInit \{[\s\S]*?\}\n\n?/g,
-        '',
-      );
-    }
-
-    await writeFile(httpTypesPath, content);
   }
 };
 
@@ -84,5 +63,90 @@ export const updateConfigIndex = async (projectPath: string): Promise<void> => {
       content += "export * from './app-apis';\n";
       await writeFile(configIndexPath, content);
     }
+  }
+};
+
+/**
+ * Migrate all HTTP client import and usage patterns when replacing one client with another
+ * Example: fetch -> axios will replace all fetchClient imports/usages with axiosClient
+ */
+export const migrateClientUsages = async (
+  projectPath: string,
+  fromClient: 'fetch' | 'axios',
+  toClient: 'fetch' | 'axios',
+): Promise<void> => {
+  if (fromClient === toClient) return;
+
+  const fromName = fromClient === 'fetch' ? 'fetchClient' : 'axiosClient';
+  const toName = toClient === 'fetch' ? 'fetchClient' : 'axiosClient';
+  const fromPath = fromClient === 'fetch' ? 'fetch-client' : 'axios-client';
+  const toPath = toClient === 'fetch' ? 'fetch-client' : 'axios-client';
+
+  // Find all .ts and .tsx files in src directory
+  const srcPath = path.join(projectPath, 'src');
+
+  try {
+    // Use grep to find files with HTTP client imports
+    const grepCommand = `grep -rl "${fromName}" "${srcPath}" --include="*.ts" --include="*.tsx" || true`;
+    const { stdout } = await execAsync(grepCommand);
+
+    if (!stdout.trim()) {
+      // No files found with the client name
+      return;
+    }
+
+    const filePaths = stdout
+      .trim()
+      .split('\n')
+      .filter((f) => f);
+
+    for (const filePath of filePaths) {
+      if (!fileExists(filePath)) continue;
+
+      let content = await readFile(filePath);
+      let modified = false;
+
+      // Replace import statements
+      // Pattern 1: import { fetchClient } from '@/lib/http'
+      const namedImportRegex = new RegExp(
+        `(import\\s*\\{[^}]*?)\\b${fromName}\\b([^}]*?\\}\\s*from\\s*['"][^'"]*?/http['"])`,
+        'g',
+      );
+      if (namedImportRegex.test(content)) {
+        content = content.replace(namedImportRegex, `$1${toName}$2`);
+        modified = true;
+      }
+
+      // Pattern 2: import fetchClient from '@/lib/http/fetch-client'
+      const defaultImportRegex = new RegExp(
+        `import\\s+${fromName}\\s+from\\s+['"]([^'"]*?)/${fromPath}['"]`,
+        'g',
+      );
+      if (defaultImportRegex.test(content)) {
+        content = content.replace(defaultImportRegex, `import ${toName} from '$1/${toPath}'`);
+        modified = true;
+      }
+
+      // Pattern 3: Replace all usage instances (e.g., fetchClient.get -> axiosClient.get)
+      const usageRegex = new RegExp(`\\b${fromName}\\b(?=\\.)`, 'g');
+      if (usageRegex.test(content)) {
+        content = content.replace(usageRegex, toName);
+        modified = true;
+      }
+
+      // Pattern 4: Replace standalone references (e.g., const api = fetchClient)
+      const standaloneRegex = new RegExp(`\\b${fromName}\\b(?![.\\w])`, 'g');
+      if (standaloneRegex.test(content)) {
+        content = content.replace(standaloneRegex, toName);
+        modified = true;
+      }
+
+      if (modified) {
+        await writeFile(filePath, content);
+      }
+    }
+  } catch (error) {
+    // If grep fails or no matches found, silently continue
+    console.warn('Warning: Could not scan for HTTP client usages:', error);
   }
 };

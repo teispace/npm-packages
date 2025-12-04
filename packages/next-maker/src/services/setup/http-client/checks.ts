@@ -10,8 +10,8 @@ export interface HttpClientSetupStatus {
 }
 
 export const checkIsAlreadySetup = async (projectPath: string): Promise<HttpClientSetupStatus> => {
-  const fetchClientPath = path.join(projectPath, PROJECT_PATHS.FETCH_CLIENT);
-  const axiosClientPath = path.join(projectPath, PROJECT_PATHS.AXIOS_CLIENT);
+  const fetchClientPath = path.join(projectPath, PROJECT_PATHS.FETCH_CLIENT_FILE);
+  const axiosClientPath = path.join(projectPath, PROJECT_PATHS.AXIOS_CLIENT_FILE);
 
   const hasFetch = fileExists(fetchClientPath);
   const hasAxios = fileExists(axiosClientPath);

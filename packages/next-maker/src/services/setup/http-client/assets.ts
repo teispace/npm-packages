@@ -1,6 +1,6 @@
 import path from 'node:path';
 import degit from 'degit';
-import { copyFile, deleteDirectory } from '../../../core/files';
+import { copyFile, deleteDirectory, fileExists } from '../../../core/files';
 import { PROJECT_PATHS } from '../../../config/paths';
 import { Ora } from 'ora';
 import fs from 'node:fs/promises';
@@ -18,7 +18,8 @@ export const fetchAssets = async (tempDir: string, spinner: Ora): Promise<void> 
 export const copyHttpClientFiles = async (
   projectPath: string,
   tempDir: string,
-  clientType: 'fetch' | 'axios',
+  clients: ('fetch' | 'axios')[],
+  removeClients?: ('fetch' | 'axios')[],
 ): Promise<void> => {
   const httpUtilsPath = path.join(projectPath, PROJECT_PATHS.HTTP_UTILS);
   const tempHttpUtilsPath = path.join(tempDir, PROJECT_PATHS.HTTP_UTILS);
@@ -37,6 +38,20 @@ export const copyHttpClientFiles = async (
     path.join(projectPath, PROJECT_PATHS.APP_APIS),
   );
 
+  // src/lib/config/constants.ts (contains API_RESPONSE_DATA_KEY)
+  await copyFile(
+    path.join(tempDir, PROJECT_PATHS.CONSTANTS),
+    path.join(projectPath, PROJECT_PATHS.CONSTANTS),
+  );
+
+  // src/services/storage (needed by token-store.ts) - only if doesn't exist
+  const storageServicePath = path.join(projectPath, PROJECT_PATHS.STORAGE_SERVICE);
+  if (!fileExists(storageServicePath)) {
+    await fs.cp(path.join(tempDir, PROJECT_PATHS.STORAGE_SERVICE), storageServicePath, {
+      recursive: true,
+    });
+  }
+
   // Restore common and utility types (needed for http types)
   await fs.cp(
     path.join(tempDir, PROJECT_PATHS.COMMON_TYPES_DIR),
@@ -49,29 +64,51 @@ export const copyHttpClientFiles = async (
     { recursive: true },
   );
 
-  // 2. Copy Specific Client
-  if (clientType === 'fetch') {
-    await fs.cp(
-      path.join(tempDir, PROJECT_PATHS.FETCH_CLIENT),
-      path.join(projectPath, PROJECT_PATHS.FETCH_CLIENT),
-      { recursive: true },
-    );
-    // Remove Axios if exists (cleanup)
-    await deleteDirectory(path.join(projectPath, PROJECT_PATHS.AXIOS_CLIENT));
-  } else {
-    await fs.cp(
-      path.join(tempDir, PROJECT_PATHS.AXIOS_CLIENT),
-      path.join(projectPath, PROJECT_PATHS.AXIOS_CLIENT),
-      { recursive: true },
-    );
-    // Remove Fetch if exists (cleanup)
-    await deleteDirectory(path.join(projectPath, PROJECT_PATHS.FETCH_CLIENT));
+  // 2. Copy HTTP Shared Utilities
+  // token-store.ts
+  await copyFile(
+    path.join(tempHttpUtilsPath, 'token-store.ts'),
+    path.join(httpUtilsPath, 'token-store.ts'),
+  );
+
+  // client-utils.ts
+  await copyFile(
+    path.join(tempHttpUtilsPath, 'client-utils.ts'),
+    path.join(httpUtilsPath, 'client-utils.ts'),
+  );
+
+  // 3. Remove specified clients if requested
+  if (removeClients && removeClients.length > 0) {
+    for (const client of removeClients) {
+      const clientPath = path.join(
+        projectPath,
+        client === 'fetch' ? PROJECT_PATHS.FETCH_CLIENT : PROJECT_PATHS.AXIOS_CLIENT,
+      );
+      await deleteDirectory(clientPath);
+    }
   }
 
-  // 3. Copy/Update http/index.ts
+  // 4. Copy specified client(s)
+  for (const client of clients) {
+    if (client === 'fetch') {
+      await fs.cp(
+        path.join(tempDir, PROJECT_PATHS.FETCH_CLIENT),
+        path.join(projectPath, PROJECT_PATHS.FETCH_CLIENT),
+        { recursive: true },
+      );
+    } else {
+      await fs.cp(
+        path.join(tempDir, PROJECT_PATHS.AXIOS_CLIENT),
+        path.join(projectPath, PROJECT_PATHS.AXIOS_CLIENT),
+        { recursive: true },
+      );
+    }
+  }
+
+  // 5. Copy/Update http/index.ts
   await copyFile(path.join(tempHttpUtilsPath, 'index.ts'), path.join(httpUtilsPath, 'index.ts'));
 
-  // 4. Copy http.types.ts
+  // 6. Copy http.types.ts
   await copyFile(
     path.join(tempDir, PROJECT_PATHS.HTTP_TYPES),
     path.join(projectPath, PROJECT_PATHS.HTTP_TYPES),
