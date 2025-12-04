@@ -189,9 +189,19 @@ export const removeHttpExports = async (projectPath: string): Promise<void> => {
     let content = await readFile(typesIndexPath);
 
     // Check common types
-    if (!fileExists(path.join(projectPath, PROJECT_PATHS.COMMON_TYPES_DIR))) {
+    const commonTypesDir = path.join(projectPath, PROJECT_PATHS.COMMON_TYPES_DIR);
+    if (!fileExists(commonTypesDir)) {
       content = content.replace(/export \* from '\.\/common';\n?/g, '');
+    } else {
+      // If directory exists, check if we need to remove http.types export from common/index.ts
+      const commonIndexPath = path.join(commonTypesDir, 'index.ts');
+      if (fileExists(commonIndexPath)) {
+        let commonContent = await readFile(commonIndexPath);
+        commonContent = commonContent.replace(/export \* from '\.\/http\.types';\n?/g, '');
+        await writeFile(commonIndexPath, commonContent);
+      }
     }
+
     // Check utility types
     if (!fileExists(path.join(projectPath, PROJECT_PATHS.UTILITY_TYPES_DIR))) {
       content = content.replace(/export \* from '\.\/utility';\n?/g, '');
