@@ -2,7 +2,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import pc from 'picocolors';
 import Enquirer from 'enquirer';
-import { deleteDirectory } from '../../../core/files';
+import { deleteDirectory, fileExists } from '../../../core/files';
 import {
   installPackage,
   runScript,
@@ -96,8 +96,9 @@ export const setupHttpClient = async (projectPath: string): Promise<void> => {
           await uninstallPackage(projectPath, 'axios');
         }
         if (
-          packageJson.dependencies?.['react-secure-storage'] ||
-          packageJson.devDependencies?.['react-secure-storage']
+          (packageJson.dependencies?.['react-secure-storage'] ||
+            packageJson.devDependencies?.['react-secure-storage']) &&
+          !fileExists(path.join(projectPath, PROJECT_PATHS.STORAGE_SERVICE))
         ) {
           await uninstallPackage(projectPath, 'react-secure-storage');
         }

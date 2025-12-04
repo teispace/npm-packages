@@ -209,11 +209,112 @@ export const removeHttpExports = async (projectPath: string): Promise<void> => {
     await writeFile(typesIndexPath, content);
   }
 
-  // 3. Remove from config/index.ts
-  const configIndexPath = path.join(projectPath, PROJECT_PATHS.CONFIG_INDEX);
-  if (fileExists(configIndexPath)) {
-    let content = await readFile(configIndexPath);
-    content = content.replace(/export \* from '\.\/app-apis';\n?/g, '');
-    await writeFile(configIndexPath, content);
+  // 3. Remove from config/index.ts - Handled by performFullCleanup smart deletion
+  // We don't blindly remove it here anymore because app-apis might be kept if used elsewhere.
+};
+
+/**
+ * Check if a file or module is used in the project
+ * @param projectPath Root project path
+ * @param importPath Import path to search for (e.g., '@/lib/config/app-apis' or 'app-apis')
+ * @param excludePaths Array of absolute paths to exclude from search results
+ */
+export const isFileUsed = async (
+  projectPath: string,
+  importPath: string,
+  excludePaths: string[] = [],
+): Promise<boolean> => {
+  const srcPath = path.join(projectPath, 'src');
+
+  // Escape special characters in import path for grep
+  const escapedImportPath = importPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // Search for the import string
+  // We look for:
+  // 1. from '...importPath...'
+  // 2. from "...importPath..."
+  const grepCommand = `grep -r "from ['\\"].*${escapedImportPath}.*['\\"]" "${srcPath}" --include="*.ts" --include="*.tsx" || true`;
+
+  try {
+    const { stdout } = await execAsync(grepCommand);
+
+    if (!stdout.trim()) {
+      return false;
+    }
+
+    const matches = stdout.trim().split('\n');
+
+    // Filter out matches from excluded files
+    const validMatches = matches.filter((match) => {
+      const [filePath] = match.split(':');
+      // Check if file path is in excluded paths
+      // We need to resolve relative paths from grep output if necessary,
+      // but grep usually outputs full or relative to cwd.
+      // Assuming grep runs from cwd, output is relative.
+      const absoluteMatchPath = path.resolve(projectPath, filePath);
+
+      return !excludePaths.some((exclude) => {
+        // Simple check: is the match file the excluded file?
+        if (absoluteMatchPath === exclude) return true;
+        // Is the match file inside an excluded directory?
+        if (absoluteMatchPath.startsWith(exclude + path.sep)) return true;
+        return false;
+      });
+    });
+
+    return validMatches.length > 0;
+  } catch (error) {
+    console.warn(`Warning: Failed to check usage for ${importPath}:`, error);
+    // If check fails, assume used to be safe
+    return true;
+  }
+};
+
+/**
+ * Check if a specific string (symbol, class name, etc.) is present in the project files
+ * @param projectPath Root project path
+ * @param searchString String to search for
+ * @param excludePaths Array of absolute paths to exclude from search results
+ */
+export const isStringUsed = async (
+  projectPath: string,
+  searchString: string,
+  excludePaths: string[] = [],
+): Promise<boolean> => {
+  const srcPath = path.join(projectPath, 'src');
+
+  // Escape special characters
+  const escapedString = searchString.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // Search for the string anywhere in the files
+  // We use -w to match whole words if possible, but for imports it might be part of braces
+  // Let's just search for the string.
+  const grepCommand = `grep -r "${escapedString}" "${srcPath}" --include="*.ts" --include="*.tsx" || true`;
+
+  try {
+    const { stdout } = await execAsync(grepCommand);
+
+    if (!stdout.trim()) {
+      return false;
+    }
+
+    const matches = stdout.trim().split('\n');
+
+    // Filter out matches from excluded files
+    const validMatches = matches.filter((match) => {
+      const [filePath] = match.split(':');
+      const absoluteMatchPath = path.resolve(projectPath, filePath);
+
+      return !excludePaths.some((exclude) => {
+        if (absoluteMatchPath === exclude) return true;
+        if (absoluteMatchPath.startsWith(exclude + path.sep)) return true;
+        return false;
+      });
+    });
+
+    return validMatches.length > 0;
+  } catch (error) {
+    console.warn(`Warning: Failed to check usage for string ${searchString}:`, error);
+    return true;
   }
 };
