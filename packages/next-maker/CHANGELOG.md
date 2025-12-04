@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.4.0...next-maker-v1.5.0) (2025-12-04)
+
+
+### Features
+
+* enhance HTTP client setup with support for multiple clients and migration utilities ([440eaa4](https://github.com/teispace/npm-packages/commit/440eaa4f189d3bc233f506e5f2cd327f2ab6278e))
+
 ## [1.4.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.3.0...next-maker-v1.4.0) (2025-12-03)
 
 
