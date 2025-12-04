@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.8.0...next-maker-v1.9.0) (2025-12-04)
+
+
+### Features
+
+* refine cleanup logic and enhance export management for HTTP clients ([2379186](https://github.com/teispace/npm-packages/commit/2379186d647b3b4b427a8288e3c333e7d20a2f23))
+
 ## [1.8.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.7.0...next-maker-v1.8.0) (2025-12-04)
 
 
