@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.5.0...next-maker-v1.5.1) (2025-12-04)
+
+
+### Documentation
+
+* update README for Next.js 16 support and clarify HTTP client setup options ([dc71c08](https://github.com/teispace/npm-packages/commit/dc71c085826be381b9c709ae0e4f240d9b61323b))
+
 ## [1.5.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.4.0...next-maker-v1.5.0) (2025-12-04)
 
 
