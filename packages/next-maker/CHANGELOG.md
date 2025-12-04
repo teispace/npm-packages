@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.7.0...next-maker-v1.8.0) (2025-12-04)
+
+
+### Features
+
+* enhance cleanup and file management for HTTP clients and types ([dea18f7](https://github.com/teispace/npm-packages/commit/dea18f70eb8ec179e61898f3b0859efa020ef028))
+
 ## [1.7.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.6.0...next-maker-v1.7.0) (2025-12-04)
 
 
