@@ -25,10 +25,6 @@ Generate a complete Next.js application with production-ready configuration.
 
 ```bash
 npx @teispace/next-maker init [project-name]
-# or
-npx @teispace/next-maker app [project-name]
-# or simply
-npx @teispace/next-maker [project-name]
 ```
 
 **Interactive Setup:**
@@ -48,7 +44,7 @@ During initialization, you'll be prompted to configure:
 
 **Core Features:**
 
-- ⚡ Next.js 15+ with App Router
+- ⚡ Next.js 16+ with App Router
 - 🔷 TypeScript (strict mode)
 - 🎨 Tailwind CSS v4
 - 📡 Result-based HTTP clients
@@ -58,7 +54,7 @@ During initialization, you'll be prompted to configure:
 **Example:**
 
 ```bash
-npx @teispace/next-maker my-awesome-app
+npx @teispace/next-maker init my-awesome-app
 ```
 
 ---
@@ -73,7 +69,7 @@ npx @teispace/next-maker setup [options]
 
 **Options:**
 
-- `--http-client <type>` - Setup HTTP client (axios|fetch|both)
+- `--http-client` - Setup HTTP client (Interactive: axios|fetch|both)
 - `--dark-theme` - Setup dark theme support (next-themes)
 - `--redux` - Setup Redux Toolkit with persistence
 - `--i18n` - Setup next-intl for internationalization
@@ -94,8 +90,8 @@ Each setup command:
 # Interactive menu
 npx @teispace/next-maker setup
 
-# Add HTTP clients
-npx @teispace/next-maker setup --http-client both
+# Add HTTP clients (Interactive)
+npx @teispace/next-maker setup --http-client
 
 # Add dark mode
 npx @teispace/next-maker setup --dark-theme
@@ -299,7 +295,7 @@ npm run dev
 # Add features to existing Next.js project
 
 # Add HTTP clients if you initially selected 'none'
-npx @teispace/next-maker setup --http-client both
+npx @teispace/next-maker setup --http-client
 
 # Add dark mode support
 npx @teispace/next-maker setup --dark-theme
@@ -412,9 +408,9 @@ All commands support `--path` for custom locations:
 
 ## Command Reference
 
-### Common Options
+### Generator Options (feature, slice, service)
 
-All commands support:
+These commands support:
 
 - `[name]` - Resource name (kebab-case, prompted if omitted)
 - `--path <path>` - Custom generation path
@@ -512,7 +508,7 @@ my-project/
 
 **Generated Apps:**
 
-- Next.js 15+ - React framework
+- Next.js 16+ - React framework
 - TypeScript - Static typing
 - Redux Toolkit - State management
 - Tailwind CSS v4 - Styling
@@ -548,7 +544,7 @@ node dist/index.js init test-project
 cd test-project
 
 # Test setup commands
-node ../dist/index.js setup --http-client both
+node ../dist/index.js setup --http-client
 node ../dist/index.js setup --dark-theme
 node ../dist/index.js setup --redux
 node ../dist/index.js setup --i18n
