@@ -89,3 +89,40 @@ export const installPackage = async (cwd: string, packageName: string): Promise<
   const manager = await detectPackageManager(cwd);
   await installPackages(cwd, manager, [packageName]);
 };
+
+export const uninstallPackages = async (
+  cwd: string,
+  manager: PackageManager,
+  packages: string[],
+): Promise<void> => {
+  if (packages.length === 0) return;
+
+  const uninstallCommand = getUninstallCommand(manager);
+  const command = `${uninstallCommand} ${packages.join(' ')}`;
+
+  try {
+    await execAsync(command, { cwd });
+  } catch (error) {
+    throw new Error(`Failed to uninstall packages with ${manager}: ${error}`);
+  }
+};
+
+const getUninstallCommand = (manager: PackageManager): string => {
+  switch (manager) {
+    case 'npm':
+      return 'npm uninstall';
+    case 'yarn':
+      return 'yarn remove';
+    case 'pnpm':
+      return 'pnpm remove';
+    case 'bun':
+      return 'bun remove';
+    default:
+      return 'npm uninstall';
+  }
+};
+
+export const uninstallPackage = async (cwd: string, packageName: string): Promise<void> => {
+  const manager = await detectPackageManager(cwd);
+  await uninstallPackages(cwd, manager, [packageName]);
+};

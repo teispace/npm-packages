@@ -3,10 +3,15 @@ import fs from 'node:fs/promises';
 import pc from 'picocolors';
 import Enquirer from 'enquirer';
 import { deleteDirectory } from '../../../core/files';
-import { installPackage, runScript, detectPackageManager } from '../../../core/package-manager';
+import {
+  installPackage,
+  runScript,
+  detectPackageManager,
+  uninstallPackage,
+} from '../../../core/package-manager';
 import { startSpinner } from '../../../config/spinner';
 import { checkIsAlreadySetup, validateProjectStructure, HttpClientType } from './checks';
-import { fetchAssets, copyHttpClientFiles } from './assets';
+import { fetchAssets, copyHttpClientFiles, performFullCleanup } from './assets';
 import {
   updateHttpIndex,
   updateUtilsIndex,
@@ -14,6 +19,7 @@ import {
   updateConfigIndex,
   migrateClientUsages,
   cleanupHttpTypes,
+  removeHttpExports,
 } from './injectors';
 
 type ClientType = 'fetch' | 'axios';
@@ -73,6 +79,28 @@ export const setupHttpClient = async (projectPath: string): Promise<void> => {
           client === 'fetch' ? PROJECT_PATHS.FETCH_CLIENT : PROJECT_PATHS.AXIOS_CLIENT,
         );
         await deleteDirectory(clientPath);
+      }
+
+      // Check if any clients remain
+      const activeClients = getActiveClients(status, action);
+      if (activeClients.length === 0) {
+        spinner.text = 'Performing full cleanup...';
+        await performFullCleanup(projectPath);
+        await removeHttpExports(projectPath);
+
+        spinner.text = 'Uninstalling dependencies...';
+        const packageJsonPath = path.join(projectPath, 'package.json');
+        const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
+
+        if (packageJson.dependencies?.['axios'] || packageJson.devDependencies?.['axios']) {
+          await uninstallPackage(projectPath, 'axios');
+        }
+        if (
+          packageJson.dependencies?.['react-secure-storage'] ||
+          packageJson.devDependencies?.['react-secure-storage']
+        ) {
+          await uninstallPackage(projectPath, 'react-secure-storage');
+        }
       }
     }
 

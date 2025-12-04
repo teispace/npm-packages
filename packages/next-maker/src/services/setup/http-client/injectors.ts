@@ -77,7 +77,11 @@ export const cleanupHttpTypes = async (
     // If axios is NOT in clients, remove the axios module declaration
     if (!clients.includes('axios')) {
       // Remove declare module 'axios' { ... } block
-      content = content.replace(/declare module 'axios'\s*\{[\s\S]*?\}/g, '');
+      // Matches: declare module 'axios' { export interface AxiosRequestConfig { ... } }
+      content = content.replace(
+        /declare module 'axios'\s*\{\s*export interface AxiosRequestConfig\s*\{[\s\S]*?\}\s*\}/g,
+        '',
+      );
       // Clean up any double newlines left behind
       content = content.replace(/\n\s*\n/g, '\n\n').trim() + '\n';
       await writeFile(httpTypesPath, content);
@@ -167,5 +171,39 @@ export const migrateClientUsages = async (
   } catch (error) {
     // If grep fails or no matches found, silently continue
     console.warn('Warning: Could not scan for HTTP client usages:', error);
+  }
+};
+
+export const removeHttpExports = async (projectPath: string): Promise<void> => {
+  // 1. Remove from utils/index.ts
+  const utilsIndexPath = path.join(projectPath, PROJECT_PATHS.UTILS_INDEX);
+  if (fileExists(utilsIndexPath)) {
+    let content = await readFile(utilsIndexPath);
+    content = content.replace(/export \* from '\.\/http';\n?/g, '');
+    await writeFile(utilsIndexPath, content);
+  }
+
+  // 2. Remove from types/index.ts
+  const typesIndexPath = path.join(projectPath, PROJECT_PATHS.TYPES_INDEX);
+  if (fileExists(typesIndexPath)) {
+    let content = await readFile(typesIndexPath);
+
+    // Check common types
+    if (!fileExists(path.join(projectPath, PROJECT_PATHS.COMMON_TYPES_DIR))) {
+      content = content.replace(/export \* from '\.\/common';\n?/g, '');
+    }
+    // Check utility types
+    if (!fileExists(path.join(projectPath, PROJECT_PATHS.UTILITY_TYPES_DIR))) {
+      content = content.replace(/export \* from '\.\/utility';\n?/g, '');
+    }
+    await writeFile(typesIndexPath, content);
+  }
+
+  // 3. Remove from config/index.ts
+  const configIndexPath = path.join(projectPath, PROJECT_PATHS.CONFIG_INDEX);
+  if (fileExists(configIndexPath)) {
+    let content = await readFile(configIndexPath);
+    content = content.replace(/export \* from '\.\/app-apis';\n?/g, '');
+    await writeFile(configIndexPath, content);
   }
 };

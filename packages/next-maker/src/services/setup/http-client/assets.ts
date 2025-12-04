@@ -114,3 +114,39 @@ export const copyHttpClientFiles = async (
     path.join(projectPath, PROJECT_PATHS.HTTP_TYPES),
   );
 };
+
+export const performFullCleanup = async (projectPath: string): Promise<void> => {
+  // 1. Remove Directories
+  await deleteDirectory(path.join(projectPath, PROJECT_PATHS.HTTP_UTILS));
+  await deleteDirectory(path.join(projectPath, PROJECT_PATHS.STORAGE_SERVICE));
+  await deleteDirectory(path.join(projectPath, PROJECT_PATHS.ERRORS_DIR));
+
+  // 2. Remove Files
+  const filesToRemove = [PROJECT_PATHS.HTTP_TYPES, PROJECT_PATHS.APP_APIS, PROJECT_PATHS.CONSTANTS];
+
+  for (const file of filesToRemove) {
+    const filePath = path.join(projectPath, file);
+    if (fileExists(filePath)) {
+      await fs.unlink(filePath);
+    }
+  }
+
+  // 3. Cleanup Types Directories if empty
+  // Check common types
+  const commonTypesPath = path.join(projectPath, PROJECT_PATHS.COMMON_TYPES_DIR);
+  if (fileExists(commonTypesPath)) {
+    const files = await fs.readdir(commonTypesPath);
+    if (files.length === 0) {
+      await deleteDirectory(commonTypesPath);
+    }
+  }
+
+  // Check utility types
+  const utilityTypesPath = path.join(projectPath, PROJECT_PATHS.UTILITY_TYPES_DIR);
+  if (fileExists(utilityTypesPath)) {
+    const files = await fs.readdir(utilityTypesPath);
+    if (files.length === 0) {
+      await deleteDirectory(utilityTypesPath);
+    }
+  }
+};
