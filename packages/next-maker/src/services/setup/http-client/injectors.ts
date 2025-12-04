@@ -66,6 +66,25 @@ export const updateConfigIndex = async (projectPath: string): Promise<void> => {
   }
 };
 
+export const cleanupHttpTypes = async (
+  projectPath: string,
+  clients: ('fetch' | 'axios')[],
+): Promise<void> => {
+  const httpTypesPath = path.join(projectPath, PROJECT_PATHS.HTTP_TYPES);
+  if (fileExists(httpTypesPath)) {
+    let content = await readFile(httpTypesPath);
+
+    // If axios is NOT in clients, remove the axios module declaration
+    if (!clients.includes('axios')) {
+      // Remove declare module 'axios' { ... } block
+      content = content.replace(/declare module 'axios'\s*\{[\s\S]*?\}/g, '');
+      // Clean up any double newlines left behind
+      content = content.replace(/\n\s*\n/g, '\n\n').trim() + '\n';
+      await writeFile(httpTypesPath, content);
+    }
+  }
+};
+
 /**
  * Migrate all HTTP client import and usage patterns when replacing one client with another
  * Example: fetch -> axios will replace all fetchClient imports/usages with axiosClient

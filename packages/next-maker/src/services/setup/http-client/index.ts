@@ -13,6 +13,7 @@ import {
   updateTypesIndex,
   updateConfigIndex,
   migrateClientUsages,
+  cleanupHttpTypes,
 } from './injectors';
 
 type ClientType = 'fetch' | 'axios';
@@ -83,6 +84,7 @@ export const setupHttpClient = async (projectPath: string): Promise<void> => {
       await updateUtilsIndex(projectPath);
       await updateTypesIndex(projectPath);
       await updateConfigIndex(projectPath);
+      await cleanupHttpTypes(projectPath, activeClients);
     }
 
     // 6. Install Dependencies
