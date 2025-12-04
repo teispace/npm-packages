@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.6.0...next-maker-v1.7.0) (2025-12-04)
+
+
+### Features
+
+* enhance removeHttpExports to manage common types exports ([f7a2e23](https://github.com/teispace/npm-packages/commit/f7a2e2301e1f79d0dc21a88351541f8d34438f00))
+
 ## [1.6.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.5.2...next-maker-v1.6.0) (2025-12-04)
 
 
