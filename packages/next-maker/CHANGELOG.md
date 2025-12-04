@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.5.2...next-maker-v1.6.0) (2025-12-04)
+
+
+### Features
+
+* add cleanupHttpTypes function to remove unused axios module declaration ([2b53fd7](https://github.com/teispace/npm-packages/commit/2b53fd78bd900d05ca9c23c88116c47b57a85206))
+* add uninstall and cleanup functionalities for HTTP clients and types ([1dae325](https://github.com/teispace/npm-packages/commit/1dae32590d377a1c1ad8f9ec84f05909f442b0de))
+
 ## [1.5.2](https://github.com/teispace/npm-packages/compare/next-maker-v1.5.1...next-maker-v1.5.2) (2025-12-04)
 
 
