@@ -87,51 +87,58 @@ export const setupHttpClient = async (projectPath: string): Promise<void> => {
         spinner.text = 'Performing full cleanup...';
         await performFullCleanup(projectPath);
         await removeHttpExports(projectPath);
-
-        spinner.text = 'Uninstalling dependencies...';
-        const packageJsonPath = path.join(projectPath, 'package.json');
-        const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
-
-        if (packageJson.dependencies?.['axios'] || packageJson.devDependencies?.['axios']) {
-          await uninstallPackage(projectPath, 'axios');
-        }
-        if (
-          (packageJson.dependencies?.['react-secure-storage'] ||
-            packageJson.devDependencies?.['react-secure-storage']) &&
-          !fileExists(path.join(projectPath, PROJECT_PATHS.STORAGE_SERVICE))
-        ) {
-          await uninstallPackage(projectPath, 'react-secure-storage');
-        }
       }
     }
 
     // 5. Update exports in http/index.ts
-    if (action.type !== 'remove-both') {
+    const activeClients = getActiveClients(status, action);
+
+    // Only update exports if there are active clients remaining
+    if (activeClients.length > 0) {
       spinner.text = 'Configuring client...';
-      const activeClients = getActiveClients(status, action);
       await updateHttpIndex(projectPath, activeClients);
       await updateUtilsIndex(projectPath);
       await updateTypesIndex(projectPath);
       await updateConfigIndex(projectPath);
-      await cleanupHttpTypes(projectPath, activeClients);
     }
 
-    // 6. Install Dependencies
-    if (action.clients.includes('axios') && (action.type === 'install' || action.type === 'add')) {
-      spinner.text = 'Installing Axios...';
-      await installPackage(projectPath, 'axios');
-    }
+    // Always cleanup types (even if removing both, we need to strip client-specific types from the preserved http.types.ts)
+    await cleanupHttpTypes(projectPath, activeClients);
 
-    // Check if react-secure-storage is needed (for token storage)
+    // 6. Dependency Management
+    spinner.text = 'Managing dependencies...';
     const packageJsonPath = path.join(projectPath, 'package.json');
     const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
-    const hasReactSecureStorage =
-      packageJson.dependencies?.['react-secure-storage'] ||
-      packageJson.devDependencies?.['react-secure-storage'];
+    const dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies };
 
-    if (!hasReactSecureStorage && action.type !== 'remove-both') {
-      spinner.text = 'Installing react-secure-storage (for token storage)...';
-      await installPackage(projectPath, 'react-secure-storage');
+    // Axios Management
+    if (activeClients.includes('axios')) {
+      if (!dependencies['axios']) {
+        spinner.text = 'Installing Axios...';
+        await installPackage(projectPath, 'axios');
+      }
+    } else {
+      if (dependencies['axios']) {
+        spinner.text = 'Uninstalling Axios...';
+        await uninstallPackage(projectPath, 'axios');
+      }
+    }
+
+    // React Secure Storage Management
+    // Needed if ANY client exists (for token store), OR if used elsewhere (checked by file existence)
+    const storageServicePath = path.join(projectPath, 'src/services/storage'); // Hardcoded path to match assets.ts usage
+    const isStorageNeeded = activeClients.length > 0 || fileExists(storageServicePath);
+
+    if (isStorageNeeded) {
+      if (!dependencies['react-secure-storage']) {
+        spinner.text = 'Installing react-secure-storage...';
+        await installPackage(projectPath, 'react-secure-storage');
+      }
+    } else {
+      if (dependencies['react-secure-storage']) {
+        spinner.text = 'Uninstalling react-secure-storage...';
+        await uninstallPackage(projectPath, 'react-secure-storage');
+      }
     }
 
     // 7. Format Code

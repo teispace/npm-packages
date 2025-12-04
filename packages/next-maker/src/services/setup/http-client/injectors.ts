@@ -179,7 +179,7 @@ export const removeHttpExports = async (projectPath: string): Promise<void> => {
   const utilsIndexPath = path.join(projectPath, PROJECT_PATHS.UTILS_INDEX);
   if (fileExists(utilsIndexPath)) {
     let content = await readFile(utilsIndexPath);
-    content = content.replace(/export \* from '\.\/http';\n?/g, '');
+    content = content.replace(/^\s*export\s+\*\s+from\s+['"]\.\/http['"];?.*$/gm, '');
     await writeFile(utilsIndexPath, content);
   }
 
@@ -191,20 +191,23 @@ export const removeHttpExports = async (projectPath: string): Promise<void> => {
     // Check common types
     const commonTypesDir = path.join(projectPath, PROJECT_PATHS.COMMON_TYPES_DIR);
     if (!fileExists(commonTypesDir)) {
-      content = content.replace(/export \* from '\.\/common';\n?/g, '');
+      content = content.replace(/^\s*export\s+\*\s+from\s+['"]\.\/common['"];?.*$/gm, '');
     } else {
       // If directory exists, check if we need to remove http.types export from common/index.ts
       const commonIndexPath = path.join(commonTypesDir, 'index.ts');
       if (fileExists(commonIndexPath)) {
         let commonContent = await readFile(commonIndexPath);
-        commonContent = commonContent.replace(/export \* from '\.\/http\.types';\n?/g, '');
+        commonContent = commonContent.replace(
+          /^\s*export\s+\*\s+from\s+['"]\.\/http\.types['"];?.*$/gm,
+          '',
+        );
         await writeFile(commonIndexPath, commonContent);
       }
     }
 
     // Check utility types
     if (!fileExists(path.join(projectPath, PROJECT_PATHS.UTILITY_TYPES_DIR))) {
-      content = content.replace(/export \* from '\.\/utility';\n?/g, '');
+      content = content.replace(/^\s*export\s+\*\s+from\s+['"]\.\/utility['"];?.*$/gm, '');
     }
     await writeFile(typesIndexPath, content);
   }
