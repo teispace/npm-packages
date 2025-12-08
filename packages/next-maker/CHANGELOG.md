@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.10.0...next-maker-v1.11.0) (2025-12-08)
+
+
+### Features
+
+* improve remote branch handling during Git initialization ([828fe8a](https://github.com/teispace/npm-packages/commit/828fe8aa7317bf413539cbd9fe0c6874c246d2c1))
+
 ## [1.10.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.9.0...next-maker-v1.10.0) (2025-12-08)
 
 
