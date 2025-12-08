@@ -19,8 +19,24 @@ export const initializeGit = async (
       await execAsync(`git remote add origin ${gitRemote}`, { cwd });
       if (pushToRemote) {
         await execAsync(`git fetch origin`, { cwd });
-        await execAsync(`git merge origin/main --allow-unrelated-histories`, { cwd });
-        await execAsync(`git push origin HEAD:main`, { cwd });
+
+        let remoteBranch = 'main';
+        try {
+          await execAsync('git show-branch origin/main', { cwd });
+        } catch {
+          try {
+            await execAsync('git show-branch origin/master', { cwd });
+            remoteBranch = 'master';
+          } catch {
+            // If neither main nor master exists, we can default to main and let it fail if it doesn't exist.
+            remoteBranch = 'main';
+          }
+        }
+
+        await execAsync(`git merge origin/${remoteBranch} --allow-unrelated-histories -X ours`, {
+          cwd,
+        });
+        await execAsync(`git push origin HEAD:${remoteBranch}`, { cwd });
       }
     }
   } catch (error) {
