@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.10.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.9.0...next-maker-v1.10.0) (2025-12-08)
+
+
+### Features
+
+* add option to push changes to remote during Git initialization ([38fc89f](https://github.com/teispace/npm-packages/commit/38fc89faf0dcc41bc5d350a17a96199f375a63dc))
+* enhance git initialization by adding remote fetch, merge, and push ([386ea7e](https://github.com/teispace/npm-packages/commit/386ea7eb0ca9e2ae42626a19de65f0f1d74411e9))
+
 ## [1.9.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.8.0...next-maker-v1.9.0) (2025-12-04)
 
 
