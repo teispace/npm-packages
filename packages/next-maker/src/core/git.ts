@@ -13,6 +13,9 @@ export const initializeGit = async (cwd: string, gitRemote?: string): Promise<vo
     // Add remote origin if GitHub URL is provided
     if (gitRemote) {
       await execAsync(`git remote add origin ${gitRemote}`, { cwd });
+      await execAsync(`git fetch origin`, { cwd });
+      await execAsync(`git merge origin/main --allow-unrelated-histories`, { cwd });
+      await execAsync(`git push origin HEAD:main`, { cwd });
     }
   } catch (error) {
     // Ignore error if git is not installed or fails
