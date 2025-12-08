@@ -15,6 +15,7 @@ export interface ProjectPrompts {
   version: string;
   packageManager: PackageManager;
   gitRemote: string;
+  pushToRemote: boolean;
   gitIssues: string;
   gitHomepage: string;
   httpClient: 'axios' | 'fetch' | 'both' | 'none';
@@ -99,13 +100,49 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
       type: 'input',
       name: 'gitRemote',
       message: 'GitHub repository URL (optional):',
+      initial: '',
+    },
+    {
+      type: 'confirm',
+      name: 'pushToRemote',
+      message: 'Would you like to push the changes to the remote repository?',
+      initial: true,
+      skip: function (this: PromptContext) {
+        return !this.state?.answers?.gitRemote;
+      },
+    },
+    {
+      type: 'input',
+      name: 'gitIssues',
+      message: 'GitHub issues URL (optional):',
+      initial: '',
+      skip: function (this: PromptContext) {
+        return !this.state?.answers?.gitRemote;
+      },
       validate: (value: string) => {
         if (!value) return true;
-        // GitHub URL patterns: https://github.com/user/repo or git@github.com:user/repo.git
-        const httpsPattern = /^https:\/\/github\.com\/[\w-]+\/[\w.-]+$/;
-        const sshPattern = /^git@github\.com:[\w-]+\/[\w.-]+\.git$/;
-        if (!httpsPattern.test(value) && !sshPattern.test(value)) {
-          return 'Please enter a valid GitHub repository URL (e.g., https://github.com/user/repo)';
+        // GitHub issues URL pattern: https://github.com/user/repo/issues
+        const httpsPattern = /^https:\/\/github\.com\/[\w-]+\/[\w.-]+\/issues$/;
+        if (!httpsPattern.test(value)) {
+          return 'Please enter a valid GitHub issues URL (e.g., https://github.com/user/repo/issues)';
+        }
+        return true;
+      },
+    },
+    {
+      type: 'input',
+      name: 'gitHomepage',
+      message: 'GitHub homepage URL (optional):',
+      initial: '',
+      skip: function (this: PromptContext) {
+        return !this.state?.answers?.gitRemote;
+      },
+      validate: (value: string) => {
+        if (!value) return true;
+        // GitHub homepage URL pattern: https://github.com/user/repo#readme
+        const httpsPattern = /^https:\/\/github\.com\/[\w-]+\/[\w.-]+#readme$/;
+        if (!httpsPattern.test(value)) {
+          return 'Please enter a valid GitHub homepage URL (e.g., https://github.com/user/repo#readme)';
         }
         return true;
       },

@@ -85,7 +85,7 @@ const createApp = async (initialName?: string): Promise<void> => {
     // 6. Initialize Git
     spinner.text = 'Initializing Git...';
     // Pass gitRemote to initialize git with remote if provided
-    await initializeGit(projectPath, answers.gitRemote);
+    await initializeGit(projectPath, answers.gitRemote, answers.pushToRemote);
 
     // 7. Install Dependencies
     spinner.text = 'Installing dependencies...';
