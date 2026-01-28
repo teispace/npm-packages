@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.11.0...next-maker-v1.11.1) (2026-01-28)
+
+
+### Miscellaneous Chores
+
+* **deps:** update dependencies ([2bbb244](https://github.com/teispace/npm-packages/commit/2bbb244bcb2c6f52ff849fad20ae07aa52bc5988))
+
 ## [1.11.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.10.0...next-maker-v1.11.0) (2025-12-08)
 
 
