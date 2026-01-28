@@ -42,13 +42,13 @@
     "commander": "^14.0.2",
     "degit": "^2.8.4",
     "enquirer": "^2.4.1",
-    "ora": "^9.0.0",
+    "ora": "^9.1.0",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
     "@types/degit": "^2.8.6",
-    "@types/node": "^24.10.1",
-    "esbuild": "^0.27.1",
+    "@types/node": "^25.0.10",
+    "esbuild": "^0.27.2",
     "tsx": "^4.21.0"
   },
   "engines": {
