@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.12.0...next-maker-v1.13.0) (2026-04-02)
+
+
+### Features
+
+* **next-maker:** split CRUD response types into Summary and Detail ([a02fdc8](https://github.com/teispace/npm-packages/commit/a02fdc863b67d9dd370c94402deb0ebfa199526c))
+
 ## [1.12.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.11.2...next-maker-v1.12.0) (2026-04-02)
 
 
