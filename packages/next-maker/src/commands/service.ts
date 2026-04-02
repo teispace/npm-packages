@@ -5,15 +5,16 @@ import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { log, logError, spinner } from '../config';
 import { promptForServiceDetails } from '../prompts/service.prompt';
-import { detectProjectSetup } from '../services/feature/detection.service';
-import { generateServiceFiles } from '../services/service/service.service';
-import { serviceExists } from '../services/service/detection.service';
-import { registerApiEndpoints } from '../services/common/api-registration.service';
+import { detectProjectSetup, fileExistsAt } from '../detection';
+import { executePipeline, createServicePipelineSteps } from '../pipelines';
+import { generateCrudService } from '../generators';
+import { registerCrudApiEndpoints } from '../modifiers/crud-api-registration.modifier';
 
 interface ServiceCommandOptions {
   path?: string;
   axios?: boolean;
   fetch?: boolean;
+  crud?: boolean;
 }
 
 export const registerServiceCommand = (program: Command) => {
@@ -23,11 +24,11 @@ export const registerServiceCommand = (program: Command) => {
     .option('--path <path>', 'Custom path for service generation (default: create new feature)')
     .option('--axios', 'Use Axios HTTP client')
     .option('--fetch', 'Use Fetch HTTP client')
+    .option('--crud', 'Generate full CRUD service (getAll, getById, create, update, delete)')
     .action(async (name: string | undefined, options: ServiceCommandOptions) => {
       try {
         const projectPath = process.cwd();
 
-        // Validate conflicting options
         if (options.axios && options.fetch) {
           logError('Cannot use --axios and --fetch together');
           process.exit(1);
@@ -35,12 +36,11 @@ export const registerServiceCommand = (program: Command) => {
 
         log(pc.cyan('\n🔧 Service Generator\n'));
 
-        // Step 1: Detect project setup
+        // Detect and validate HTTP clients
         spinner.start('Detecting project setup...');
         const detection = await detectProjectSetup(projectPath);
         spinner.succeed('Project setup detected');
 
-        // Step 2: Check if HTTP clients are setup
         if (detection.httpClient === 'none') {
           spinner.fail('No HTTP client is setup in this project');
           logError('Please setup either AxiosClient or FetchClient first');
@@ -48,7 +48,6 @@ export const registerServiceCommand = (program: Command) => {
           process.exit(1);
         }
 
-        // Display available clients
         const availableClients: string[] = [];
         if (detection.httpClient === 'axios' || detection.httpClient === 'both') {
           availableClients.push('Axios ✓');
@@ -58,7 +57,7 @@ export const registerServiceCommand = (program: Command) => {
         }
         log(pc.dim(`  HTTP Clients: ${availableClients.join(', ')}\n`));
 
-        // Step 3: Prompt for service details
+        // Prompt and resolve paths
         const serviceOptions = await promptForServiceDetails(
           name,
           options.axios,
@@ -66,87 +65,113 @@ export const registerServiceCommand = (program: Command) => {
           detection.httpClient,
         );
 
-        // Step 4: Determine service path (feature-first approach)
-        let basePath: string;
-        let featureName: string;
-        let servicePath: string;
+        const { basePath, servicePath } = resolveServicePaths(
+          projectPath,
+          serviceOptions.serviceName,
+          options.path,
+        );
 
-        if (options.path) {
-          // Custom path provided
-          const customPath = options.path.replace(/^src\//, '');
-
-          // Check if custom path is a feature
-          if (customPath.startsWith('features/')) {
-            // Extract feature name and ensure services subdirectory
-            const parts = customPath.split('/');
-            featureName = parts[1]; // features/featureName/...
-            basePath = path.join('src', 'features', featureName, 'services');
-            servicePath = path.join(projectPath, basePath);
-          } else {
-            // Non-feature custom path - use as-is
-            basePath = path.join('src', customPath);
-            featureName = customPath.split('/')[0]; // First directory as feature name
-            servicePath = path.join(projectPath, basePath);
-          }
-        } else {
-          // Default: Create new feature with services
-          featureName = serviceOptions.serviceName;
-          basePath = path.join('src', 'features', featureName, 'services');
-          servicePath = path.join(projectPath, basePath);
-        }
-
-        // Step 5: Ensure feature and services directories exist
         if (!existsSync(servicePath)) {
           await mkdir(servicePath, { recursive: true });
         }
 
-        // Check if service already exists
-        const exists = await serviceExists(projectPath, serviceOptions.serviceName, basePath);
+        const exists = fileExistsAt(
+          projectPath,
+          basePath,
+          `${serviceOptions.serviceName}.service.ts`,
+        );
         if (exists) {
           logError(`Service '${serviceOptions.serviceName}' already exists at ${basePath}!`);
           process.exit(1);
         }
 
-        // Step 6: Generate service files
-        spinner.start('Generating service files...');
-        await generateServiceFiles({
-          serviceName: serviceOptions.serviceName,
-          servicePath,
-          httpClient: serviceOptions.httpClient,
-        });
-        spinner.succeed('Service files generated');
+        // Execute generation
+        if (options.crud) {
+          spinner.start('Generating CRUD service files...');
+          await generateCrudService({
+            name: serviceOptions.serviceName,
+            outputPath: servicePath,
+            httpClient: serviceOptions.httpClient,
+          });
+          spinner.succeed('CRUD service files generated');
 
-        // Step 7: Register API endpoints
-        spinner.start('Registering API endpoints...');
-        await registerApiEndpoints({
-          serviceName: serviceOptions.serviceName,
-          projectPath,
-        });
-        spinner.succeed('API endpoints registered');
+          spinner.start('Registering CRUD API endpoints...');
+          await registerCrudApiEndpoints(projectPath, serviceOptions.serviceName);
+          spinner.succeed('CRUD API endpoints registered');
+        } else {
+          await executePipeline(createServicePipelineSteps(), {
+            projectPath,
+            spinner,
+            serviceName: serviceOptions.serviceName,
+            servicePath,
+            httpClient: serviceOptions.httpClient,
+          });
+        }
 
-        // Success message
-        const displayPath = path.join(basePath, `${serviceOptions.serviceName}.service.ts`);
-        log(pc.green(`\n✨ Service '${serviceOptions.serviceName}' created successfully!\n`));
-        log(pc.dim('Generated files:'));
-        log(pc.dim(`  📄 ${displayPath}\n`));
-
-        log(pc.cyan('Next steps:'));
-        const importPath = basePath.replace(/^src\//, '@/');
-        log(
-          pc.dim(
-            `  1. Import service: import { ${serviceOptions.serviceName}Service } from '${importPath}/${serviceOptions.serviceName}.service'`,
-          ),
-        );
-        log(
-          pc.dim(
-            `  2. Use in component: const data = await ${serviceOptions.serviceName}Service.getAll()`,
-          ),
-        );
-        log('');
+        printServiceSuccess(serviceOptions, basePath, !!options.crud);
       } catch (error) {
         spinner.fail('Service generation failed');
         logError(`${error}`);
         process.exit(1);
       }
     });
+};
+
+const resolveServicePaths = (
+  projectPath: string,
+  serviceName: string,
+  customPath?: string,
+): { basePath: string; servicePath: string } => {
+  let basePath: string;
+
+  if (customPath) {
+    const cleanPath = customPath.replace(/^src\//, '');
+    if (cleanPath.startsWith('features/')) {
+      const featureName = cleanPath.split('/')[1];
+      basePath = path.join('src', 'features', featureName, 'services');
+    } else {
+      basePath = path.join('src', cleanPath);
+    }
+  } else {
+    basePath = path.join('src', 'features', serviceName, 'services');
+  }
+
+  return {
+    basePath,
+    servicePath: path.join(projectPath, basePath),
+  };
+};
+
+const printServiceSuccess = (
+  serviceOptions: { serviceName: string; httpClient: string },
+  basePath: string,
+  isCrud: boolean = false,
+) => {
+  const displayPath = path.join(basePath, `${serviceOptions.serviceName}.service.ts`);
+  log(
+    pc.green(
+      `\n✨ ${isCrud ? 'CRUD ' : ''}Service '${serviceOptions.serviceName}' created successfully!\n`,
+    ),
+  );
+  log(pc.dim('Generated files:'));
+  log(pc.dim(`  📄 ${displayPath}\n`));
+
+  log(pc.cyan('Next steps:'));
+  const importPath = basePath.replace(/^src\//, '@/');
+  log(
+    pc.dim(
+      `  1. Import service: import { ${serviceOptions.serviceName}Service } from '${importPath}/${serviceOptions.serviceName}.service'`,
+    ),
+  );
+  if (isCrud) {
+    log(pc.dim(`  2. Available methods: getAll, getById, create, update, delete`));
+    log(pc.dim(`  3. Update DTO types in the service file`));
+  } else {
+    log(
+      pc.dim(
+        `  2. Use in component: const data = await ${serviceOptions.serviceName}Service.getAll()`,
+      ),
+    );
+  }
+  log('');
 };

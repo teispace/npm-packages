@@ -8,13 +8,7 @@ export interface ProjectDetection {
 }
 
 export const detectProjectSetup = async (projectPath: string): Promise<ProjectDetection> => {
-  let hasRedux: boolean;
-  let hasAxios: boolean;
-  let hasFetch: boolean;
-  let hasI18n: boolean;
-
   try {
-    // Read package.json
     const packageJsonPath = path.join(projectPath, 'package.json');
     const packageJsonContent = await readFile(packageJsonPath, 'utf-8');
     const packageJson = JSON.parse(packageJsonContent);
@@ -24,35 +18,29 @@ export const detectProjectSetup = async (projectPath: string): Promise<ProjectDe
       ...packageJson.devDependencies,
     };
 
-    // Check for Redux
-    hasRedux = !!(dependencies['@reduxjs/toolkit'] && dependencies['react-redux']);
+    const hasRedux = !!(dependencies['@reduxjs/toolkit'] && dependencies['react-redux']);
+    const hasI18n = !!dependencies['next-intl'];
 
-    // Check for axios
-    hasAxios = !!dependencies['axios'];
+    // Check for HTTP clients: must be both in dependencies AND have client directory
+    let hasAxios = !!dependencies['axios'];
+    let hasFetch = false;
 
-    // Check for i18n
-    hasI18n = !!dependencies['next-intl'];
-
-    // Check if axios client exists
     const axiosClientPath = path.join(projectPath, 'src', 'lib', 'utils', 'http', 'axios-client');
     try {
       await access(axiosClientPath);
-      hasAxios = hasAxios && true; // Confirm axios is both installed and client exists
     } catch {
-      hasAxios = false; // Axios client doesn't exist
+      hasAxios = false;
     }
 
-    // Check if fetch client exists
     const fetchClientPath = path.join(projectPath, 'src', 'lib', 'utils', 'http', 'fetch-client');
     try {
       await access(fetchClientPath);
       hasFetch = true;
     } catch {
-      hasFetch = false; // Fetch client doesn't exist
+      hasFetch = false;
     }
 
-    // Determine HTTP client setup
-    let httpClient: 'axios' | 'fetch' | 'both' | 'none';
+    let httpClient: ProjectDetection['httpClient'];
     if (hasAxios && hasFetch) {
       httpClient = 'both';
     } else if (hasAxios) {
@@ -63,26 +51,8 @@ export const detectProjectSetup = async (projectPath: string): Promise<ProjectDe
       httpClient = 'none';
     }
 
-    return {
-      hasRedux,
-      httpClient,
-      hasI18n,
-    };
+    return { hasRedux, httpClient, hasI18n };
   } catch (error) {
     throw new Error(`Failed to detect project setup: ${error}`, { cause: error });
-  }
-};
-
-export const featureExists = async (
-  projectPath: string,
-  featureName: string,
-  basePath: string = path.join('src', 'features'),
-): Promise<boolean> => {
-  const featurePath = path.join(projectPath, basePath, featureName);
-  try {
-    await access(featurePath);
-    return true;
-  } catch {
-    return false;
   }
 };

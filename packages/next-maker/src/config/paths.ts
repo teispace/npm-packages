@@ -84,4 +84,10 @@ export const PROJECT_PATHS = {
   CODE_OF_CONDUCT: 'CODE_OF_CONDUCT.md',
   CONTRIBUTING: 'CONTRIBUTING.md',
   SECURITY: 'SECURITY.md',
+
+  // Template-specific (should be cleaned on init)
+  SCRIPTS_DIR: 'scripts',
+  DOCS_DIR: 'docs',
+  CLAUDE_DIR: '.claude',
+  VSCODE_DIR: '.vscode',
 } as const;
