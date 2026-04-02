@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.2](https://github.com/teispace/npm-packages/compare/next-maker-v1.11.1...next-maker-v1.11.2) (2026-04-02)
+
+
+### Miscellaneous Chores
+
+* bump dev tooling and tighten next-maker ([9f401e8](https://github.com/teispace/npm-packages/commit/9f401e8697301ab0bd014d36c1d1c585d2f802ab))
+
 ## [1.11.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.11.0...next-maker-v1.11.1) (2026-01-28)
 
 
