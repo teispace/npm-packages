@@ -9,7 +9,7 @@ import { installDependencies, runScript } from '../core/package-manager';
 import { log, printBanner } from '../config';
 import { cloneTemplate } from '../services/init/template.service';
 import { configurePackageJson } from '../services/init/config.service';
-import { cleanupFeatures } from '../services/init/cleanup.service';
+import { cleanupFeatures } from '../services/init/cleanup';
 import { generateRootProvider, generateLayout } from '../services/init/providers.service';
 import { setupDevTools } from '../services/init/devtools.service';
 

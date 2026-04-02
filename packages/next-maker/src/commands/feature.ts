@@ -3,10 +3,8 @@ import pc from 'picocolors';
 import path from 'node:path';
 import { log, logError, spinner } from '../config';
 import { promptForFeatureDetails } from '../prompts/feature.prompt';
-import { detectProjectSetup, featureExists } from '../services/feature/detection.service';
-import { generateFeatureStructure } from '../services/feature/templates.service';
-import { registerFeatureInRootReducer } from '../services/feature/registration.service';
-import { registerApiEndpoints } from '../services/common/api-registration.service';
+import { directoryExists } from '../detection';
+import { executePipeline, createFeaturePipelineSteps } from '../pipelines';
 
 interface FeatureCommandOptions {
   skipStore?: boolean;
@@ -29,33 +27,14 @@ export const registerFeatureCommand = (program: Command) => {
       try {
         const projectPath = process.cwd();
 
-        // Validate store option
-        if (options.store && !['persist', 'no-persist'].includes(options.store)) {
-          logError('Invalid --store option. Use: persist or no-persist');
-          process.exit(1);
-        }
-
-        // Validate service option
-        if (options.service && !['axios', 'fetch'].includes(options.service)) {
-          logError('Invalid --service option. Use: axios or fetch');
-          process.exit(1);
-        }
-
-        // Validate conflicting options
-        if (options.skipStore && options.store) {
-          logError('Cannot use --skip-store and --store together');
-          process.exit(1);
-        }
-
-        if (options.skipService && options.service) {
-          logError('Cannot use --skip-service and --service together');
-          process.exit(1);
-        }
+        validateFeatureOptions(options);
 
         log(pc.cyan('\n🎯 Feature Generator\n'));
 
-        // Step 1: Detect project setup
+        // Detect & prompt
+        const steps = createFeaturePipelineSteps();
         spinner.start('Detecting project setup...');
+        const { detectProjectSetup } = await import('../detection');
         const detection = await detectProjectSetup(projectPath);
         spinner.succeed('Project setup detected');
 
@@ -63,7 +42,6 @@ export const registerFeatureCommand = (program: Command) => {
         log(pc.dim(`  HTTP Client: ${detection.httpClient}`));
         log(pc.dim(`  i18n: ${detection.hasI18n ? '✓' : '✗'}\n`));
 
-        // Step 2: Prompt for feature details
         const featureOptions = await promptForFeatureDetails(
           name,
           detection.hasRedux,
@@ -74,87 +52,88 @@ export const registerFeatureCommand = (program: Command) => {
           options.service,
         );
 
-        // Step 3: Determine feature path
         const basePath = options.path || path.join('src', 'features');
         const featurePath = path.join(projectPath, basePath, featureOptions.featureName);
 
-        // Check if feature already exists
-        const exists = await featureExists(projectPath, featureOptions.featureName, basePath);
+        const exists = await directoryExists(projectPath, featureOptions.featureName, basePath);
         if (exists) {
           logError(`Feature '${featureOptions.featureName}' already exists at ${basePath}!`);
           process.exit(1);
         }
 
-        // Step 4: Generate feature structure
-        spinner.start('Generating feature files...');
-
-        await generateFeatureStructure({
+        // Execute generation pipeline (generate → register API → register reducer)
+        await executePipeline(steps.slice(1), {
+          projectPath,
+          spinner,
           featureName: featureOptions.featureName,
+          basePath,
           featurePath,
           createStore: featureOptions.createStore,
           persistStore: featureOptions.persistStore,
           createService: featureOptions.createService,
           httpClient: featureOptions.selectedHttpClient,
+          detection,
         });
 
-        spinner.succeed('Feature files generated');
-
-        // Step 5: Register API endpoints if service was created
-        if (featureOptions.createService) {
-          spinner.start('Registering API endpoints...');
-          await registerApiEndpoints({
-            serviceName: featureOptions.featureName,
-            projectPath,
-          });
-          spinner.succeed('API endpoints registered');
-        }
-
-        // Step 6: Register in rootReducer if store was created
-        if (featureOptions.createStore && detection.hasRedux) {
-          spinner.start('Registering feature in rootReducer...');
-          await registerFeatureInRootReducer(
-            projectPath,
-            featureOptions.featureName,
-            featureOptions.persistStore,
-            basePath,
-          );
-          spinner.succeed('Feature registered in rootReducer');
-        }
-
-        // Success message
-        const displayPath = path.join(basePath, featureOptions.featureName);
-        log(pc.green(`\n✨ Feature '${featureOptions.featureName}' created successfully!\n`));
-        log(pc.dim('Generated files:'));
-        log(pc.dim(`  📂 ${displayPath}/`));
-        log(pc.dim(`     ├── components/`));
-        log(pc.dim(`     ├── hooks/`));
-        log(pc.dim(`     ├── types/`));
-        if (featureOptions.createStore) log(pc.dim(`     ├── store/`));
-        if (featureOptions.createService) log(pc.dim(`     ├── services/`));
-        log(pc.dim(`     └── index.ts\n`));
-
-        log(pc.cyan('Next steps:'));
-        const importPath = basePath.replace(/^src\//, '@/');
-        log(
-          pc.dim(
-            `  1. Import and use the feature: import { ${featureOptions.featureName} } from '${importPath}/${featureOptions.featureName}'`,
-          ),
-        );
-        if (featureOptions.createStore) {
-          log(pc.dim(`  2. Customize your Redux slice in: ${displayPath}/store/`));
-        }
-        if (featureOptions.createService) {
-          log(
-            pc.dim(
-              `  3. Add API methods in: ${displayPath}/services/${featureOptions.featureName}.service.ts`,
-            ),
-          );
-        }
-        log('');
+        printFeatureSuccess(featureOptions, basePath);
       } catch (error) {
         spinner.fail('Feature generation failed');
         logError(`${error}`);
         process.exit(1);
       }
     });
+};
+
+const validateFeatureOptions = (options: FeatureCommandOptions) => {
+  if (options.store && !['persist', 'no-persist'].includes(options.store)) {
+    logError('Invalid --store option. Use: persist or no-persist');
+    process.exit(1);
+  }
+  if (options.service && !['axios', 'fetch'].includes(options.service)) {
+    logError('Invalid --service option. Use: axios or fetch');
+    process.exit(1);
+  }
+  if (options.skipStore && options.store) {
+    logError('Cannot use --skip-store and --store together');
+    process.exit(1);
+  }
+  if (options.skipService && options.service) {
+    logError('Cannot use --skip-service and --service together');
+    process.exit(1);
+  }
+};
+
+const printFeatureSuccess = (
+  featureOptions: { featureName: string; createStore: boolean; createService: boolean },
+  basePath: string,
+) => {
+  const displayPath = path.join(basePath, featureOptions.featureName);
+  log(pc.green(`\n✨ Feature '${featureOptions.featureName}' created successfully!\n`));
+  log(pc.dim('Generated files:'));
+  log(pc.dim(`  📂 ${displayPath}/`));
+  log(pc.dim(`     ├── components/`));
+  log(pc.dim(`     ├── hooks/`));
+  log(pc.dim(`     ├── types/`));
+  if (featureOptions.createStore) log(pc.dim(`     ├── store/`));
+  if (featureOptions.createService) log(pc.dim(`     ├── services/`));
+  log(pc.dim(`     └── index.ts\n`));
+
+  log(pc.cyan('Next steps:'));
+  const importPath = basePath.replace(/^src\//, '@/');
+  log(
+    pc.dim(
+      `  1. Import and use the feature: import { ${featureOptions.featureName} } from '${importPath}/${featureOptions.featureName}'`,
+    ),
+  );
+  if (featureOptions.createStore) {
+    log(pc.dim(`  2. Customize your Redux slice in: ${displayPath}/store/`));
+  }
+  if (featureOptions.createService) {
+    log(
+      pc.dim(
+        `  3. Add API methods in: ${displayPath}/services/${featureOptions.featureName}.service.ts`,
+      ),
+    );
+  }
+  log('');
 };
