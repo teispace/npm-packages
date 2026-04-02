@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.11.2...next-maker-v1.12.0) (2026-04-02)
+
+
+### Features
+
+* **next-maker:** add hook generator command ([05c4d24](https://github.com/teispace/npm-packages/commit/05c4d247de40e235885e7d4bfd40981521866e01))
+
 ## [1.11.2](https://github.com/teispace/npm-packages/compare/next-maker-v1.11.1...next-maker-v1.11.2) (2026-04-02)
 
 
