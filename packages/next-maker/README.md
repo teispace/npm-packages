@@ -255,7 +255,8 @@ npx @teispace/next-maker service <name> [options]
 **CRUD mode** generates:
 
 - Service with 5 methods: `getAll`, `getById`, `create`, `update`, `delete`
-- DTO types: `Create<Name>Dto`, `Update<Name>Dto`, `<Name>` response interface
+- `<Name>Summary` type for list responses (cards, tables) and `<Name>Detail` type for single-item responses (detail pages)
+- DTO types: `Create<Name>Dto`, `Update<Name>Dto`
 - Full API config with dynamic routes (`getById(id)`, `update(id)`, `delete(id)`)
 
 **Examples:**
@@ -299,6 +300,31 @@ npx @teispace/next-maker locale es
 
 # Add French with English translations as starting point
 npx @teispace/next-maker locale fr --copy-translations
+```
+
+---
+
+### 9. Generate a Hook
+
+Create a custom React hook with loading/error state boilerplate.
+
+```bash
+npx @teispace/next-maker hook <name> [options]
+```
+
+**Options:**
+
+- `--client` - Add `'use client'` directive (default: true)
+- `--feature <path>` - Generate in feature directory
+
+**Examples:**
+
+```bash
+# Shared hook in src/hooks/
+npx @teispace/next-maker hook auth-session
+
+# Hook inside a feature
+npx @teispace/next-maker hook user-profile --feature src/features/auth
 ```
 
 ---
@@ -363,7 +389,7 @@ Creates component in `src/components/common/<Name>/` and auto-updates all barrel
 
 ### CRUD Service Generation
 
-`--crud` flag generates a complete service with 5 REST methods, typed DTOs, and full API config with dynamic route helpers.
+`--crud` flag generates a complete service with 5 REST methods, separate `Summary` and `Detail` response types (list vs detail views), typed DTOs, and full API config with dynamic route helpers.
 
 ### Locale Management
 
@@ -407,6 +433,7 @@ All commands support `--path` for custom locations. Relative paths like `feature
 | `slice <name>`     | Generate a Redux slice           |
 | `service <name>`   | Generate an API service          |
 | `locale [code]`    | Add a new locale/language        |
+| `hook <name>`      | Generate a custom React hook     |
 
 ---
 

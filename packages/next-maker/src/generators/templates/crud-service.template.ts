@@ -14,9 +14,19 @@ export const crudServiceTemplate = (params: {
 ${clientImport}
 import { ResultAsync } from '@/types';
 
-export interface ${pascalName} {
+/**
+ * Summary type used in list responses (e.g., cards, tables).
+ */
+export interface ${pascalName}Summary {
   id: string;
-  // Add your ${camelName} properties here
+  // Add list/card fields here (title, thumbnail, status, etc.)
+}
+
+/**
+ * Detail type used in single-item responses (e.g., detail page).
+ */
+export interface ${pascalName}Detail extends ${pascalName}Summary {
+  // Add detailed fields here (content, metadata, relations, etc.)
 }
 
 export interface Create${pascalName}Dto {
@@ -28,20 +38,20 @@ export interface Update${pascalName}Dto {
 }
 
 export const ${camelName}Service = {
-  getAll: (): ResultAsync<${pascalName}[]> => {
-    return ${clientName}.get<${pascalName}[]>(AppApis.${camelName}.getAll);
+  getAll: (): ResultAsync<${pascalName}Summary[]> => {
+    return ${clientName}.get<${pascalName}Summary[]>(AppApis.${camelName}.getAll);
   },
 
-  getById: (id: string): ResultAsync<${pascalName}> => {
-    return ${clientName}.get<${pascalName}>(AppApis.${camelName}.getById(id));
+  getById: (id: string): ResultAsync<${pascalName}Detail> => {
+    return ${clientName}.get<${pascalName}Detail>(AppApis.${camelName}.getById(id));
   },
 
-  create: (data: Create${pascalName}Dto): ResultAsync<${pascalName}> => {
-    return ${clientName}.post<${pascalName}>(AppApis.${camelName}.create, data);
+  create: (data: Create${pascalName}Dto): ResultAsync<${pascalName}Detail> => {
+    return ${clientName}.post<${pascalName}Detail>(AppApis.${camelName}.create, data);
   },
 
-  update: (id: string, data: Update${pascalName}Dto): ResultAsync<${pascalName}> => {
-    return ${clientName}.patch<${pascalName}>(AppApis.${camelName}.update(id), data);
+  update: (id: string, data: Update${pascalName}Dto): ResultAsync<${pascalName}Detail> => {
+    return ${clientName}.patch<${pascalName}Detail>(AppApis.${camelName}.update(id), data);
   },
 
   delete: (id: string): ResultAsync<void> => {
