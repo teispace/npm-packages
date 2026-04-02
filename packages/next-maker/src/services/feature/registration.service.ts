@@ -62,7 +62,7 @@ export const registerFeatureInRootReducer = async (
 
     await writeFile(rootReducerPath, content);
   } catch (error) {
-    throw new Error(`Failed to register feature in rootReducer: ${error}`);
+    throw new Error(`Failed to register feature in rootReducer: ${error}`, { cause: error });
   }
 };
 
@@ -129,6 +129,6 @@ export const registerSliceInRootReducer = async (
 
     await writeFile(rootReducerPath, content);
   } catch (error) {
-    throw new Error(`Failed to register slice in rootReducer: ${error}`);
+    throw new Error(`Failed to register slice in rootReducer: ${error}`, { cause: error });
   }
 };

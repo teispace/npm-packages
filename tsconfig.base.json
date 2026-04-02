@@ -7,7 +7,6 @@
     "declarationMap": true,
     "emitDeclarationOnly": false,
     "strict": true,
-    "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "bundler",
@@ -15,9 +14,9 @@
     "isolatedModules": true,
     "noImplicitAny": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
+    "types": ["node", "jest"],
     "paths": {
-      "@teispace/*": ["packages/*/src"]
+      "@teispace/*": ["./packages/*/src"]
     }
   },
   "include": ["packages/*/src", "packages/*/types", "scripts", "tools"],

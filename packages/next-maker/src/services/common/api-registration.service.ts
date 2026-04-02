@@ -65,6 +65,6 @@ export const registerApiEndpoints = async (options: RegisterApiOptions): Promise
     // Write the updated content back
     await writeFile(apiConfigPath, updatedContent);
   } catch (error) {
-    throw new Error(`Failed to register API endpoints: ${error}`);
+    throw new Error(`Failed to register API endpoints: ${error}`, { cause: error });
   }
 };

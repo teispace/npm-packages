@@ -10,7 +10,7 @@ export const installDependencies = async (cwd: string, manager: PackageManager):
   try {
     await execAsync(command, { cwd });
   } catch (error) {
-    throw new Error(`Failed to install dependencies with ${manager}: ${error}`);
+    throw new Error(`Failed to install dependencies with ${manager}: ${error}`, { cause: error });
   }
 };
 
@@ -66,7 +66,7 @@ export const installPackages = async (
   try {
     await execAsync(command, { cwd });
   } catch (error) {
-    throw new Error(`Failed to install packages with ${manager}: ${error}`);
+    throw new Error(`Failed to install packages with ${manager}: ${error}`, { cause: error });
   }
 };
 
@@ -103,7 +103,7 @@ export const uninstallPackages = async (
   try {
     await execAsync(command, { cwd });
   } catch (error) {
-    throw new Error(`Failed to uninstall packages with ${manager}: ${error}`);
+    throw new Error(`Failed to uninstall packages with ${manager}: ${error}`, { cause: error });
   }
 };
 
