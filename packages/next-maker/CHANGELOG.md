@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.11.2](https://github.com/teispace/npm-packages/compare/next-maker-v1.11.1...next-maker-v1.11.2) (2026-04-02)
+
+
+### Miscellaneous Chores
+
+* bump dev tooling and tighten next-maker ([9f401e8](https://github.com/teispace/npm-packages/commit/9f401e8697301ab0bd014d36c1d1c585d2f802ab))
+
+
+### Code Refactoring
+
+* **next-maker:** restructure into modular architecture ([25a56a9](https://github.com/teispace/npm-packages/commit/25a56a9313f9be6bf91e76cef896d3c83e65d73f))
+* **next-maker:** restructure into modular architecture ([6c60aa1](https://github.com/teispace/npm-packages/commit/6c60aa13149a0cb52012bc4d0562365b6f49c1c3))
+
 ## [1.11.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.11.0...next-maker-v1.11.1) (2026-01-28)
 
 
