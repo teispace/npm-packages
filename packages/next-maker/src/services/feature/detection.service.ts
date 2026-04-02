@@ -8,10 +8,10 @@ export interface ProjectDetection {
 }
 
 export const detectProjectSetup = async (projectPath: string): Promise<ProjectDetection> => {
-  let hasRedux = false;
-  let hasAxios = false;
-  let hasFetch = false;
-  let hasI18n = false;
+  let hasRedux: boolean;
+  let hasAxios: boolean;
+  let hasFetch: boolean;
+  let hasI18n: boolean;
 
   try {
     // Read package.json
@@ -69,7 +69,7 @@ export const detectProjectSetup = async (projectPath: string): Promise<ProjectDe
       hasI18n,
     };
   } catch (error) {
-    throw new Error(`Failed to detect project setup: ${error}`);
+    throw new Error(`Failed to detect project setup: ${error}`, { cause: error });
   }
 };
 

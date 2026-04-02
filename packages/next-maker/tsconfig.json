@@ -3,9 +3,8 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": ".",
-    "baseUrl": ".",
     "paths": {
-      "@teispace/next-maker": ["src"]
+      "@teispace/next-maker": ["./src"]
     }
   },
   "include": ["src/**/*", "build.ts"],

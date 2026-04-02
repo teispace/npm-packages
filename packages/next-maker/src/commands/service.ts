@@ -8,6 +8,7 @@ import { promptForServiceDetails } from '../prompts/service.prompt';
 import { detectProjectSetup } from '../services/feature/detection.service';
 import { generateServiceFiles } from '../services/service/service.service';
 import { serviceExists } from '../services/service/detection.service';
+import { registerApiEndpoints } from '../services/common/api-registration.service';
 
 interface ServiceCommandOptions {
   path?: string;
@@ -114,6 +115,14 @@ export const registerServiceCommand = (program: Command) => {
           httpClient: serviceOptions.httpClient,
         });
         spinner.succeed('Service files generated');
+
+        // Step 7: Register API endpoints
+        spinner.start('Registering API endpoints...');
+        await registerApiEndpoints({
+          serviceName: serviceOptions.serviceName,
+          projectPath,
+        });
+        spinner.succeed('API endpoints registered');
 
         // Success message
         const displayPath = path.join(basePath, `${serviceOptions.serviceName}.service.ts`);

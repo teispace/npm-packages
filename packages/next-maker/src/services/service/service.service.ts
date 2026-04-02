@@ -19,78 +19,26 @@ const generateServiceFile = async (options: GenerateServiceOptions): Promise<voi
   let content: string;
 
   if (httpClient === 'axios') {
-    content = `import { axiosClient } from '@/lib/utils/http';
+    content = `import { AppApis } from '@/lib/config';
+import { axiosClient } from '@/lib/utils/http';
+import { ResultAsync } from '@/types';
 
 export const ${camelName}Service = {
-  // Add your API methods here
-  // Example:
-  // getAll: async () => {
-  //   const result = await axiosClient.get<YourType[]>('/${serviceName}');
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // getById: async (id: string) => {
-  //   const result = await axiosClient.get<YourType>(\`/${serviceName}/\${id}\`);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // create: async (data: YourCreateType) => {
-  //   const result = await axiosClient.post<YourType>('/${serviceName}', data);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // update: async (id: string, data: YourUpdateType) => {
-  //   const result = await axiosClient.put<YourType>(\`/${serviceName}/\${id}\`, data);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // delete: async (id: string) => {
-  //   const result = await axiosClient.delete<void>(\`/${serviceName}/\${id}\`);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
+  getAll: (): ResultAsync<string> => {
+    return axiosClient.get<string>(AppApis.${camelName}.getAll);
+  },
 };
 `;
   } else {
     // fetch
-    content = `import { fetchClient } from '@/lib/utils/http';
+    content = `import { AppApis } from '@/lib/config';
+import { fetchClient } from '@/lib/utils/http';
+import { ResultAsync } from '@/types';
 
 export const ${camelName}Service = {
-  // Add your API methods here
-  // Example:
-  // getAll: async () => {
-  //   const result = await fetchClient.get<YourType[]>('/${serviceName}');
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // getById: async (id: string) => {
-  //   const result = await fetchClient.get<YourType>(\`/${serviceName}/\${id}\`);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // create: async (data: YourCreateType) => {
-  //   const result = await fetchClient.post<YourType>('/${serviceName}', data);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // update: async (id: string, data: YourUpdateType) => {
-  //   const result = await fetchClient.put<YourType>(\`/${serviceName}/\${id}\`, data);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
-  //
-  // delete: async (id: string) => {
-  //   const result = await fetchClient.delete<void>(\`/${serviceName}/\${id}\`);
-  //   if (result.isErr()) throw result.error;
-  //   return result.value;
-  // },
+  getAll: (): ResultAsync<string> => {
+    return fetchClient.get<string>(AppApis.${camelName}.getAll);
+  },
 };
 `;
   }

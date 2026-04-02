@@ -4,6 +4,7 @@ import { ProjectPrompts } from '../../prompts/create-app.prompt';
 import { startSpinner } from '../../config/spinner';
 
 import { PROJECT_PATHS } from '../../config/paths';
+import { cleanupHttpTypes } from '../setup/http-client/injectors';
 
 // ... (imports)
 
@@ -40,6 +41,9 @@ const cleanupHttpClient = async (projectPath: string, answers: ProjectPrompts): 
       await writeFile(path.join(httpUtilsPath, 'index.ts'), "export * from './token-store';\n");
       // token-store.ts does not use client-utils, so we can remove it
       await deleteFile(path.join(projectPath, PROJECT_PATHS.CLIENT_UTILS));
+
+      // Ensure http.types.ts is clean (remove axios declaration)
+      await cleanupHttpTypes(projectPath, []);
     } else {
       await deleteDirectory(httpUtilsPath);
       const utilsIndexPath = path.join(projectPath, PROJECT_PATHS.UTILS_INDEX);
@@ -114,11 +118,13 @@ const cleanupHttpClient = async (projectPath: string, answers: ProjectPrompts): 
     await writeFile(path.join(httpUtilsPath, 'index.ts'), content);
 
     // Remove axios module declaration and AxiosClientOptions from http.types.ts
+    // Use the shared helper to ensure robust regex matching
+    await cleanupHttpTypes(projectPath, ['fetch']);
+
+    // Also remove AxiosClientOptions interface (cleanupHttpTypes only handles module declaration)
     const httpTypesPath = path.join(projectPath, PROJECT_PATHS.HTTP_TYPES);
     if (fileExists(httpTypesPath)) {
       let typesContent = await readFile(httpTypesPath);
-      // Remove axios module declaration
-      typesContent = typesContent.replace(/declare module 'axios' \{[\s\S]*?\}\n\n/, '');
       // Remove AxiosClientOptions interface
       typesContent = typesContent.replace(
         /export interface AxiosClientOptions \{[\s\S]*?\}\n\n/,
