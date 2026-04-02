@@ -5,10 +5,8 @@ import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { log, logError, spinner } from '../config';
 import { promptForSliceDetails } from '../prompts/slice.prompt';
-import { detectProjectSetup } from '../services/feature/detection.service';
-import { generateSliceFiles } from '../services/slice/slice.service';
-import { registerSliceInRootReducer } from '../services/feature/registration.service';
-import { sliceExists } from '../services/slice/detection.service';
+import { detectProjectSetup, directoryExists } from '../detection';
+import { executePipeline, createSlicePipelineSteps } from '../pipelines';
 
 interface SliceCommandOptions {
   path?: string;
@@ -27,7 +25,6 @@ export const registerSliceCommand = (program: Command) => {
       try {
         const projectPath = process.cwd();
 
-        // Validate conflicting options
         if (options.persist && options.noPersist === true) {
           logError('Cannot use --persist and --no-persist together');
           process.exit(1);
@@ -35,12 +32,11 @@ export const registerSliceCommand = (program: Command) => {
 
         log(pc.cyan('\n🔧 Slice Generator\n'));
 
-        // Step 1: Detect project setup
+        // Detect and validate Redux
         spinner.start('Detecting project setup...');
         const detection = await detectProjectSetup(projectPath);
         spinner.succeed('Project setup detected');
 
-        // Step 2: Check if Redux is setup
         if (!detection.hasRedux) {
           spinner.fail('Redux is not setup in this project');
           logError('Please install @reduxjs/toolkit and react-redux first');
@@ -50,100 +46,95 @@ export const registerSliceCommand = (program: Command) => {
 
         log(pc.dim(`  Redux: ✓\n`));
 
-        // Step 3: Prompt for slice details
+        // Prompt and resolve paths
         const sliceOptions = await promptForSliceDetails(
           name,
           options.persist,
           options.noPersist === true ? false : undefined,
         );
 
-        // Step 4: Determine slice path (feature-first approach)
-        let basePath: string;
-        let featureName: string;
-        let slicePath: string;
+        const { basePath, slicePath } = resolveSlicePaths(
+          projectPath,
+          sliceOptions.sliceName,
+          options.path,
+        );
 
-        if (options.path) {
-          // Custom path provided
-          const customPath = options.path.replace(/^src\//, '');
-
-          // Check if custom path is a feature
-          if (customPath.startsWith('features/')) {
-            // Extract feature name and ensure store subdirectory
-            const parts = customPath.split('/');
-            featureName = parts[1]; // features/featureName/...
-            basePath = path.join('src', 'features', featureName, 'store');
-            slicePath = path.join(projectPath, basePath, sliceOptions.sliceName);
-          } else {
-            // Non-feature custom path - use as-is but treat as feature store
-            basePath = path.join('src', customPath);
-            featureName = customPath.split('/')[0]; // First directory as feature name
-            slicePath = path.join(projectPath, basePath, sliceOptions.sliceName);
-          }
-        } else {
-          // Default: Create new feature with store
-          featureName = sliceOptions.sliceName;
-          basePath = path.join('src', 'features', featureName, 'store');
-          slicePath = path.join(projectPath, basePath, sliceOptions.sliceName);
-        }
-
-        // Step 5: Ensure feature and store directories exist
         const featureStorePath = path.join(projectPath, basePath);
         if (!existsSync(featureStorePath)) {
           await mkdir(featureStorePath, { recursive: true });
         }
 
-        // Check if slice already exists
-        const exists = await sliceExists(projectPath, sliceOptions.sliceName, basePath);
+        const exists = await directoryExists(projectPath, sliceOptions.sliceName, basePath);
         if (exists) {
           logError(`Slice '${sliceOptions.sliceName}' already exists at ${basePath}!`);
           process.exit(1);
         }
 
-        // Step 6: Generate slice files
-        spinner.start('Generating slice files...');
-        await generateSliceFiles({
+        // Execute generation pipeline
+        await executePipeline(createSlicePipelineSteps(), {
+          projectPath,
+          spinner,
           sliceName: sliceOptions.sliceName,
+          basePath,
           slicePath,
           persistSlice: sliceOptions.persistSlice,
         });
-        spinner.succeed('Slice files generated');
 
-        // Step 7: Register in rootReducer
-        spinner.start('Registering slice in rootReducer...');
-        // For features: basePath includes store (e.g., src/features/auth/store)
-        // We need to register the slice at basePath/sliceName
-        await registerSliceInRootReducer(
-          projectPath,
-          sliceOptions.sliceName,
-          sliceOptions.persistSlice,
-          basePath,
-        );
-        spinner.succeed('Slice registered in rootReducer');
-
-        // Success message
-        const displayPath = path.join(basePath, sliceOptions.sliceName);
-        log(pc.green(`\n✨ Slice '${sliceOptions.sliceName}' created successfully!\n`));
-        log(pc.dim('Generated files:'));
-        log(pc.dim(`  📂 ${displayPath}/`));
-        log(pc.dim(`     ├── ${sliceOptions.sliceName}.slice.ts`));
-        log(pc.dim(`     ├── ${sliceOptions.sliceName}.selectors.ts`));
-        if (sliceOptions.persistSlice) log(pc.dim(`     ├── persist.ts`));
-        log(pc.dim(`     ├── ${sliceOptions.sliceName}.types.ts`));
-        log(pc.dim(`     └── index.ts\n`));
-
-        log(pc.cyan('Next steps:'));
-        const importPath = basePath.replace(/^src\//, '@/');
-        log(
-          pc.dim(
-            `  1. Import actions: import { setLoading, setError } from '${importPath}/${sliceOptions.sliceName}'`,
-          ),
-        );
-        log(pc.dim(`  2. Use in component: dispatch(setLoading(true))`));
-        log('');
+        printSliceSuccess(sliceOptions, basePath);
       } catch (error) {
         spinner.fail('Slice generation failed');
         logError(`${error}`);
         process.exit(1);
       }
     });
+};
+
+const resolveSlicePaths = (
+  projectPath: string,
+  sliceName: string,
+  customPath?: string,
+): { basePath: string; slicePath: string } => {
+  let basePath: string;
+
+  if (customPath) {
+    const cleanPath = customPath.replace(/^src\//, '');
+    if (cleanPath.startsWith('features/')) {
+      const featureName = cleanPath.split('/')[1];
+      basePath = path.join('src', 'features', featureName, 'store');
+    } else {
+      basePath = path.join('src', cleanPath);
+    }
+  } else {
+    basePath = path.join('src', 'features', sliceName, 'store');
+  }
+
+  return {
+    basePath,
+    slicePath: path.join(projectPath, basePath, sliceName),
+  };
+};
+
+const printSliceSuccess = (
+  sliceOptions: { sliceName: string; persistSlice: boolean },
+  basePath: string,
+) => {
+  const displayPath = path.join(basePath, sliceOptions.sliceName);
+  log(pc.green(`\n✨ Slice '${sliceOptions.sliceName}' created successfully!\n`));
+  log(pc.dim('Generated files:'));
+  log(pc.dim(`  📂 ${displayPath}/`));
+  log(pc.dim(`     ├── ${sliceOptions.sliceName}.slice.ts`));
+  log(pc.dim(`     ├── ${sliceOptions.sliceName}.selectors.ts`));
+  if (sliceOptions.persistSlice) log(pc.dim(`     ├── persist.ts`));
+  log(pc.dim(`     ├── ${sliceOptions.sliceName}.types.ts`));
+  log(pc.dim(`     └── index.ts\n`));
+
+  log(pc.cyan('Next steps:'));
+  const importPath = basePath.replace(/^src\//, '@/');
+  log(
+    pc.dim(
+      `  1. Import actions: import { setLoading, setError } from '${importPath}/${sliceOptions.sliceName}'`,
+    ),
+  );
+  log(pc.dim(`  2. Use in component: dispatch(setLoading(true))`));
+  log('');
 };

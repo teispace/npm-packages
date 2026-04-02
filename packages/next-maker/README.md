@@ -1,6 +1,6 @@
 # @teispace/next-maker
 
-A powerful CLI tool to scaffold Next.js applications with modern best practices and generate feature-based architecture components including Redux slices and API services.
+A powerful CLI tool to scaffold Next.js applications with modern best practices and generate feature-based architecture components including pages, components, Redux slices, API services, and locales.
 
 ## Installation
 
@@ -31,31 +31,25 @@ npx @teispace/next-maker init [project-name]
 
 During initialization, you'll be prompted to configure:
 
-- 📦 **Package Manager** (npm, yarn, pnpm, bun)
-- 🔗 **GitHub Repository** (optional - configures remote origin)
-- 🌐 **HTTP Client** (axios, fetch, both, or none)
-- 🌙 **Dark Mode** (next-themes integration)
-- 🔄 **Redux Toolkit** (with redux-persist)
-- 🌍 **Internationalization** (next-intl)
-- 📋 **Community Files** (CODE_OF_CONDUCT, CONTRIBUTING, etc.)
-- 🐳 **Docker** support
-- 🔧 **CI/CD** configuration
-- 🎯 **Pre-commit hooks** (Husky)
+- **Package Manager** (npm, yarn, pnpm, bun)
+- **GitHub Repository** (optional - configures remote origin)
+- **HTTP Client** (axios, fetch, both, or none)
+- **Dark Mode** (next-themes integration)
+- **Redux Toolkit** (with redux-persist)
+- **Internationalization** (next-intl)
+- **Community Files** (CODE_OF_CONDUCT, CONTRIBUTING, etc.)
+- **Docker** support
+- **CI/CD** configuration
+- **Pre-commit hooks** (Husky)
 
 **Core Features:**
 
-- ⚡ Next.js 16+ with App Router
-- 🔷 TypeScript (strict mode)
-- 🎨 Tailwind CSS v4
-- 📡 Result-based HTTP clients
-- 🏗️ Feature-based DDD architecture
-- 🎯 ESLint + Prettier configured
-
-**Example:**
-
-```bash
-npx @teispace/next-maker init my-awesome-app
-```
+- Next.js 16+ with App Router
+- TypeScript (strict mode)
+- Tailwind CSS v4
+- Result-based HTTP clients
+- Feature-based DDD architecture
+- ESLint + Prettier configured
 
 ---
 
@@ -74,73 +68,97 @@ npx @teispace/next-maker setup [options]
 - `--redux` - Setup Redux Toolkit with persistence
 - `--i18n` - Setup next-intl for internationalization
 
-**Features:**
-
-Each setup command:
-
-- ✅ Checks if already configured (exits gracefully)
-- 📁 Copies necessary files from template
-- 🔧 Updates configuration files
-- 📦 Installs required packages
-- 🔗 Integrates with existing providers
-
 **Examples:**
 
 ```bash
 # Interactive menu
 npx @teispace/next-maker setup
 
-# Add HTTP clients (Interactive)
+# Add specific features
 npx @teispace/next-maker setup --http-client
-
-# Add dark mode
 npx @teispace/next-maker setup --dark-theme
-
-# Add Redux
 npx @teispace/next-maker setup --redux
-
-# Add internationalization
 npx @teispace/next-maker setup --i18n
 ```
 
-**What Gets Setup:**
+---
 
-**HTTP Client:**
+### 3. Generate a Page
 
-- Copies axios-client and/or fetch-client to `src/lib/utils/http/`
-- Updates `src/lib/utils/http/index.ts` with exports
-- Installs axios package (if selected)
+Create a new page/route with locale-aware boilerplate, SEO metadata, and optional loading/error states.
 
-**Dark Theme:**
+```bash
+npx @teispace/next-maker page <name> [options]
+```
 
-- Copies `CustomThemeProvider.tsx` to `src/providers/`
-- Adds `@custom-variant dark` to `src/styles/globals.css`
-- Adds CSS variables `--color-dark` and `--color-light`
-- Updates layout.tsx with `bg-light dark:bg-dark` classes
-- Integrates with RootProvider
-- Installs next-themes package
+**Options:**
 
-**Redux Toolkit:**
+- `--dynamic <param>` - Create dynamic route (e.g., `--dynamic id` creates `[id]/page.tsx`)
+- `--loading` - Generate `loading.tsx`
+- `--error` - Generate `error.tsx`
 
-- Copies store configuration to `src/store/`
-- Creates hooks, persistor, and rootReducer
-- Copies `StoreProvider.tsx` to `src/providers/`
-- Integrates with RootProvider
-- Installs @reduxjs/toolkit, react-redux, redux-persist
+**What it generates:**
 
-**Internationalization:**
+- `page.tsx` with full locale support (if i18n is set up), `generateMetadata`, `setRequestLocale`
+- Registers route in `src/lib/config/app-paths.ts`
+- Adds translation namespace to `en.json` (if i18n)
+- Optional `loading.tsx` and `error.tsx`
 
-- Copies i18n directory (`routing.ts`, `request.ts`, `navigation.ts`, `translations/`)
-- Copies `types/i18n.ts` and `lib/config/app-locales.ts`
-- Creates/updates `src/proxy.ts` (middleware)
-- Updates `next.config.ts` with createNextIntlPlugin
-- Updates RootProvider with NextIntlClientProvider
-- Creates `[locale]` route structure
-- Installs next-intl package
+**Examples:**
+
+```bash
+# Simple page
+npx @teispace/next-maker page about
+
+# Page with loading and error states
+npx @teispace/next-maker page dashboard --loading --error
+
+# Dynamic route (e.g., /products/[id])
+npx @teispace/next-maker page products --dynamic id --loading --error
+```
 
 ---
 
-### 3. Generate a Feature Module
+### 4. Generate a Component
+
+Create a shared component with automatic barrel export wiring across all index files.
+
+```bash
+npx @teispace/next-maker component <name> [options]
+```
+
+**Options:**
+
+- `--client` - Add `'use client'` directive
+- `--i18n` - Add `useTranslations` hook
+- `--feature <path>` - Generate inside a feature directory
+
+**Generated structure (shared):**
+
+```
+src/components/common/MyButton/
+├── MyButton.tsx
+└── index.ts
+```
+
+Auto-updates `src/components/common/index.ts` and `src/components/index.ts`.
+
+**Examples:**
+
+```bash
+# Shared component
+npx @teispace/next-maker component data-table --client
+
+# Component with i18n
+npx @teispace/next-maker component nav-bar --client --i18n
+
+# Feature-specific component
+npx @teispace/next-maker component user-card --client --feature src/features/auth
+```
+
+---
+
+### 5. Generate a Feature Module
 
 Create a complete feature module following Domain-Driven Design principles.
 
@@ -182,7 +200,7 @@ src/features/user-dashboard/
 # Full feature with Redux and API service
 npx @teispace/next-maker feature user-profile --store persist --service axios
 
-# Feature with Redux only (no persistence)
+# Feature with Redux only
 npx @teispace/next-maker feature shopping-cart --store no-persist --skip-service
 
 # Feature in custom location
@@ -191,7 +209,7 @@ npx @teispace/next-maker feature auth --store persist --service fetch --path src
 
 ---
 
-### 4. Generate a Redux Slice
+### 6. Generate a Redux Slice
 
 Create a Redux Toolkit slice with persistence support.
 
@@ -205,18 +223,7 @@ npx @teispace/next-maker slice <name> [options]
 - `--no-persist` - Disable persistence
 - `--path <path>` - Custom path (default: create new feature)
 
-**Generated structure:**
-
-```
-src/features/auth/store/auth/
-├── auth.slice.ts
-├── auth.selectors.ts
-├── auth.types.ts
-├── persist.ts                (optional)
-└── index.ts
-```
-
-**Auto-registers in rootReducer** with correct imports!
+**Auto-registers in rootReducer** with correct imports.
 
 **Examples:**
 
@@ -226,16 +233,13 @@ npx @teispace/next-maker slice auth --persist
 
 # Add slice to existing feature
 npx @teispace/next-maker slice user-settings --path features/auth/store
-
-# Slice in custom location
-npx @teispace/next-maker slice theme --no-persist --path src/store/slices
 ```
 
 ---
 
-### 5. Generate an API Service
+### 7. Generate an API Service
 
-Create an API service with HTTP client integration.
+Create an API service with HTTP client integration. Supports both simple and full CRUD generation.
 
 ```bash
 npx @teispace/next-maker service <name> [options]
@@ -245,28 +249,56 @@ npx @teispace/next-maker service <name> [options]
 
 - `--axios` - Use AxiosClient
 - `--fetch` - Use FetchClient
+- `--crud` - Generate full CRUD service (getAll, getById, create, update, delete)
 - `--path <path>` - Custom path (default: create new feature)
 
-**Generated structure:**
+**CRUD mode** generates:
 
-```
-src/features/payment/services/
-└── payment.service.ts
-```
-
-**Validates HTTP client setup** before generation!
+- Service with 5 methods: `getAll`, `getById`, `create`, `update`, `delete`
+- DTO types: `Create<Name>Dto`, `Update<Name>Dto`, `<Name>` response interface
+- Full API config with dynamic routes (`getById(id)`, `update(id)`, `delete(id)`)
 
 **Examples:**
 
 ```bash
-# Create new feature with service
+# Simple service
 npx @teispace/next-maker service payment --axios
 
-# Add service to existing feature
-npx @teispace/next-maker service user --fetch --path features/auth/services
+# Full CRUD service with types and endpoints
+npx @teispace/next-maker service users --fetch --crud
 
-# Service in custom location
-npx @teispace/next-maker service analytics --axios --path src/api/services
+# CRUD service in existing feature
+npx @teispace/next-maker service orders --axios --crud --path features/products/services
+```
+
+---
+
+### 8. Add a Locale
+
+Add a new language/locale to your internationalized project.
+
+```bash
+npx @teispace/next-maker locale [code] [options]
+```
+
+**Options:**
+
+- `--copy-translations` - Copy English translations instead of empty values
+
+**What it does:**
+
+- Creates `src/i18n/translations/<code>.json` (empty or copied from English)
+- Updates `SupportedLocale` type in `src/types/i18n.ts`
+- Adds entry to `src/lib/config/app-locales.ts` with name, flag, country
+
+**Examples:**
+
+```bash
+# Add Spanish (interactive prompts for name, country, flag)
+npx @teispace/next-maker locale es
+
+# Add French with English translations as starting point
+npx @teispace/next-maker locale fr --copy-translations
 ```
 
 ---
@@ -277,34 +309,22 @@ npx @teispace/next-maker service analytics --axios --path src/api/services
 
 ```bash
 # Create a new Next.js app with interactive setup
-npx @teispace/next-maker my-project
-
-# Navigate to the project
+npx @teispace/next-maker init my-project
 cd my-project
 
-# Generate your first feature
-npx @teispace/next-maker feature auth --store persist --service axios
+# Generate pages
+npx @teispace/next-maker page dashboard --loading --error
+npx @teispace/next-maker page settings --loading
 
-# Start development server
+# Generate features with CRUD
+npx @teispace/next-maker feature users --store persist --service fetch
+npx @teispace/next-maker service users --fetch --crud --path features/users/services
+
+# Add a locale
+npx @teispace/next-maker locale es
+
+# Start development
 npm run dev
-```
-
-### Setup Existing Project
-
-```bash
-# Add features to existing Next.js project
-
-# Add HTTP clients if you initially selected 'none'
-npx @teispace/next-maker setup --http-client
-
-# Add dark mode support
-npx @teispace/next-maker setup --dark-theme
-
-# Add Redux state management
-npx @teispace/next-maker setup --redux
-
-# Add internationalization
-npx @teispace/next-maker setup --i18n
 ```
 
 ### Feature-Based Development
@@ -312,152 +332,81 @@ npx @teispace/next-maker setup --i18n
 ```bash
 # E-commerce example
 npx @teispace/next-maker feature products --store persist --service axios
-npx @teispace/next-maker feature cart --store persist --skip-service
-npx @teispace/next-maker slice checkout --path features/cart/store
-npx @teispace/next-maker service orders --axios --path features/products/services
+npx @teispace/next-maker service products --axios --crud --path features/products/services
+npx @teispace/next-maker page products --dynamic id --loading --error
+npx @teispace/next-maker component product-card --client --feature src/features/products
 
-# Dashboard example
-npx @teispace/next-maker feature dashboard --store no-persist --service fetch
-npx @teispace/next-maker slice analytics --path features/dashboard/store
-npx @teispace/next-maker service metrics --fetch --path features/dashboard/services
+npx @teispace/next-maker feature cart --store persist --skip-service
+npx @teispace/next-maker page checkout --loading --error
 ```
 
 ### Get Help
 
 ```bash
-# General help
 npx @teispace/next-maker --help
-
-# Command-specific help
-npx @teispace/next-maker init --help
-npx @teispace/next-maker setup --help
-npx @teispace/next-maker feature --help
-npx @teispace/next-maker slice --help
-npx @teispace/next-maker service --help
+npx @teispace/next-maker page --help
+npx @teispace/next-maker component --help
+npx @teispace/next-maker locale --help
 ```
 
 ---
 
 ## Key Features
 
-### 🚀 Post-Installation Setup
+### Pages with Full Locale Support
 
-Add features to your project anytime with the `setup` command:
+Auto-generates `generateMetadata`, `setRequestLocale`, typed Props, SEO metadata, and translation namespace. Supports dynamic routes with `--dynamic`.
 
-- HTTP clients (axios/fetch) even if you initially chose "none"
-- Dark theme with automatic CSS and layout updates
-- Redux Toolkit with complete store configuration
-- Internationalization with routing and middleware
-- Smart detection prevents duplicate setups
-- Automatic package installation
+### Shared Components with Auto-Wiring
 
-### 🏗️ Feature-First Architecture
+Creates component in `src/components/common/<Name>/` and auto-updates all barrel exports so you can immediately `import { MyComponent } from '@/components'`.
 
-All generators follow a feature-based DDD approach by default, organizing code by business domain rather than technical layers.
+### CRUD Service Generation
 
-### 🔄 Smart Redux Integration
+`--crud` flag generates a complete service with 5 REST methods, typed DTOs, and full API config with dynamic route helpers.
 
-- Auto-registers slices in `rootReducer`
-- Correct import paths for any custom location
-- Optional redux-persist configuration
-- Demo actions included (setLoading, setError, resetState)
-- Can be added post-initialization via `setup --redux`
+### Locale Management
 
-### 📡 HTTP Client Support
+One command adds a new language: translation file, type update, and config entry. No manual file editing.
 
-- **AxiosClient**: Result-based error handling with `isOk()/isErr()`
+### Feature-First Architecture
+
+All generators follow a feature-based DDD approach, organizing code by business domain rather than technical layers.
+
+### Smart Redux Integration
+
+Auto-registers slices in `rootReducer` with correct import paths and optional redux-persist configuration.
+
+### HTTP Client Support
+
+- **AxiosClient**: Result-based error handling
 - **FetchClient**: Same Result pattern with native fetch
 - Auto-detects available clients
-- Type-safe API calls with generics
-- Can be added later via `setup --http-client`
 
-### 🌙 Dark Mode Support
+### Intelligent Path Handling
 
-- next-themes integration with CustomThemeProvider
-- Automatic CSS variable setup (`--color-dark`, `--color-light`)
-- Tailwind CSS v4 custom variant (`@custom-variant dark`)
-- Layout className updates (`bg-light dark:bg-dark`)
-- Can be added via `setup --dark-theme`
+All commands support `--path` for custom locations. Relative paths like `features/auth` are resolved to `src/features/auth`.
 
-### 🌍 Internationalization
+### Built-in Validations
 
-- next-intl with routing middleware
-- Translation management system
-- Locale type safety
-- [locale] route structure
-- Can be added via `setup --i18n`
-
-### 🎯 Intelligent Path Handling
-
-All commands support `--path` for custom locations:
-
-- Relative: `features/auth` → `src/features/auth`
-- Absolute: `src/modules/auth` → `src/modules/auth`
-- Auto-creates directory structure
-- Adapts imports based on location
-
-### ✅ Built-in Validations
-
-- Checks for required dependencies (Redux, HTTP clients)
-- Prevents duplicate generation and setups
+- Checks for required dependencies (Redux, HTTP clients, i18n)
+- Prevents duplicate generation
 - Validates naming conventions (kebab-case)
-- Ensures consistent project structure
-- Validates GitHub repository URLs
 
 ---
 
 ## Command Reference
 
-### Generator Options (feature, slice, service)
-
-These commands support:
-
-- `[name]` - Resource name (kebab-case, prompted if omitted)
-- `--path <path>` - Custom generation path
-- `--help` - Show command help
-
-### Init/App Options
-
-Interactive prompts guide you through:
-
-- Project name, description, version
-- Package manager selection
-- GitHub repository (optional)
-- HTTP client selection
-- Dark mode, Redux, i18n toggles
-- Docker, CI/CD, pre-commit hooks
-
-### Setup Options
-
-```bash
---http-client <type>         # Setup HTTP client (axios|fetch|both)
---dark-theme                 # Setup dark theme support
---redux                      # Setup Redux Toolkit
---i18n                       # Setup internationalization
-```
-
-### Feature Options
-
-```bash
---store <persist|no-persist>  # Generate Redux store
---skip-store                  # Don't generate store
---service <axios|fetch>       # Generate API service
---skip-service               # Don't generate service
-```
-
-### Slice Options
-
-```bash
---persist                    # Enable redux-persist
---no-persist                # Disable persistence
-```
-
-### Service Options
-
-```bash
---axios                     # Use AxiosClient
---fetch                     # Use FetchClient
-```
+| Command            | Description                      |
+| ------------------ | -------------------------------- |
+| `init [name]`      | Create a new Next.js application |
+| `setup`            | Add features to existing project |
+| `page <name>`      | Generate a new page/route        |
+| `component <name>` | Generate a shared component      |
+| `feature <name>`   | Generate a feature module        |
+| `slice <name>`     | Generate a Redux slice           |
+| `service <name>`   | Generate an API service          |
+| `locale [code]`    | Add a new locale/language        |
 
 ---
 
@@ -469,6 +418,7 @@ Generated apps follow this structure:
 my-project/
 ├── src/
 │   ├── app/                  # Next.js App Router
+│   │   └── [locale]/        # Locale-aware routes (if i18n)
 │   ├── features/             # Feature modules (DDD)
 │   │   └── counter/
 │   │       ├── components/
@@ -477,21 +427,18 @@ my-project/
 │   │       ├── types/
 │   │       └── index.ts
 │   ├── components/           # Shared components
+│   │   └── common/          # Reusable UI components
 │   ├── lib/
 │   │   ├── config/          # App configuration
 │   │   ├── utils/
 │   │   │   └── http/        # AxiosClient & FetchClient
-│   │   ├── errors/          # Error classes
-│   │   └── validations/     # Validation schemas
+│   │   └── errors/          # Error classes
 │   ├── providers/           # React providers
 │   ├── store/               # Redux store setup
-│   ├── services/            # Global services
 │   ├── i18n/                # Internationalization
+│   │   └── translations/    # Translation files
 │   └── styles/              # Global styles
 ├── public/                   # Static assets
-├── .husky/                   # Git hooks
-├── Dockerfile
-├── docker-compose.yml
 └── package.json
 ```
 
@@ -501,20 +448,11 @@ my-project/
 
 **CLI:**
 
-- TypeScript - Type-safe development
-- esbuild - Fast bundling
-- Commander.js - CLI framework
-- Enquirer - Interactive prompts
+- TypeScript, esbuild, Commander.js, Enquirer, Vitest
 
 **Generated Apps:**
 
-- Next.js 16+ - React framework
-- TypeScript - Static typing
-- Redux Toolkit - State management
-- Tailwind CSS v4 - Styling
-- next-intl - Internationalization
-- Axios - HTTP client
-- ESLint + Prettier - Code quality
+- Next.js 16+, TypeScript, Redux Toolkit, Tailwind CSS v4, next-intl, Axios, ESLint + Prettier
 
 ---
 
@@ -525,46 +463,32 @@ my-project/
 ```bash
 git clone <repository-url>
 cd npm-packages/packages/next-maker
-yarn install
+npm install
 ```
 
 ### Build
 
 ```bash
-yarn build
+npm run build
+```
+
+### Test
+
+```bash
+npm test
+npm run test:watch
 ```
 
 ### Test Locally
 
 ```bash
-# Test app generation
 node dist/index.js init test-project
-
-# Navigate to test project
 cd test-project
-
-# Test setup commands
-node ../dist/index.js setup --http-client
-node ../dist/index.js setup --dark-theme
-node ../dist/index.js setup --redux
-node ../dist/index.js setup --i18n
-
-# Test feature generation
+node ../dist/index.js page dashboard --loading --error
+node ../dist/index.js component sidebar --client
 node ../dist/index.js feature auth --store persist --service axios
-
-# Test slice generation
-node ../dist/index.js slice user-profile --persist
-
-# Test service generation
-node ../dist/index.js service payment --axios
-```
-
-### Link for Global Testing
-
-```bash
-npm link
-next-maker feature my-feature
-npm unlink -g
+node ../dist/index.js service users --fetch --crud
+node ../dist/index.js locale es
 ```
 
 ---
