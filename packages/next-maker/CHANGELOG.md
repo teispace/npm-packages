@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.13.0...next-maker-v1.13.1) (2026-04-09)
+
+
+### Bug Fixes
+
+* **cleanup:** change storage service cleanup from deleteFile to deleteDirectory ([27d2a62](https://github.com/teispace/npm-packages/commit/27d2a622f01f208759b250c21d574184e34ea690))
+
 ## [1.13.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.12.0...next-maker-v1.13.0) (2026-04-02)
 
 
