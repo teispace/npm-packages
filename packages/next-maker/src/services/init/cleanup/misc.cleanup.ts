@@ -9,7 +9,7 @@ export const cleanupSecureStorage = async (
 ): Promise<void> => {
   const keepSecureStorage = answers.httpClient !== 'none' || answers.reactSecureStorage;
   if (!keepSecureStorage) {
-    await deleteFile(path.join(projectPath, PROJECT_PATHS.STORAGE_SERVICE));
+    await deleteDirectory(path.join(projectPath, PROJECT_PATHS.STORAGE_SERVICE));
   }
 };
 
