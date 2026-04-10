@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/teispace/npm-packages/compare/teieditor-v1.3.0...teieditor-v1.4.0) (2026-04-10)
+
+
+### Features
+
+* **teieditor:** refactor CLI test to use TypeScript and update dependencies ([5167836](https://github.com/teispace/npm-packages/commit/5167836b9cf72c02972d96337e11700abf55f01b))
+
 ## [1.3.0](https://github.com/teispace/npm-packages/compare/teieditor-v1.2.0...teieditor-v1.3.0) (2026-04-10)
 
 
