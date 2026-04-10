@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/teispace/npm-packages/compare/teieditor-v1.0.0...teieditor-v1.1.0) (2026-04-10)
+
+
+### Features
+
+* add toolbar component with formatting options and theme support ([113ad9e](https://github.com/teispace/npm-packages/commit/113ad9e729e6e9e815eddadd3dce563ea67b117d))
+
 ## [1.0.0](https://github.com/teispace/npm-packages/compare/teieditor-v0.1.121...teieditor-v1.0.0) (2026-04-10)
 
 ### Features
