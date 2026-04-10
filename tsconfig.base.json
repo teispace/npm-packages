@@ -17,6 +17,7 @@
     "jsx": "react-jsx",
     "types": ["node"],
     "paths": {
+      "@teispace/teieditor/*": ["./packages/teieditor/src/*"],
       "@teispace/*": ["./packages/*/src"]
     }
   },
