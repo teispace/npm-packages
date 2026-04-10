@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.13.1...next-maker-v1.14.0) (2026-04-10)
+
+
+### Features
+
+* add toolbar component with formatting options and theme support ([113ad9e](https://github.com/teispace/npm-packages/commit/113ad9e729e6e9e815eddadd3dce563ea67b117d))
+
 ## [1.13.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.13.0...next-maker-v1.13.1) (2026-04-09)
 
 
