@@ -1,8 +1,8 @@
 import path from 'node:path';
-import { deleteDirectory, deleteFile, fileExists, readFile, writeFile } from '../../../core/files';
 import { PROJECT_PATHS } from '../../../config/paths';
-import { cleanupHttpTypes } from '../../setup/http-client/injectors';
+import { deleteDirectory, deleteFile, fileExists, readFile, writeFile } from '../../../core/files';
 import type { ProjectPrompts } from '../../../prompts/create-app.prompt';
+import { cleanupHttpTypes } from '../../setup/http-client/injectors';
 
 export const cleanupHttpClient = async (
   projectPath: string,

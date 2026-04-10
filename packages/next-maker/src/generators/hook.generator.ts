@@ -1,4 +1,4 @@
-import { writeFile, mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { kebabToPascal } from '../config/utils';
 import { customHookTemplate } from './templates/custom-hook.template';

@@ -1,6 +1,6 @@
+import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { existsSync } from 'node:fs';
 
 export const readFile = async (filePath: string): Promise<string> => {
   return fs.readFile(filePath, 'utf-8');

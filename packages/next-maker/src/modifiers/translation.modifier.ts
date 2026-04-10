@@ -22,5 +22,5 @@ export const addTranslationNamespace = async (
     description: `${namespace} page description`,
   };
 
-  await writeFile(translationFile, JSON.stringify(json, null, 2) + '\n');
+  await writeFile(translationFile, `${JSON.stringify(json, null, 2)}\n`);
 };

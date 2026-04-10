@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { fileExists, readFile } from '../../../core/files';
 import { PROJECT_PATHS } from '../../../config/paths';
+import { fileExists, readFile } from '../../../core/files';
 
 export const checkIsAlreadySetup = async (
   projectPath: string,
@@ -14,10 +14,7 @@ export const checkIsAlreadySetup = async (
 
   if (fileExists(packageJsonPath)) {
     const packageJson = JSON.parse(await readFile(packageJsonPath));
-    if (
-      (packageJson.dependencies && packageJson.dependencies['next-intl']) ||
-      (packageJson.devDependencies && packageJson.devDependencies['next-intl'])
-    ) {
+    if (packageJson.dependencies?.['next-intl'] || packageJson.devDependencies?.['next-intl']) {
       return { isSetup: true, reason: 'next-intl is installed' };
     }
   }

@@ -1,17 +1,17 @@
-import { Command } from 'commander';
 import path from 'node:path';
+import type { Command } from 'commander';
 import pc from 'picocolors';
+import { log, printBanner } from '../config';
 import { startSpinner } from '../config/spinner';
-import { promptForProjectDetails } from '../prompts/create-app.prompt';
 import { deleteDirectory, fileExists } from '../core/files';
 import { initializeGit } from '../core/git';
 import { installDependencies, runScript } from '../core/package-manager';
-import { log, printBanner } from '../config';
-import { cloneTemplate } from '../services/init/template.service';
-import { configurePackageJson } from '../services/init/config.service';
+import { promptForProjectDetails } from '../prompts/create-app.prompt';
 import { cleanupFeatures } from '../services/init/cleanup';
-import { generateRootProvider, generateLayout } from '../services/init/providers.service';
+import { configurePackageJson } from '../services/init/config.service';
 import { setupDevTools } from '../services/init/devtools.service';
+import { generateLayout, generateRootProvider } from '../services/init/providers.service';
+import { cloneTemplate } from '../services/init/template.service';
 
 export const registerAppCommand = (program: Command) => {
   program
@@ -117,7 +117,7 @@ const createApp = async (initialName?: string): Promise<void> => {
     log(pc.cyan(`  cd ${answers.projectName}`));
     log(
       pc.cyan(
-        `  ${answers.packageManager === 'npm' ? 'npm run dev' : answers.packageManager + ' dev'}`,
+        `  ${answers.packageManager === 'npm' ? 'npm run dev' : `${answers.packageManager} dev`}`,
       ),
     );
     log('');

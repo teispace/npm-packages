@@ -1,5 +1,5 @@
 import Enquirer from 'enquirer';
-import { PackageManager } from '../core/package-manager';
+import type { PackageManager } from '../core/package-manager';
 
 const { prompt } = Enquirer;
 

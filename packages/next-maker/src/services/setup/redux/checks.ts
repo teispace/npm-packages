@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { fileExists, readFile } from '../../../core/files';
 import { PROJECT_PATHS } from '../../../config/paths';
+import { fileExists, readFile } from '../../../core/files';
 import { findLayoutPath } from '../dark-theme/utils'; // Reuse utility
 
 export const checkIsAlreadySetup = async (
@@ -16,8 +16,8 @@ export const checkIsAlreadySetup = async (
   if (fileExists(packageJsonPath)) {
     const packageJson = JSON.parse(await readFile(packageJsonPath));
     if (
-      (packageJson.dependencies && packageJson.dependencies['@reduxjs/toolkit']) ||
-      (packageJson.devDependencies && packageJson.devDependencies['@reduxjs/toolkit'])
+      packageJson.dependencies?.['@reduxjs/toolkit'] ||
+      packageJson.devDependencies?.['@reduxjs/toolkit']
     ) {
       return { isSetup: true, reason: '@reduxjs/toolkit is installed' };
     }

@@ -1,9 +1,9 @@
 import path from 'node:path';
-import { updateJson } from '../../core/files';
-import { ProjectPrompts } from '../../prompts/create-app.prompt';
-import { startSpinner } from '../../config/spinner';
-import { PROJECT_PATHS } from '../../config/paths';
 import { PACKAGES } from '../../config/packages';
+import { PROJECT_PATHS } from '../../config/paths';
+import { startSpinner } from '../../config/spinner';
+import { updateJson } from '../../core/files';
+import type { ProjectPrompts } from '../../prompts/create-app.prompt';
 
 export const configurePackageJson = async (
   projectPath: string,

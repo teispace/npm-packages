@@ -6,6 +6,10 @@
     "packages/next-maker": {
       "component": "next-maker",
       "release-type": "node"
+    },
+    "packages/teieditor": {
+      "component": "teieditor",
+      "release-type": "node"
     }
   },
   "changelog-sections": [

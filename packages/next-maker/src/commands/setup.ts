@@ -1,11 +1,11 @@
-import { Command } from 'commander';
-import pc from 'picocolors';
+import type { Command } from 'commander';
 import Enquirer from 'enquirer';
+import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
 import { setupDarkTheme } from '../services/setup/dark-theme';
-import { setupRedux } from '../services/setup/redux';
-import { setupI18n } from '../services/setup/i18n';
 import { setupHttpClient } from '../services/setup/http-client';
+import { setupI18n } from '../services/setup/i18n';
+import { setupRedux } from '../services/setup/redux';
 
 const { prompt } = Enquirer;
 

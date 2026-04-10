@@ -1,4 +1,4 @@
-import { readFile as readFileFs, writeFile, copyFile } from 'node:fs/promises';
+import { copyFile, readFile as readFileFs, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileExists, readFile, writeFile as writeFileCore } from '../core/files';
 
@@ -35,7 +35,7 @@ const createTranslationFile = async (
     const sourceContent = await readFileFs(sourcePath, 'utf-8');
     const sourceJson = JSON.parse(sourceContent);
     const emptyJson = emptyValues(sourceJson);
-    await writeFile(destPath, JSON.stringify(emptyJson, null, 2) + '\n');
+    await writeFile(destPath, `${JSON.stringify(emptyJson, null, 2)}\n`);
   }
 };
 

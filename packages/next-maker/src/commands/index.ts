@@ -1,13 +1,13 @@
-import { Command } from 'commander';
+import type { Command } from 'commander';
 import { registerAppCommand } from './app';
+import { registerComponentCommand } from './component';
 import { registerFeatureCommand } from './feature';
-import { registerSliceCommand } from './slice';
+import { registerHookCommand } from './hook';
+import { registerLocaleCommand } from './locale';
+import { registerPageCommand } from './page';
 import { registerServiceCommand } from './service';
 import { registerSetupCommand } from './setup';
-import { registerPageCommand } from './page';
-import { registerComponentCommand } from './component';
-import { registerLocaleCommand } from './locale';
-import { registerHookCommand } from './hook';
+import { registerSliceCommand } from './slice';
 
 export const registerCommands = (program: Command) => {
   registerAppCommand(program);

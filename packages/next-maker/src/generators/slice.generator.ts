@@ -1,11 +1,11 @@
-import { writeFile, mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { kebabToCamel, kebabToPascal } from '../config/utils';
-import { sliceTemplate } from './templates/slice.template';
-import { selectorsTemplate } from './templates/selectors.template';
-import { persistTemplate } from './templates/persist.template';
-import { stateTypesTemplate } from './templates/types.template';
 import { sliceBarrelTemplate } from './templates/barrel.template';
+import { persistTemplate } from './templates/persist.template';
+import { selectorsTemplate } from './templates/selectors.template';
+import { sliceTemplate } from './templates/slice.template';
+import { stateTypesTemplate } from './templates/types.template';
 import type { SliceGeneratorOptions } from './types';
 
 /**

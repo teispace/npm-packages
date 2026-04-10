@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   addImportStatement,
-  addToCombineReducers,
   addToAppApis,
+  addToCombineReducers,
 } from '../../src/modifiers/helpers';
 
 describe('addImportStatement', () => {

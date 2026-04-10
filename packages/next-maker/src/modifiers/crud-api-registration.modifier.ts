@@ -1,8 +1,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { kebabToCamel } from '../config/utils';
-import { addToAppApis } from './helpers';
 import { crudApiConfigTemplate } from '../generators/templates/crud-service.template';
+import { addToAppApis } from './helpers';
 
 /**
  * Register CRUD API endpoints for a service in app-apis.ts.

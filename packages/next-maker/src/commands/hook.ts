@@ -1,9 +1,9 @@
-import { Command } from 'commander';
+import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
-import { promptForHookDetails } from '../prompts/hook.prompt';
-import { generateHook } from '../generators';
 import { kebabToPascal } from '../config/utils';
+import { generateHook } from '../generators';
+import { promptForHookDetails } from '../prompts/hook.prompt';
 
 interface HookCommandOptions {
   client?: boolean;

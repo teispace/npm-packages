@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { fileExists, readFile } from '../../../core/files';
 import { PROJECT_PATHS } from '../../../config/paths';
+import { fileExists, readFile } from '../../../core/files';
 
 export const findLayoutPath = async (projectPath: string): Promise<string> => {
   const possibleLayoutPaths = [

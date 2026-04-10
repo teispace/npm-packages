@@ -1,7 +1,7 @@
 import path from 'node:path';
-import { writeFile } from '../../core/files';
-import { ProjectPrompts } from '../../prompts/create-app.prompt';
 import { PROJECT_PATHS } from '../../config/paths';
+import { writeFile } from '../../core/files';
+import type { ProjectPrompts } from '../../prompts/create-app.prompt';
 
 export const generateRootProvider = async (
   projectPath: string,

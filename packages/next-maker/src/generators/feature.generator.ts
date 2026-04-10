@@ -1,12 +1,12 @@
-import { writeFile, mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { kebabToPascal } from '../config/utils';
-import { componentTemplate } from './templates/component.template';
-import { hookWithStoreTemplate, hookWithoutStoreTemplate } from './templates/hook.template';
-import { stateTypesTemplate } from './templates/types.template';
-import { featureBarrelTemplate } from './templates/barrel.template';
-import { generateSlice } from './slice.generator';
 import { generateService } from './service.generator';
+import { generateSlice } from './slice.generator';
+import { featureBarrelTemplate } from './templates/barrel.template';
+import { componentTemplate } from './templates/component.template';
+import { hookWithoutStoreTemplate, hookWithStoreTemplate } from './templates/hook.template';
+import { stateTypesTemplate } from './templates/types.template';
 import type { FeatureGeneratorOptions } from './types';
 
 /**

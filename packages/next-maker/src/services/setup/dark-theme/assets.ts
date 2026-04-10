@@ -1,8 +1,8 @@
 import path from 'node:path';
 import degit from 'degit';
-import { copyFile } from '../../../core/files';
+import type { Ora } from 'ora';
 import { PROJECT_PATHS } from '../../../config/paths';
-import { Ora } from 'ora';
+import { copyFile } from '../../../core/files';
 
 export const fetchAssets = async (tempDir: string, spinner: Ora): Promise<void> => {
   spinner.text = 'Fetching assets from starter repo...';

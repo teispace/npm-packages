@@ -1,8 +1,8 @@
 import path from 'node:path';
-import { generateFeature } from '../generators';
-import { registerInRootReducer, registerApiEndpoints } from '../modifiers';
-import { detectProjectSetup } from '../detection';
 import type { ProjectDetection } from '../detection';
+import { detectProjectSetup } from '../detection';
+import { generateFeature } from '../generators';
+import { registerApiEndpoints, registerInRootReducer } from '../modifiers';
 import type { PipelineContext, PipelineStep } from './types';
 
 export interface FeaturePipelineContext extends PipelineContext {

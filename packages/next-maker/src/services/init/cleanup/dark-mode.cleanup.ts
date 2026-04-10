@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { deleteFile, fileExists, readFile, writeFile } from '../../../core/files';
 import { PROJECT_PATHS } from '../../../config/paths';
+import { deleteFile, fileExists, readFile, writeFile } from '../../../core/files';
 import type { ProjectPrompts } from '../../../prompts/create-app.prompt';
 
 export const cleanupDarkMode = async (

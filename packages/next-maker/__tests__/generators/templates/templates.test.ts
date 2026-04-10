@@ -1,18 +1,18 @@
-import { describe, it, expect } from 'vitest';
-import { sliceTemplate } from '../../../src/generators/templates/slice.template';
-import { selectorsTemplate } from '../../../src/generators/templates/selectors.template';
-import { persistTemplate } from '../../../src/generators/templates/persist.template';
-import { serviceTemplate } from '../../../src/generators/templates/service.template';
+import { describe, expect, it } from 'vitest';
+import {
+  featureBarrelTemplate,
+  sliceBarrelTemplate,
+} from '../../../src/generators/templates/barrel.template';
 import { componentTemplate } from '../../../src/generators/templates/component.template';
 import {
-  hookWithStoreTemplate,
   hookWithoutStoreTemplate,
+  hookWithStoreTemplate,
 } from '../../../src/generators/templates/hook.template';
+import { persistTemplate } from '../../../src/generators/templates/persist.template';
+import { selectorsTemplate } from '../../../src/generators/templates/selectors.template';
+import { serviceTemplate } from '../../../src/generators/templates/service.template';
+import { sliceTemplate } from '../../../src/generators/templates/slice.template';
 import { stateTypesTemplate } from '../../../src/generators/templates/types.template';
-import {
-  sliceBarrelTemplate,
-  featureBarrelTemplate,
-} from '../../../src/generators/templates/barrel.template';
 
 describe('sliceTemplate', () => {
   it('should generate a valid Redux slice', () => {

@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { deleteDirectory, deleteFile } from '../../../core/files';
 import { PROJECT_PATHS } from '../../../config/paths';
+import { deleteDirectory, deleteFile } from '../../../core/files';
 import type { ProjectPrompts } from '../../../prompts/create-app.prompt';
 
 export const cleanupSecureStorage = async (

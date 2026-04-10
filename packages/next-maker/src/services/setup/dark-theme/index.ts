@@ -1,15 +1,15 @@
 import path from 'node:path';
 import pc from 'picocolors';
-import { deleteDirectory } from '../../../core/files';
-import { installPackage, runScript, detectPackageManager } from '../../../core/package-manager';
 import { startSpinner } from '../../../config/spinner';
+import { deleteDirectory } from '../../../core/files';
+import { detectPackageManager, installPackage, runScript } from '../../../core/package-manager';
+import { copyThemeProvider, fetchAssets } from './assets';
 import { checkIsAlreadySetup, validateProjectStructure } from './checks';
-import { fetchAssets, copyThemeProvider } from './assets';
 import {
-  updateProvidersIndex,
-  updateRootProvider,
   updateGlobalsCss,
   updateLayout,
+  updateProvidersIndex,
+  updateRootProvider,
 } from './injectors';
 
 export const setupDarkTheme = async (projectPath: string): Promise<void> => {

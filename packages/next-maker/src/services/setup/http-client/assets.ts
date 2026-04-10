@@ -1,9 +1,9 @@
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import degit from 'degit';
-import { copyFile, deleteDirectory, fileExists, readFile, writeFile } from '../../../core/files';
+import type { Ora } from 'ora';
 import { PROJECT_PATHS } from '../../../config/paths';
-import { Ora } from 'ora';
-import fs from 'node:fs/promises';
+import { copyFile, deleteDirectory, fileExists, readFile, writeFile } from '../../../core/files';
 
 export const fetchAssets = async (tempDir: string, spinner: Ora): Promise<void> => {
   spinner.text = 'Downloading assets from starter repository...';
@@ -179,7 +179,7 @@ export const performFullCleanup = async (projectPath: string): Promise<void> => 
 
     if (modified) {
       // Clean up extra newlines if any
-      content = content.replace(/\n\s*\n/g, '\n\n').trim() + '\n';
+      content = `${content.replace(/\n\s*\n/g, '\n\n').trim()}\n`;
       await writeFile(constantsPath, content);
     }
   }

@@ -1,14 +1,14 @@
-import { Command } from 'commander';
-import pc from 'picocolors';
-import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
+import path from 'node:path';
+import type { Command } from 'commander';
+import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
-import { promptForServiceDetails } from '../prompts/service.prompt';
 import { detectProjectSetup, fileExistsAt } from '../detection';
-import { executePipeline, createServicePipelineSteps } from '../pipelines';
 import { generateCrudService } from '../generators';
 import { registerCrudApiEndpoints } from '../modifiers/crud-api-registration.modifier';
+import { createServicePipelineSteps, executePipeline } from '../pipelines';
+import { promptForServiceDetails } from '../prompts/service.prompt';
 
 interface ServiceCommandOptions {
   path?: string;

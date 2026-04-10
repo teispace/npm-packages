@@ -1,11 +1,11 @@
-import { writeFile, mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { kebabToPascal } from '../config/utils';
-import {
-  sharedComponentTemplate,
-  componentBarrelTemplate,
-} from './templates/shared-component.template';
 import { fileExists, readFile, writeFile as writeFileCore } from '../core/files';
+import {
+  componentBarrelTemplate,
+  sharedComponentTemplate,
+} from './templates/shared-component.template';
 
 export interface ComponentGeneratorOptions {
   name: string;
@@ -44,7 +44,7 @@ const generateFeatureComponent = async (
 
 const generateSharedComponent = async (
   componentName: string,
-  kebabName: string,
+  _kebabName: string,
   projectPath: string,
   isClient: boolean,
   hasI18n: boolean,

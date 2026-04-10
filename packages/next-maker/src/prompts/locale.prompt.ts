@@ -1,4 +1,5 @@
 import Enquirer from 'enquirer';
+
 const { prompt } = Enquirer;
 
 export interface LocalePromptResult {

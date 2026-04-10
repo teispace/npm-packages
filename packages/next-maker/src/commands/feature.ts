@@ -1,10 +1,10 @@
-import { Command } from 'commander';
-import pc from 'picocolors';
 import path from 'node:path';
+import type { Command } from 'commander';
+import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
-import { promptForFeatureDetails } from '../prompts/feature.prompt';
 import { directoryExists } from '../detection';
-import { executePipeline, createFeaturePipelineSteps } from '../pipelines';
+import { createFeaturePipelineSteps, executePipeline } from '../pipelines';
+import { promptForFeatureDetails } from '../prompts/feature.prompt';
 
 interface FeatureCommandOptions {
   skipStore?: boolean;

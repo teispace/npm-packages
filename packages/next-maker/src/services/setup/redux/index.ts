@@ -1,11 +1,11 @@
 import path from 'node:path';
 import pc from 'picocolors';
-import { deleteDirectory } from '../../../core/files';
-import { installPackage, runScript, detectPackageManager } from '../../../core/package-manager';
 import { startSpinner } from '../../../config/spinner';
+import { deleteDirectory } from '../../../core/files';
+import { detectPackageManager, installPackage, runScript } from '../../../core/package-manager';
+import { copyReduxFiles, createCounterFeature, fetchAssets } from './assets';
 import { checkIsAlreadySetup, validateProjectStructure } from './checks';
-import { fetchAssets, copyReduxFiles, createCounterFeature } from './assets';
-import { updateProvidersIndex, updateRootProvider, updatePage } from './injectors';
+import { updatePage, updateProvidersIndex, updateRootProvider } from './injectors';
 
 export const setupRedux = async (projectPath: string): Promise<void> => {
   const spinner = startSpinner('Setting up Redux Toolkit...');

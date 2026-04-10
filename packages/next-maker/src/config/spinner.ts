@@ -1,4 +1,4 @@
-import ora, { Ora, Options } from 'ora';
+import ora, { type Options, type Ora } from 'ora';
 
 // Create and start a spinner
 export function startSpinner(text = '', options?: Options): Ora {

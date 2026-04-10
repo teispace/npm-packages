@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { deleteDirectory, deleteFile, fileExists, readFile, writeFile } from '../../../core/files';
 import { PROJECT_PATHS } from '../../../config/paths';
+import { deleteDirectory, deleteFile, fileExists, readFile, writeFile } from '../../../core/files';
 import type { ProjectPrompts } from '../../../prompts/create-app.prompt';
 
 export const cleanupI18n = async (projectPath: string, answers: ProjectPrompts): Promise<void> => {

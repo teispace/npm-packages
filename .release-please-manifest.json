@@ -1,3 +1,4 @@
 {
-  "packages/next-maker": "1.13.1"
+  "packages/next-maker": "1.13.1",
+  "packages/teieditor": "1.0.0"
 }

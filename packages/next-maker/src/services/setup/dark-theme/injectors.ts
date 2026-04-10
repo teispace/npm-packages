@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { fileExists, readFile, writeFile } from '../../../core/files';
 import { PROJECT_PATHS } from '../../../config/paths';
+import { fileExists, readFile, writeFile } from '../../../core/files';
 
 export const updateProvidersIndex = async (projectPath: string): Promise<void> => {
   const providersIndexPath = path.join(projectPath, PROJECT_PATHS.PROVIDERS_INDEX);
@@ -38,15 +38,14 @@ export const updateRootProvider = async (projectPath: string): Promise<void> => 
             ", CustomThemeProvider } from '@/providers'",
           );
         } else {
-          rootProviderContent =
-            "import { CustomThemeProvider } from '@/providers';\n" + rootProviderContent;
+          rootProviderContent = `import { CustomThemeProvider } from '@/providers';\n${rootProviderContent}`;
         }
       }
     }
 
     // Re-add 'use client' at the top
     if (hasUseClient) {
-      rootProviderContent = useClientDirective + '\n' + rootProviderContent;
+      rootProviderContent = `${useClientDirective}\n${rootProviderContent}`;
     }
 
     // Wrap children

@@ -1,16 +1,16 @@
 import { startSpinner } from '../../../config/spinner';
 import type { ProjectPrompts } from '../../../prompts/create-app.prompt';
-import { cleanupHttpClient } from './http.cleanup';
-import { cleanupRedux } from './redux.cleanup';
 import { cleanupDarkMode } from './dark-mode.cleanup';
+import { cleanupHttpClient } from './http.cleanup';
 import { cleanupI18n } from './i18n.cleanup';
 import {
-  cleanupSecureStorage,
-  cleanupLicense,
   cleanupChangelog,
   cleanupConfig,
+  cleanupLicense,
+  cleanupSecureStorage,
   cleanupTemplateArtifacts,
 } from './misc.cleanup';
+import { cleanupRedux } from './redux.cleanup';
 
 export const cleanupFeatures = async (
   projectPath: string,

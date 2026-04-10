@@ -1,12 +1,12 @@
-import { Command } from 'commander';
-import pc from 'picocolors';
 import path from 'node:path';
+import type { Command } from 'commander';
+import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
-import { promptForPageDetails } from '../prompts/page.prompt';
+import { kebabToPascal } from '../config/utils';
 import { detectProjectSetup, directoryExists } from '../detection';
 import { generatePage } from '../generators';
-import { registerAppPath, addTranslationNamespace } from '../modifiers';
-import { kebabToPascal } from '../config/utils';
+import { addTranslationNamespace, registerAppPath } from '../modifiers';
+import { promptForPageDetails } from '../prompts/page.prompt';
 
 interface PageCommandOptions {
   dynamic?: string;

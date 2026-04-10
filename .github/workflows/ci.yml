@@ -36,11 +36,8 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Lint code
+      - name: Lint & format check
         run: yarn lint
-
-      - name: Format check
-        run: yarn format:check
 
       - name: Type check
         run: yarn type-check
@@ -67,7 +64,7 @@ jobs:
         run: yarn install --immutable
 
       - name: Run tests
-        run: yarn test --passWithNoTests
+        run: yarn test
 
       - name: Upload coverage
         if: always()

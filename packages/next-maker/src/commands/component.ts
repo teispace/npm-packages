@@ -1,10 +1,10 @@
-import { Command } from 'commander';
+import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
-import { promptForComponentDetails } from '../prompts/component.prompt';
+import { kebabToPascal } from '../config/utils';
 import { detectProjectSetup } from '../detection';
 import { generateComponent } from '../generators';
-import { kebabToPascal } from '../config/utils';
+import { promptForComponentDetails } from '../prompts/component.prompt';
 
 interface ComponentCommandOptions {
   client?: boolean;

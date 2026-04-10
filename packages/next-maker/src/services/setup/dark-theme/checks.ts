@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { fileExists, readFile } from '../../../core/files';
 import { PROJECT_PATHS } from '../../../config/paths';
+import { fileExists, readFile } from '../../../core/files';
 import { findLayoutPath } from './utils';
 
 export const checkIsAlreadySetup = async (
@@ -16,10 +16,7 @@ export const checkIsAlreadySetup = async (
 
   if (fileExists(packageJsonPath)) {
     const packageJson = JSON.parse(await readFile(packageJsonPath));
-    if (
-      (packageJson.dependencies && packageJson.dependencies['next-themes']) ||
-      (packageJson.devDependencies && packageJson.devDependencies['next-themes'])
-    ) {
+    if (packageJson.dependencies?.['next-themes'] || packageJson.devDependencies?.['next-themes']) {
       return { isSetup: true, reason: 'next-themes is installed' };
     }
   }

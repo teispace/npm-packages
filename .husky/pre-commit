@@ -2,19 +2,7 @@
 
 echo '🏗️👷 Checking your code before committing...'
 
-# Run lint-staged on staged files (fast)
-echo '🔍 Linting and formatting staged files...'
-
-echo '🧹 Running Prettier across repository (auto-formatting)...'
-yarn format
-if [ $? -ne 0 ]; then
-    echo '❌ Prettier failed. Aborting commit.'
-    exit 1
-fi
-
-# Stage any formatting changes so lint-staged sees them
-git add -A
-
+# Run Biome check on staged files via lint-staged
 echo '🔍 Linting and formatting staged files...'
 yarn lint-staged
 
@@ -23,7 +11,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Type check only staged TypeScript files (fast)
+# Type check only staged TypeScript files
 echo '🔎 Type checking staged files...'
 STAGED_TS_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx)$' || true)
 

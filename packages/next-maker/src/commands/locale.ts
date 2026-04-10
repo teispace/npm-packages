@@ -1,11 +1,11 @@
-import { Command } from 'commander';
+import path from 'node:path';
+import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
-import { promptForLocaleDetails } from '../prompts/locale.prompt';
+import { fileExists } from '../core/files';
 import { detectProjectSetup } from '../detection';
 import { generateLocale } from '../generators';
-import { fileExists } from '../core/files';
-import path from 'node:path';
+import { promptForLocaleDetails } from '../prompts/locale.prompt';
 
 interface LocaleCommandOptions {
   copyTranslations?: boolean;

@@ -1,12 +1,12 @@
-import { Command } from 'commander';
-import pc from 'picocolors';
-import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
+import path from 'node:path';
+import type { Command } from 'commander';
+import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
-import { promptForSliceDetails } from '../prompts/slice.prompt';
 import { detectProjectSetup, directoryExists } from '../detection';
-import { executePipeline, createSlicePipelineSteps } from '../pipelines';
+import { createSlicePipelineSteps, executePipeline } from '../pipelines';
+import { promptForSliceDetails } from '../prompts/slice.prompt';
 
 interface SliceCommandOptions {
   path?: string;

@@ -1,16 +1,16 @@
 import path from 'node:path';
 import pc from 'picocolors';
-import { deleteDirectory } from '../../../core/files';
-import { installPackage, runScript, detectPackageManager } from '../../../core/package-manager';
 import { startSpinner } from '../../../config/spinner';
+import { deleteDirectory } from '../../../core/files';
+import { detectPackageManager, installPackage, runScript } from '../../../core/package-manager';
+import { copyI18nFiles, fetchAssets } from './assets';
 import { checkIsAlreadySetup, validateProjectStructure } from './checks';
-import { fetchAssets, copyI18nFiles } from './assets';
 import {
-  updateNextConfig,
-  updateTypesIndex,
-  updateConfigIndex,
   migrateToLocaleStructure,
+  updateConfigIndex,
+  updateNextConfig,
   updateRootProvider,
+  updateTypesIndex,
 } from './injectors';
 
 export const setupI18n = async (projectPath: string): Promise<void> => {

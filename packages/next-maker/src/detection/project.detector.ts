@@ -1,4 +1,4 @@
-import { readFile, access } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 export interface ProjectDetection {
@@ -22,7 +22,7 @@ export const detectProjectSetup = async (projectPath: string): Promise<ProjectDe
     const hasI18n = !!dependencies['next-intl'];
 
     // Check for HTTP clients: must be both in dependencies AND have client directory
-    let hasAxios = !!dependencies['axios'];
+    let hasAxios = !!dependencies.axios;
     let hasFetch = false;
 
     const axiosClientPath = path.join(projectPath, 'src', 'lib', 'utils', 'http', 'axios-client');

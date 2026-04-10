@@ -1,11 +1,11 @@
-import { writeFile, mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { kebabToPascal } from '../config/utils';
 import {
-  pageTemplate,
   dynamicPageTemplate,
-  loadingTemplate,
   errorTemplate,
+  loadingTemplate,
+  pageTemplate,
 } from './templates/page.template';
 
 export interface PageGeneratorOptions {

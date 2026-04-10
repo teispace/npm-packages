@@ -1,0 +1,144 @@
+{
+  "name": "@teispace/teieditor",
+  "version": "1.0.0",
+  "description": "A feature-rich, lightweight, fully customizable text editor built on Lexical. shadcn-style — install, use, customize.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Teispace",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teispace/npm-packages.git",
+    "directory": "packages/teieditor"
+  },
+  "homepage": "https://github.com/teispace/npm-packages/tree/main/packages/teieditor#readme",
+  "bugs": {
+    "url": "https://github.com/teispace/npm-packages/issues"
+  },
+  "keywords": [
+    "editor",
+    "rich-text",
+    "lexical",
+    "wysiwyg",
+    "text-editor",
+    "react",
+    "tailwindcss",
+    "shadcn",
+    "notion-like",
+    "customizable"
+  ],
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": "./dist/cli/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    },
+    "./extensions": {
+      "types": "./dist/extensions/index.d.ts",
+      "import": "./dist/extensions/index.js"
+    },
+    "./extensions/*": {
+      "types": "./dist/extensions/*/index.d.ts",
+      "import": "./dist/extensions/*/index.js"
+    },
+    "./plugins": {
+      "types": "./dist/plugins/index.d.ts",
+      "import": "./dist/plugins/index.js"
+    },
+    "./themes": {
+      "types": "./dist/themes/index.d.ts",
+      "import": "./dist/themes/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "registry",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "NODE_OPTIONS='--max-old-space-size=8192' tsup && rm -rf registry && mkdir -p registry && cp -r src/registry/ui registry/ui",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "yarn build"
+  },
+  "peerDependencies": {
+    "@lexical/code": ">=0.43.0",
+    "@lexical/history": ">=0.43.0",
+    "@lexical/html": ">=0.43.0",
+    "@lexical/link": ">=0.43.0",
+    "@lexical/list": ">=0.43.0",
+    "@lexical/markdown": ">=0.43.0",
+    "@lexical/react": ">=0.43.0",
+    "@lexical/rich-text": ">=0.43.0",
+    "@lexical/selection": ">=0.43.0",
+    "@lexical/table": ">=0.43.0",
+    "@lexical/utils": ">=0.43.0",
+    "lexical": ">=0.43.0",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@lexical/code": {
+      "optional": true
+    },
+    "@lexical/html": {
+      "optional": true
+    },
+    "@lexical/link": {
+      "optional": true
+    },
+    "@lexical/list": {
+      "optional": true
+    },
+    "@lexical/markdown": {
+      "optional": true
+    },
+    "@lexical/table": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "commander": "^14.0.3",
+    "ora": "^9.3.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@lexical/code": "^0.43.0",
+    "@lexical/history": "^0.43.0",
+    "@lexical/html": "^0.43.0",
+    "@lexical/link": "^0.43.0",
+    "@lexical/list": "^0.43.0",
+    "@lexical/markdown": "^0.43.0",
+    "@lexical/react": "^0.43.0",
+    "@lexical/rich-text": "^0.43.0",
+    "@lexical/selection": "^0.43.0",
+    "@lexical/table": "^0.43.0",
+    "@lexical/utils": "^0.43.0",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "jsdom": "^29.0.2",
+    "lexical": "^0.43.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
+  }
+}

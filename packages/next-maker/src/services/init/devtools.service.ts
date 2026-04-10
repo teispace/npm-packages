@@ -1,5 +1,7 @@
-import path from 'node:path';
 import { readdir } from 'node:fs/promises';
+import path from 'node:path';
+import { PACKAGES } from '../../config/packages';
+import { PROJECT_PATHS } from '../../config/paths';
 import {
   deleteDirectory,
   deleteFile,
@@ -8,9 +10,7 @@ import {
   updateJson,
   writeFile,
 } from '../../core/files';
-import { ProjectPrompts } from '../../prompts/create-app.prompt';
-import { PROJECT_PATHS } from '../../config/paths';
-import { PACKAGES } from '../../config/packages';
+import type { ProjectPrompts } from '../../prompts/create-app.prompt';
 
 export const setupDevTools = async (
   projectPath: string,
@@ -36,8 +36,8 @@ const setupPreCommitHooks = async (projectPath: string, answers: ProjectPrompts)
       delete pkg.devDependencies[PACKAGES.COMMITLINT_CLI];
       delete pkg.devDependencies[PACKAGES.COMMITLINT_CONFIG];
       delete pkg.devDependencies[PACKAGES.LINT_STAGED];
-      delete pkg.scripts['prepare'];
-      delete pkg.scripts['postinstall'];
+      delete pkg.scripts.prepare;
+      delete pkg.scripts.postinstall;
       delete pkg.commitlint;
       delete pkg['lint-staged'];
       return pkg;
@@ -56,7 +56,7 @@ const setupCommitizen = async (projectPath: string, answers: ProjectPrompts): Pr
       if (pkg.config && Object.keys(pkg.config).length === 0) {
         delete pkg.config;
       }
-      delete pkg.scripts['commit'];
+      delete pkg.scripts.commit;
       return pkg;
     });
   }
@@ -196,7 +196,7 @@ ${answers.description}
 First, run the development server:
 
 \`\`\`bash
-${answers.packageManager === 'npm' ? 'npm run dev' : answers.packageManager + ' dev'}
+${answers.packageManager === 'npm' ? 'npm run dev' : `${answers.packageManager} dev`}
 \`\`\`
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.

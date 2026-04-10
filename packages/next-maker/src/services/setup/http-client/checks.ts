@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { fileExists } from '../../../core/files';
 import { PROJECT_PATHS } from '../../../config/paths';
+import { fileExists } from '../../../core/files';
 
 export type HttpClientType = 'fetch' | 'axios' | 'none' | 'both';
 

@@ -1,5 +1,5 @@
-import { access } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { access } from 'node:fs/promises';
 import path from 'node:path';
 
 /**

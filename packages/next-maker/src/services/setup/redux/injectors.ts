@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { fileExists, readFile, writeFile } from '../../../core/files';
 import { PROJECT_PATHS } from '../../../config/paths';
+import { fileExists, readFile, writeFile } from '../../../core/files';
 
 export const updateProvidersIndex = async (projectPath: string): Promise<void> => {
   const providersIndexPath = path.join(projectPath, PROJECT_PATHS.PROVIDERS_INDEX);
@@ -39,15 +39,14 @@ export const updateRootProvider = async (projectPath: string): Promise<void> => 
             ", StoreProvider } from '@/providers'",
           );
         } else {
-          rootProviderContent =
-            "import { StoreProvider } from '@/providers';\n" + rootProviderContent;
+          rootProviderContent = `import { StoreProvider } from '@/providers';\n${rootProviderContent}`;
         }
       }
     }
 
     // Re-add 'use client' at the top
     if (hasUseClient) {
-      rootProviderContent = useClientDirective + '\n' + rootProviderContent;
+      rootProviderContent = `${useClientDirective}\n${rootProviderContent}`;
     }
 
     // Wrap children
@@ -86,8 +85,7 @@ export const updatePage = async (projectPath: string): Promise<void> => {
 
     // Add import
     if (!pageContent.includes('Counter')) {
-      pageContent =
-        "import { Counter } from '@/features/counter/components/Counter';\n" + pageContent;
+      pageContent = `import { Counter } from '@/features/counter/components/Counter';\n${pageContent}`;
     }
 
     // Add Component

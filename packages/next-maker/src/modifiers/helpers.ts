@@ -17,7 +17,7 @@ export const addImportStatement = (fileContent: string, importStatement: string)
     );
   }
 
-  return importStatement + '\n' + fileContent;
+  return `${importStatement}\n${fileContent}`;
 };
 
 /**
@@ -57,5 +57,5 @@ export const addToAppApis = (fileContent: string, endpointBlock: string): string
   const beforeClosing = fileContent.substring(0, insertPosition);
   const afterClosing = fileContent.substring(insertPosition);
 
-  return beforeClosing.trimEnd() + '\n' + endpointBlock + '\n' + afterClosing;
+  return `${beforeClosing.trimEnd()}\n${endpointBlock}\n${afterClosing}`;
 };

@@ -1,8 +1,8 @@
-import path from 'node:path';
-import { fileExists, readFile, writeFile } from '../../../core/files';
-import { PROJECT_PATHS } from '../../../config/paths';
 import { exec } from 'node:child_process';
+import path from 'node:path';
 import { promisify } from 'node:util';
+import { PROJECT_PATHS } from '../../../config/paths';
+import { fileExists, readFile, writeFile } from '../../../core/files';
 
 const execAsync = promisify(exec);
 
@@ -83,7 +83,7 @@ export const cleanupHttpTypes = async (
         '',
       );
       // Clean up any double newlines left behind
-      content = content.replace(/\n\s*\n/g, '\n\n').trim() + '\n';
+      content = `${content.replace(/\n\s*\n/g, '\n\n').trim()}\n`;
       await writeFile(httpTypesPath, content);
     }
   }

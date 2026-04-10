@@ -1,25 +1,25 @@
-import path from 'node:path';
 import fs from 'node:fs/promises';
-import pc from 'picocolors';
+import path from 'node:path';
 import Enquirer from 'enquirer';
+import pc from 'picocolors';
+import { startSpinner } from '../../../config/spinner';
 import { deleteDirectory, fileExists } from '../../../core/files';
 import {
+  detectPackageManager,
   installPackage,
   runScript,
-  detectPackageManager,
   uninstallPackage,
 } from '../../../core/package-manager';
-import { startSpinner } from '../../../config/spinner';
-import { checkIsAlreadySetup, validateProjectStructure, HttpClientType } from './checks';
-import { fetchAssets, copyHttpClientFiles, performFullCleanup } from './assets';
+import { copyHttpClientFiles, fetchAssets, performFullCleanup } from './assets';
+import { checkIsAlreadySetup, type HttpClientType, validateProjectStructure } from './checks';
 import {
-  updateHttpIndex,
-  updateUtilsIndex,
-  updateTypesIndex,
-  updateConfigIndex,
-  migrateClientUsages,
   cleanupHttpTypes,
+  migrateClientUsages,
   removeHttpExports,
+  updateConfigIndex,
+  updateHttpIndex,
+  updateTypesIndex,
+  updateUtilsIndex,
 } from './injectors';
 
 type ClientType = 'fetch' | 'axios';
@@ -113,12 +113,12 @@ export const setupHttpClient = async (projectPath: string): Promise<void> => {
 
     // Axios Management
     if (activeClients.includes('axios')) {
-      if (!dependencies['axios']) {
+      if (!dependencies.axios) {
         spinner.text = 'Installing Axios...';
         await installPackage(projectPath, 'axios');
       }
     } else {
-      if (dependencies['axios']) {
+      if (dependencies.axios) {
         spinner.text = 'Uninstalling Axios...';
         await uninstallPackage(projectPath, 'axios');
       }

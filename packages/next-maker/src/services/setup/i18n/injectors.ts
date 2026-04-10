@@ -1,14 +1,14 @@
-import path from 'node:path';
-import { fileExists, readFile, writeFile, deleteFile } from '../../../core/files';
-import { PROJECT_PATHS } from '../../../config/paths';
 import fs from 'node:fs/promises';
+import path from 'node:path';
+import { PROJECT_PATHS } from '../../../config/paths';
+import { deleteFile, fileExists, readFile, writeFile } from '../../../core/files';
 
 export const updateNextConfig = async (projectPath: string): Promise<void> => {
   const nextConfigPath = path.join(projectPath, PROJECT_PATHS.NEXT_CONFIG);
   if (fileExists(nextConfigPath)) {
     let content = await readFile(nextConfigPath);
     if (!content.includes('createNextIntlPlugin')) {
-      content = "import createNextIntlPlugin from 'next-intl/plugin';\n" + content;
+      content = `import createNextIntlPlugin from 'next-intl/plugin';\n${content}`;
 
       const exportDefaultRegex = /export default (.*?);/;
       if (exportDefaultRegex.test(content)) {
@@ -72,7 +72,7 @@ import { NextIntlClientProvider, AbstractIntlMessages } from 'next-intl';
 
     // Re-add 'use client' at the top
     if (hasUseClient) {
-      content = useClientDirective + '\n' + content;
+      content = `${useClientDirective}\n${content}`;
     }
 
     // Update Props
@@ -160,12 +160,11 @@ export const migrateToLocaleStructure = async (projectPath: string): Promise<voi
 
     // Add imports
     if (!content.includes('next-intl')) {
-      content =
-        `import { routing } from '@/i18n/routing';
+      content = `import { routing } from '@/i18n/routing';
 import { hasLocale } from 'next-intl';
 import { notFound } from 'next/navigation';
 import { setRequestLocale, getMessages } from 'next-intl/server';
-` + content;
+${content}`;
     }
 
     // Add generateStaticParams
@@ -253,10 +252,9 @@ import { setRequestLocale, getMessages } from 'next-intl/server';
 
     // Add imports
     if (!content.includes('next-intl')) {
-      content =
-        `import { SupportedLocale } from '@/types/i18n';
+      content = `import { SupportedLocale } from '@/types/i18n';
 import { setRequestLocale } from 'next-intl/server';
-` + content;
+${content}`;
     }
 
     // Update Page signature
