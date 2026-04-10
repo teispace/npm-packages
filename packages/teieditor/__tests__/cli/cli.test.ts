@@ -6,11 +6,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const CLI_PATH = join(__dirname, '../../dist/cli/index.js');
+const CLI_PATH = join(__dirname, '../../src/cli/index.ts');
 const TEMP_DIR = join(__dirname, '../.tmp-cli-test');
 
 function runCli(args: string): string {
-  return execSync(`node ${CLI_PATH} ${args}`, {
+  return execSync(`node --import tsx ${CLI_PATH} ${args}`, {
     cwd: TEMP_DIR,
     encoding: 'utf-8',
     timeout: 10000,

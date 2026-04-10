@@ -2333,6 +2333,7 @@ __metadata:
     ora: "npm:^9.3.0"
     picocolors: "npm:^1.1.1"
     tsup: "npm:^8.5.1"
+    tsx: "npm:^4.21.0"
     typescript: "npm:^6.0.2"
     vitest: "npm:^4.1.4"
   peerDependencies:
