@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/teispace/npm-packages/compare/teieditor-v1.2.0...teieditor-v1.3.0) (2026-04-10)
+
+
+### Features
+
+* add various plugins for enhanced editor functionality ([0f127ba](https://github.com/teispace/npm-packages/commit/0f127ba88a4b632c16d891e852eaf70301040058))
+
 ## [1.2.0](https://github.com/teispace/npm-packages/compare/teieditor-v1.1.0...teieditor-v1.2.0) (2026-04-10)
 
 
