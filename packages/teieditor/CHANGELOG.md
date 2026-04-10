@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/teispace/npm-packages/compare/teieditor-v1.1.0...teieditor-v1.2.0) (2026-04-10)
+
+
+### Features
+
+* **teieditor:** complete UI rewrite with 46 extensions and 3 editor modes ([79cd4d6](https://github.com/teispace/npm-packages/commit/79cd4d626175cd96bf2a1e09c0da749c9968c52a))
+
 ## [1.1.0](https://github.com/teispace/npm-packages/compare/teieditor-v1.0.0...teieditor-v1.1.0) (2026-04-10)
 
 
