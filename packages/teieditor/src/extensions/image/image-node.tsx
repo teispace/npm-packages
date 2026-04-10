@@ -1,3 +1,5 @@
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection';
 import type {
   DOMConversionMap,
   DOMConversionOutput,
@@ -8,8 +10,15 @@ import type {
   SerializedLexicalNode,
   Spread,
 } from 'lexical';
-import { $applyNodeReplacement, DecoratorNode } from 'lexical';
+import {
+  $applyNodeReplacement,
+  $getNodeByKey,
+  CLICK_COMMAND,
+  COMMAND_PRIORITY_LOW,
+  DecoratorNode,
+} from 'lexical';
 import type { JSX } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 // ---------------------------------------------------------------------------
 // Serialization
@@ -157,6 +166,7 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
         width={this.__width}
         height={this.__height}
         caption={this.__caption}
+        nodeKey={this.__key}
       />
     );
   }
@@ -172,27 +182,111 @@ function ImageComponent({
   width,
   height,
   caption,
+  nodeKey,
 }: {
   src: string;
   altText: string;
   width: number | 'inherit';
   height: number | 'inherit';
   caption: string;
+  nodeKey: NodeKey;
 }) {
+  const [editor] = useLexicalComposerContext();
+  const [isSelected, setSelected, clearSelection] = useLexicalNodeSelection(nodeKey);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // Click to select
+  useEffect(() => {
+    return editor.registerCommand(
+      CLICK_COMMAND,
+      (event: MouseEvent) => {
+        if (imgRef.current && imgRef.current.contains(event.target as Node)) {
+          if (!event.shiftKey) clearSelection();
+          setSelected(true);
+          return true;
+        }
+        return false;
+      },
+      COMMAND_PRIORITY_LOW,
+    );
+  }, [editor, setSelected, clearSelection]);
+
+  // Resize handler
+  const handleResize = useCallback(
+    (newWidth: number, newHeight: number) => {
+      editor.update(() => {
+        const node = $getNodeByKey(nodeKey);
+        if (node && node instanceof ImageNode) {
+          node.setWidthAndHeight(newWidth, newHeight);
+        }
+      });
+    },
+    [editor, nodeKey],
+  );
+
+  const numericWidth = width !== 'inherit' ? width : undefined;
+  const numericHeight = height !== 'inherit' ? height : undefined;
+
   return (
-    <figure className="tei-image group my-4 flex flex-col items-center">
-      <img
-        src={src}
-        alt={altText}
-        className="max-w-full rounded-lg"
-        style={{
-          width: width !== 'inherit' ? width : undefined,
-          height: height !== 'inherit' ? height : undefined,
-        }}
-        draggable={false}
-      />
+    <figure
+      className={`tei-image group my-4 flex flex-col items-center ${
+        isSelected ? 'ring-2 ring-[hsl(var(--tei-ring))] rounded-lg' : ''
+      }`}
+    >
+      <div className="relative inline-block">
+        <img
+          ref={imgRef}
+          src={src}
+          alt={altText}
+          className="max-w-full rounded-lg cursor-pointer"
+          style={{
+            width: numericWidth,
+            height: numericHeight,
+          }}
+          draggable={false}
+        />
+        {/* Resize handles shown when selected */}
+        {isSelected && numericWidth && numericHeight && (
+          <div className="absolute inset-0">
+            {/* Corner handles */}
+            {[
+              'top-0 left-0 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize',
+              'top-0 right-0 translate-x-1/2 -translate-y-1/2 cursor-ne-resize',
+              'bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-sw-resize',
+              'bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-se-resize',
+            ].map((pos) => (
+              <div
+                key={pos}
+                className={`absolute h-3 w-3 rounded-full border-2 border-[hsl(var(--tei-primary))] bg-[hsl(var(--tei-bg))] ${pos}`}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const startX = e.clientX;
+                  const startW = numericWidth;
+                  const startH = numericHeight;
+                  const aspect = startW / startH;
+
+                  const onMove = (ev: PointerEvent) => {
+                    const dx = ev.clientX - startX;
+                    let newW = Math.max(50, startW + dx);
+                    const newH = Math.max(50, newW / aspect);
+                    newW = newH * aspect;
+                    handleResize(Math.round(newW), Math.round(newH));
+                  };
+                  const onUp = () => {
+                    document.removeEventListener('pointermove', onMove);
+                    document.removeEventListener('pointerup', onUp);
+                  };
+                  document.addEventListener('pointermove', onMove);
+                  document.addEventListener('pointerup', onUp);
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
       {caption && (
-        <figcaption className="mt-2 text-center text-sm text-muted-foreground">
+        <figcaption className="mt-2 text-center text-sm text-[hsl(var(--tei-muted-fg))]">
           {caption}
         </figcaption>
       )}

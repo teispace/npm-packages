@@ -57,6 +57,10 @@ export class FileNode extends DecoratorNode<JSX.Element> {
     return false;
   }
 
+  static importDOM(): null {
+    return null;
+  }
+
   exportDOM(): DOMExportOutput {
     const a = document.createElement('a');
     a.href = this.__url;

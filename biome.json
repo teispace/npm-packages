@@ -50,7 +50,8 @@
         "noExplicitAny": "off",
         "noShadowRestrictedNames": "off",
         "noArrayIndexKey": "off",
-        "useIterableCallbackReturn": "off"
+        "useIterableCallbackReturn": "off",
+        "noConfusingVoidType": "off"
       },
       "correctness": {
         "noUnusedImports": "warn",
@@ -62,7 +63,11 @@
       },
       "a11y": {
         "noStaticElementInteractions": "off",
-        "useAriaPropsSupportedByRole": "off"
+        "useAriaPropsSupportedByRole": "off",
+        "noSvgWithoutTitle": "off",
+        "useSemanticElements": "off",
+        "useFocusableInteractive": "off",
+        "useAriaPropsForRole": "off"
       },
       "style": {
         "noParameterAssign": "off",

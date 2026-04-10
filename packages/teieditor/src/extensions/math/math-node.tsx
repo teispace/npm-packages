@@ -36,6 +36,10 @@ export class MathNode extends DecoratorNode<JSX.Element> {
     return false;
   }
 
+  static importDOM(): null {
+    return null;
+  }
+
   exportDOM(): DOMExportOutput {
     const el = document.createElement(this.__inline ? 'span' : 'div');
     el.className = 'tei-math';

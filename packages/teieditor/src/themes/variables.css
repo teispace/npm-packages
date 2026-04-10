@@ -1,0 +1,70 @@
+/*
+ * TeiEditor CSS Variables
+ *
+ * Override these in your global CSS to theme the editor.
+ * Compatible with shadcn/ui — if you use shadcn, these map
+ * to your existing design tokens automatically.
+ *
+ * Usage:
+ *   @import '@teispace/teieditor/themes/variables.css';
+ *   // Or copy these into your globals.css and customize
+ */
+
+:root {
+  /* Core */
+  --tei-bg: 0 0% 100%;
+  --tei-fg: 0 0% 3.9%;
+  --tei-border: 0 0% 89.8%;
+  --tei-ring: 0 0% 3.9%;
+  --tei-radius: 0.5rem;
+
+  /* Surfaces */
+  --tei-muted: 0 0% 96.1%;
+  --tei-muted-fg: 0 0% 45.1%;
+  --tei-accent: 0 0% 96.1%;
+  --tei-accent-fg: 0 0% 9%;
+  --tei-popover: 0 0% 100%;
+  --tei-popover-fg: 0 0% 3.9%;
+  --tei-primary: 0 0% 9%;
+  --tei-primary-fg: 0 0% 98%;
+
+  /* Editor-specific */
+  --tei-toolbar-bg: var(--tei-bg);
+  --tei-toolbar-border: var(--tei-border);
+  --tei-bubble-bg: 0 0% 9%;
+  --tei-bubble-fg: 0 0% 98%;
+  --tei-drag-handle: 0 0% 63.9%;
+  --tei-placeholder: 0 0% 45.1%;
+  --tei-highlight: 48 96% 89%;
+  --tei-selection: 214 95% 93%;
+
+  /* Callout variants */
+  --tei-callout-info: 217 91% 60%;
+  --tei-callout-warning: 38 92% 50%;
+  --tei-callout-error: 0 84% 60%;
+  --tei-callout-success: 142 71% 45%;
+  --tei-callout-note: 0 0% 45%;
+}
+
+.dark {
+  --tei-bg: 0 0% 3.9%;
+  --tei-fg: 0 0% 98%;
+  --tei-border: 0 0% 14.9%;
+  --tei-ring: 0 0% 83.1%;
+
+  --tei-muted: 0 0% 14.9%;
+  --tei-muted-fg: 0 0% 63.9%;
+  --tei-accent: 0 0% 14.9%;
+  --tei-accent-fg: 0 0% 98%;
+  --tei-popover: 0 0% 3.9%;
+  --tei-popover-fg: 0 0% 98%;
+  --tei-primary: 0 0% 98%;
+  --tei-primary-fg: 0 0% 9%;
+
+  --tei-bubble-bg: 0 0% 14.9%;
+  --tei-bubble-fg: 0 0% 98%;
+  --tei-drag-handle: 0 0% 45.1%;
+  --tei-placeholder: 0 0% 35%;
+  --tei-highlight: 48 40% 30%;
+  --tei-selection: 214 40% 25%;
+}

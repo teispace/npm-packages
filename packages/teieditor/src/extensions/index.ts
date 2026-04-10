@@ -21,6 +21,12 @@ export { CodeBlock } from './code-block/index.js';
 export type { ColorConfig } from './color/index.js';
 // Colors
 export { Color, setBackgroundColor, setTextColor } from './color/index.js';
+export type { DateTimeConfig } from './datetime/index.js';
+// DateTime
+export { DateTime, INSERT_DATETIME_COMMAND } from './datetime/index.js';
+export type { DragDropPasteConfig } from './drag-drop-paste/index.js';
+// Drag Drop Paste
+export { DragDropPaste } from './drag-drop-paste/index.js';
 export type { DragHandleConfig } from './drag-handle/index.js';
 // Drag handle
 export { DragHandle } from './drag-handle/index.js';
@@ -36,6 +42,15 @@ export {
 export type { EmojiConfig, EmojiItem } from './emoji/index.js';
 // Emoji
 export { EMOJI_LIST, Emoji } from './emoji/index.js';
+// Figma
+export {
+  $createFigmaNode,
+  $isFigmaNode,
+  Figma,
+  FigmaNode,
+  INSERT_FIGMA_COMMAND,
+  parseFigmaUrl,
+} from './figma/index.js';
 export type { FileConfig, FilePayload } from './file/index.js';
 // File
 export { $createFileNode, $isFileNode, File, FileNode, INSERT_FILE_COMMAND } from './file/index.js';
@@ -65,20 +80,42 @@ export {
   INSERT_IMAGE_COMMAND,
 } from './image/index.js';
 export { Italic } from './italic/index.js';
+// Layout
+export {
+  $createLayoutContainerNode,
+  INSERT_LAYOUT_COMMAND,
+  Layout,
+  LayoutContainerNode,
+  LayoutItemNode,
+} from './layout/index.js';
 export type { LinkConfig } from './link/index.js';
 // Links
 export { Link } from './link/index.js';
 export type { ListConfig } from './list/index.js';
 // Lists
 export { List } from './list/index.js';
+export type { ListMaxIndentConfig } from './list-max-indent/index.js';
+// List Max Indent
+export { ListMaxIndent } from './list-max-indent/index.js';
 export type { MarkdownConfig } from './markdown/index.js';
 // Markdown
 export { htmlToMarkdown, Markdown, markdownToHtml } from './markdown/index.js';
 // Math
 export { $createMathNode, $isMathNode, INSERT_MATH_COMMAND, Math, MathNode } from './math/index.js';
+export type { MaxLengthConfig } from './max-length/index.js';
+// Max Length
+export { MaxLength } from './max-length/index.js';
 export type { MentionConfig, MentionSuggestion } from './mention/index.js';
 // Mention
 export { $createMentionNode, $isMentionNode, Mention, MentionNode } from './mention/index.js';
+// Page Break
+export {
+  $createPageBreakNode,
+  $isPageBreakNode,
+  INSERT_PAGE_BREAK_COMMAND,
+  PageBreak,
+  PageBreakNode,
+} from './page-break/index.js';
 export { Paragraph } from './paragraph/index.js';
 export type { PlaceholderConfig } from './placeholder/index.js';
 // Placeholder
@@ -97,7 +134,6 @@ export { INSERT_TABLE_COMMAND, Table } from './table/index.js';
 // Base class for custom extensions
 export { type TextFormatConfig, TextFormatExtension } from './text-format-extension.js';
 export type { TocConfig } from './toc/index.js';
-
 // Table of Contents
 export { Toc, TocPlugin, useToc } from './toc/index.js';
 // Toggle
@@ -111,7 +147,25 @@ export {
 export type { TurnIntoConfig } from './turn-into/index.js';
 // Turn into
 export { TurnInto } from './turn-into/index.js';
+// Twitter
+export {
+  $createTweetNode,
+  $isTweetNode,
+  INSERT_TWEET_COMMAND,
+  parseTweetUrl,
+  TweetNode,
+  Twitter,
+} from './twitter/index.js';
 export { Underline } from './underline/index.js';
 export type { WordCountConfig } from './word-count/index.js';
 // Word Count
 export { WordCount } from './word-count/index.js';
+// YouTube
+export {
+  $createYouTubeNode,
+  $isYouTubeNode,
+  INSERT_YOUTUBE_COMMAND,
+  parseYouTubeUrl,
+  YouTube,
+  YouTubeNode,
+} from './youtube/index.js';

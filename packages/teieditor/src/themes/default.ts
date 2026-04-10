@@ -1,17 +1,21 @@
 import type { EditorThemeClasses } from 'lexical';
 
 /**
- * Default TeiEditor theme using Tailwind CSS classes.
+ * Default TeiEditor theme using CSS custom properties.
  *
- * Uses `tei-` prefixed classes so they don't collide with the consumer's
- * styles. The consumer can override any class by passing a custom theme
- * to `createTeiEditor({ theme: { ... } })`.
+ * All colors reference `--tei-*` variables defined in `variables.css`.
+ * Override the CSS variables in your global styles to theme the editor —
+ * no need to modify this object unless you want structural changes.
+ *
+ * Class naming: `tei-*` prefix prevents collisions with your app's styles.
  */
 export const defaultTheme: EditorThemeClasses = {
   // Root
   root: 'tei-root outline-none min-h-[150px] p-4 text-base leading-relaxed',
+
   // Paragraphs
   paragraph: 'tei-paragraph mb-2 leading-relaxed',
+
   // Headings
   heading: {
     h1: 'tei-h1 text-3xl font-bold mt-6 mb-4 leading-tight',
@@ -21,6 +25,7 @@ export const defaultTheme: EditorThemeClasses = {
     h5: 'tei-h5 text-base font-semibold mt-2 mb-1',
     h6: 'tei-h6 text-sm font-semibold mt-2 mb-1 uppercase tracking-wide',
   },
+
   // Text formats
   text: {
     bold: 'tei-bold font-bold',
@@ -28,14 +33,16 @@ export const defaultTheme: EditorThemeClasses = {
     underline: 'tei-underline underline',
     strikethrough: 'tei-strikethrough line-through',
     underlineStrikethrough: 'tei-underline-strikethrough underline line-through',
-    code: 'tei-inline-code rounded bg-muted px-1.5 py-0.5 font-mono text-sm',
-    highlight: 'tei-highlight bg-yellow-200 dark:bg-yellow-800',
+    code: 'tei-inline-code rounded bg-[hsl(var(--tei-muted))] px-1.5 py-0.5 font-mono text-sm',
+    highlight: 'tei-highlight bg-[hsl(var(--tei-highlight))]',
     subscript: 'tei-subscript',
     superscript: 'tei-superscript',
   },
+
   // Block-level
   quote:
-    'tei-blockquote border-l-4 border-muted-foreground/30 pl-4 italic text-muted-foreground my-4',
+    'tei-blockquote border-l-4 border-[hsl(var(--tei-border))] pl-4 italic text-[hsl(var(--tei-muted-fg))] my-4',
+
   // Lists
   list: {
     ul: 'tei-ul list-disc ml-6 mb-2',
@@ -54,10 +61,12 @@ export const defaultTheme: EditorThemeClasses = {
       'tei-ol-5 list-[lower-alpha]',
     ],
   },
+
   // Links
-  link: 'tei-link text-primary underline cursor-pointer hover:text-primary/80',
-  // Code
-  code: 'tei-code-block block rounded-lg bg-muted p-4 font-mono text-sm my-4 overflow-x-auto',
+  link: 'tei-link text-[hsl(var(--tei-primary))] underline cursor-pointer hover:opacity-80',
+
+  // Code blocks
+  code: 'tei-code-block block rounded-lg bg-[hsl(var(--tei-muted))] p-4 font-mono text-sm my-4 overflow-x-auto',
   codeHighlight: {
     atrule: 'tei-token-atrule text-purple-600 dark:text-purple-400',
     attr: 'tei-token-attr text-yellow-600 dark:text-yellow-400',
@@ -90,4 +99,11 @@ export const defaultTheme: EditorThemeClasses = {
     url: 'tei-token-url text-blue-600 dark:text-blue-400',
     variable: 'tei-token-variable text-orange-600 dark:text-orange-400',
   },
+
+  // Table
+  table: 'tei-table border-collapse w-full my-4',
+  tableCell: 'tei-table-cell border border-[hsl(var(--tei-border))] px-3 py-2 min-w-[75px]',
+  tableCellHeader:
+    'tei-table-cell-header border border-[hsl(var(--tei-border))] px-3 py-2 bg-[hsl(var(--tei-muted))] font-semibold',
+  tableSelection: 'tei-table-selection bg-[hsl(var(--tei-selection))]',
 };

@@ -37,7 +37,7 @@ export interface TeiExtension<TConfig extends ExtensionConfig = ExtensionConfig>
   // -- Lifecycle ------------------------------------------------------------
 
   /** Called once when the editor mounts this extension. */
-  onRegister?(editor: LexicalEditor): (() => void) | undefined;
+  onRegister?(editor: LexicalEditor): (() => void) | void;
 
   /** Called when the editor unmounts this extension. */
   onDestroy?(editor: LexicalEditor): void;

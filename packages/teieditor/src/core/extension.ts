@@ -41,6 +41,6 @@ export abstract class BaseExtension<TConfig extends ExtensionConfig = ExtensionC
   getNodes?(): Array<Klass<LexicalNode>>;
   getPlugins?(): Array<ComponentType>;
   getKeyBindings?(): Record<string, (editor: LexicalEditor) => boolean>;
-  onRegister?(editor: LexicalEditor): (() => void) | undefined;
+  onRegister?(editor: LexicalEditor): (() => void) | void;
   onDestroy?(editor: LexicalEditor): void;
 }

@@ -6,9 +6,11 @@ import {
   createCommand,
   type LexicalCommand,
 } from 'lexical';
+import type { ComponentType } from 'react';
 import { BaseExtension } from '../../core/extension.js';
 import type { ExtensionConfig } from '../../core/types.js';
 import { $createToggleNode, ToggleNode } from './toggle-node.js';
+import { TogglePlugin } from './toggle-plugin.js';
 
 export const INSERT_TOGGLE_COMMAND: LexicalCommand<string> = createCommand('INSERT_TOGGLE_COMMAND');
 
@@ -18,6 +20,10 @@ class ToggleExtension extends BaseExtension<ExtensionConfig> {
 
   getNodes(): Array<Klass<LexicalNode>> {
     return [ToggleNode];
+  }
+
+  getPlugins(): Array<ComponentType> {
+    return [TogglePlugin];
   }
 
   onRegister(editor: LexicalEditor): (() => void) | undefined {

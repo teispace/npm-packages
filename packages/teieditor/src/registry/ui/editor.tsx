@@ -12,7 +12,7 @@ import {
   OnChangePlugin,
 } from '@teispace/teieditor/plugins';
 import type { SerializationFormat } from '@teispace/teieditor/utils';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Toolbar } from './toolbar';
 
 export interface TeiEditorProps {
@@ -115,6 +115,10 @@ export function TeiEditor({
   readOnly = false,
   config = {},
 }: TeiEditorProps) {
+  // Lexical requires a browser DOM — prevent SSR rendering
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const editor = useMemo(
     () =>
       createTeiEditor({
@@ -124,6 +128,20 @@ export function TeiEditor({
       }),
     [readOnly, extensions, config],
   );
+
+  // Show skeleton during SSR / hydration
+  if (!mounted) {
+    return (
+      <div
+        className={`tei-editor-wrapper rounded-lg border border-border bg-background animate-pulse ${className}`.trim()}
+      >
+        {showToolbar && <div className="h-10 border-b border-border" />}
+        <div className="min-h-[150px] p-4">
+          <div className="h-4 w-48 rounded bg-muted" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <TeiEditorProvider editor={editor}>

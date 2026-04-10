@@ -5,7 +5,8 @@
   "version": "0.0.1",
   "type": "module",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
   "engines": {
     "node": ">=20.0.0",
@@ -46,11 +47,41 @@
     "@biomejs/biome": "^2.4.11",
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
+    "@lexical/code": "^0.43.0",
+    "@lexical/history": "^0.43.0",
+    "@lexical/html": "^0.43.0",
+    "@lexical/link": "^0.43.0",
+    "@lexical/list": "^0.43.0",
+    "@lexical/markdown": "^0.43.0",
+    "@lexical/react": "^0.43.0",
+    "@lexical/rich-text": "^0.43.0",
+    "@lexical/selection": "^0.43.0",
+    "@lexical/table": "^0.43.0",
+    "@lexical/utils": "^0.43.0",
     "commitizen": "^4.3.1",
     "cz-conventional-changelog": "^3.3.0",
     "husky": "^9.1.7",
+    "lexical": "^0.43.0",
     "lint-staged": "^16.4.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "typescript": "^6.0.2",
     "vitest": "^4.1.4"
+  },
+  "resolutions": {
+    "lexical": "0.43.0",
+    "@lexical/react": "0.43.0",
+    "@lexical/rich-text": "0.43.0",
+    "@lexical/selection": "0.43.0",
+    "@lexical/utils": "0.43.0",
+    "@lexical/history": "0.43.0",
+    "@lexical/html": "0.43.0",
+    "@lexical/list": "0.43.0",
+    "@lexical/link": "0.43.0",
+    "@lexical/code": "0.43.0",
+    "@lexical/table": "0.43.0",
+    "@lexical/markdown": "0.43.0",
+    "@lexical/extension": "0.43.0",
+    "@lexical/clipboard": "0.43.0"
   }
 }

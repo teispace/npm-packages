@@ -3,13 +3,19 @@ import type { ComponentType } from 'react';
 import { BaseExtension } from '../../core/extension.js';
 import type { ExtensionConfig } from '../../core/types.js';
 import { MentionNode } from './mention-node.js';
-import { MentionPlugin, type MentionSuggestion } from './mention-plugin.js';
+import {
+  MentionPlugin,
+  type MentionPluginProps,
+  type MentionSuggestion,
+} from './mention-plugin.js';
 
 export interface MentionConfig extends ExtensionConfig {
   /** Trigger character. Default: '@'. */
   trigger: string;
   /** Fetch suggestions. Required. */
   onSearch: (query: string) => Promise<MentionSuggestion[]> | MentionSuggestion[];
+  /** Custom render function for the menu UI. Registry components provide this. */
+  menuRenderFn?: MentionPluginProps['menuRenderFn'];
 }
 
 const defaultSearch = (): MentionSuggestion[] => [];
@@ -26,8 +32,8 @@ class MentionExtension extends BaseExtension<MentionConfig> {
   }
 
   getPlugins(): Array<ComponentType> {
-    const { trigger, onSearch } = this.config;
-    const Plugin = () => MentionPlugin({ trigger, onSearch });
+    const { trigger, onSearch, menuRenderFn } = this.config;
+    const Plugin = () => MentionPlugin({ trigger, onSearch, menuRenderFn });
     Plugin.displayName = 'MentionPluginWrapper';
     return [Plugin];
   }
@@ -36,3 +42,4 @@ class MentionExtension extends BaseExtension<MentionConfig> {
 export const Mention = new MentionExtension();
 export { $createMentionNode, $isMentionNode, MentionNode } from './mention-node.js';
 export type { MentionSuggestion } from './mention-plugin.js';
+export { MentionOption } from './mention-plugin.js';

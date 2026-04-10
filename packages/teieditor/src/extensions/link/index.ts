@@ -1,6 +1,7 @@
-import { $toggleLink, AutoLinkNode, LinkNode } from '@lexical/link';
+import { AutoLinkNode, LinkNode } from '@lexical/link';
 import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import type { Klass, LexicalEditor, LexicalNode } from 'lexical';
+import { createCommand, type LexicalCommand } from 'lexical';
 import type { ComponentType } from 'react';
 import { BaseExtension } from '../../core/extension.js';
 import type { ExtensionConfig } from '../../core/types.js';
@@ -16,6 +17,15 @@ export interface LinkConfig extends ExtensionConfig {
 function defaultValidateUrl(url: string): boolean {
   return /^(https?:\/\/|mailto:)/i.test(url);
 }
+
+/**
+ * Command dispatched by Ctrl+K or toolbar link button.
+ * The registry link-editor component listens for this to show the floating editor.
+ * If no UI is mounted, this is a no-op.
+ */
+export const TOGGLE_LINK_EDITOR_COMMAND: LexicalCommand<void> = createCommand(
+  'TOGGLE_LINK_EDITOR_COMMAND',
+);
 
 class LinkExtension extends BaseExtension<LinkConfig> {
   readonly name = 'link';
@@ -43,14 +53,8 @@ class LinkExtension extends BaseExtension<LinkConfig> {
   getKeyBindings(): Record<string, (editor: LexicalEditor) => boolean> {
     return {
       'Mod+K': (editor) => {
-        // Toggle link — if text is selected, prompt will be handled by UI
-        // For now, dispatch a custom event the toolbar can listen to
-        const url = typeof window !== 'undefined' ? window.prompt('Enter URL:') : null;
-        if (url) {
-          editor.update(() => {
-            $toggleLink(url);
-          });
-        }
+        // Dispatch command — the registry link-editor component handles the UI
+        editor.dispatchCommand(TOGGLE_LINK_EDITOR_COMMAND, undefined);
         return true;
       },
     };

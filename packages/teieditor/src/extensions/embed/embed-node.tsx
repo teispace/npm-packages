@@ -60,6 +60,10 @@ export class EmbedNode extends DecoratorNode<JSX.Element> {
     return false;
   }
 
+  static importDOM(): null {
+    return null;
+  }
+
   exportDOM(): DOMExportOutput {
     const el = document.createElement('a');
     el.href = this.__url;
