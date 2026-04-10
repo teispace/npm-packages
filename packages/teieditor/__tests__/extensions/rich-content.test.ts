@@ -78,8 +78,8 @@ describe('Rich Content Extensions', () => {
       expect(Toggle.name).toBe('toggle');
     });
 
-    it('registers ToggleNode', () => {
-      expect(Toggle.getNodes!().length).toBe(1);
+    it('registers collapsible nodes', () => {
+      expect(Toggle.getNodes!().length).toBe(4);
     });
   });
 

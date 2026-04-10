@@ -4,12 +4,12 @@ import {
   INSERT_ORDERED_LIST_COMMAND,
   INSERT_UNORDERED_LIST_COMMAND,
 } from '@lexical/list';
+import { INSERT_HORIZONTAL_RULE_COMMAND } from '@lexical/react/LexicalHorizontalRuleNode';
 import { $createHeadingNode, $createQuoteNode } from '@lexical/rich-text';
 import { $setBlocksType } from '@lexical/selection';
 import { $createParagraphNode, $getSelection, $isRangeSelection } from 'lexical';
 import { INSERT_CALLOUT_COMMAND } from '../callout/index.js';
 import { INSERT_EMBED_COMMAND } from '../embed/index.js';
-import { INSERT_HORIZONTAL_RULE_COMMAND } from '../horizontal-rule/plugin.js';
 import { INSERT_IMAGE_COMMAND } from '../image/image-plugin.js';
 import { INSERT_TABLE_COMMAND } from '../table/index.js';
 import { INSERT_TOGGLE_COMMAND } from '../toggle/index.js';
@@ -25,7 +25,7 @@ export const defaultSlashCommands: SlashCommandItem[] = [
     name: 'paragraph',
     label: 'Text',
     description: 'Plain text block',
-    keywords: ['paragraph', 'text', 'plain'],
+    keywords: ['paragraph', 'text', 'plain', 'normal'],
     group: 'Basic',
     onSelect: (editor) => {
       editor.update(() => {
@@ -39,7 +39,7 @@ export const defaultSlashCommands: SlashCommandItem[] = [
     name: 'heading1',
     label: 'Heading 1',
     description: 'Large section heading',
-    keywords: ['h1', 'heading', 'title'],
+    keywords: ['h1', 'heading', 'title', 'large'],
     group: 'Headings',
     onSelect: (editor) => {
       editor.update(() => {
@@ -52,7 +52,7 @@ export const defaultSlashCommands: SlashCommandItem[] = [
     name: 'heading2',
     label: 'Heading 2',
     description: 'Medium section heading',
-    keywords: ['h2', 'heading', 'subtitle'],
+    keywords: ['h2', 'heading', 'subtitle', 'medium'],
     group: 'Headings',
     onSelect: (editor) => {
       editor.update(() => {
@@ -65,12 +65,51 @@ export const defaultSlashCommands: SlashCommandItem[] = [
     name: 'heading3',
     label: 'Heading 3',
     description: 'Small section heading',
-    keywords: ['h3', 'heading'],
+    keywords: ['h3', 'heading', 'small'],
     group: 'Headings',
     onSelect: (editor) => {
       editor.update(() => {
         const sel = $getSelection();
         if ($isRangeSelection(sel)) $setBlocksType(sel, () => $createHeadingNode('h3'));
+      });
+    },
+  },
+  {
+    name: 'heading4',
+    label: 'Heading 4',
+    description: 'Small heading',
+    keywords: ['h4', 'heading'],
+    group: 'Headings',
+    onSelect: (editor) => {
+      editor.update(() => {
+        const sel = $getSelection();
+        if ($isRangeSelection(sel)) $setBlocksType(sel, () => $createHeadingNode('h4'));
+      });
+    },
+  },
+  {
+    name: 'heading5',
+    label: 'Heading 5',
+    description: 'Tiny heading',
+    keywords: ['h5', 'heading'],
+    group: 'Headings',
+    onSelect: (editor) => {
+      editor.update(() => {
+        const sel = $getSelection();
+        if ($isRangeSelection(sel)) $setBlocksType(sel, () => $createHeadingNode('h5'));
+      });
+    },
+  },
+  {
+    name: 'heading6',
+    label: 'Heading 6',
+    description: 'Smallest heading',
+    keywords: ['h6', 'heading'],
+    group: 'Headings',
+    onSelect: (editor) => {
+      editor.update(() => {
+        const sel = $getSelection();
+        if ($isRangeSelection(sel)) $setBlocksType(sel, () => $createHeadingNode('h6'));
       });
     },
   },
@@ -136,10 +175,20 @@ export const defaultSlashCommands: SlashCommandItem[] = [
     name: 'divider',
     label: 'Divider',
     description: 'Horizontal rule separator',
-    keywords: ['hr', 'divider', 'separator', 'line'],
+    keywords: ['hr', 'divider', 'separator', 'line', 'horizontal'],
     group: 'Blocks',
     onSelect: (editor) => {
       editor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined);
+    },
+  },
+  {
+    name: 'toggle',
+    label: 'Collapsible',
+    description: 'Collapsible content block',
+    keywords: ['toggle', 'collapse', 'accordion', 'details', 'collapsible'],
+    group: 'Blocks',
+    onSelect: (editor) => {
+      editor.dispatchCommand(INSERT_TOGGLE_COMMAND, 'Toggle');
     },
   },
   // Rich content
@@ -171,8 +220,8 @@ export const defaultSlashCommands: SlashCommandItem[] = [
   {
     name: 'table',
     label: 'Table',
-    description: 'Insert a table',
-    keywords: ['table', 'grid', 'spreadsheet'],
+    description: 'Insert a data table',
+    keywords: ['table', 'grid', 'spreadsheet', 'data'],
     group: 'Media',
     onSelect: (editor) => {
       editor.dispatchCommand(INSERT_TABLE_COMMAND, { rows: 3, columns: 3, includeHeaders: true });
@@ -182,16 +231,17 @@ export const defaultSlashCommands: SlashCommandItem[] = [
     name: 'embed',
     label: 'Embed',
     description: 'YouTube, Twitter, or any URL',
-    keywords: ['embed', 'youtube', 'video', 'twitter', 'link'],
+    keywords: ['embed', 'youtube', 'video', 'twitter', 'link', 'figma', 'iframe'],
     group: 'Media',
     onSelect: (editor) => {
       const url = typeof window !== 'undefined' ? window.prompt('Enter URL to embed:') : null;
       if (url) editor.dispatchCommand(INSERT_EMBED_COMMAND, url);
     },
   },
+  // Callouts
   {
     name: 'calloutInfo',
-    label: 'Callout',
+    label: 'Info Callout',
     description: 'Info callout block',
     keywords: ['callout', 'alert', 'info', 'notice', 'note'],
     group: 'Blocks',
@@ -201,9 +251,9 @@ export const defaultSlashCommands: SlashCommandItem[] = [
   },
   {
     name: 'calloutWarning',
-    label: 'Warning',
+    label: 'Warning Callout',
     description: 'Warning callout block',
-    keywords: ['warning', 'caution', 'alert'],
+    keywords: ['warning', 'caution', 'alert', 'danger'],
     group: 'Blocks',
     onSelect: (editor) => {
       editor.dispatchCommand(INSERT_CALLOUT_COMMAND, 'warning');
@@ -211,22 +261,22 @@ export const defaultSlashCommands: SlashCommandItem[] = [
   },
   {
     name: 'calloutSuccess',
-    label: 'Success',
+    label: 'Success Callout',
     description: 'Success callout block',
-    keywords: ['success', 'tip', 'done'],
+    keywords: ['success', 'tip', 'done', 'check'],
     group: 'Blocks',
     onSelect: (editor) => {
       editor.dispatchCommand(INSERT_CALLOUT_COMMAND, 'success');
     },
   },
   {
-    name: 'toggle',
-    label: 'Toggle',
-    description: 'Collapsible content block',
-    keywords: ['toggle', 'collapse', 'accordion', 'details'],
+    name: 'calloutError',
+    label: 'Error Callout',
+    description: 'Error callout block',
+    keywords: ['error', 'danger', 'fail', 'critical'],
     group: 'Blocks',
     onSelect: (editor) => {
-      editor.dispatchCommand(INSERT_TOGGLE_COMMAND, 'Toggle');
+      editor.dispatchCommand(INSERT_CALLOUT_COMMAND, 'error');
     },
   },
 ];

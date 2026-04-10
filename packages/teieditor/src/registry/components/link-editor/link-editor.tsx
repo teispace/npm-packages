@@ -12,8 +12,34 @@ import { TeiButton } from '../../ui/button.js';
 import { IconCheck, IconExternalLink, IconUnlink } from '../../ui/icons.js';
 import { TeiInput } from '../../ui/input.js';
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const URL_REGEX = /^https?:\/\//i;
+const MAILTO_REGEX = /^mailto:/i;
+
+function isValidUrl(url: string): boolean {
+  if (!url.trim()) return false;
+  return URL_REGEX.test(url) || MAILTO_REGEX.test(url);
+}
+
+function sanitizeUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  // Auto-add https:// if no protocol
+  if (!URL_REGEX.test(trimmed) && !MAILTO_REGEX.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+  return trimmed;
+}
+
+// ---------------------------------------------------------------------------
+// LinkEditor
+// ---------------------------------------------------------------------------
+
 /**
- * Floating link editor with view/edit modes.
+ * Floating link editor with view/edit modes and URL validation.
  * Appears when:
  * - Ctrl+K is pressed (TOGGLE_LINK_EDITOR_COMMAND)
  * - Cursor is inside an existing link
@@ -26,6 +52,8 @@ export function LinkEditor() {
   const [editMode, setEditMode] = useState(false);
   const [url, setUrl] = useState('');
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const [isInvalid, setIsInvalid] = useState(false);
+  const [openInNewTab, setOpenInNewTab] = useState(true);
 
   // Listen for TOGGLE_LINK_EDITOR_COMMAND
   useEffect(() => {
@@ -34,6 +62,7 @@ export function LinkEditor() {
       () => {
         setEditMode(true);
         setVisible(true);
+        setIsInvalid(false);
         setAnchorRect(getSelectionRect());
         requestAnimationFrame(() => inputRef.current?.focus());
         return true;
@@ -78,12 +107,18 @@ export function LinkEditor() {
   });
 
   const applyLink = useCallback(() => {
+    const sanitized = sanitizeUrl(url);
+    if (!isValidUrl(sanitized)) {
+      setIsInvalid(true);
+      return;
+    }
+
     editor.update(() => {
-      $toggleLink(url.trim() || null);
+      $toggleLink(sanitized, openInNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {});
     });
     setEditMode(false);
-    if (!url.trim()) setVisible(false);
-  }, [editor, url]);
+    setIsInvalid(false);
+  }, [editor, url, openInNewTab]);
 
   const removeLink = useCallback(() => {
     editor.update(() => {
@@ -100,6 +135,7 @@ export function LinkEditor() {
       if (e.key === 'Escape') {
         setVisible(false);
         setEditMode(false);
+        setIsInvalid(false);
       }
     };
     document.addEventListener('keydown', handler);
@@ -112,7 +148,7 @@ export function LinkEditor() {
     <div
       ref={editorRef}
       className={[
-        'tei-link-editor fixed z-50 flex items-center gap-1.5 rounded-lg px-2 py-1.5 shadow-lg',
+        'tei-link-editor fixed z-50 flex flex-col gap-2 rounded-lg px-3 py-2.5 shadow-lg',
         'border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-popover))]',
         'transition-opacity duration-150',
         visible ? 'opacity-100' : 'pointer-events-none opacity-0',
@@ -120,37 +156,52 @@ export function LinkEditor() {
       style={{ position: 'fixed', top: -10000, left: -10000 }}
     >
       {editMode ? (
-        /* Edit mode: URL input */
+        /* Edit mode */
         <>
-          <TeiInput
-            ref={inputRef}
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://..."
-            className="w-52"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                applyLink();
-              }
-            }}
-          />
-          <TeiButton onClick={applyLink} title="Apply link" variant="default" size="sm">
-            <IconCheck size={14} />
-          </TeiButton>
-          <TeiButton onClick={removeLink} title="Remove link" size="sm">
-            <IconUnlink size={14} />
-          </TeiButton>
+          <div className="flex items-center gap-1.5">
+            <TeiInput
+              ref={inputRef}
+              type="url"
+              value={url}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                setIsInvalid(false);
+              }}
+              placeholder="https://..."
+              className={`w-56 ${isInvalid ? 'border-red-500 focus:border-red-500' : ''}`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  applyLink();
+                }
+              }}
+            />
+            <TeiButton onClick={applyLink} title="Apply link" variant="default" size="sm">
+              <IconCheck size={14} />
+            </TeiButton>
+            <TeiButton onClick={removeLink} title="Remove link" size="sm">
+              <IconUnlink size={14} />
+            </TeiButton>
+          </div>
+          {isInvalid && <p className="text-xs text-red-500">Please enter a valid URL</p>}
+          <label className="flex items-center gap-2 text-xs text-[hsl(var(--tei-muted-fg))]">
+            <input
+              type="checkbox"
+              checked={openInNewTab}
+              onChange={(e) => setOpenInNewTab(e.target.checked)}
+              className="rounded"
+            />
+            Open in new tab
+          </label>
         </>
       ) : (
-        /* View mode: show URL */
-        <>
+        /* View mode */
+        <div className="flex items-center gap-1.5">
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="max-w-[200px] truncate text-sm text-[hsl(var(--tei-primary))] underline"
+            className="max-w-[240px] truncate text-sm text-[hsl(var(--tei-primary))] underline"
           >
             {url}
           </a>
@@ -167,7 +218,7 @@ export function LinkEditor() {
           <TeiButton onClick={removeLink} title="Remove link" size="sm">
             <IconUnlink size={14} />
           </TeiButton>
-        </>
+        </div>
       )}
     </div>,
     document.body,

@@ -2,20 +2,28 @@
 
 import type { TeiEditorConfig, TeiExtension } from '@teispace/teieditor/core';
 import { createTeiEditor, TeiEditorProvider } from '@teispace/teieditor/core';
-import { StarterKit } from '@teispace/teieditor/extensions/starter-kit';
+import { SlashCommand, StarterKit } from '@teispace/teieditor/extensions/starter-kit';
 import type { OutputFormat } from '@teispace/teieditor/plugins';
 import {
+  AutoEmbedPlugin,
   ClickableLinkPlugin,
+  CodeActionMenuPlugin,
   EditorContent,
+  EmojiPickerPlugin,
   InitialValuePlugin,
   KeyboardShortcutsPlugin,
   OnChangePlugin,
   TabIndentationPlugin,
+  TableCellResizerPlugin,
+  TableHoverActionsPlugin,
 } from '@teispace/teieditor/plugins';
 import type { SerializationFormat } from '@teispace/teieditor/utils';
 import { useEffect, useMemo, useState } from 'react';
 import { BubbleMenu } from '../components/bubble-menu/bubble-menu.js';
+import { ContextMenu } from '../components/context-menu/context-menu.js';
 import { LinkEditor } from '../components/link-editor/link-editor.js';
+import { SlashMenu } from '../components/slash-menu/slash-menu.js';
+import { TableMenu } from '../components/table-menu/table-menu.js';
 
 export interface TeiEditorNotionProps {
   extensions?: TeiExtension[];
@@ -32,7 +40,8 @@ export interface TeiEditorNotionProps {
 
 /**
  * Notion-style editor: no toolbar. Uses slash commands (/), floating bubble menu,
- * drag handles, and per-block placeholders.
+ * drag handles, context menu, and all other features.
+ * Like Lexical Playground but without the fixed toolbar.
  */
 export function TeiEditorNotion({
   extensions = [],
@@ -49,15 +58,29 @@ export function TeiEditorNotion({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const editor = useMemo(
-    () =>
-      createTeiEditor({
-        extensions: [...StarterKit, ...extensions],
-        editable: !readOnly,
-        ...config,
-      }),
-    [readOnly, extensions, config],
-  );
+  const editor = useMemo(() => {
+    // Configure SlashCommand with the styled menu
+    const configuredStarterKit = StarterKit.map((ext) => {
+      if (ext.name === 'slashCommand') {
+        return SlashCommand.configure({
+          menuRenderFn: (anchorRef: any, itemProps: any, matchingString: any) => (
+            <SlashMenu
+              anchorElementRef={anchorRef}
+              itemProps={itemProps}
+              matchingString={matchingString}
+            />
+          ),
+        });
+      }
+      return ext;
+    });
+
+    return createTeiEditor({
+      extensions: [...configuredStarterKit, ...extensions],
+      editable: !readOnly,
+      ...config,
+    });
+  }, [readOnly, extensions, config]);
 
   if (!mounted) {
     return (
@@ -76,15 +99,33 @@ export function TeiEditorNotion({
       <div
         className={`tei-editor-wrapper rounded-[var(--tei-radius)] border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-bg))] ${className}`.trim()}
       >
+        {/* No toolbar — Notion style */}
         <div className="tei-editor-content relative">
           <EditorContent className={editorClassName} placeholder={placeholder} />
+
+          {/* Core plugins */}
           <InitialValuePlugin value={initialValue} format={initialFormat} />
           <OnChangePlugin onChange={onChange} format={format} />
           <KeyboardShortcutsPlugin />
           <TabIndentationPlugin />
           <ClickableLinkPlugin />
+
+          {/* Floating menus — the primary UX in Notion mode */}
           <BubbleMenu />
           <LinkEditor />
+          <CodeActionMenuPlugin />
+
+          {/* Table enhancements */}
+          <TableCellResizerPlugin />
+          <TableHoverActionsPlugin />
+          <TableMenu />
+
+          {/* Context menu */}
+          <ContextMenu />
+
+          {/* Auto-detection */}
+          <AutoEmbedPlugin />
+          <EmojiPickerPlugin />
         </div>
       </div>
     </TeiEditorProvider>

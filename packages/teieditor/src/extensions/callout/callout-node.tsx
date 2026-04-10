@@ -15,11 +15,14 @@ export type CalloutVariant = 'info' | 'warning' | 'error' | 'success' | 'note';
 export type SerializedCalloutNode = Spread<{ variant: CalloutVariant }, SerializedElementNode>;
 
 const VARIANT_STYLES: Record<CalloutVariant, string> = {
-  info: 'tei-callout-info border-blue-400 bg-blue-50 dark:bg-blue-950/30',
-  warning: 'tei-callout-warning border-yellow-400 bg-yellow-50 dark:bg-yellow-950/30',
-  error: 'tei-callout-error border-red-400 bg-red-50 dark:bg-red-950/30',
-  success: 'tei-callout-success border-green-400 bg-green-50 dark:bg-green-950/30',
-  note: 'tei-callout-note border-gray-400 bg-gray-50 dark:bg-gray-950/30',
+  info: 'tei-callout-info border-[hsl(var(--tei-callout-info-border))] bg-[hsl(var(--tei-callout-info-bg))]',
+  warning:
+    'tei-callout-warning border-[hsl(var(--tei-callout-warning-border))] bg-[hsl(var(--tei-callout-warning-bg))]',
+  error:
+    'tei-callout-error border-[hsl(var(--tei-callout-error-border))] bg-[hsl(var(--tei-callout-error-bg))]',
+  success:
+    'tei-callout-success border-[hsl(var(--tei-callout-success-border))] bg-[hsl(var(--tei-callout-success-bg))]',
+  note: 'tei-callout-note border-[hsl(var(--tei-callout-note-border))] bg-[hsl(var(--tei-callout-note-bg))]',
 };
 
 /** Icons for callout variants. Exported for use in toolbar/UI components. */

@@ -1,21 +1,18 @@
 'use client';
 
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { $patchStyleText } from '@lexical/selection';
-import { $getSelection, $isRangeSelection } from 'lexical';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useToolbarState } from '@teispace/teieditor/plugins';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TeiButton } from '../../ui/button';
 import { ColorPicker } from '../../ui/color-picker';
 
 /**
  * Text color and background color buttons with color picker popover.
+ * Uses shared ToolbarContext for current color state.
  */
 export function TextColorButton() {
-  const [editor] = useLexicalComposerContext();
+  const toolbar = useToolbarState();
   const [showPicker, setShowPicker] = useState<'text' | 'bg' | null>(null);
-  const [textColor, setTextColor] = useState('#000000');
-  const [bgColor, setBgColor] = useState('');
   const btnRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
 
@@ -36,18 +33,6 @@ export function TextColorButton() {
     return () => document.removeEventListener('mousedown', handler);
   }, [showPicker]);
 
-  const applyColor = useCallback(
-    (property: string, color: string) => {
-      editor.update(() => {
-        const selection = $getSelection();
-        if ($isRangeSelection(selection)) {
-          $patchStyleText(selection, { [property]: color || null });
-        }
-      });
-    },
-    [editor],
-  );
-
   const btnRect = btnRef.current?.getBoundingClientRect();
 
   return (
@@ -61,7 +46,7 @@ export function TextColorButton() {
         <span className="text-xs font-bold">A</span>
         <span
           className="absolute bottom-1 left-1/2 h-0.5 w-3.5 -translate-x-1/2 rounded"
-          style={{ backgroundColor: textColor }}
+          style={{ backgroundColor: toolbar.fontColor }}
         />
       </TeiButton>
 
@@ -73,7 +58,7 @@ export function TextColorButton() {
       >
         <span
           className="inline-flex h-4 w-4 items-center justify-center rounded text-[10px] font-bold"
-          style={{ backgroundColor: bgColor || 'hsl(var(--tei-highlight))' }}
+          style={{ backgroundColor: toolbar.bgColor || 'hsl(var(--tei-highlight))' }}
         >
           A
         </span>
@@ -90,14 +75,12 @@ export function TextColorButton() {
             style={{ top: btnRect.bottom + 4, left: btnRect.left }}
           >
             <ColorPicker
-              value={showPicker === 'text' ? textColor : bgColor}
+              value={showPicker === 'text' ? toolbar.fontColor : toolbar.bgColor}
               onChange={(color) => {
                 if (showPicker === 'text') {
-                  setTextColor(color);
-                  applyColor('color', color);
+                  toolbar.applyFontColor(color);
                 } else {
-                  setBgColor(color);
-                  applyColor('background-color', color);
+                  toolbar.applyBgColor(color);
                 }
               }}
             />

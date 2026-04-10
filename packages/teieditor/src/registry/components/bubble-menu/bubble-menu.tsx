@@ -1,17 +1,11 @@
 'use client';
 
-import { $isLinkNode } from '@lexical/link';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { $isAtNodeEnd } from '@lexical/selection';
 import { TOGGLE_LINK_EDITOR_COMMAND } from '@teispace/teieditor/extensions/link';
+import { useToolbarState } from '@teispace/teieditor/plugins';
 import { getSelectionRect, useFloatingPosition } from '@teispace/teieditor/utils';
-import {
-  $getSelection,
-  $isRangeSelection,
-  FORMAT_TEXT_COMMAND,
-  type TextFormatType,
-} from 'lexical';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { $getSelection, $isRangeSelection, type TextFormatType } from 'lexical';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TeiButton } from '../../ui/button.js';
 import {
@@ -21,23 +15,29 @@ import {
   IconItalic,
   IconLink,
   IconStrikethrough,
+  IconSubscript,
+  IconSuperscript,
   IconUnderline,
 } from '../../ui/icons.js';
 import { TeiSeparator } from '../../ui/separator.js';
 
+// ---------------------------------------------------------------------------
+// BubbleMenu (Floating Text Format Toolbar)
+// ---------------------------------------------------------------------------
+
 /**
  * Floating formatting toolbar that appears when text is selected.
- * Shows formatting buttons and a link toggle.
+ * Like Lexical Playground's FloatingTextFormatToolbarPlugin.
+ * Uses shared ToolbarContext for format state.
  */
 export function BubbleMenu() {
   const [editor] = useLexicalComposerContext();
+  const toolbar = useToolbarState();
   const menuRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
-  const [formats, setFormats] = useState<Set<TextFormatType>>(new Set());
-  const [isLink, setIsLink] = useState(false);
 
-  // Track selection changes
+  // Track selection changes to show/hide
   useEffect(() => {
     return editor.registerUpdateListener(() => {
       editor.getEditorState().read(() => {
@@ -53,31 +53,12 @@ export function BubbleMenu() {
           return;
         }
 
-        // Read formats
-        const fmts = new Set<TextFormatType>();
-        if (selection.hasFormat('bold')) fmts.add('bold');
-        if (selection.hasFormat('italic')) fmts.add('italic');
-        if (selection.hasFormat('underline')) fmts.add('underline');
-        if (selection.hasFormat('strikethrough')) fmts.add('strikethrough');
-        if (selection.hasFormat('code')) fmts.add('code');
-        if (selection.hasFormat('highlight')) fmts.add('highlight');
-        setFormats(fmts);
-
-        // Check link
-        const node = $isAtNodeEnd(selection.focus)
-          ? selection.focus.getNode()
-          : selection.anchor.getNode();
-        const parent = node.getParent();
-        setIsLink($isLinkNode(parent) || $isLinkNode(node));
-
-        // Position
         setAnchorRect(getSelectionRect());
         setVisible(true);
       });
     });
   }, [editor]);
 
-  // Position the floating menu
   useFloatingPosition({
     anchorRect,
     floatingRef: menuRef,
@@ -86,12 +67,18 @@ export function BubbleMenu() {
     visible,
   });
 
-  const toggleFormat = useCallback(
-    (format: TextFormatType) => editor.dispatchCommand(FORMAT_TEXT_COMMAND, format),
-    [editor],
-  );
-
   if (typeof window === 'undefined') return null;
+
+  const formatButton = (format: TextFormatType, icon: React.ReactNode, title: string) => (
+    <TeiButton
+      onClick={() => toolbar.toggleFormat(format)}
+      active={toolbar.activeFormats.has(format)}
+      title={title}
+      className="text-[hsl(var(--tei-bubble-fg))] hover:bg-white/10"
+    >
+      {icon}
+    </TeiButton>
+  );
 
   return createPortal(
     <div
@@ -106,59 +93,24 @@ export function BubbleMenu() {
       aria-label="Text formatting"
       style={{ position: 'fixed', top: -10000, left: -10000 }}
     >
-      <TeiButton
-        onClick={() => toggleFormat('bold')}
-        active={formats.has('bold')}
-        title="Bold"
-        className="text-[hsl(var(--tei-bubble-fg))] hover:bg-white/10"
-      >
-        <IconBold size={14} />
-      </TeiButton>
-      <TeiButton
-        onClick={() => toggleFormat('italic')}
-        active={formats.has('italic')}
-        title="Italic"
-        className="text-[hsl(var(--tei-bubble-fg))] hover:bg-white/10"
-      >
-        <IconItalic size={14} />
-      </TeiButton>
-      <TeiButton
-        onClick={() => toggleFormat('underline')}
-        active={formats.has('underline')}
-        title="Underline"
-        className="text-[hsl(var(--tei-bubble-fg))] hover:bg-white/10"
-      >
-        <IconUnderline size={14} />
-      </TeiButton>
-      <TeiButton
-        onClick={() => toggleFormat('strikethrough')}
-        active={formats.has('strikethrough')}
-        title="Strikethrough"
-        className="text-[hsl(var(--tei-bubble-fg))] hover:bg-white/10"
-      >
-        <IconStrikethrough size={14} />
-      </TeiButton>
-      <TeiButton
-        onClick={() => toggleFormat('code')}
-        active={formats.has('code')}
-        title="Code"
-        className="text-[hsl(var(--tei-bubble-fg))] hover:bg-white/10"
-      >
-        <IconCode size={14} />
-      </TeiButton>
-      <TeiButton
-        onClick={() => toggleFormat('highlight')}
-        active={formats.has('highlight')}
-        title="Highlight"
-        className="text-[hsl(var(--tei-bubble-fg))] hover:bg-white/10"
-      >
-        <IconHighlight size={14} />
-      </TeiButton>
+      {formatButton('bold', <IconBold size={14} />, 'Bold (Ctrl+B)')}
+      {formatButton('italic', <IconItalic size={14} />, 'Italic (Ctrl+I)')}
+      {formatButton('underline', <IconUnderline size={14} />, 'Underline (Ctrl+U)')}
+      {formatButton('strikethrough', <IconStrikethrough size={14} />, 'Strikethrough')}
+      {formatButton('code', <IconCode size={14} />, 'Code')}
+      {formatButton('highlight', <IconHighlight size={14} />, 'Highlight')}
+
       <TeiSeparator className="bg-white/20" />
+
+      {formatButton('subscript', <IconSubscript size={14} />, 'Subscript')}
+      {formatButton('superscript', <IconSuperscript size={14} />, 'Superscript')}
+
+      <TeiSeparator className="bg-white/20" />
+
       <TeiButton
         onClick={() => editor.dispatchCommand(TOGGLE_LINK_EDITOR_COMMAND, undefined)}
-        active={isLink}
-        title={isLink ? 'Edit link' : 'Add link'}
+        active={toolbar.isLink}
+        title={toolbar.isLink ? 'Edit link' : 'Add link (Ctrl+K)'}
         className="text-[hsl(var(--tei-bubble-fg))] hover:bg-white/10"
       >
         <IconLink size={14} />

@@ -1,5 +1,6 @@
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { createContext, type ReactNode, useContext, useMemo } from 'react';
+import { ToolbarProvider } from '../plugins/toolbar-context.js';
 import type { TeiEditorInstance } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -37,7 +38,8 @@ export interface TeiEditorProviderProps {
 
 /**
  * Wraps children in both the TeiEditor context and Lexical's `<LexicalComposer>`.
- * All extension plugins are automatically mounted.
+ * All extension plugins are automatically mounted. A shared `ToolbarProvider`
+ * is included so toolbar, bubble menu, and other components can share state.
  *
  * @example
  * ```tsx
@@ -56,8 +58,10 @@ export function TeiEditorProvider({ editor, children }: TeiEditorProviderProps) 
   return (
     <TeiEditorContext.Provider value={editor}>
       <LexicalComposer initialConfig={editor.composerConfig}>
-        {ExtensionPlugins}
-        {children}
+        <ToolbarProvider>
+          {ExtensionPlugins}
+          {children}
+        </ToolbarProvider>
       </LexicalComposer>
     </TeiEditorContext.Provider>
   );

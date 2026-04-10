@@ -12,20 +12,33 @@ export { BaseExtension, createTeiEditor, TeiEditorProvider, useTeiEditor } from 
 
 // Extensions (re-export everything from the extensions barrel)
 export * from './extensions/index.js';
+
+// Plugins
 export type {
   BubbleMenuPluginProps,
   EditorContentProps,
   InitialValuePluginProps,
   OnChangePluginProps,
   OutputFormat,
+  ToolbarActions,
+  ToolbarContextValue,
+  ToolbarState,
 } from './plugins/index.js';
-// Plugins
 export {
+  AutoEmbedPlugin,
   BubbleMenuPlugin,
+  ClickableLinkPlugin,
+  CodeActionMenuPlugin,
   EditorContent,
+  EmojiPickerPlugin,
   InitialValuePlugin,
   KeyboardShortcutsPlugin,
   OnChangePlugin,
+  TabIndentationPlugin,
+  TableCellResizerPlugin,
+  TableHoverActionsPlugin,
+  ToolbarProvider,
+  useToolbarState,
 } from './plugins/index.js';
 
 // Themes

@@ -512,7 +512,7 @@ export function Toolbar({ className = '' }: ToolbarProps) {
         active={activeFormats.has('highlight')}
         title="Highlight"
       >
-        <span className="text-xs bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">H</span>
+        <span className="text-xs bg-[hsl(var(--tei-highlight))] px-0.5 rounded">H</span>
       </ToolbarButton>
 
       <ToolbarSeparator />
@@ -545,7 +545,7 @@ export function Toolbar({ className = '' }: ToolbarProps) {
           }}
           title="Background color"
         >
-          <span className="text-xs bg-yellow-200 dark:bg-yellow-800 px-1 rounded">A</span>
+          <span className="text-xs bg-[hsl(var(--tei-highlight))] px-1 rounded">A</span>
         </ToolbarButton>
         {showBgColor && (
           <ColorPicker

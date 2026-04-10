@@ -114,3 +114,6 @@ export const StarterKit: TeiExtension[] = [
   // Utilities
   History,
 ];
+
+// Re-export commonly needed extensions for editor presets
+export { SlashCommand } from '../slash-command/index.js';

@@ -37,6 +37,9 @@ export const defaultTheme: EditorThemeClasses = {
     highlight: 'tei-highlight bg-[hsl(var(--tei-highlight))]',
     subscript: 'tei-subscript',
     superscript: 'tei-superscript',
+    uppercase: 'tei-uppercase uppercase',
+    lowercase: 'tei-lowercase lowercase',
+    capitalize: 'tei-capitalize capitalize',
   },
 
   // Block-level
@@ -68,42 +71,108 @@ export const defaultTheme: EditorThemeClasses = {
   // Code blocks
   code: 'tei-code-block block rounded-lg bg-[hsl(var(--tei-muted))] p-4 font-mono text-sm my-4 overflow-x-auto',
   codeHighlight: {
-    atrule: 'tei-token-atrule text-purple-600 dark:text-purple-400',
-    attr: 'tei-token-attr text-yellow-600 dark:text-yellow-400',
-    boolean: 'tei-token-boolean text-red-600 dark:text-red-400',
-    builtin: 'tei-token-builtin text-cyan-600 dark:text-cyan-400',
-    cdata: 'tei-token-cdata text-gray-500 dark:text-gray-400',
-    char: 'tei-token-char text-green-600 dark:text-green-400',
-    class: 'tei-token-class text-yellow-600 dark:text-yellow-400',
-    'class-name': 'tei-token-class-name text-yellow-600 dark:text-yellow-400',
-    comment: 'tei-token-comment text-gray-500 dark:text-gray-400 italic',
-    constant: 'tei-token-constant text-red-600 dark:text-red-400',
-    deleted: 'tei-token-deleted text-red-600 dark:text-red-400',
-    doctype: 'tei-token-doctype text-gray-500 dark:text-gray-400',
-    entity: 'tei-token-entity text-red-600 dark:text-red-400',
-    function: 'tei-token-function text-blue-600 dark:text-blue-400',
-    important: 'tei-token-important text-red-600 dark:text-red-400 font-bold',
-    inserted: 'tei-token-inserted text-green-600 dark:text-green-400',
-    keyword: 'tei-token-keyword text-purple-600 dark:text-purple-400',
-    namespace: 'tei-token-namespace text-gray-600 dark:text-gray-400',
-    number: 'tei-token-number text-orange-600 dark:text-orange-400',
-    operator: 'tei-token-operator text-gray-600 dark:text-gray-400',
-    prolog: 'tei-token-prolog text-gray-500 dark:text-gray-400',
-    property: 'tei-token-property text-red-600 dark:text-red-400',
-    punctuation: 'tei-token-punctuation text-gray-600 dark:text-gray-400',
-    regex: 'tei-token-regex text-orange-600 dark:text-orange-400',
-    selector: 'tei-token-selector text-green-600 dark:text-green-400',
-    string: 'tei-token-string text-green-600 dark:text-green-400',
-    symbol: 'tei-token-symbol text-red-600 dark:text-red-400',
-    tag: 'tei-token-tag text-red-600 dark:text-red-400',
-    url: 'tei-token-url text-blue-600 dark:text-blue-400',
-    variable: 'tei-token-variable text-orange-600 dark:text-orange-400',
+    atrule: 'tei-token-atrule text-[hsl(var(--tei-token-atrule))]',
+    attr: 'tei-token-attr text-[hsl(var(--tei-token-attr))]',
+    boolean: 'tei-token-boolean text-[hsl(var(--tei-token-boolean))]',
+    builtin: 'tei-token-builtin text-[hsl(var(--tei-token-builtin))]',
+    cdata: 'tei-token-cdata text-[hsl(var(--tei-token-comment))]',
+    char: 'tei-token-char text-[hsl(var(--tei-token-char))]',
+    class: 'tei-token-class text-[hsl(var(--tei-token-class-name))]',
+    'class-name': 'tei-token-class-name text-[hsl(var(--tei-token-class-name))]',
+    comment: 'tei-token-comment text-[hsl(var(--tei-token-comment))] italic',
+    constant: 'tei-token-constant text-[hsl(var(--tei-token-constant))]',
+    deleted: 'tei-token-deleted text-[hsl(var(--tei-token-deleted))]',
+    doctype: 'tei-token-doctype text-[hsl(var(--tei-token-comment))]',
+    entity: 'tei-token-entity text-[hsl(var(--tei-token-tag))]',
+    function: 'tei-token-function text-[hsl(var(--tei-token-function))]',
+    important: 'tei-token-important text-[hsl(var(--tei-token-important))] font-bold',
+    inserted: 'tei-token-inserted text-[hsl(var(--tei-token-inserted))]',
+    keyword: 'tei-token-keyword text-[hsl(var(--tei-token-keyword))]',
+    namespace: 'tei-token-namespace text-[hsl(var(--tei-token-punctuation))]',
+    number: 'tei-token-number text-[hsl(var(--tei-token-number))]',
+    operator: 'tei-token-operator text-[hsl(var(--tei-token-operator))]',
+    prolog: 'tei-token-prolog text-[hsl(var(--tei-token-comment))]',
+    property: 'tei-token-property text-[hsl(var(--tei-token-property))]',
+    punctuation: 'tei-token-punctuation text-[hsl(var(--tei-token-punctuation))]',
+    regex: 'tei-token-regex text-[hsl(var(--tei-token-regex))]',
+    selector: 'tei-token-selector text-[hsl(var(--tei-token-selector))]',
+    string: 'tei-token-string text-[hsl(var(--tei-token-string))]',
+    symbol: 'tei-token-symbol text-[hsl(var(--tei-token-constant))]',
+    tag: 'tei-token-tag text-[hsl(var(--tei-token-tag))]',
+    url: 'tei-token-url text-[hsl(var(--tei-token-url))]',
+    variable: 'tei-token-variable text-[hsl(var(--tei-token-variable))]',
   },
 
   // Table
   table: 'tei-table border-collapse w-full my-4',
-  tableCell: 'tei-table-cell border border-[hsl(var(--tei-border))] px-3 py-2 min-w-[75px]',
+  tableCell:
+    'tei-table-cell border border-[hsl(var(--tei-border))] px-3 py-2 min-w-[75px] relative',
   tableCellHeader:
     'tei-table-cell-header border border-[hsl(var(--tei-border))] px-3 py-2 bg-[hsl(var(--tei-muted))] font-semibold',
   tableSelection: 'tei-table-selection bg-[hsl(var(--tei-selection))]',
+  tableScrollableWrapper: 'tei-table-scroll-wrapper overflow-x-auto relative',
+  tableCellActionButton:
+    'tei-table-cell-action-btn absolute top-0 right-0 p-1 cursor-pointer opacity-0 hover:opacity-100',
+  tableCellActionButtonContainer: 'tei-table-cell-action-container absolute top-0 right-0 z-10',
+  tableCellPrimarySelected:
+    'tei-table-cell-primary-selected outline-2 outline-[hsl(var(--tei-primary))] outline-offset-[-2px]',
+  tableCellSortedIndicator:
+    'tei-table-cell-sorted-indicator absolute bottom-0 left-0 w-full h-0.5 bg-[hsl(var(--tei-primary))]',
+  tableResizeRuler:
+    'tei-table-resize-ruler absolute top-0 bottom-0 w-0.5 bg-[hsl(var(--tei-primary))] cursor-col-resize z-10',
+  tableSelected: 'tei-table-selected outline-2 outline-[hsl(var(--tei-primary))]',
+
+  // Horizontal rule
+  horizontalRule: 'tei-hr border-t border-[hsl(var(--tei-border))] my-6 cursor-pointer',
+
+  // Embed
+  embedBlock: {
+    base: 'tei-embed-block select-none my-4',
+    focus: 'tei-embed-block-focus outline-2 outline-[hsl(var(--tei-primary))] outline-offset-2',
+  },
+
+  // Collapsible / Toggle
+  collapsibleContainer:
+    'tei-collapsible-container border border-[hsl(var(--tei-border))] rounded-lg my-3',
+  collapsibleTitle:
+    'tei-collapsible-title cursor-pointer select-none font-medium px-4 py-2 flex items-center gap-2 bg-[hsl(var(--tei-muted)/.3)] rounded-t-lg',
+  collapsibleContent: 'tei-collapsible-content px-4 py-3',
+
+  // Layout
+  layoutContainer: 'tei-layout-container grid gap-3 my-4',
+  layoutItem:
+    'tei-layout-item border border-dashed border-[hsl(var(--tei-border))] rounded-lg p-3 min-h-[100px]',
+
+  // Mark (for comments)
+  mark: 'tei-mark bg-[hsl(var(--tei-highlight)/.4)] border-b-2 border-[hsl(var(--tei-primary)/.5)]',
+  markOverlap: 'tei-mark-overlap bg-[hsl(var(--tei-highlight)/.6)]',
+
+  // Block cursor
+  blockCursor:
+    'tei-block-cursor block pointer-events-none absolute w-full border-t-2 border-[hsl(var(--tei-primary))]',
+
+  // Character limit
+  characterLimit: 'tei-character-limit text-red-500',
+
+  // Hashtag
+  hashtag: 'tei-hashtag text-[hsl(var(--tei-primary))]',
+
+  // Autocomplete
+  autocomplete: 'tei-autocomplete text-[hsl(var(--tei-muted-fg))] inline-block',
+
+  // Image
+  image: 'tei-image cursor-default inline-block relative select-none',
+
+  // Indent (Lexical applies indent level as data attribute; use CSS to handle each level)
+  indent: 'tei-indent',
+
+  // Mention
+  mention: 'tei-mention bg-[hsl(var(--tei-accent))] rounded px-1 py-0.5 text-sm font-medium',
+
+  // Sticky note
+  stickyNote: 'tei-sticky-note absolute shadow-lg rounded-lg min-w-[200px] min-h-[100px]',
+
+  // Page break
+  pageBreak:
+    'tei-page-break my-6 border-t-2 border-dashed border-[hsl(var(--tei-border))] relative text-center',
 };

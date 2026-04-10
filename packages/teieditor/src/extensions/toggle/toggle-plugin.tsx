@@ -1,44 +1,72 @@
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   $createParagraphNode,
-  $isElementNode,
+  $createTextNode,
   COMMAND_PRIORITY_LOW,
   INSERT_PARAGRAPH_COMMAND,
   KEY_ARROW_DOWN_COMMAND,
 } from 'lexical';
 import { useEffect } from 'react';
-import { $isToggleNode, ToggleNode } from './toggle-node.js';
+import {
+  $isCollapsibleContainerNode,
+  $isCollapsibleContentNode,
+  $isCollapsibleTitleNode,
+  CollapsibleContainerNode,
+  CollapsibleContentNode,
+  CollapsibleTitleNode,
+} from './collapsible-nodes.js';
 
 /**
- * Keyboard handling for toggle/collapsible blocks.
- * - Enter at end of toggle: insert paragraph after
- * - ArrowDown at last position: move to next sibling
+ * Plugin for collapsible/toggle blocks.
+ * Handles:
+ * - Ensuring collapsible containers always have title + content nodes
+ * - Enter in title creates paragraph in content
+ * - ArrowDown from title moves to content
+ * - Backspace in empty title removes the collapsible
  */
 export function TogglePlugin(): null {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
-    // Ensure toggle nodes always have at least one child
-    const removeTransform = editor.registerNodeTransform(ToggleNode, (node) => {
+    // Ensure container always has title + content children
+    const removeContainerTransform = editor.registerNodeTransform(
+      CollapsibleContainerNode,
+      (node) => {
+        const children = node.getChildren();
+        const hasTitle = children.some((c) => $isCollapsibleTitleNode(c));
+        const hasContent = children.some((c) => $isCollapsibleContentNode(c));
+
+        if (!hasTitle) {
+          const title = new CollapsibleTitleNode();
+          title.append($createTextNode('Toggle'));
+          node.splice(0, 0, [title]);
+        }
+        if (!hasContent) {
+          const content = new CollapsibleContentNode();
+          content.append($createParagraphNode());
+          node.append(content);
+        }
+      },
+    );
+
+    // Ensure content always has at least one child
+    const removeContentTransform = editor.registerNodeTransform(CollapsibleContentNode, (node) => {
       if (node.getChildrenSize() === 0) {
-        const p = $createParagraphNode();
-        node.append(p);
+        node.append($createParagraphNode());
       }
     });
 
-    // Arrow down from last child exits the toggle
-    const removeArrow = editor.registerCommand(
-      KEY_ARROW_DOWN_COMMAND,
-      () => {
-        // Let default behavior handle most cases
-        return false;
-      },
-      COMMAND_PRIORITY_LOW,
-    );
+    // Ensure title has at least some content
+    const removeTitleTransform = editor.registerNodeTransform(CollapsibleTitleNode, (node) => {
+      if (node.getChildrenSize() === 0) {
+        node.append($createTextNode(''));
+      }
+    });
 
     return () => {
-      removeTransform();
-      removeArrow();
+      removeContainerTransform();
+      removeContentTransform();
+      removeTitleTransform();
     };
   }, [editor]);
 

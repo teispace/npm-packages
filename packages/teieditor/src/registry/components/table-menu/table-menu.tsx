@@ -167,7 +167,7 @@ export function TableMenu() {
             onClick={'action' in item ? item.action : undefined}
             className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-sm transition-colors ${
               'danger' in item && item.danger
-                ? 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30'
+                ? 'text-[hsl(var(--tei-danger))] hover:bg-[hsl(var(--tei-danger-bg))]'
                 : 'text-[hsl(var(--tei-popover-fg))] hover:bg-[hsl(var(--tei-accent))]'
             }`}
           >

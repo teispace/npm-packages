@@ -161,7 +161,7 @@ export function BubbleMenuPlugin(/* props: BubbleMenuPluginProps = {} */) {
   return createPortal(
     <div
       ref={menuRef}
-      className="tei-bubble-menu fixed z-50 flex items-center gap-0.5 rounded-lg bg-gray-900 dark:bg-gray-800 px-1.5 py-1 shadow-xl animate-in fade-in-0 zoom-in-95"
+      className="tei-bubble-menu fixed z-50 flex items-center gap-0.5 rounded-lg bg-[hsl(var(--tei-bubble-bg))] px-1.5 py-1 shadow-xl animate-in fade-in-0 zoom-in-95"
       style={{ top: position.top, left: position.left }}
       role="toolbar"
       aria-label="Text formatting"
