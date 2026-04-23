@@ -1,6 +1,6 @@
 {
   "name": "@teispace/teieditor",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "A feature-rich, lightweight, fully customizable text editor built on Lexical. shadcn-style — install, use, customize.",
   "type": "module",
   "license": "MIT",
