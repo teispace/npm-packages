@@ -8,9 +8,9 @@ import { getSelectionRect, useFloatingPosition } from '@teispace/teieditor/utils
 import { $getSelection, $isRangeSelection, COMMAND_PRIORITY_LOW } from 'lexical';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { TeiButton } from '../../ui/button.js';
-import { IconCheck, IconExternalLink, IconUnlink } from '../../ui/icons.js';
-import { TeiInput } from '../../ui/input.js';
+import { TeiButton } from '../../ui/button';
+import { IconCheck, IconExternalLink, IconUnlink } from '../../ui/icons';
+import { TeiInput } from '../../ui/input';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -148,14 +148,12 @@ export function LinkEditor() {
     <div
       ref={editorRef}
       className={[
-        'tei-link-editor fixed z-50 flex flex-col gap-2 rounded-lg px-3 py-2.5 shadow-lg',
+        'tei-link-editor z-50 flex flex-col gap-2 rounded-lg px-3 py-2.5 shadow-lg',
         'border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-popover))]',
         'transition-opacity duration-150',
-        visible ? 'opacity-100' : 'pointer-events-none opacity-0',
       ].join(' ')}
       role="dialog"
       aria-label="Edit link"
-      style={{ position: 'fixed', top: -10000, left: -10000 }}
     >
       {editMode ? (
         /* Edit mode */

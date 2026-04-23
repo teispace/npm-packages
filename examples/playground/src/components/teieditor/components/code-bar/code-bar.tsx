@@ -1,6 +1,6 @@
 'use client';
 
-import { $isCodeNode, CodeNode } from '@lexical/code';
+import { $isCodeNode } from '@lexical/code';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { CHANGE_CODE_LANGUAGE_COMMAND } from '@teispace/teieditor/extensions/code-block';
 import { $getNearestNodeFromDOMNode } from 'lexical';

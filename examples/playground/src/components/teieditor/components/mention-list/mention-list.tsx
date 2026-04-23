@@ -28,6 +28,7 @@ export function MentionList({ anchorElementRef, itemProps }: MentionListProps) {
     <div
       className="tei-mention-menu z-50 max-h-56 w-56 overflow-y-auto rounded-lg border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-popover))] p-1 shadow-lg"
       role="listbox"
+      aria-label="Mention suggestions"
     >
       {options.map((option, index) => {
         const isSelected = index === selectedIndex;

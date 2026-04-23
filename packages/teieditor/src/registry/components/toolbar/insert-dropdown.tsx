@@ -8,9 +8,10 @@ import { INSERT_IMAGE_COMMAND } from '@teispace/teieditor/extensions/image';
 import { INSERT_MATH_COMMAND } from '@teispace/teieditor/extensions/math';
 import { INSERT_TABLE_COMMAND } from '@teispace/teieditor/extensions/table';
 import { INSERT_TOGGLE_COMMAND } from '@teispace/teieditor/extensions/toggle';
+import type { LexicalCommand } from 'lexical';
 import { useCallback, useState } from 'react';
-import { TeiButton } from '../../ui/button.js';
-import { Dropdown, DropdownGroup, DropdownItem } from '../../ui/dropdown.js';
+import { TeiButton } from '../../ui/button';
+import { Dropdown, DropdownGroup, DropdownItem } from '../../ui/dropdown';
 import {
   IconCallout,
   IconDivider,
@@ -20,9 +21,9 @@ import {
   IconTable,
   IconToggle,
   IconVideo,
-} from '../../ui/icons.js';
-import { TeiInput } from '../../ui/input.js';
-import { Modal } from '../../ui/modal.js';
+} from '../../ui/icons';
+import { TeiInput } from '../../ui/input';
+import { Modal } from '../../ui/modal';
 
 // ---------------------------------------------------------------------------
 // Insert Dialogs
@@ -341,6 +342,17 @@ export function InsertDropdown() {
   const [editor] = useLexicalComposerContext();
   const [activeDialog, setActiveDialog] = useState<DialogType>(null);
 
+  // Clicking a toolbar button (or opening a dialog) blurs the editor. All the
+  // insert plugins bail if there's no RangeSelection, so `focus()` first to
+  // restore the last-known selection before dispatching.
+  const dispatch = useCallback(
+    <T,>(command: LexicalCommand<T>, payload: T) => {
+      editor.focus();
+      editor.dispatchCommand(command, payload);
+    },
+    [editor],
+  );
+
   return (
     <>
       <Dropdown
@@ -366,13 +378,13 @@ export function InsertDropdown() {
 
         <DropdownGroup label="Blocks">
           <DropdownItem
-            onClick={() => editor.dispatchCommand(INSERT_CALLOUT_COMMAND, 'info')}
+            onClick={() => dispatch(INSERT_CALLOUT_COMMAND, 'info')}
             icon={<IconCallout size={14} />}
           >
             Callout
           </DropdownItem>
           <DropdownItem
-            onClick={() => editor.dispatchCommand(INSERT_TOGGLE_COMMAND, 'Toggle')}
+            onClick={() => dispatch(INSERT_TOGGLE_COMMAND, 'Toggle')}
             icon={<IconToggle size={14} />}
           >
             Collapsible
@@ -381,7 +393,7 @@ export function InsertDropdown() {
             Math (LaTeX)
           </DropdownItem>
           <DropdownItem
-            onClick={() => editor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined)}
+            onClick={() => dispatch(INSERT_HORIZONTAL_RULE_COMMAND, undefined)}
             icon={<IconDivider size={14} />}
           >
             Horizontal Rule
@@ -393,25 +405,25 @@ export function InsertDropdown() {
       {activeDialog === 'image' && (
         <InsertImageDialog
           onClose={() => setActiveDialog(null)}
-          onInsert={(data) => editor.dispatchCommand(INSERT_IMAGE_COMMAND, data)}
+          onInsert={(data) => dispatch(INSERT_IMAGE_COMMAND, data)}
         />
       )}
       {activeDialog === 'table' && (
         <InsertTableDialog
           onClose={() => setActiveDialog(null)}
-          onInsert={(data) => editor.dispatchCommand(INSERT_TABLE_COMMAND, data)}
+          onInsert={(data) => dispatch(INSERT_TABLE_COMMAND, data)}
         />
       )}
       {activeDialog === 'embed' && (
         <InsertEmbedDialog
           onClose={() => setActiveDialog(null)}
-          onInsert={(url) => editor.dispatchCommand(INSERT_EMBED_COMMAND, url)}
+          onInsert={(url) => dispatch(INSERT_EMBED_COMMAND, url)}
         />
       )}
       {activeDialog === 'math' && (
         <InsertMathDialog
           onClose={() => setActiveDialog(null)}
-          onInsert={(payload) => editor.dispatchCommand(INSERT_MATH_COMMAND, payload)}
+          onInsert={(payload) => dispatch(INSERT_MATH_COMMAND, payload)}
         />
       )}
     </>

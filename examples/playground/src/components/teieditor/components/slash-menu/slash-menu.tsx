@@ -38,6 +38,7 @@ export function SlashMenu({ anchorElementRef, itemProps }: SlashMenuProps) {
     <div
       className="tei-slash-menu z-50 max-h-72 w-64 overflow-y-auto rounded-lg border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-popover))] p-1 shadow-lg"
       role="listbox"
+      aria-label="Slash commands"
     >
       {Array.from(groups.entries()).map(([groupName, groupOptions]) => (
         <div key={groupName}>

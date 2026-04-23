@@ -46,7 +46,12 @@ export const defaultTheme: EditorThemeClasses = {
   quote:
     'tei-blockquote border-l-4 border-[hsl(var(--tei-border))] pl-4 italic text-[hsl(var(--tei-muted-fg))] my-4',
 
-  // Lists
+  // Lists.
+  //
+  // Lexical renders checklists as a `<ul>` where each `<li>` gets either
+  // `tei-li-checked` or `tei-li-unchecked`. We strip the bullet on checklist
+  // items and draw the checkbox as a `::before` pseudo-element via the
+  // variables.css stylesheet so the marker respects the editor theme.
   list: {
     ul: 'tei-ul list-disc ml-6 mb-2',
     ol: 'tei-ol list-decimal ml-6 mb-2',
@@ -54,8 +59,9 @@ export const defaultTheme: EditorThemeClasses = {
     nested: {
       listitem: 'tei-nested-li list-none',
     },
-    listitemChecked: 'tei-li-checked line-through opacity-60',
-    listitemUnchecked: 'tei-li-unchecked',
+    listitemChecked:
+      'tei-li-checked relative list-none pl-6 mb-1 line-through text-[hsl(var(--tei-muted-fg))] outline-none cursor-pointer',
+    listitemUnchecked: 'tei-li-unchecked relative list-none pl-6 mb-1 outline-none cursor-pointer',
     olDepth: [
       'tei-ol-1 list-decimal',
       'tei-ol-2 list-[lower-alpha]',

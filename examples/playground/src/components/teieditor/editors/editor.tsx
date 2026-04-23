@@ -38,6 +38,8 @@ export interface TeiEditorProps {
   showToolbar?: boolean;
   showBubbleMenu?: boolean;
   readOnly?: boolean;
+  /** Toggle the browser's native spell-check. Default `true`. */
+  spellCheck?: boolean;
   config?: Partial<TeiEditorConfig>;
 }
 
@@ -59,6 +61,7 @@ export function TeiEditor({
   showToolbar = true,
   showBubbleMenu = true,
   readOnly = false,
+  spellCheck = true,
   config = {},
 }: TeiEditorProps) {
   const [mounted, setMounted] = useState(false);
@@ -108,7 +111,11 @@ export function TeiEditor({
       >
         {showToolbar && <Toolbar />}
         <div className="tei-editor-content relative">
-          <EditorContent className={editorClassName} placeholder={placeholder} />
+          <EditorContent
+            className={editorClassName}
+            placeholder={placeholder}
+            spellCheck={spellCheck}
+          />
 
           {/* Core plugins */}
           <InitialValuePlugin value={initialValue} format={initialFormat} />

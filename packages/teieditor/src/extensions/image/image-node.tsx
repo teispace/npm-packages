@@ -245,10 +245,11 @@ function ImageComponent({
           }}
           draggable={false}
         />
-        {/* Resize handles shown when selected */}
-        {isSelected && numericWidth && numericHeight && (
+        {/* Resize handles shown when selected. Fall back to the rendered
+            image dimensions if the node hasn't been explicitly sized yet —
+            otherwise the handles would only appear after the first resize. */}
+        {isSelected && (
           <div className="absolute inset-0">
-            {/* Corner handles */}
             {[
               'top-0 left-0 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize',
               'top-0 right-0 translate-x-1/2 -translate-y-1/2 cursor-ne-resize',
@@ -261,14 +262,18 @@ function ImageComponent({
                 onPointerDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  const img = imgRef.current;
+                  if (!img) return;
                   const startX = e.clientX;
-                  const startW = numericWidth;
-                  const startH = numericHeight;
-                  const aspect = startW / startH;
+                  const startW = numericWidth ?? img.offsetWidth;
+                  const startH = numericHeight ?? img.offsetHeight;
+                  const aspect = startH > 0 ? startW / startH : 1;
+                  const isRight = pos.includes('right');
 
                   const onMove = (ev: PointerEvent) => {
                     const dx = ev.clientX - startX;
-                    let newW = Math.max(50, startW + dx);
+                    const delta = isRight ? dx : -dx;
+                    let newW = Math.max(50, startW + delta);
                     const newH = Math.max(50, newW / aspect);
                     newW = newH * aspect;
                     handleResize(Math.round(newW), Math.round(newH));

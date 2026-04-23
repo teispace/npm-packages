@@ -7,7 +7,7 @@ import { getSelectionRect, useFloatingPosition } from '@teispace/teieditor/utils
 import { $getSelection, $isRangeSelection, type TextFormatType } from 'lexical';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { TeiButton } from '../../ui/button.js';
+import { TeiButton } from '../../ui/button';
 import {
   IconBold,
   IconCode,
@@ -18,8 +18,8 @@ import {
   IconSubscript,
   IconSuperscript,
   IconUnderline,
-} from '../../ui/icons.js';
-import { TeiSeparator } from '../../ui/separator.js';
+} from '../../ui/icons';
+import { TeiSeparator } from '../../ui/separator';
 
 // ---------------------------------------------------------------------------
 // BubbleMenu (Floating Text Format Toolbar)
@@ -84,14 +84,12 @@ export function BubbleMenu() {
     <div
       ref={menuRef}
       className={[
-        'tei-bubble-menu fixed z-50 flex items-center gap-0.5 rounded-lg px-1.5 py-1 shadow-xl',
+        'tei-bubble-menu z-50 flex items-center gap-0.5 rounded-lg px-1.5 py-1 shadow-xl',
         'bg-[hsl(var(--tei-bubble-bg))] border border-[hsl(var(--tei-border))]',
         'transition-opacity duration-150',
-        visible ? 'opacity-100' : 'pointer-events-none opacity-0',
       ].join(' ')}
       role="toolbar"
       aria-label="Text formatting"
-      style={{ position: 'fixed', top: -10000, left: -10000 }}
     >
       {formatButton('bold', <IconBold size={14} />, 'Bold (Ctrl+B)')}
       {formatButton('italic', <IconItalic size={14} />, 'Italic (Ctrl+I)')}

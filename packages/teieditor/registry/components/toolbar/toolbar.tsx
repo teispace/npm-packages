@@ -11,7 +11,7 @@ import {
   UNDO_COMMAND,
 } from 'lexical';
 import { useCallback, useMemo, useState } from 'react';
-import { Dropdown, DropdownItem } from '../../ui/dropdown.js';
+import { Dropdown, DropdownItem } from '../../ui/dropdown';
 import {
   IconAlignCenter,
   IconAlignJustify,
@@ -31,12 +31,12 @@ import {
   IconSuperscript,
   IconUnderline,
   IconUndo,
-} from '../../ui/icons.js';
-import { BlockTypeDropdown } from './block-type-dropdown.js';
-import { InsertDropdown } from './insert-dropdown.js';
-import { TextColorButton } from './text-color-button.js';
-import { ToolbarButton } from './toolbar-button.js';
-import { ToolbarGroup } from './toolbar-group.js';
+} from '../../ui/icons';
+import { BlockTypeDropdown } from './block-type-dropdown';
+import { InsertDropdown } from './insert-dropdown';
+import { TextColorButton } from './text-color-button';
+import { ToolbarButton } from './toolbar-button';
+import { ToolbarGroup } from './toolbar-group';
 
 // ---------------------------------------------------------------------------
 // Default font families (used when FontFamily extension is not configured)

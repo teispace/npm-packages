@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { TeiSeparator } from '../../ui/separator.js';
+import { TeiSeparator } from '../../ui/separator';
 
 /**
  * Groups toolbar buttons with a separator.

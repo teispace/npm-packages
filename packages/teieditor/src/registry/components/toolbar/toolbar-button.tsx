@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { TeiButton } from '../../ui/button.js';
+import { TeiButton } from '../../ui/button';
 
 export interface ToolbarButtonProps {
   onClick: () => void;

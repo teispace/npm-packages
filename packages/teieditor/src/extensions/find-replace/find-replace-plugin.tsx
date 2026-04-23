@@ -2,10 +2,13 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { $getRoot, $isTextNode, type TextNode } from 'lexical';
 import type { JSX } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
- * Simple find & replace UI that floats at the top-right of the editor.
- * Toggled via Ctrl/Cmd+F or the custom 'tei-find-replace-toggle' event.
+ * Simple find & replace UI. Toggles via Ctrl/Cmd+F or the custom
+ * `tei-find-replace-toggle` event. The panel portals into the editor's
+ * content container so it stays anchored to the editor even when the
+ * plugin itself is rendered elsewhere in the React tree.
  */
 export function FindReplacePlugin(): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
@@ -101,8 +104,16 @@ export function FindReplacePlugin(): JSX.Element | null {
 
   if (!isOpen) return null;
 
-  return (
-    <div className="tei-find-replace absolute right-2 top-2 z-50 flex flex-col gap-1.5 rounded-lg border border-border bg-popover p-3 shadow-lg">
+  // Anchor to the content container so the panel floats inside the editor.
+  // Falls back to the document body if the editor hasn't mounted yet.
+  const anchor =
+    typeof document !== 'undefined'
+      ? (editor.getRootElement()?.parentElement ?? document.body)
+      : null;
+  if (!anchor) return null;
+
+  return createPortal(
+    <div className="tei-find-replace absolute right-3 top-3 z-50 flex flex-col gap-1.5 rounded-lg border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-popover))] p-3 shadow-lg">
       <div className="flex items-center gap-2">
         <input
           ref={inputRef}
@@ -110,12 +121,12 @@ export function FindReplacePlugin(): JSX.Element | null {
           placeholder="Find..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-7 w-40 rounded border border-border bg-background px-2 text-sm outline-none focus:ring-1 focus:ring-ring"
+          className="h-7 w-40 rounded border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-bg))] px-2 text-sm text-[hsl(var(--tei-fg))] outline-none focus:ring-1 focus:ring-[hsl(var(--tei-ring))]"
           onKeyDown={(e) => {
             if (e.key === 'Escape') setIsOpen(false);
           }}
         />
-        <span className="text-xs text-muted-foreground min-w-[3ch]">{matchCount}</span>
+        <span className="text-xs text-[hsl(var(--tei-muted-fg))] min-w-[3ch]">{matchCount}</span>
       </div>
       <div className="flex items-center gap-2">
         <input
@@ -123,7 +134,7 @@ export function FindReplacePlugin(): JSX.Element | null {
           placeholder="Replace..."
           value={replace}
           onChange={(e) => setReplace(e.target.value)}
-          className="h-7 w-40 rounded border border-border bg-background px-2 text-sm outline-none focus:ring-1 focus:ring-ring"
+          className="h-7 w-40 rounded border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-bg))] px-2 text-sm text-[hsl(var(--tei-fg))] outline-none focus:ring-1 focus:ring-[hsl(var(--tei-ring))]"
           onKeyDown={(e) => {
             if (e.key === 'Escape') setIsOpen(false);
           }}
@@ -131,7 +142,7 @@ export function FindReplacePlugin(): JSX.Element | null {
         <button
           type="button"
           onClick={handleReplace}
-          className="h-7 rounded border border-border px-2 text-xs hover:bg-accent"
+          className="h-7 rounded border border-[hsl(var(--tei-border))] px-2 text-xs text-[hsl(var(--tei-fg))] hover:bg-[hsl(var(--tei-accent))]"
           title="Replace"
         >
           1
@@ -139,7 +150,7 @@ export function FindReplacePlugin(): JSX.Element | null {
         <button
           type="button"
           onClick={handleReplaceAll}
-          className="h-7 rounded border border-border px-2 text-xs hover:bg-accent"
+          className="h-7 rounded border border-[hsl(var(--tei-border))] px-2 text-xs text-[hsl(var(--tei-fg))] hover:bg-[hsl(var(--tei-accent))]"
           title="Replace all"
         >
           All
@@ -147,12 +158,13 @@ export function FindReplacePlugin(): JSX.Element | null {
         <button
           type="button"
           onClick={() => setIsOpen(false)}
-          className="h-7 rounded border border-border px-2 text-xs hover:bg-accent"
+          className="h-7 rounded border border-[hsl(var(--tei-border))] px-2 text-xs hover:bg-[hsl(var(--tei-accent))]"
           title="Close"
         >
           ✕
         </button>
       </div>
-    </div>
+    </div>,
+    anchor,
   );
 }
