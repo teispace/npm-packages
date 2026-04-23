@@ -1,12 +1,22 @@
 @import "tailwindcss";
 @import "@teispace/next-themes/tailwind.css";
 
-/* Custom variants for the multi-theme demo. */
+/* Custom variants for the multi-theme demo. Add as many as you like — the
+   package imposes no limit on the number of themes. */
 @custom-variant sepia (
   &:where([data-theme="sepia"], [data-theme="sepia"] *, .sepia, .sepia *)
 );
 @custom-variant mint (
   &:where([data-theme="mint"], [data-theme="mint"] *, .mint, .mint *)
+);
+@custom-variant solarized (
+  &:where([data-theme="solarized"], [data-theme="solarized"] *, .solarized, .solarized *)
+);
+@custom-variant dracula (
+  &:where([data-theme="dracula"], [data-theme="dracula"] *, .dracula, .dracula *)
+);
+@custom-variant nord (
+  &:where([data-theme="nord"], [data-theme="nord"] *, .nord, .nord *)
 );
 
 /*
@@ -66,6 +76,48 @@
   color-scheme: light;
 }
 
+/* Classic Solarized Light (Ethan Schoonover) */
+.solarized {
+  --bg: 44 87% 94%;         /* base3   #fdf6e3 */
+  --fg: 196 25% 30%;        /* base00  #657b83 */
+  --muted: 46 42% 88%;      /* base2   #eee8d5 */
+  --muted-fg: 196 13% 45%;  /* base0   #839496 */
+  --border: 180 7% 75%;     /* base1   #93a1a1 */
+  --accent: 205 69% 49%;    /* blue    #268bd2 */
+  --accent-fg: 44 87% 94%;
+  --card: 44 87% 96%;
+  --card-fg: 196 25% 30%;
+  color-scheme: light;
+}
+
+/* Dracula — dark palette with vivid accents */
+.dracula {
+  --bg: 231 15% 18%;        /* #282a36 */
+  --fg: 60 30% 96%;         /* #f8f8f2 */
+  --muted: 232 14% 24%;     /* #363948 */
+  --muted-fg: 228 14% 70%;  /* #bfbfd4 */
+  --border: 232 14% 32%;
+  --accent: 326 100% 74%;   /* pink #ff79c6 */
+  --accent-fg: 231 15% 18%;
+  --card: 231 15% 20%;
+  --card-fg: 60 30% 96%;
+  color-scheme: dark;
+}
+
+/* Nord — frosty, muted dark palette */
+.nord {
+  --bg: 220 16% 22%;        /* polar night #2e3440 */
+  --fg: 219 28% 88%;        /* snow storm  #eceff4 */
+  --muted: 220 17% 32%;     /* #4c566a */
+  --muted-fg: 218 27% 75%;  /* #d8dee9 */
+  --border: 220 15% 40%;
+  --accent: 193 43% 67%;    /* frost #88c0d0 */
+  --accent-fg: 220 16% 22%;
+  --card: 220 16% 26%;      /* #3b4252 */
+  --card-fg: 219 28% 88%;
+  color-scheme: dark;
+}
+
 body {
   background: hsl(var(--bg));
   color: hsl(var(--fg));
@@ -114,6 +166,58 @@ pre {
   --border: 40 20% 78%;
   --card: 40 35% 96%;
   --card-fg: 25 25% 20%;
+  color-scheme: light;
+  background: hsl(var(--bg));
+  color: hsl(var(--fg));
+}
+
+[data-theme="solarized"] {
+  --bg: 44 87% 94%;
+  --fg: 196 25% 30%;
+  --muted: 46 42% 88%;
+  --muted-fg: 196 13% 45%;
+  --border: 180 7% 75%;
+  --card: 44 87% 96%;
+  --card-fg: 196 25% 30%;
+  color-scheme: light;
+  background: hsl(var(--bg));
+  color: hsl(var(--fg));
+}
+
+[data-theme="dracula"] {
+  --bg: 231 15% 18%;
+  --fg: 60 30% 96%;
+  --muted: 232 14% 24%;
+  --muted-fg: 228 14% 70%;
+  --border: 232 14% 32%;
+  --card: 231 15% 20%;
+  --card-fg: 60 30% 96%;
+  color-scheme: dark;
+  background: hsl(var(--bg));
+  color: hsl(var(--fg));
+}
+
+[data-theme="nord"] {
+  --bg: 220 16% 22%;
+  --fg: 219 28% 88%;
+  --muted: 220 17% 32%;
+  --muted-fg: 218 27% 75%;
+  --border: 220 15% 40%;
+  --card: 220 16% 26%;
+  --card-fg: 219 28% 88%;
+  color-scheme: dark;
+  background: hsl(var(--bg));
+  color: hsl(var(--fg));
+}
+
+[data-theme="mint"] {
+  --bg: 160 30% 96%;
+  --fg: 160 25% 18%;
+  --muted: 160 20% 90%;
+  --muted-fg: 160 15% 35%;
+  --border: 160 15% 82%;
+  --card: 160 35% 98%;
+  --card-fg: 160 25% 18%;
   color-scheme: light;
   background: hsl(var(--bg));
   color: hsl(var(--fg));

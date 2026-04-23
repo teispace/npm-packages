@@ -7,7 +7,7 @@ import { useTheme } from '@teispace/next-themes';
 const routes = [
   { href: '/', label: 'Home' },
   { href: '/basic', label: 'Basic' },
-  { href: '/typed', label: 'Typed' },
+  { href: '/typed', label: 'Custom themes' },
   { href: '/transitions', label: 'Transitions' },
   { href: '/ssr', label: 'SSR' },
   { href: '/scoped', label: 'Scoped' },

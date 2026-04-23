@@ -9,8 +9,8 @@ const demos = [
   },
   {
     href: '/typed',
-    title: 'Typed factory',
-    lead: 'createThemes({ themes: [...] as const }) for fully-typed setTheme.',
+    title: 'Custom themes (+ typed factory)',
+    lead: 'Unlimited themes — the live demo ships 7 (light, dark, sepia, mint, solarized, dracula, nord). createThemes gives the whole API literal-type inference.',
   },
   {
     href: '/transitions',

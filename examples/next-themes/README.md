@@ -18,7 +18,7 @@ Visit [http://localhost:3000](http://localhost:3000).
 |---|---|
 | `/` | Home + links to every demo |
 | `/basic` | Minimal light / dark / system toggle |
-| `/typed` | `createThemes({ themes: [...] as const })` factory with 4 themes |
+| `/typed` | Custom themes — 7 live (light, dark, sepia, mint, solarized, dracula, nord) via the `createThemes({ themes: [...] as const })` factory |
 | `/transitions` | View Transitions API — fade, circular (cursor/center), custom CSS |
 | `/ssr` | Server-side `getTheme()` + client hint + server action cookie writes |
 | `/scoped` | `<ScopedTheme>` — sub-tree overrides via class or data-attribute |
