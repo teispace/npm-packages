@@ -1,13 +1,12 @@
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   $createParagraphNode,
-  $getSelection,
-  $isRangeSelection,
   COMMAND_PRIORITY_LOW,
   createCommand,
   type LexicalCommand,
 } from 'lexical';
 import { useEffect } from 'react';
+import { $getOrCreateRangeSelection } from '../../core/insert.js';
 import { $createImageNode, type ImagePayload } from './image-node.js';
 
 // ---------------------------------------------------------------------------
@@ -43,15 +42,14 @@ export function ImagePlugin({
       INSERT_IMAGE_COMMAND,
       (payload) => {
         editor.update(() => {
-          const selection = $getSelection();
-          if ($isRangeSelection(selection)) {
-            const imageNode = $createImageNode(payload);
-            selection.insertNodes([imageNode]);
-            // Add paragraph after image so cursor has somewhere to go
-            const paragraph = $createParagraphNode();
-            imageNode.insertAfter(paragraph);
-            paragraph.select();
-          }
+          const selection = $getOrCreateRangeSelection();
+          if (!selection) return;
+          const imageNode = $createImageNode(payload);
+          selection.insertNodes([imageNode]);
+          // Add paragraph after image so cursor has somewhere to go
+          const paragraph = $createParagraphNode();
+          imageNode.insertAfter(paragraph);
+          paragraph.select();
         });
         return true;
       },

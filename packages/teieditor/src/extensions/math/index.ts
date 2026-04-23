@@ -1,13 +1,12 @@
 import type { Klass, LexicalEditor, LexicalNode } from 'lexical';
 import {
   $createParagraphNode,
-  $getSelection,
-  $isRangeSelection,
   COMMAND_PRIORITY_LOW,
   createCommand,
   type LexicalCommand,
 } from 'lexical';
 import { BaseExtension } from '../../core/extension.js';
+import { $getOrCreateRangeSelection } from '../../core/insert.js';
 import type { ExtensionConfig } from '../../core/types.js';
 import { $createMathNode, MathNode } from './math-node.js';
 
@@ -32,8 +31,8 @@ class MathExtension extends BaseExtension<ExtensionConfig> {
       INSERT_MATH_COMMAND,
       (payload) => {
         editor.update(() => {
-          const selection = $getSelection();
-          if (!$isRangeSelection(selection)) return;
+          const selection = $getOrCreateRangeSelection();
+          if (!selection) return;
           const node = $createMathNode(payload.expression, payload.inline ?? false);
           selection.insertNodes([node]);
           if (!payload.inline) {

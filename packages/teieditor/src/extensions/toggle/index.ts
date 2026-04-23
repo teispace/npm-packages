@@ -2,14 +2,13 @@ import type { Klass, LexicalEditor, LexicalNode } from 'lexical';
 import {
   $createParagraphNode,
   $createTextNode,
-  $getSelection,
-  $isRangeSelection,
   COMMAND_PRIORITY_LOW,
   createCommand,
   type LexicalCommand,
 } from 'lexical';
 import type { ComponentType } from 'react';
 import { BaseExtension } from '../../core/extension.js';
+import { $getOrCreateRangeSelection } from '../../core/insert.js';
 import type { ExtensionConfig } from '../../core/types.js';
 import {
   $createCollapsibleContainerNode,
@@ -48,8 +47,8 @@ class ToggleExtension extends BaseExtension<ExtensionConfig> {
       INSERT_TOGGLE_COMMAND,
       (title) => {
         editor.update(() => {
-          const selection = $getSelection();
-          if (!$isRangeSelection(selection)) return;
+          const selection = $getOrCreateRangeSelection();
+          if (!selection) return;
 
           // Create the 3-node collapsible structure
           const container = $createCollapsibleContainerNode(true); // Start open

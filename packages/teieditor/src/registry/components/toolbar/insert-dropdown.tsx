@@ -342,13 +342,19 @@ export function InsertDropdown() {
   const [editor] = useLexicalComposerContext();
   const [activeDialog, setActiveDialog] = useState<DialogType>(null);
 
-  // Clicking a toolbar button (or opening a dialog) blurs the editor. All the
-  // insert plugins bail if there's no RangeSelection, so `focus()` first to
-  // restore the last-known selection before dispatching.
+  // Clicking a toolbar button or opening a dialog blurs the editor, so by the
+  // time we dispatch there's no RangeSelection and every insert plugin
+  // early-returns. `focus()` is asynchronous — its callback runs *after* the
+  // selection has been restored (or placed at the root end when none existed),
+  // which is the only reliable moment to dispatch the command.
   const dispatch = useCallback(
     <T,>(command: LexicalCommand<T>, payload: T) => {
-      editor.focus();
-      editor.dispatchCommand(command, payload);
+      editor.focus(
+        () => {
+          editor.dispatchCommand(command, payload);
+        },
+        { defaultSelection: 'rootEnd' },
+      );
     },
     [editor],
   );

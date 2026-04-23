@@ -1,14 +1,13 @@
 import type { Klass, LexicalEditor, LexicalNode } from 'lexical';
 import {
   $createParagraphNode,
-  $getSelection,
-  $isRangeSelection,
   COMMAND_PRIORITY_LOW,
   createCommand,
   type LexicalCommand,
 } from 'lexical';
 import type { ComponentType } from 'react';
 import { BaseExtension } from '../../core/extension.js';
+import { $getOrCreateRangeSelection } from '../../core/insert.js';
 import type { ExtensionConfig } from '../../core/types.js';
 import { EmbedCommandPlugin } from './embed-command-plugin.js';
 import { $createEmbedNode, EmbedNode } from './embed-node.js';
@@ -37,8 +36,8 @@ class EmbedExtension extends BaseExtension<EmbedConfig> {
       INSERT_EMBED_COMMAND,
       (url) => {
         editor.update(() => {
-          const selection = $getSelection();
-          if (!$isRangeSelection(selection)) return;
+          const selection = $getOrCreateRangeSelection();
+          if (!selection) return;
           const node = $createEmbedNode(url);
           selection.insertNodes([node]);
           const paragraph = $createParagraphNode();
