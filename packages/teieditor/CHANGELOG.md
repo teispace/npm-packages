@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.0](https://github.com/teispace/npm-packages/compare/teieditor-v1.4.0...teieditor-v1.5.0) (2026-04-23)
+
+
+### Features
+
+* **teieditor:** drop-in /react export, CLI overhaul, feature-parity pass ([adb3ce9](https://github.com/teispace/npm-packages/commit/adb3ce97129f6b284002a39b1981634802b11c3b))
+
+
+### Bug Fixes
+
+* **teieditor:** alias self-refs to source in vitest config ([fae9251](https://github.com/teispace/npm-packages/commit/fae925150464b6a5a63bc2e123bd9ecb1030a3e8))
+* **teieditor:** clean up imports and improve formatting in context-menu, table-menu, insert-dropdown, and button components ([84a548c](https://github.com/teispace/npm-packages/commit/84a548cc99deec509b7c9221d15e7c33f21a95d4))
+
 ## [1.4.0](https://github.com/teispace/npm-packages/compare/teieditor-v1.3.0...teieditor-v1.4.0) (2026-04-10)
 
 
