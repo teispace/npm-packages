@@ -104,8 +104,8 @@ describe('startViewTransition', () => {
       { css: '::view-transition-old(root) { animation: none; }', duration: 120 },
     );
 
-    // CSS was injected
-    expect(document.head.querySelector('#teispace-theme-vt')).not.toBeNull();
+    // CSS was injected with the data-marker, not a fixed id
+    expect(document.head.querySelector('style[data-teispace-vt]')).not.toBeNull();
     // startViewTransition received the apply callback; invoke it to simulate
     expect(typeof capturedCb).toBe('function');
     capturedCb?.();
@@ -116,8 +116,31 @@ describe('startViewTransition', () => {
     return finished.then(() => {
       // Microtask flush
       return Promise.resolve().then(() => {
-        expect(document.head.querySelector('#teispace-theme-vt')).toBeNull();
+        expect(document.head.querySelector('style[data-teispace-vt]')).toBeNull();
       });
     });
+  });
+
+  it('concurrent calls produce independent style elements (no id collision)', () => {
+    const calls: Array<() => void> = [];
+    (
+      document as unknown as {
+        startViewTransition: (cb: () => void) => { finished: Promise<void> };
+      }
+    ).startViewTransition = (cb: () => void) => {
+      calls.push(cb);
+      return { finished: new Promise<void>(() => {}) };
+    };
+
+    startViewTransition(() => {}, { css: '.a {}', duration: 100 });
+    startViewTransition(() => {}, { css: '.b {}', duration: 100 });
+    startViewTransition(() => {}, { css: '.c {}', duration: 100 });
+
+    const styles = document.head.querySelectorAll('style[data-teispace-vt]');
+    expect(styles.length).toBe(3);
+    // None share an id (no `id` attribute set at all).
+    for (const s of Array.from(styles)) {
+      expect(s.id).toBe('');
+    }
   });
 });

@@ -21,14 +21,38 @@ export interface ResolveOutput {
 }
 
 /**
+ * Coerce a raw theme value into something the library's contract guarantees:
+ *   • `'system'` only when `enableSystem` is true.
+ *   • Otherwise a concrete entry from `themes`.
+ *   • Last-resort fallback: the first configured theme, or `'light'`.
+ *
+ * This is the one place that enforces `resolvedTheme` is never `'system'`.
+ */
+export function normalizeSelection(
+  raw: string | null | undefined,
+  themes: string[],
+  defaultTheme: string,
+  enableSystem: boolean,
+): string {
+  const systemAllowed = enableSystem;
+  if (raw === 'system' && systemAllowed) return 'system';
+  if (raw && themes.includes(raw)) return raw;
+  if (defaultTheme === 'system' && systemAllowed) return 'system';
+  if (themes.includes(defaultTheme)) return defaultTheme;
+  return themes[0] ?? 'light';
+}
+
+/**
  * Pure theme resolution. Shared semantics with the inline script.
  * Given the current env (forced, storages, system), return the effective
  * selected theme and its resolved form.
+ *
+ * Invariant: `resolvedTheme` is always a concrete theme (never `'system'`).
  */
 export function resolveTheme(i: ResolveInput): ResolveOutput {
-  let theme: string | null = null;
+  let rawTheme: string | null = null;
   if (i.forcedTheme) {
-    theme = i.forcedTheme;
+    rawTheme = i.forcedTheme;
   } else {
     const chain: StorageMode[] =
       i.storageMode === 'hybrid'
@@ -37,18 +61,16 @@ export function resolveTheme(i: ResolveInput): ResolveOutput {
           ? []
           : [i.storageMode];
     for (const mode of chain) {
-      if (theme) break;
-      if (mode === 'cookie') theme = i.readCookie(i.cookieName);
-      else if (mode === 'local') theme = i.readLocal(i.storageKey);
-      else if (mode === 'session') theme = i.readSession(i.storageKey);
+      if (rawTheme) break;
+      if (mode === 'cookie') rawTheme = i.readCookie(i.cookieName);
+      else if (mode === 'local') rawTheme = i.readLocal(i.storageKey);
+      else if (mode === 'session') rawTheme = i.readSession(i.storageKey);
     }
-    if (!theme && i.initialTheme) theme = i.initialTheme;
-    if (!theme) theme = i.defaultTheme;
+    if (!rawTheme && i.initialTheme) rawTheme = i.initialTheme;
+    if (!rawTheme) rawTheme = i.defaultTheme;
   }
 
-  const isSystem = theme === 'system' && i.enableSystem;
-  if (!isSystem && !i.themes.includes(theme)) theme = i.defaultTheme;
-
-  const resolvedTheme = isSystem ? i.systemTheme : theme;
+  const theme = normalizeSelection(rawTheme, i.themes, i.defaultTheme, i.enableSystem);
+  const resolvedTheme = theme === 'system' ? i.systemTheme : theme;
   return { theme, resolvedTheme };
 }

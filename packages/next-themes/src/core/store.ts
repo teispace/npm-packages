@@ -5,8 +5,10 @@ import {
   applyThemeColor,
   disableTransition,
   getSystemTheme,
+  resolveTarget,
   subscribeSystem,
 } from './dom';
+import { normalizeSelection } from './resolve';
 import type { Attribute, Listener, SetThemeOptions, ThemeState, TransitionConfig } from './types';
 import { resolveTransition, startViewTransition } from './view-transition';
 
@@ -73,17 +75,16 @@ export function createStore(opts: StoreOptions): ThemeStore {
 
   function initial(): ThemeState {
     const systemTheme = getSystemTheme();
-    let theme: string;
+    let rawTheme: string;
     if (forcedTheme) {
-      theme = forcedTheme;
+      rawTheme = forcedTheme;
     } else if (followSystem && enableSystem) {
-      theme = 'system';
+      rawTheme = 'system';
     } else {
-      theme = readStored() ?? initialTheme ?? defaultTheme;
+      rawTheme = readStored() ?? initialTheme ?? defaultTheme;
     }
-    const isSys = theme === 'system' && enableSystem;
-    if (!isSys && !themes.includes(theme)) theme = defaultTheme;
-    const resolved = isSys ? systemTheme : theme;
+    const theme = normalizeSelection(rawTheme, themes, defaultTheme, enableSystem);
+    const resolved = theme === 'system' ? systemTheme : theme;
     return {
       theme,
       resolvedTheme: resolved,
@@ -106,7 +107,7 @@ export function createStore(opts: StoreOptions): ThemeStore {
 
   function apply(next: ThemeState, skipTransitionDisable = false): void {
     if (typeof document === 'undefined') return;
-    const el = (document.querySelector(target) as HTMLElement | null) ?? document.documentElement;
+    const el = resolveTarget(target);
     const applied =
       value && value[next.resolvedTheme] != null ? value[next.resolvedTheme] : next.resolvedTheme;
 
@@ -147,14 +148,15 @@ export function createStore(opts: StoreOptions): ThemeStore {
 
   function setTheme(raw: string, options?: SetThemeOptions): void {
     if (forcedTheme) return;
-    const theme = raw;
-    const isSys = theme === 'system' && enableSystem;
-    if (!isSys && !themes.includes(theme)) return;
+    const isSys = raw === 'system' && enableSystem;
+    // Reject unknown values — `'system'` is only valid when `enableSystem`.
+    if (!isSys && !themes.includes(raw)) return;
+    const theme = normalizeSelection(raw, themes, defaultTheme, enableSystem);
 
     const doApply = (): void => {
       storage.set(theme);
       const systemTheme = getSystemTheme();
-      const resolved = isSys ? systemTheme : theme;
+      const resolved = theme === 'system' ? systemTheme : theme;
       setState({
         ...state,
         theme,
@@ -182,11 +184,9 @@ export function createStore(opts: StoreOptions): ThemeStore {
 
   function onStorageChange(raw: string | null): void {
     if (forcedTheme) return;
-    const v = raw && (raw === 'system' ? enableSystem : themes.includes(raw)) ? raw : null;
-    const nextTheme = v ?? defaultTheme;
-    const isSys = nextTheme === 'system' && enableSystem;
+    const nextTheme = normalizeSelection(raw, themes, defaultTheme, enableSystem);
     const systemTheme = getSystemTheme();
-    const resolved = isSys ? systemTheme : nextTheme;
+    const resolved = nextTheme === 'system' ? systemTheme : nextTheme;
     setState({
       ...state,
       theme: nextTheme,

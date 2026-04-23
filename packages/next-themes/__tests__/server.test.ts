@@ -29,6 +29,13 @@ describe('readColorSchemeHint', () => {
   it('is case-insensitive on the value', () => {
     expect(readColorSchemeHint({ 'sec-ch-prefers-color-scheme': 'DARK' })).toBe('dark');
   });
+
+  it('is case-insensitive on Record<string,string> keys', () => {
+    // Real middleware may hand us raw headers with the canonical casing.
+    expect(readColorSchemeHint({ 'Sec-CH-Prefers-Color-Scheme': 'dark' })).toBe('dark');
+    expect(readColorSchemeHint({ 'SEC-CH-PREFERS-COLOR-SCHEME': 'light' })).toBe('light');
+    expect(readColorSchemeHint({ 'sec-CH-prefers-COLOR-scheme': 'dark' })).toBe('dark');
+  });
 });
 
 describe('acceptClientHintsHeader', () => {

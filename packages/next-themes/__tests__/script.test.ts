@@ -152,6 +152,32 @@ describe('buildScript', () => {
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 
+  it("never applies 'system' when enableSystem=false (coerces to a concrete theme)", () => {
+    window.localStorage.setItem('theme', 'system');
+    const s = buildScript({
+      storageMode: 'local',
+      themes: ['light', 'dark'],
+      defaultTheme: 'system',
+      enableSystem: false,
+    });
+    runScript(s);
+    const applied = document.documentElement.getAttribute('data-theme');
+    expect(applied).not.toBe('system');
+    expect(['light', 'dark']).toContain(applied);
+  });
+
+  it('does not throw on an invalid target selector', () => {
+    const s = buildScript({
+      target: '>>>not-valid',
+      storageMode: 'local',
+      defaultTheme: 'light',
+      enableSystem: false,
+    });
+    expect(() => runScript(s)).not.toThrow();
+    // Fell back to documentElement
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+  });
+
   it('supports multiple attributes simultaneously', () => {
     window.localStorage.setItem('theme', 'dark');
     const s = buildScript({

@@ -11,6 +11,24 @@ export function getSystemTheme(): 'light' | 'dark' {
   return window.matchMedia(MEDIA_DARK).matches ? 'dark' : 'light';
 }
 
+/**
+ * Resolve the target element safely. `document.querySelector` throws a
+ * `DOMException` on invalid CSS selectors — catching that keeps a misconfig
+ * from crashing `setTheme` forever. Returns `documentElement` as fallback.
+ */
+export function resolveTarget(target: string): HTMLElement {
+  if (typeof document === 'undefined') {
+    return null as unknown as HTMLElement;
+  }
+  try {
+    const found = document.querySelector(target) as HTMLElement | null;
+    if (found) return found;
+  } catch (_e) {
+    /* invalid selector — fall through to documentElement */
+  }
+  return document.documentElement;
+}
+
 export function subscribeSystem(cb: (theme: 'light' | 'dark') => void): () => void {
   if (typeof window === 'undefined') return () => {};
   const mql = window.matchMedia(MEDIA_DARK);

@@ -1,5 +1,24 @@
 const HINT_HEADER = 'sec-ch-prefers-color-scheme';
 
+function getHeader(headers: Headers | Record<string, string>, name: string): string | null {
+  // Fetch `Headers` — already case-insensitive.
+  const maybeGet = (headers as Headers).get;
+  if (typeof maybeGet === 'function') {
+    return (headers as Headers).get(name);
+  }
+  // Plain record — do a case-insensitive linear scan so any casing
+  // (`sec-ch-prefers-color-scheme`, `Sec-CH-Prefers-Color-Scheme`, etc.) hits.
+  const record = headers as Record<string, string>;
+  const target = name.toLowerCase();
+  for (const key of Object.keys(record)) {
+    if (key.toLowerCase() === target) {
+      const value = record[key];
+      return value ?? null;
+    }
+  }
+  return null;
+}
+
 /**
  * Parse the `Sec-CH-Prefers-Color-Scheme` User-Agent Client Hint. When set,
  * this is the browser's current `prefers-color-scheme` value, so the server
@@ -12,12 +31,7 @@ const HINT_HEADER = 'sec-ch-prefers-color-scheme';
 export function readColorSchemeHint(
   headers: Headers | Record<string, string>,
 ): 'light' | 'dark' | null {
-  const value =
-    typeof (headers as Headers).get === 'function'
-      ? (headers as Headers).get(HINT_HEADER)
-      : ((headers as Record<string, string>)[HINT_HEADER] ??
-        (headers as Record<string, string>)[HINT_HEADER.toUpperCase()] ??
-        null);
+  const value = getHeader(headers, HINT_HEADER);
   if (!value) return null;
   const v = value.trim().toLowerCase();
   if (v === 'dark' || v === 'light') return v;

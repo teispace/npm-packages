@@ -108,7 +108,15 @@ type Cfg = {
 // it needs is passed in via `c`. Keep identifiers short to minimize payload.
 function themeScript(c: Cfg): void {
   const d = document;
-  const el = (d.querySelector(c.tg) as HTMLElement | null) || d.documentElement;
+  // querySelector can throw DOMException for invalid CSS selectors — fall
+  // back to <html> so the theme still applies instead of crashing the script.
+  let el: HTMLElement = d.documentElement;
+  try {
+    const found = d.querySelector(c.tg) as HTMLElement | null;
+    if (found) el = found;
+  } catch (_e) {
+    /* invalid selector — keep documentElement */
+  }
 
   const readCookie = (name: string): string | null => {
     const parts = d.cookie ? d.cookie.split('; ') : [];
@@ -158,14 +166,17 @@ function themeScript(c: Cfg): void {
     if (!theme) theme = c.d;
   }
 
-  const isSys = theme === 'system' && !!c.s;
-  if (!isSys && c.t.indexOf(theme) < 0) theme = c.d;
+  // Normalize — `'system'` is only valid when enableSystem (c.s) is truthy.
+  // Fall through any misconfig (defaultTheme='system' with enableSystem=false)
+  // to the first configured theme, mirroring `normalizeSelection` in TS.
+  const systemAllowed = !!c.s;
+  if (theme === 'system' && !systemAllowed) theme = c.d;
+  if (theme !== 'system' && c.t.indexOf(theme) < 0) theme = c.d;
+  if (theme === 'system' && !systemAllowed) theme = c.t[0] || 'light';
 
   let resolved = theme;
-  if (isSys) {
+  if (theme === 'system') {
     resolved = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  } else if (theme === 'system') {
-    resolved = c.d;
   }
 
   const applied = c.v && c.v[resolved] != null ? c.v[resolved] : resolved;

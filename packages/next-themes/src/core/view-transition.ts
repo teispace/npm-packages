@@ -2,7 +2,7 @@ import { getLastPointerPosition } from './cursor-tracker';
 import type { TransitionConfig, TransitionOptions, TransitionOrigin } from './types';
 
 const MEDIA_REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
-const STYLE_ID = 'teispace-theme-vt';
+const STYLE_MARKER = 'data-teispace-vt';
 
 export interface ResolvedTransition {
   css: string;
@@ -106,12 +106,19 @@ export function startViewTransition(apply: () => void, transition: ResolvedTrans
     return;
   }
 
+  // Use a data-attribute marker instead of a fixed `id` so rapid successive
+  // switches or nested providers can have multiple concurrent transitions
+  // without colliding on id. Each call owns its own <style> element and
+  // cleans it up via the direct reference.
   const style = document.createElement('style');
-  style.id = STYLE_ID;
+  style.setAttribute(STYLE_MARKER, '');
   style.appendChild(document.createTextNode(transition.css));
   document.head.appendChild(style);
 
+  let cleaned = false;
   const cleanup = (): void => {
+    if (cleaned) return;
+    cleaned = true;
     if (style.parentNode) style.parentNode.removeChild(style);
   };
 
