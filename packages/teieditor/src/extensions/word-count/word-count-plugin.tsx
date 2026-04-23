@@ -7,6 +7,10 @@ export interface WordCountPluginProps {
   showCharacters?: boolean;
 }
 
+// Average reading speed used to estimate reading time. ~200 wpm is the
+// commonly cited figure for online prose; tweak via config if needed.
+const WPM = 200;
+
 export function WordCountPlugin({ showCharacters = true }: WordCountPluginProps): JSX.Element {
   const [editor] = useLexicalComposerContext();
   const [words, setWords] = useState(0);
@@ -23,16 +27,19 @@ export function WordCountPlugin({ showCharacters = true }: WordCountPluginProps)
     });
   }, [editor]);
 
+  const readingMinutes = Math.max(1, Math.ceil(words / WPM));
+
   return (
-    <div className="tei-word-count flex items-center gap-2 border-t border-border px-3 py-1 text-xs text-muted-foreground">
+    <div className="tei-word-count flex items-center justify-end gap-3 border-t border-[hsl(var(--tei-border))] px-3 py-1.5 text-xs text-[hsl(var(--tei-muted-fg))]">
       <span>
         {words} {words === 1 ? 'word' : 'words'}
       </span>
       {showCharacters && (
         <span>
-          · {chars} {chars === 1 ? 'character' : 'characters'}
+          {chars} {chars === 1 ? 'char' : 'chars'}
         </span>
       )}
+      {words > 0 && <span>~{readingMinutes} min read</span>}
     </div>
   );
 }

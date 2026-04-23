@@ -19,7 +19,7 @@ A feature-rich, lightweight, fully customizable rich text editor built on [Lexic
 |                   | TeiEditor                   | Tiptap            | Plate.js        | LexKit     |
 | ----------------- | --------------------------- | ----------------- | --------------- | ---------- |
 | **Foundation**    | Lexical (Meta)              | ProseMirror       | Slate           | Lexical    |
-| **Extensions**    | 46 built-in                 | 100+ (many paid)  | 40+             | 25+        |
+| **Extensions**    | 48 built-in                 | 100+ (many paid)  | 40+             | 25+        |
 | **Cost**          | Free & open source          | Paid pro features | Free            | Free       |
 | **Customization** | shadcn-style (own the code) | Props/CSS only    | shadcn registry | Headless   |
 | **Format I/O**    | HTML, Markdown, JSON, Text  | HTML, JSON        | HTML, JSON      | HTML, JSON |
@@ -78,7 +78,7 @@ TypeScript strict mode, 55+ subpath exports, tree-shakable ESM, `sideEffects: fa
 ```
 npm package (headless core, tree-shakable)
 ├── core/           createTeiEditor, BaseExtension, TeiEditorProvider, useTeiEditor
-├── extensions/     46 extensions — nodes, plugins, configs, commands
+├── extensions/     48 extensions — nodes, plugins, configs, commands
 ├── plugins/        Lexical plugins:
 │   ├── toolbar-context.tsx       Shared ToolbarProvider + useToolbarState hook
 │   ├── code-action-menu-plugin   Floating code block actions
@@ -124,13 +124,20 @@ registry/ (copied to your project via CLI — you own these files)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Props Reference](#props-reference)
 - [Peer Dependencies](#peer-dependencies)
+- [Next.js & SSR](#nextjs--ssr)
+- [Mobile & touch](#mobile--touch)
+- [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 
 ---
 
 ## Quick Start
 
-### 1. Install
+Two adoption paths. Pick one — both use the same underlying primitives.
+
+### Path A — Drop-in (recommended for most apps)
+
+One command install, one import, one component. Batteries-included.
 
 ```bash
 npm install @teispace/teieditor lexical @lexical/react @lexical/rich-text \
@@ -138,25 +145,50 @@ npm install @teispace/teieditor lexical @lexical/react @lexical/rich-text \
   @lexical/list @lexical/link @lexical/code @lexical/table @lexical/markdown
 ```
 
-### 2. Scaffold UI
-
-```bash
-npx teieditor init
-```
-
-Copies customizable `.tsx` files into `src/components/teieditor/`. You own them — edit freely.
-
-### 3. Use
-
 ```tsx
-import { TeiEditor } from '@/components/teieditor/editors/editor';
+'use client';
+import { TeiEditor } from '@teispace/teieditor/react';
+import '@teispace/teieditor/styles.css'; // once, anywhere in your app
 
 export default function Page() {
   return <TeiEditor onChange={(html) => console.log(html)} />;
 }
 ```
 
-Done. Full editor with toolbar, bubble menu, slash commands, code actions, table plugins, context menu, auto-embed, and emoji picker — all wired together.
+That's it. Full editor with toolbar, bubble menu, slash commands (`/`), tables, mentions (`@`), emoji (`:`), code blocks, auto-embed, and everything else — all wired together.
+
+### Path B — Scaffold (own the UI source)
+
+Want to fork, reskin, or delete pieces? Scaffold the UI into your project — shadcn-style.
+
+```bash
+npm install @teispace/teieditor # + the same lexical peers as above
+npx teieditor init
+```
+
+Copies 25 `.tsx` files into `src/components/teieditor/`. You own them — edit freely, commit to git.
+
+```tsx
+import { TeiEditor } from '@/components/teieditor/editors/editor';
+import '@teispace/teieditor/styles.css';
+
+export default function Page() {
+  return <TeiEditor onChange={(html) => console.log(html)} />;
+}
+```
+
+Later, `npx teieditor update` re-syncs the files you haven't modified; your local edits are detected (by hash) and left alone.
+
+### Tailwind v4 (required for default styling)
+
+The drop-in UI uses Tailwind utility classes. Add this to your main CSS:
+
+```css
+@import "tailwindcss";
+@import "@teispace/teieditor/tailwind.css";
+```
+
+The `tailwind.css` file tells Tailwind to scan the package's compiled output so utilities used by the drop-in components land in your bundle. If you'd rather manage sources yourself, import `@teispace/teieditor/styles.css` (variables only) and add the package dir to your own `@source` directive.
 
 ---
 
@@ -194,11 +226,20 @@ No toolbar. All formatting via:
 ## CLI
 
 ```bash
-npx teieditor init                      # Scaffold all UI components
-npx teieditor add <component>           # Add a specific component
-npx teieditor list                      # List available components
+npx teieditor init                      # Scaffold the full UI tree (25 files)
 npx teieditor init --path src/editor    # Custom output directory
+npx teieditor init --force              # Overwrite existing files (destructive)
+
+npx teieditor update                    # Re-sync unmodified files with the latest registry
+npx teieditor update --force            # Overwrite even your local edits (destructive)
+
+npx teieditor add toolbar               # Scaffold one group (pulls deps)
+npx teieditor list                      # List available groups
 ```
+
+**Groups** are independently-scaffoldable slices of the registry: `ui`, `toolbar`, `bubble-menu`, `slash-menu`, `link-editor`, `mention-list`, `table-menu`, `context-menu`, `code-bar`, `editor`. Use `add <group>` to pull just one slice.
+
+**Safe updates:** `teieditor update` compares each file's hash against the registry. Files you've edited are marked `modified locally` and left untouched — only unmodified defaults get updated. Opt in to clobber with `--force`.
 
 ---
 
@@ -459,8 +500,8 @@ The default theme includes classes for:
 - Links, code blocks (30+ syntax highlight tokens)
 - Tables (cell, header, selection, resizer, sorted indicator, scroll wrapper)
 - Horizontal rule, embed blocks (base + focus), collapsible (container/title/content)
-- Layout (container/item), marks (comments), block cursor, character limit
-- Hashtags, autocomplete, images, mentions, sticky notes, page breaks
+- Layout (container/item), block cursor, character limit
+- Images, mentions, page breaks
 - Indent levels (1-10)
 
 ---
@@ -551,8 +592,97 @@ On macOS, `Ctrl` becomes `Cmd`.
 
 **Optional heavy dependencies (for specific features):**
 - `katex` — For Math/KaTeX extension
-- `@excalidraw/excalidraw` — For Excalidraw drawing extension
 - `prettier` — For code formatting in code blocks
+
+---
+
+## Next.js & SSR
+
+TeiEditor uses browser APIs (`document`, `window.getSelection`, `matchMedia`, `localStorage`). It must render on the client.
+
+### App Router (recommended)
+
+```tsx
+// app/editor/page.tsx
+'use client';
+
+import { TeiEditor } from '@teispace/teieditor/react';
+import '@teispace/teieditor/styles.css';
+
+export default function EditorPage() {
+  return <TeiEditor onChange={(html) => console.log(html)} />;
+}
+```
+
+For pages that should stay server-rendered, import the editor inside a child client component and keep the server page itself server-only.
+
+### Avoiding hydration warnings
+
+If you render the editor directly in a SSR-tolerant page, wrap it with `next/dynamic` to opt out of SSR entirely:
+
+```tsx
+import dynamic from 'next/dynamic';
+
+const TeiEditor = dynamic(
+  () => import('@teispace/teieditor/react').then((m) => m.TeiEditor),
+  { ssr: false },
+);
+```
+
+Both patterns work; use whichever fits your page boundary.
+
+### Persisting content
+
+Prefer the JSON format for database round-trips — it's lossless:
+
+```tsx
+<TeiEditor
+  initialValue={savedJsonString}
+  initialFormat="json"
+  format="json"
+  onChange={async (json) => {
+    await fetch('/api/doc', { method: 'PUT', body: json });
+  }}
+/>
+```
+
+HTML is fine for rendering/email output. Markdown is good for git-friendly content but is lossy for some blocks (callouts, layouts, embeds).
+
+---
+
+## Mobile & touch
+
+Floating UI (bubble menu, slash menu, context menu, link editor, code actions) uses the VisualViewport API where available, so positions stay correct when:
+
+- The mobile soft keyboard opens or closes
+- The user pinch-zooms
+- iOS Safari's address bar collapses
+
+Tap targets on toolbar buttons are 32×32 px by default (Apple's recommended minimum is 44×44 px). If you scaffold the UI you can bump `sizeStyles.icon` in `registry/ui/button.tsx` — e.g. `h-11 w-11 sm:h-8 sm:w-8` to give phones bigger targets while keeping desktop compact.
+
+Drag handles and table cell resizers are pointer-based and may be awkward to reach on touch. For primarily-mobile editors, prefer the toolbar/slash-menu flow.
+
+---
+
+## Troubleshooting
+
+**"Package path './react' is not exported"**
+Webpack (especially in older Next.js setups) sometimes misses ESM-only exports. Make sure you're on `@teispace/teieditor` ≥ the version that added the `default` fallback condition in each export (the current one). If you're on an older major and can't upgrade, scaffold the editor instead (`npx teieditor init`) to import from your own `src/`.
+
+**Styles aren't applying**
+Two things to check: (1) you imported `@teispace/teieditor/styles.css` once somewhere in your app, (2) Tailwind scans the package's compiled output. The easy fix is to `@import "@teispace/teieditor/tailwind.css";` in your main CSS — it adds the right `@source` directive.
+
+**"window is not defined" during build**
+You're rendering the editor from a server component. Either add `'use client'` at the top of the file, or import via `next/dynamic` with `ssr: false` (see Next.js & SSR above).
+
+**KaTeX / math equations aren't rendering**
+Math is an optional feature with a peer dep: `npm install katex` and `import 'katex/dist/katex.min.css'` in your app.
+
+**Extensions passed via `extensions` prop conflict with the StarterKit defaults**
+They don't — `createTeiEditor` dedups by extension name with last-wins. You can pass `FontFamily.configure({...})` alongside the starter kit and your configured version overrides the default cleanly.
+
+**Tests: `Storage is not defined` / `document is not defined`**
+Use the `jsdom` environment: `environment: 'jsdom'` in `vitest.config.ts`. On Node 22+ you may also need a polyfill for `localStorage` — see this package's own `__tests__/setup.ts` for a reference implementation.
 
 ---
 

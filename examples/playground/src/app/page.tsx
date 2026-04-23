@@ -1,173 +1,197 @@
-'use client';
+import Link from 'next/link';
+import { CodeBlock } from '@/components/code-block';
 
-import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
-
-const PlaygroundEditor = dynamic(
-  () => import('@/components/playground-editor').then((m) => ({ default: m.PlaygroundEditor })),
+const DEMOS = [
   {
-    ssr: false,
-    loading: () => (
-      <div className="rounded-lg border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-bg))] animate-pulse">
-        <div className="h-10 border-b border-[hsl(var(--tei-border))]" />
-        <div className="min-h-[500px] p-4">
-          <div className="h-4 w-48 rounded bg-[hsl(var(--tei-muted))]" />
-        </div>
-      </div>
-    ),
+    href: '/basic',
+    title: 'Basic',
+    description: 'Full-featured editor in 3 lines. Drop-in component, zero config.',
+    badge: 'Drop-in',
   },
-);
+  {
+    href: '/notion',
+    title: 'Notion-style',
+    description: 'Same drop-in, no fixed toolbar. Slash, bubble, drag handles do the work.',
+    badge: 'Drop-in',
+  },
+  {
+    href: '/customize',
+    title: 'Customize',
+    description: 'Add your own extension, override defaults, hook into onChange.',
+    badge: 'Drop-in',
+  },
+  {
+    href: '/forms',
+    title: 'Forms',
+    description: 'Validate required content and wire into react-hook-form.',
+    badge: 'Drop-in',
+  },
+  {
+    href: '/themed',
+    title: 'Themed',
+    description: 'Switch color palettes at runtime by overriding --tei-* CSS variables.',
+    badge: 'Drop-in',
+  },
+  {
+    href: '/playground',
+    title: 'Kitchen sink',
+    description: 'Every feature, both modes, 4-format output. Uses scaffolded UI.',
+    badge: 'Scaffold',
+  },
+];
 
-function ThemeToggle() {
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+const SNIPPET_DROP_IN = `import { TeiEditor } from '@teispace/teieditor/react';
+import '@teispace/teieditor/styles.css';
 
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    } else if (theme === 'light') {
-      root.classList.add('light');
-      root.classList.remove('dark');
-    } else {
-      root.classList.remove('dark', 'light');
-    }
-  }, [theme]);
+export default function Page() {
+  return <TeiEditor onChange={(html) => console.log(html)} />;
+}`;
 
-  return (
-    <div className="flex items-center gap-1 rounded-lg border border-[hsl(var(--tei-border))] p-0.5">
-      {(['light', 'system', 'dark'] as const).map((t) => (
-        <button
-          key={t}
-          type="button"
-          onClick={() => setTheme(t)}
-          className={`rounded-md px-2 py-1 text-xs transition-colors ${
-            theme === t
-              ? 'bg-[hsl(var(--tei-fg))] text-[hsl(var(--tei-bg))]'
-              : 'text-[hsl(var(--tei-muted-fg))] hover:text-[hsl(var(--tei-fg))]'
-          }`}
-          title={t === 'system' ? 'System preference' : `${t} mode`}
-        >
-          {t === 'light' && (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" />
-            </svg>
-          )}
-          {t === 'dark' && (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-            </svg>
-          )}
-          {t === 'system' && (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8" /><path d="M12 17v4" />
-            </svg>
-          )}
-        </button>
-      ))}
-    </div>
-  );
-}
+const SNIPPET_SCAFFOLD = `# Own the UI — scaffold the source into your project
+npx teieditor init
+
+# Then import what was generated
+import { TeiEditor } from '@/components/teieditor/editors/editor';`;
 
 export default function Home() {
-  const [output, setOutput] = useState('');
-  const [format, setFormat] = useState<'html' | 'markdown' | 'json' | 'text'>('html');
-  const [mode, setMode] = useState<'full' | 'notion'>('full');
-
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">TeiEditor Playground</h1>
-          <p className="text-sm text-[hsl(var(--tei-muted-fg))]">
-            Type{' '}
-            <code className="rounded bg-[hsl(var(--tei-muted))] px-1 text-xs">/</code> for commands,{' '}
-            <code className="rounded bg-[hsl(var(--tei-muted))] px-1 text-xs">@</code> for mentions,{' '}
-            <code className="rounded bg-[hsl(var(--tei-muted))] px-1 text-xs">:</code> for emoji,{' '}
-            select text for bubble menu, right-click for context menu.
-          </p>
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-12 px-4 py-10">
+      {/* Hero */}
+      <section className="flex flex-col gap-4">
+        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[hsl(var(--tei-border))] px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-[hsl(var(--tei-muted-fg))]">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          Built on Lexical · 54 extensions · Tree-shakable
         </div>
-        <ThemeToggle />
-      </div>
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+          The rich-text editor that just works.
+        </h1>
+        <p className="max-w-2xl text-lg text-[hsl(var(--tei-muted-fg))]">
+          A feature-rich, fully customizable editor for React and Next.js. Pick your adoption path:
+          drop-in for speed, scaffolded for ownership.
+        </p>
 
-      {/* Controls */}
-      <div className="flex flex-wrap items-center gap-4">
-        {/* Editor mode tabs */}
-        <div className="flex items-center gap-1 rounded-lg border border-[hsl(var(--tei-border))] p-0.5">
-          {(['full', 'notion'] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                mode === m
-                  ? 'bg-[hsl(var(--tei-fg))] text-[hsl(var(--tei-bg))]'
-                  : 'text-[hsl(var(--tei-muted-fg))] hover:text-[hsl(var(--tei-fg))]'
-              }`}
+        <div className="mt-4 grid gap-6 md:grid-cols-2">
+          {/* Path A: drop-in */}
+          <div className="flex flex-col gap-3 rounded-xl border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-bg))] p-5">
+            <div className="flex items-center gap-2">
+              <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                Easiest
+              </span>
+              <h2 className="text-sm font-semibold">Drop-in — 1 command</h2>
+            </div>
+            <p className="text-sm text-[hsl(var(--tei-muted-fg))]">
+              One install, one import, one component. Batteries-included UI.
+            </p>
+            <CodeBlock code={SNIPPET_DROP_IN} />
+            <Link
+              href="/basic"
+              className="mt-2 inline-flex w-fit items-center gap-1 text-sm font-medium underline underline-offset-2"
             >
-              {m === 'full' ? 'Full (Toolbar)' : 'Notion (No Toolbar)'}
-            </button>
+              See it live →
+            </Link>
+          </div>
+
+          {/* Path B: scaffold */}
+          <div className="flex flex-col gap-3 rounded-xl border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-bg))] p-5">
+            <div className="flex items-center gap-2">
+              <span className="rounded-md bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-blue-700 dark:text-blue-400">
+                Full control
+              </span>
+              <h2 className="text-sm font-semibold">Scaffold — 2 commands</h2>
+            </div>
+            <p className="text-sm text-[hsl(var(--tei-muted-fg))]">
+              Own the UI source. Fork, reskin, commit to git. shadcn-style.
+            </p>
+            <CodeBlock code={SNIPPET_SCAFFOLD} lang="bash" />
+            <Link
+              href="/playground"
+              className="mt-2 inline-flex w-fit items-center gap-1 text-sm font-medium underline underline-offset-2"
+            >
+              Kitchen sink →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Demo grid */}
+      <section className="flex flex-col gap-4">
+        <h2 className="text-xl font-semibold">Examples</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {DEMOS.map((d) => (
+            <Link
+              key={d.href}
+              href={d.href}
+              className="group flex flex-col gap-2 rounded-xl border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-bg))] p-4 transition-all hover:border-[hsl(var(--tei-fg))]/40 hover:shadow-sm"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">{d.title}</h3>
+                <span
+                  className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
+                    d.badge === 'Drop-in'
+                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                      : 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                  }`}
+                >
+                  {d.badge}
+                </span>
+              </div>
+              <p className="text-xs text-[hsl(var(--tei-muted-fg))]">{d.description}</p>
+              <span className="mt-1 text-xs font-medium text-[hsl(var(--tei-muted-fg))] group-hover:text-[hsl(var(--tei-fg))]">
+                Open →
+              </span>
+            </Link>
           ))}
         </div>
+      </section>
 
-        {/* Output format selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[hsl(var(--tei-muted-fg))]">Output:</span>
-          {(['html', 'markdown', 'json', 'text'] as const).map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => setFormat(f)}
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                format === f
-                  ? 'bg-[hsl(var(--tei-fg))] text-[hsl(var(--tei-bg))]'
-                  : 'bg-[hsl(var(--tei-muted))] text-[hsl(var(--tei-muted-fg))] hover:text-[hsl(var(--tei-fg))]'
-              }`}
+      {/* Feature matrix */}
+      <section className="flex flex-col gap-4">
+        <h2 className="text-xl font-semibold">What&apos;s in the box</h2>
+        <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              title: '54 extensions',
+              body: 'Formatting, blocks, tables, media, mentions, emoji, math, callouts, layouts…',
+            },
+            {
+              title: '4 output formats',
+              body: 'HTML, Markdown, Lexical JSON, plain text. Round-trip freely.',
+            },
+            {
+              title: 'Notion UX',
+              body: 'Slash commands, bubble menu, drag handles, context menu, auto-embeds.',
+            },
+            {
+              title: 'SSR safe',
+              body: "Next.js App Router friendly. 'use client' done for you.",
+            },
+            {
+              title: 'Themed via CSS vars',
+              body: '`--tei-*` variables — override in globals.css. Dark mode included.',
+            },
+            {
+              title: 'Tree-shakable',
+              body: 'One entry per extension. Only pay for what you import.',
+            },
+            {
+              title: 'Fully typed',
+              body: 'Strict TypeScript. Extensions, config, events — all type-safe.',
+            },
+            {
+              title: 'MIT licensed',
+              body: 'Built on Lexical. No rug-pulls.',
+            },
+          ].map((f) => (
+            <div
+              key={f.title}
+              className="rounded-xl border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-bg))] p-4"
             >
-              {f.toUpperCase()}
-            </button>
+              <h3 className="text-sm font-semibold">{f.title}</h3>
+              <p className="mt-1 text-xs text-[hsl(var(--tei-muted-fg))]">{f.body}</p>
+            </div>
           ))}
         </div>
-      </div>
-
-      {/* Feature hints based on mode */}
-      <div className="flex flex-wrap gap-2 text-[10px] text-[hsl(var(--tei-muted-fg))]">
-        {mode === 'full' ? (
-          <>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">Toolbar</span>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">Bubble Menu</span>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">/ Slash Commands</span>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">@ Mentions</span>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">: Emoji</span>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">Code Actions</span>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">Table Resize</span>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">Auto-Embed</span>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">Context Menu</span>
-          </>
-        ) : (
-          <>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">No Toolbar</span>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">Bubble Menu</span>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">/ Slash Commands</span>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">@ Mentions</span>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">: Emoji</span>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">Drag Handles</span>
-            <span className="rounded-full border border-[hsl(var(--tei-border))] px-2 py-0.5">Keyboard Shortcuts</span>
-          </>
-        )}
-      </div>
-
-      {/* Editor */}
-      <PlaygroundEditor onChange={setOutput} format={format} mode={mode} />
-
-      {/* Output */}
-      <div className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold">{format.toUpperCase()} Output</h2>
-        <pre className="max-h-64 overflow-auto rounded-lg border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-muted))] p-4 text-xs whitespace-pre-wrap break-all">
-          {output || '(start typing...)'}
-        </pre>
-      </div>
+      </section>
     </div>
   );
 }

@@ -34,41 +34,58 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./core": {
       "types": "./dist/core/index.d.ts",
-      "import": "./dist/core/index.js"
+      "import": "./dist/core/index.js",
+      "default": "./dist/core/index.js"
     },
     "./extensions": {
       "types": "./dist/extensions/index.d.ts",
-      "import": "./dist/extensions/index.js"
+      "import": "./dist/extensions/index.js",
+      "default": "./dist/extensions/index.js"
     },
     "./extensions/*": {
       "types": "./dist/extensions/*/index.d.ts",
-      "import": "./dist/extensions/*/index.js"
+      "import": "./dist/extensions/*/index.js",
+      "default": "./dist/extensions/*/index.js"
     },
     "./plugins": {
       "types": "./dist/plugins/index.d.ts",
-      "import": "./dist/plugins/index.js"
+      "import": "./dist/plugins/index.js",
+      "default": "./dist/plugins/index.js"
     },
     "./themes": {
       "types": "./dist/themes/index.d.ts",
-      "import": "./dist/themes/index.js"
+      "import": "./dist/themes/index.js",
+      "default": "./dist/themes/index.js"
     },
     "./utils": {
       "types": "./dist/utils/index.d.ts",
-      "import": "./dist/utils/index.js"
-    }
+      "import": "./dist/utils/index.js",
+      "default": "./dist/utils/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js",
+      "default": "./dist/react/index.js"
+    },
+    "./styles.css": "./styles.css",
+    "./tailwind.css": "./tailwind.css",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "registry",
+    "styles.css",
+    "tailwind.css",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "NODE_OPTIONS='--max-old-space-size=8192' tsup && rm -rf registry && mkdir -p registry && cp -r src/registry/ui registry/ui",
+    "build": "NODE_OPTIONS='--max-old-space-size=8192' tsup && rm -rf registry && mkdir -p registry && cp -r src/registry/ui registry/ui && cp -r src/registry/components registry/components && cp -r src/registry/editors registry/editors",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -5,6 +5,7 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { $getNearestNodeFromDOMNode } from 'lexical';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useFloatingPosition } from '../utils/positioning.js';
 
 // ---------------------------------------------------------------------------
 // Languages
@@ -47,11 +48,35 @@ const LANGUAGES = [
 export function CodeActionMenuPlugin() {
   const [editor] = useLexicalComposerContext();
   const [codeNodeKey, setCodeNodeKey] = useState<string | null>(null);
+  const [codeEl, setCodeEl] = useState<HTMLElement | null>(null);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [language, setLanguage] = useState('');
-  const [position, setPosition] = useState({ top: 0, right: 0 });
   const [copied, setCopied] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useFloatingPosition({
+    anchorRect,
+    floatingRef: barRef,
+    placement: 'bottom',
+    offset: -4,
+    visible: codeNodeKey !== null,
+  });
+
+  // Re-measure the code block's rect when the viewport/layout changes so the
+  // action bar keeps tracking it. `useFloatingPosition` already listens to
+  // scroll; we just refresh the anchor rect on the same events.
+  useEffect(() => {
+    if (!codeEl) return;
+    const measure = () => setAnchorRect(codeEl.getBoundingClientRect());
+    measure();
+    window.addEventListener('scroll', measure, true);
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('scroll', measure, true);
+      window.removeEventListener('resize', measure);
+    };
+  }, [codeEl]);
 
   useEffect(() => {
     const root = editor.getRootElement();
@@ -60,20 +85,21 @@ export function CodeActionMenuPlugin() {
     const handleMouseMove = (e: MouseEvent) => {
       clearTimeout(hoverTimeout.current);
       hoverTimeout.current = setTimeout(() => {
-        const target = (e.target as HTMLElement).closest('code.tei-code-block, pre');
+        const target = (e.target as HTMLElement).closest(
+          'code.tei-code-block, pre',
+        ) as HTMLElement | null;
         if (!target) {
-          // Delay hiding so user can interact with the bar
           hoverTimeout.current = setTimeout(() => setCodeNodeKey(null), 200);
           return;
         }
 
         editor.getEditorState().read(() => {
-          const node = $getNearestNodeFromDOMNode(target as HTMLElement);
+          const node = $getNearestNodeFromDOMNode(target);
           if (node && $isCodeNode(node)) {
             setCodeNodeKey(node.getKey());
             setLanguage(node.getLanguage() || 'plain');
-            const rect = target.getBoundingClientRect();
-            setPosition({ top: rect.top + 4, right: window.innerWidth - rect.right + 4 });
+            setCodeEl(target);
+            setAnchorRect(target.getBoundingClientRect());
           } else {
             setCodeNodeKey(null);
           }
@@ -126,8 +152,7 @@ export function CodeActionMenuPlugin() {
   return createPortal(
     <div
       ref={barRef}
-      className="tei-code-action-menu fixed z-40 flex items-center gap-1.5 rounded-md border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-popover))] px-2 py-1 shadow-sm"
-      style={{ top: position.top, right: position.right }}
+      className="tei-code-action-menu z-40 flex items-center gap-1.5 rounded-md border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-popover))] px-2 py-1 shadow-sm transition-opacity"
       onMouseEnter={() => clearTimeout(hoverTimeout.current)}
       onMouseLeave={() => {
         hoverTimeout.current = setTimeout(() => setCodeNodeKey(null), 200);

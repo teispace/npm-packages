@@ -1,0 +1,23 @@
+/*
+ * @teispace/teieditor — Tailwind v4 preset
+ *
+ * Drop this into your app's main CSS to get the drop-in editor fully styled:
+ *
+ *   @import "tailwindcss";
+ *   @import "@teispace/teieditor/tailwind.css";
+ *
+ * What this does:
+ *   1. Loads the `--tei-*` CSS custom properties (light + dark).
+ *   2. Tells Tailwind to scan the package's compiled output so the
+ *      utility classes used by the drop-in components (TeiEditor,
+ *      TeiEditorNotion, and all registry UI) land in your CSS bundle.
+ *
+ * If you don't want to change your Tailwind sources, you can instead
+ * just import `@teispace/teieditor/styles.css` (variables only) and
+ * add the package path to your own `@source` directive.
+ */
+
+@source "../@teispace/teieditor/dist";
+@source "../@teispace/teieditor/registry";
+
+@import "@teispace/teieditor/styles.css";

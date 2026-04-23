@@ -7,6 +7,8 @@ export interface EditorContentProps {
   className?: string;
   /** Placeholder text when editor is empty. */
   placeholder?: string;
+  /** Browser spell check. Default `true`. */
+  spellCheck?: boolean;
 }
 
 function Placeholder({ text }: { text: string }) {
@@ -23,6 +25,7 @@ function Placeholder({ text }: { text: string }) {
 export function EditorContent({
   className = '',
   placeholder = 'Start writing...',
+  spellCheck = true,
 }: EditorContentProps) {
   return (
     <LexicalRichTextPlugin
@@ -31,6 +34,7 @@ export function EditorContent({
           className={`tei-content-editable outline-none ${className}`.trim()}
           aria-placeholder={placeholder}
           placeholder={<Placeholder text={placeholder} />}
+          spellCheck={spellCheck}
         />
       }
       ErrorBoundary={LexicalErrorBoundary}

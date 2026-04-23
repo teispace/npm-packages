@@ -1,0 +1,146 @@
+/*
+ * @teispace/teieditor — runtime stylesheet
+ *
+ * Defines the CSS custom properties (`--tei-*`) used by the editor theme
+ * and drop-in React components (`@teispace/teieditor/react`).
+ *
+ * Usage (in your root layout / entry file):
+ *
+ *   import '@teispace/teieditor/styles.css';
+ *
+ * Dark mode: toggle a `.dark` class on <html> (or any ancestor).
+ * All variables can be overridden in your own stylesheet.
+ *
+ * NOTE: the drop-in components also use Tailwind utility classes
+ * (`rounded-lg`, `border`, `flex`, etc.). If your app uses Tailwind v4,
+ * add `@source "../node_modules/@teispace/teieditor";` to your main CSS
+ * so Tailwind picks up those classes. See `tailwind.css` for an
+ * opinionated preset that does this for you.
+ */
+
+:root {
+  --tei-bg: 0 0% 100%;
+  --tei-fg: 0 0% 3.9%;
+  --tei-border: 0 0% 89.8%;
+  --tei-ring: 0 0% 3.9%;
+  --tei-radius: 0.5rem;
+
+  --tei-muted: 0 0% 96.1%;
+  --tei-muted-fg: 0 0% 45.1%;
+  --tei-accent: 0 0% 96.1%;
+  --tei-accent-fg: 0 0% 9%;
+  --tei-popover: 0 0% 100%;
+  --tei-popover-fg: 0 0% 3.9%;
+  --tei-primary: 0 0% 9%;
+  --tei-primary-fg: 0 0% 98%;
+
+  --tei-toolbar-bg: var(--tei-bg);
+  --tei-toolbar-border: var(--tei-border);
+  --tei-bubble-bg: 0 0% 9%;
+  --tei-bubble-fg: 0 0% 98%;
+  --tei-drag-handle: 0 0% 63.9%;
+  --tei-placeholder: 0 0% 45.1%;
+  --tei-highlight: 48 96% 89%;
+  --tei-selection: 214 95% 93%;
+
+  --tei-danger: 0 84% 60%;
+  --tei-danger-fg: 0 0% 98%;
+  --tei-danger-bg: 0 84% 97%;
+
+  --tei-callout-info-border: 217 91% 60%;
+  --tei-callout-info-bg: 217 91% 97%;
+  --tei-callout-warning-border: 38 92% 50%;
+  --tei-callout-warning-bg: 48 96% 95%;
+  --tei-callout-error-border: 0 84% 60%;
+  --tei-callout-error-bg: 0 84% 97%;
+  --tei-callout-success-border: 142 71% 45%;
+  --tei-callout-success-bg: 142 71% 95%;
+  --tei-callout-note-border: 0 0% 45%;
+  --tei-callout-note-bg: 0 0% 96%;
+
+  --tei-token-comment: 0 0% 40%;
+  --tei-token-punctuation: 0 0% 40%;
+  --tei-token-property: 5 74% 50%;
+  --tei-token-selector: 114 31% 40%;
+  --tei-token-operator: 0 0% 40%;
+  --tei-token-atrule: 265 60% 50%;
+  --tei-token-keyword: 265 60% 50%;
+  --tei-token-function: 210 70% 45%;
+  --tei-token-string: 114 31% 40%;
+  --tei-token-char: 114 31% 40%;
+  --tei-token-number: 24 80% 45%;
+  --tei-token-variable: 24 80% 45%;
+  --tei-token-regex: 24 80% 45%;
+  --tei-token-tag: 5 74% 50%;
+  --tei-token-boolean: 5 74% 50%;
+  --tei-token-constant: 5 74% 50%;
+  --tei-token-builtin: 187 70% 40%;
+  --tei-token-attr: 38 80% 40%;
+  --tei-token-class-name: 38 80% 40%;
+  --tei-token-url: 210 70% 45%;
+  --tei-token-inserted: 114 31% 40%;
+  --tei-token-deleted: 5 74% 50%;
+  --tei-token-important: 5 74% 50%;
+}
+
+.dark {
+  --tei-bg: 0 0% 3.9%;
+  --tei-fg: 0 0% 98%;
+  --tei-border: 0 0% 14.9%;
+  --tei-ring: 0 0% 83.1%;
+
+  --tei-muted: 0 0% 14.9%;
+  --tei-muted-fg: 0 0% 63.9%;
+  --tei-accent: 0 0% 14.9%;
+  --tei-accent-fg: 0 0% 98%;
+  --tei-popover: 0 0% 3.9%;
+  --tei-popover-fg: 0 0% 98%;
+  --tei-primary: 0 0% 98%;
+  --tei-primary-fg: 0 0% 9%;
+
+  --tei-bubble-bg: 0 0% 14.9%;
+  --tei-bubble-fg: 0 0% 98%;
+  --tei-drag-handle: 0 0% 45.1%;
+  --tei-placeholder: 0 0% 35%;
+  --tei-highlight: 48 40% 30%;
+  --tei-selection: 214 40% 25%;
+
+  --tei-danger: 0 62% 55%;
+  --tei-danger-fg: 0 0% 98%;
+  --tei-danger-bg: 0 50% 12%;
+
+  --tei-callout-info-border: 217 80% 55%;
+  --tei-callout-info-bg: 217 50% 12%;
+  --tei-callout-warning-border: 38 80% 55%;
+  --tei-callout-warning-bg: 38 50% 12%;
+  --tei-callout-error-border: 0 70% 55%;
+  --tei-callout-error-bg: 0 50% 12%;
+  --tei-callout-success-border: 142 60% 50%;
+  --tei-callout-success-bg: 142 40% 12%;
+  --tei-callout-note-border: 0 0% 50%;
+  --tei-callout-note-bg: 0 0% 12%;
+
+  --tei-token-comment: 0 0% 55%;
+  --tei-token-punctuation: 0 0% 55%;
+  --tei-token-property: 5 74% 65%;
+  --tei-token-selector: 114 40% 60%;
+  --tei-token-operator: 0 0% 55%;
+  --tei-token-atrule: 265 60% 70%;
+  --tei-token-keyword: 265 60% 70%;
+  --tei-token-function: 210 70% 65%;
+  --tei-token-string: 114 40% 60%;
+  --tei-token-char: 114 40% 60%;
+  --tei-token-number: 24 80% 65%;
+  --tei-token-variable: 24 80% 65%;
+  --tei-token-regex: 24 80% 65%;
+  --tei-token-tag: 5 74% 65%;
+  --tei-token-boolean: 5 74% 65%;
+  --tei-token-constant: 5 74% 65%;
+  --tei-token-builtin: 187 70% 60%;
+  --tei-token-attr: 38 80% 60%;
+  --tei-token-class-name: 38 80% 60%;
+  --tei-token-url: 210 70% 65%;
+  --tei-token-inserted: 114 40% 60%;
+  --tei-token-deleted: 5 74% 65%;
+  --tei-token-important: 5 74% 65%;
+}

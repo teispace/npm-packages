@@ -1,14 +1,7 @@
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import {
-  $createParagraphNode,
-  $createTextNode,
-  COMMAND_PRIORITY_LOW,
-  INSERT_PARAGRAPH_COMMAND,
-  KEY_ARROW_DOWN_COMMAND,
-} from 'lexical';
+import { $createParagraphNode, $createTextNode } from 'lexical';
 import { useEffect } from 'react';
 import {
-  $isCollapsibleContainerNode,
   $isCollapsibleContentNode,
   $isCollapsibleTitleNode,
   CollapsibleContainerNode,

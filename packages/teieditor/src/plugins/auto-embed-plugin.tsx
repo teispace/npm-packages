@@ -4,6 +4,7 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { COMMAND_PRIORITY_LOW, PASTE_COMMAND } from 'lexical';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useFloatingPosition } from '../utils/positioning.js';
 
 // ---------------------------------------------------------------------------
 // URL patterns for embeddable content
@@ -41,6 +42,15 @@ export function AutoEmbedPlugin() {
   const [editor] = useLexicalComposerContext();
   const [suggestion, setSuggestion] = useState<EmbedSuggestion | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  useFloatingPosition({
+    anchorRect: suggestion?.rect ?? null,
+    floatingRef: popupRef,
+    placement: 'bottom',
+    offset: 8,
+    visible: suggestion !== null,
+  });
 
   useEffect(() => {
     return editor.registerCommand(
@@ -99,11 +109,8 @@ export function AutoEmbedPlugin() {
 
   return createPortal(
     <div
-      className="tei-auto-embed fixed z-50 flex items-center gap-2 rounded-lg border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-popover))] px-3 py-2 shadow-lg"
-      style={{
-        top: suggestion.rect.bottom + 8,
-        left: suggestion.rect.left,
-      }}
+      ref={popupRef}
+      className="tei-auto-embed z-50 flex items-center gap-2 rounded-lg border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-popover))] px-3 py-2 shadow-lg transition-opacity"
     >
       <span className="text-sm text-[hsl(var(--tei-popover-fg))]">Embed as {suggestion.name}?</span>
       <button

@@ -169,9 +169,6 @@ export const defaultTheme: EditorThemeClasses = {
   // Mention
   mention: 'tei-mention bg-[hsl(var(--tei-accent))] rounded px-1 py-0.5 text-sm font-medium',
 
-  // Sticky note
-  stickyNote: 'tei-sticky-note absolute shadow-lg rounded-lg min-w-[200px] min-h-[100px]',
-
   // Page break
   pageBreak:
     'tei-page-break my-6 border-t-2 border-dashed border-[hsl(var(--tei-border))] relative text-center',

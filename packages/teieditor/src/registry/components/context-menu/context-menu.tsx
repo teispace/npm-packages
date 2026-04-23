@@ -1,6 +1,7 @@
 'use client';
 
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { usePointFloating } from '@teispace/teieditor/utils';
 import {
   $copyNode,
   $createParagraphNode,
@@ -13,9 +14,9 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-interface MenuPosition {
-  top: number;
-  left: number;
+interface MenuPoint {
+  x: number;
+  y: number;
 }
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
@@ -124,9 +125,11 @@ function TrashIcon() {
 export function ContextMenu() {
   const [editor] = useLexicalComposerContext();
   const [visible, setVisible] = useState(false);
-  const [position, setPosition] = useState<MenuPosition>({ top: 0, left: 0 });
+  const [point, setPoint] = useState<MenuPoint | null>(null);
   const [targetNodeKey, setTargetNodeKey] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  usePointFloating({ point, floatingRef: menuRef, visible });
 
   useEffect(() => {
     const root = editor.getRootElement();
@@ -143,7 +146,7 @@ export function ContextMenu() {
         if (node) setTargetNodeKey(node.getKey());
       });
 
-      setPosition({ top: e.clientY, left: e.clientX });
+      setPoint({ x: e.clientX, y: e.clientY });
       setVisible(true);
     };
 
@@ -222,9 +225,9 @@ export function ContextMenu() {
   return createPortal(
     <div
       ref={menuRef}
-      className="tei-context-menu fixed z-50 min-w-[180px] rounded-lg border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-popover))] p-1 shadow-lg"
-      style={{ top: position.top, left: position.left }}
+      className="tei-context-menu z-50 min-w-[180px] rounded-lg border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-popover))] p-1 shadow-lg transition-opacity"
       role="menu"
+      aria-label="Block context menu"
     >
       <button type="button" role="menuitem" onClick={handleCopy} className={itemClass}>
         <CopyIcon />

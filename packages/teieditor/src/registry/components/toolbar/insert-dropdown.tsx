@@ -5,6 +5,7 @@ import { INSERT_HORIZONTAL_RULE_COMMAND } from '@lexical/react/LexicalHorizontal
 import { INSERT_CALLOUT_COMMAND } from '@teispace/teieditor/extensions/callout';
 import { INSERT_EMBED_COMMAND } from '@teispace/teieditor/extensions/embed';
 import { INSERT_IMAGE_COMMAND } from '@teispace/teieditor/extensions/image';
+import { INSERT_MATH_COMMAND } from '@teispace/teieditor/extensions/math';
 import { INSERT_TABLE_COMMAND } from '@teispace/teieditor/extensions/table';
 import { INSERT_TOGGLE_COMMAND } from '@teispace/teieditor/extensions/toggle';
 import { useCallback, useState } from 'react';
@@ -14,6 +15,7 @@ import {
   IconCallout,
   IconDivider,
   IconImage,
+  IconMath,
   IconPlus,
   IconTable,
   IconToggle,
@@ -31,11 +33,13 @@ function InsertImageDialog({
   onInsert,
 }: {
   onClose: () => void;
-  onInsert: (data: { src: string; altText: string }) => void;
+  onInsert: (data: { src: string; altText: string; caption?: string }) => void;
 }) {
   const [mode, setMode] = useState<'file' | 'url'>('file');
   const [url, setUrl] = useState('');
   const [altText, setAltText] = useState('');
+  const [caption, setCaption] = useState('');
+  const [pendingFile, setPendingFile] = useState<{ src: string; fileName: string } | null>(null);
 
   const handleFileSelect = useCallback(() => {
     const input = document.createElement('input');
@@ -46,13 +50,33 @@ function InsertImageDialog({
       if (!file) return;
       const reader = new FileReader();
       reader.onload = () => {
-        onInsert({ src: reader.result as string, altText: file.name });
-        onClose();
+        setPendingFile({ src: reader.result as string, fileName: file.name });
+        if (!altText) setAltText(file.name.replace(/\.[^.]+$/, ''));
       };
       reader.readAsDataURL(file);
     };
     input.click();
-  }, [onInsert, onClose]);
+  }, [altText]);
+
+  const handleInsert = useCallback(() => {
+    if (mode === 'file' && pendingFile) {
+      onInsert({
+        src: pendingFile.src,
+        altText: altText || pendingFile.fileName,
+        caption: caption || undefined,
+      });
+      onClose();
+    } else if (mode === 'url' && url.trim()) {
+      onInsert({
+        src: url.trim(),
+        altText: altText || 'Image',
+        caption: caption || undefined,
+      });
+      onClose();
+    }
+  }, [mode, pendingFile, url, altText, caption, onInsert, onClose]);
+
+  const canInsert = mode === 'file' ? pendingFile !== null : url.trim().length > 0;
 
   return (
     <Modal title="Insert Image" onClose={onClose}>
@@ -73,47 +97,62 @@ function InsertImageDialog({
         </TeiButton>
       </div>
 
-      {mode === 'file' ? (
-        <div className="flex flex-col items-center gap-3 py-6">
-          <TeiButton onClick={handleFileSelect} variant="default">
-            Choose Image File
-          </TeiButton>
-          <p className="text-xs text-[hsl(var(--tei-muted-fg))]">PNG, JPG, GIF, WebP</p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3">
+        {mode === 'file' ? (
+          <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-[hsl(var(--tei-border))] py-6">
+            {pendingFile ? (
+              <>
+                <img
+                  src={pendingFile.src}
+                  alt={altText || pendingFile.fileName}
+                  className="max-h-32 rounded-md"
+                />
+                <p className="text-xs text-[hsl(var(--tei-muted-fg))]">{pendingFile.fileName}</p>
+                <TeiButton onClick={handleFileSelect} variant="ghost" size="sm">
+                  Choose different file
+                </TeiButton>
+              </>
+            ) : (
+              <>
+                <TeiButton onClick={handleFileSelect} variant="default">
+                  Choose Image File
+                </TeiButton>
+                <p className="text-xs text-[hsl(var(--tei-muted-fg))]">PNG, JPG, GIF, WebP, SVG</p>
+              </>
+            )}
+          </div>
+        ) : (
           <TeiInput
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://example.com/image.png"
             label="Image URL"
+            autoFocus
           />
-          <TeiInput
-            value={altText}
-            onChange={(e) => setAltText(e.target.value)}
-            placeholder="Description of the image"
-            label="Alt text"
-          />
-          <div className="flex justify-end gap-2 mt-2">
-            <TeiButton onClick={onClose} variant="ghost" size="sm">
-              Cancel
-            </TeiButton>
-            <TeiButton
-              onClick={() => {
-                if (url.trim()) {
-                  onInsert({ src: url.trim(), altText: altText || 'Image' });
-                  onClose();
-                }
-              }}
-              variant="default"
-              size="sm"
-              disabled={!url.trim()}
-            >
-              Insert
-            </TeiButton>
-          </div>
+        )}
+
+        <TeiInput
+          value={altText}
+          onChange={(e) => setAltText(e.target.value)}
+          placeholder="Description of the image (for screen readers)"
+          label="Alt text"
+        />
+        <TeiInput
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          placeholder="Optional caption below the image"
+          label="Caption"
+        />
+
+        <div className="flex justify-end gap-2 mt-2">
+          <TeiButton onClick={onClose} variant="ghost" size="sm">
+            Cancel
+          </TeiButton>
+          <TeiButton onClick={handleInsert} variant="default" size="sm" disabled={!canInsert}>
+            Insert
+          </TeiButton>
         </div>
-      )}
+      </div>
     </Modal>
   );
 }
@@ -231,11 +270,69 @@ function InsertEmbedDialog({
   );
 }
 
+function InsertMathDialog({
+  onClose,
+  onInsert,
+}: {
+  onClose: () => void;
+  onInsert: (payload: { expression: string; inline: boolean }) => void;
+}) {
+  const [expression, setExpression] = useState('');
+  const [inline, setInline] = useState(false);
+
+  const submit = () => {
+    if (!expression.trim()) return;
+    onInsert({ expression: expression.trim(), inline });
+    onClose();
+  };
+
+  return (
+    <Modal title="Insert math (LaTeX)" onClose={onClose}>
+      <div className="flex flex-col gap-3">
+        <TeiInput
+          value={expression}
+          onChange={(e) => setExpression(e.target.value)}
+          placeholder="e = mc^2"
+          label="Expression"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              submit();
+            }
+          }}
+          autoFocus
+        />
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={inline}
+            onChange={(e) => setInline(e.target.checked)}
+            className="h-4 w-4 accent-[hsl(var(--tei-fg))]"
+          />
+          Inline (default is block)
+        </label>
+        <p className="text-xs text-[hsl(var(--tei-muted-fg))]">
+          Uses KaTeX. Install <code className="rounded bg-[hsl(var(--tei-muted))] px-1">katex</code>{' '}
+          in your app to render.
+        </p>
+        <div className="flex justify-end gap-2 mt-2">
+          <TeiButton onClick={onClose} variant="ghost" size="sm">
+            Cancel
+          </TeiButton>
+          <TeiButton onClick={submit} variant="default" size="sm" disabled={!expression.trim()}>
+            Insert
+          </TeiButton>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // InsertDropdown
 // ---------------------------------------------------------------------------
 
-type DialogType = 'image' | 'table' | 'embed' | null;
+type DialogType = 'image' | 'table' | 'embed' | 'math' | null;
 
 /**
  * Insert dropdown with proper modal dialogs for rich content insertion.
@@ -280,6 +377,9 @@ export function InsertDropdown() {
           >
             Collapsible
           </DropdownItem>
+          <DropdownItem onClick={() => setActiveDialog('math')} icon={<IconMath size={14} />}>
+            Math (LaTeX)
+          </DropdownItem>
           <DropdownItem
             onClick={() => editor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined)}
             icon={<IconDivider size={14} />}
@@ -306,6 +406,12 @@ export function InsertDropdown() {
         <InsertEmbedDialog
           onClose={() => setActiveDialog(null)}
           onInsert={(url) => editor.dispatchCommand(INSERT_EMBED_COMMAND, url)}
+        />
+      )}
+      {activeDialog === 'math' && (
+        <InsertMathDialog
+          onClose={() => setActiveDialog(null)}
+          onInsert={(payload) => editor.dispatchCommand(INSERT_MATH_COMMAND, payload)}
         />
       )}
     </>
