@@ -37,11 +37,11 @@
     "commit": "cz",
     "type-check": "tsc --noEmit -p tsconfig.build.json",
     "validate": "yarn lint && yarn type-check && yarn build",
-    "test": "vitest run",
+    "test": "yarn workspaces foreach -Apt --no-private run test",
     "test:watch": "vitest",
-    "test:cov": "vitest run --coverage",
-    "test:ci": "vitest run --coverage --reporter=default --reporter=junit",
-    "test:workspaces": "yarn workspaces foreach -pt run test"
+    "test:cov": "yarn workspaces foreach -Apt --no-private run test:cov",
+    "test:ci": "yarn workspaces foreach -Apt --no-private run test:cov",
+    "test:workspaces": "yarn workspaces foreach -Apt --no-private run test"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.11",

@@ -191,7 +191,7 @@ describe('buildScript', () => {
   });
 
   it('is resilient when localStorage throws', () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
       throw new Error('blocked');
     });
     const s = buildScript({ storageMode: 'local', defaultTheme: 'light', enableSystem: false });
