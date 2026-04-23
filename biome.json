@@ -86,6 +86,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["packages/next-themes/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noDocumentCookie": "off"
+          }
+        }
+      }
     }
   ]
 }
