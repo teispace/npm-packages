@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Pick up utility classes from the drop-in components' compiled bundle */
+@source "../../../../packages/teieditor/dist";
+@source "../../../../packages/teieditor/src/registry";
+
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

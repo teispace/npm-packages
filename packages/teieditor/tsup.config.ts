@@ -56,6 +56,7 @@ export default defineConfig({
     'themes/index': 'src/themes/index.ts',
     'utils/index': 'src/utils/index.ts',
     'cli/index': 'src/cli/index.ts',
+    'react/index': 'src/react/index.ts',
   },
   format: ['esm'],
   dts: true,
@@ -63,7 +64,19 @@ export default defineConfig({
   splitting: true,
   treeshake: true,
   sourcemap: true,
-  external: ['react', 'react-dom', 'lexical', /^@lexical\//, 'commander', 'ora', 'picocolors'],
+  external: [
+    'react',
+    'react-dom',
+    'lexical',
+    /^@lexical\//,
+    'commander',
+    'ora',
+    'picocolors',
+    // Self-ref: registry editors import from '@teispace/teieditor/core' etc.
+    // Keep them as externals so Node resolves them via our own exports map at runtime.
+    '@teispace/teieditor',
+    /^@teispace\/teieditor\//,
+  ],
   target: 'es2020',
   outDir: 'dist',
   esbuildOptions(options) {

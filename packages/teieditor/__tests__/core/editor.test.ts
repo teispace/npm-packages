@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createTeiEditor } from '../../src/core/editor.js';
 import { Bold } from '../../src/extensions/bold/index.js';
+import { FontFamily } from '../../src/extensions/font-family/index.js';
 import { Heading } from '../../src/extensions/heading/index.js';
 import { History } from '../../src/extensions/history/index.js';
 import { Italic } from '../../src/extensions/italic/index.js';
@@ -86,5 +87,40 @@ describe('createTeiEditor', () => {
     const editor = createTeiEditor({ extensions: [] });
     expect(editor.composerConfig.theme).toBeDefined();
     expect(editor.composerConfig.theme.paragraph).toBeDefined();
+  });
+
+  describe('extension dedup', () => {
+    it('dedups extensions by name, keeping the last one (user override wins)', () => {
+      const defaultFontFamily = FontFamily;
+      const customFontFamily = FontFamily.configure({
+        families: [{ label: 'Custom', value: 'Custom, serif' }],
+      });
+
+      const editor = createTeiEditor({
+        extensions: [defaultFontFamily, customFontFamily],
+      });
+
+      const fontFamilyExts = editor.extensions.filter((e) => e.name === 'fontFamily');
+      expect(fontFamilyExts).toHaveLength(1);
+      expect(fontFamilyExts[0]).toBe(customFontFamily);
+    });
+
+    it('preserves order for non-duplicate extensions', () => {
+      const editor = createTeiEditor({
+        extensions: [Bold, Italic, Paragraph],
+      });
+      expect(editor.extensions.map((e) => e.name)).toEqual(['bold', 'italic', 'paragraph']);
+    });
+
+    it('keeps the later duplicate and still preserves relative order around it', () => {
+      // [Bold, Italic, Bold.configure(...)] → [Italic, Bold.configure(...)]
+      // First Bold is dropped; Italic stays before the override Bold.
+      const overrideBold = { ...Bold, name: 'bold' };
+      const editor = createTeiEditor({
+        extensions: [Bold, Italic, overrideBold],
+      });
+      expect(editor.extensions.map((e) => e.name)).toEqual(['italic', 'bold']);
+      expect(editor.extensions.at(-1)).toBe(overrideBold);
+    });
   });
 });

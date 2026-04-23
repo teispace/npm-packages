@@ -11,6 +11,7 @@ import { $createParagraphNode, $getSelection, $isRangeSelection } from 'lexical'
 import { INSERT_CALLOUT_COMMAND } from '../callout/index.js';
 import { INSERT_EMBED_COMMAND } from '../embed/index.js';
 import { INSERT_IMAGE_COMMAND } from '../image/image-plugin.js';
+import { INSERT_MATH_COMMAND } from '../math/index.js';
 import { INSERT_TABLE_COMMAND } from '../table/index.js';
 import { INSERT_TOGGLE_COMMAND } from '../toggle/index.js';
 import type { SlashCommandItem } from './types.js';
@@ -236,6 +237,18 @@ export const defaultSlashCommands: SlashCommandItem[] = [
     onSelect: (editor) => {
       const url = typeof window !== 'undefined' ? window.prompt('Enter URL to embed:') : null;
       if (url) editor.dispatchCommand(INSERT_EMBED_COMMAND, url);
+    },
+  },
+  {
+    name: 'math',
+    label: 'Math (LaTeX)',
+    description: 'Inline or block equation via KaTeX',
+    keywords: ['math', 'equation', 'formula', 'latex', 'katex', 'tex'],
+    group: 'Media',
+    onSelect: (editor) => {
+      const expression =
+        typeof window !== 'undefined' ? window.prompt('Enter LaTeX expression:') : null;
+      if (expression) editor.dispatchCommand(INSERT_MATH_COMMAND, { expression, inline: false });
     },
   },
   // Callouts
