@@ -12,10 +12,10 @@ import {
   $mergeCells,
   $unmergeCell,
 } from '@lexical/table';
+import { usePointFloating } from '@teispace/teieditor/utils';
 import { $getSelection, $isRangeSelection } from 'lexical';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { usePointFloating } from '@teispace/teieditor/utils';
 import { IconPlus, IconTrash } from '../../ui/icons';
 
 interface MenuPoint {
@@ -70,7 +70,8 @@ export function TableMenu() {
         const sel = $getSelection();
         if ($isTableSelection(sel)) {
           isTableCell = true;
-          multiCell = sel.getShape().fromX !== sel.getShape().toX ||
+          multiCell =
+            sel.getShape().fromX !== sel.getShape().toX ||
             sel.getShape().fromY !== sel.getShape().toY;
         } else if ($isRangeSelection(sel)) {
           const cell = $getTableCellNodeFromLexicalNode(sel.anchor.getNode());

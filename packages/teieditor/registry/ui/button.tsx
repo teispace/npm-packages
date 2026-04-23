@@ -35,7 +35,8 @@ export const TeiButton = forwardRef<HTMLButtonElement, TeiButtonProps>(
   ) => {
     // If a title is provided without an explicit aria-label, mirror it so
     // screen readers have a name for icon-only buttons.
-    const ariaLabel = props['aria-label'] ?? (typeof props.title === 'string' ? props.title : undefined);
+    const ariaLabel =
+      props['aria-label'] ?? (typeof props.title === 'string' ? props.title : undefined);
 
     return (
       <button

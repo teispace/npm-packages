@@ -1,6 +1,7 @@
 'use client';
 
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { usePointFloating } from '@teispace/teieditor/utils';
 import {
   $copyNode,
   $createParagraphNode,
@@ -12,7 +13,6 @@ import {
 } from 'lexical';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { usePointFloating } from '@teispace/teieditor/utils';
 
 interface MenuPoint {
   x: number;

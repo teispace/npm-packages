@@ -312,7 +312,8 @@ function InsertMathDialog({
           Inline (default is block)
         </label>
         <p className="text-xs text-[hsl(var(--tei-muted-fg))]">
-          Uses KaTeX. Install <code className="rounded bg-[hsl(var(--tei-muted))] px-1">katex</code> in your app to render.
+          Uses KaTeX. Install <code className="rounded bg-[hsl(var(--tei-muted))] px-1">katex</code>{' '}
+          in your app to render.
         </p>
         <div className="flex justify-end gap-2 mt-2">
           <TeiButton onClick={onClose} variant="ghost" size="sm">
