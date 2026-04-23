@@ -10,6 +10,10 @@
     "packages/teieditor": {
       "component": "teieditor",
       "release-type": "node"
+    },
+    "packages/next-themes": {
+      "component": "next-themes",
+      "release-type": "node"
     }
   },
   "changelog-sections": [

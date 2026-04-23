@@ -1,0 +1,25 @@
+/*
+ * @teispace/next-themes — Tailwind v4 preset
+ *
+ * Drop into your app CSS (after `@import "tailwindcss";`):
+ *
+ *   @import "@teispace/next-themes/tailwind.css";
+ *
+ * This registers a `dark:` variant that matches either `data-theme="dark"`
+ * or a `.dark` class on any ancestor — so it works with both attribute modes
+ * of the provider. A matching `light:` variant is also registered.
+ *
+ * To add custom theme variants (e.g. `sepia:`), add in your own CSS:
+ *
+ *   @custom-variant sepia (
+ *     &:where([data-theme="sepia"], [data-theme="sepia"] *, .sepia, .sepia *)
+ *   );
+ */
+
+@custom-variant dark (
+  &:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *)
+);
+
+@custom-variant light (
+  &:where([data-theme="light"], [data-theme="light"] *, .light, .light *)
+);

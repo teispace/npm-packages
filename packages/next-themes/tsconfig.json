@@ -2,10 +2,9 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "lib": ["DOM", "ES2022"],
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "declaration": true,
     "declarationMap": true,
-    "emitDeclarationOnly": false,
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -13,15 +12,18 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "ignoreDeprecations": "6.0",
     "jsx": "react-jsx",
     "types": ["node"],
+    "outDir": "./dist",
+    "rootDir": "./src",
     "paths": {
-      "@teispace/teieditor/*": ["./packages/teieditor/src/*"],
-      "@teispace/next-themes/*": ["./packages/next-themes/src/*"],
-      "@teispace/*": ["./packages/*/src"]
+      "@teispace/next-themes": ["./src"],
+      "@teispace/next-themes/*": ["./src/*"]
     }
   },
-  "include": ["packages/*/src", "packages/*/types", "scripts", "tools"],
-  "exclude": ["node_modules", "dist", "build", "coverage"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
 }

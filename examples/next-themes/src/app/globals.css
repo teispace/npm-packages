@@ -1,0 +1,120 @@
+@import "tailwindcss";
+@import "@teispace/next-themes/tailwind.css";
+
+/* Custom variants for the multi-theme demo. */
+@custom-variant sepia (
+  &:where([data-theme="sepia"], [data-theme="sepia"] *, .sepia, .sepia *)
+);
+@custom-variant mint (
+  &:where([data-theme="mint"], [data-theme="mint"] *, .mint, .mint *)
+);
+
+/*
+ * Theme tokens. Values are HSL triplets used with `hsl(var(--token))` or
+ * Tailwind arbitrary values. The root provider uses `attribute="class"` so
+ * the .light/.dark selectors apply.
+ */
+:root {
+  --bg: 0 0% 100%;
+  --fg: 0 0% 10%;
+  --muted: 0 0% 96%;
+  --muted-fg: 0 0% 45%;
+  --border: 0 0% 90%;
+  --accent: 220 90% 56%;
+  --accent-fg: 0 0% 100%;
+  --card: 0 0% 100%;
+  --card-fg: 0 0% 10%;
+  color-scheme: light;
+}
+
+.dark {
+  --bg: 220 15% 7%;
+  --fg: 0 0% 96%;
+  --muted: 220 10% 13%;
+  --muted-fg: 0 0% 65%;
+  --border: 220 10% 18%;
+  --accent: 220 90% 65%;
+  --accent-fg: 220 15% 7%;
+  --card: 220 12% 10%;
+  --card-fg: 0 0% 96%;
+  color-scheme: dark;
+}
+
+.sepia {
+  --bg: 40 30% 94%;
+  --fg: 25 25% 20%;
+  --muted: 40 25% 88%;
+  --muted-fg: 25 15% 40%;
+  --border: 40 20% 78%;
+  --accent: 25 60% 45%;
+  --accent-fg: 40 40% 96%;
+  --card: 40 35% 96%;
+  --card-fg: 25 25% 20%;
+  color-scheme: light;
+}
+
+.mint {
+  --bg: 160 30% 96%;
+  --fg: 160 25% 18%;
+  --muted: 160 20% 90%;
+  --muted-fg: 160 15% 35%;
+  --border: 160 15% 82%;
+  --accent: 160 60% 40%;
+  --accent-fg: 160 30% 97%;
+  --card: 160 35% 98%;
+  --card-fg: 160 25% 18%;
+  color-scheme: light;
+}
+
+body {
+  background: hsl(var(--bg));
+  color: hsl(var(--fg));
+  transition: background-color 0.2s, color 0.2s;
+  min-height: 100vh;
+}
+
+/* Utility classes driven by theme tokens */
+.surface { background: hsl(var(--card)); color: hsl(var(--card-fg)); }
+.muted-text { color: hsl(var(--muted-fg)); }
+.border-token { border-color: hsl(var(--border)); }
+.muted-bg { background: hsl(var(--muted)); }
+.accent-bg { background: hsl(var(--accent)); color: hsl(var(--accent-fg)); }
+
+/* Code blocks */
+pre {
+  background: hsl(var(--muted));
+  color: hsl(var(--fg));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 1rem;
+  font-size: 0.8rem;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+/* Scoped-theme wrapper uses `data-theme` explicitly */
+[data-theme="dark"] {
+  --bg: 220 15% 7%;
+  --fg: 0 0% 96%;
+  --muted: 220 10% 13%;
+  --muted-fg: 0 0% 65%;
+  --border: 220 10% 18%;
+  --card: 220 12% 10%;
+  --card-fg: 0 0% 96%;
+  color-scheme: dark;
+  background: hsl(var(--bg));
+  color: hsl(var(--fg));
+}
+
+[data-theme="sepia"] {
+  --bg: 40 30% 94%;
+  --fg: 25 25% 20%;
+  --muted: 40 25% 88%;
+  --muted-fg: 25 15% 40%;
+  --border: 40 20% 78%;
+  --card: 40 35% 96%;
+  --card-fg: 25 25% 20%;
+  color-scheme: light;
+  background: hsl(var(--bg));
+  color: hsl(var(--fg));
+}

@@ -1,4 +1,5 @@
 {
   "packages/next-maker": "1.14.0",
-  "packages/teieditor": "1.3.0"
+  "packages/teieditor": "1.3.0",
+  "packages/next-themes": "0.1.0"
 }
