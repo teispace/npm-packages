@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.15.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.14.0...next-maker-v1.15.0) (2026-04-24)
+
+
+### Features
+
+* **next-maker:** biome + @teispace/next-themes migration, new prompts, test generation ([e30eb1a](https://github.com/teispace/npm-packages/commit/e30eb1a8dc3075868315bcf97cea10dfc001fc2e))
+
+
+### Documentation
+
+* **next-maker:** sync README with current tooling, prompts, structure, and test generation ([dc599aa](https://github.com/teispace/npm-packages/commit/dc599aab194669c63a57aa45c70230bb937c6260))
+
 ## [1.14.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.13.1...next-maker-v1.14.0) (2026-04-10)
 
 
