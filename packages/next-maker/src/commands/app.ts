@@ -91,9 +91,8 @@ const createApp = async (initialName?: string): Promise<void> => {
     spinner.text = 'Installing dependencies...';
     await installDependencies(projectPath, answers.packageManager);
 
-    // 8. Format and Lint
+    // 8. Format and Lint (biome check --write does both)
     spinner.text = 'Formatting and Linting...';
-    await runScript(projectPath, answers.packageManager, 'format');
     await runScript(projectPath, answers.packageManager, 'lint:fix');
 
     // 9. Copy .env.example to .env if requested

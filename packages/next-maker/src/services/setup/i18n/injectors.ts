@@ -64,78 +64,65 @@ export const updateRootProvider = async (projectPath: string): Promise<void> => 
 
     // Add imports
     if (!content.includes('next-intl')) {
-      const imports = `import { SupportedLocale } from '@/types/i18n';
-import { NextIntlClientProvider, AbstractIntlMessages } from 'next-intl';
+      const imports = `import { type AbstractIntlMessages, NextIntlClientProvider } from 'next-intl';
+import type { SupportedLocale } from '@/types/i18n';
 `;
       content = imports + content;
     }
 
-    // Re-add 'use client' at the top
     if (hasUseClient) {
       content = `${useClientDirective}\n${content}`;
     }
 
-    // Update Props
-    // Replace props type or signature
+    // Extend props with locale/messages/timeZone. Handle two shapes:
+    //   1) inline  — `({ children }: { children: ReactNode })`
+    //   2) aliased — `type RootProviderProps = { ... }` + `({ children }: RootProviderProps)`
     if (!content.includes('locale: SupportedLocale')) {
-      // Try to find the props definition
-      // This assumes a specific structure, might need to be more robust
-      // We'll look for the component definition
-      const componentRegex = /export const RootProvider = \(\{([\s\S]*?)\}: \{([\s\S]*?)\}\) => \{/;
-      const match = content.match(componentRegex);
+      const i18nFields = `  locale: SupportedLocale;\n  messages: AbstractIntlMessages;\n  timeZone: string;`;
+      const aliasRe = /(type\s+RootProviderProps\s*=\s*\{)([\s\S]*?)(\};?)/;
+      const inlineRe = /export const RootProvider = \(\{([\s\S]*?)\}: \{([\s\S]*?)\}\) => \{/;
 
-      if (match) {
-        const newParams = `\n  children,\n  locale,\n  messages,`;
-        const newTypes = `\n  children: React.ReactNode;\n  locale: SupportedLocale;\n  messages: AbstractIntlMessages;`;
-
+      if (aliasRe.test(content)) {
+        content = content.replace(aliasRe, (_m, open, body, close) => {
+          const trimmed = body.replace(/\s+$/, '');
+          return `${open}${trimmed}\n${i18nFields}\n${close}`;
+        });
+        // Add locale/messages/timeZone to destructured args too.
         content = content.replace(
-          match[0],
-          `export const RootProvider = ({${newParams}\n}: {${newTypes}\n}) => {`,
+          /export const RootProvider = \(\{([\s\S]*?)\}:\s*RootProviderProps\)/,
+          (_m, inner) => {
+            const existing = inner.trim().replace(/,$/, '');
+            return `export const RootProvider = ({ ${existing ? `${existing}, ` : ''}locale, messages, timeZone }: RootProviderProps)`;
+          },
         );
+      } else {
+        const match = content.match(inlineRe);
+        if (match) {
+          const existingParams = match[1].trim().replace(/,$/, '');
+          const existingTypes = match[2].trim().replace(/;$/, '');
+          const newParams = `\n  ${existingParams ? `${existingParams},\n  ` : ''}locale,\n  messages,\n  timeZone,`;
+          const newTypes = `\n  ${existingTypes ? `${existingTypes};\n  ` : ''}locale: SupportedLocale;\n  messages: AbstractIntlMessages;\n  timeZone: string;`;
+          content = content.replace(
+            match[0],
+            `export const RootProvider = ({${newParams}\n}: {${newTypes}\n}) => {`,
+          );
+        }
       }
     }
 
-    // Wrap with NextIntlClientProvider
+    // Wrap {children} with NextIntlClientProvider
     if (!content.includes('<NextIntlClientProvider')) {
       const returnMatch = content.match(/return\s*(?:\(\s*)?([\s\S]*?)(?:\s*\))?;/);
       if (returnMatch) {
-        // We want NextIntlClientProvider to be inside CustomThemeProvider if possible, or just wrap children
-        // But usually it wraps everything inside the provider
-        // Let's wrap the inner content
         const existingJsx = returnMatch[1];
-
-        // We need to be careful. If existingJsx contains {children}, we want to wrap THAT.
-        // But replacing {children} might be safer if we can find it.
-        // However, if we just wrap the whole thing, it might be double wrapping if not careful.
-        // But here we are wrapping the *returned JSX*.
-
-        // Wait, the previous logic was:
-        // content = content.replace(/return \(\s*<([^>]+)([^>]*)>([\s\S]*)<\/\1>\s*\);/, (match) => {
-        //   return match.replace(
-        //     /\{children\}/,
-        //     `<NextIntlClientProvider locale={locale} messages={messages}>\n          {children}\n        </NextIntlClientProvider>`,
-        //   );
-        // });
-
-        // The previous logic tried to find {children} inside the returned JSX and wrap IT.
-        // This is different from dark-theme/redux which wrap the *entire* returned JSX.
-        // Why? Because NextIntlClientProvider should be close to children?
-        // Or maybe just to avoid wrapping other providers?
-
-        // If I use the new regex, I get the whole JSX.
-        // I can try to replace {children} inside it.
-
+        const wrapped = `<NextIntlClientProvider locale={locale} messages={messages} timeZone={timeZone}>\n          {children}\n        </NextIntlClientProvider>`;
         if (existingJsx.includes('{children}')) {
-          const newJsx = existingJsx.replace(
-            '{children}',
-            `<NextIntlClientProvider locale={locale} messages={messages}>\n          {children}\n        </NextIntlClientProvider>`,
-          );
+          const newJsx = existingJsx.replace('{children}', wrapped);
           content = content.replace(returnMatch[0], `return (\n    ${newJsx}\n  );`);
         } else {
-          // Fallback: wrap the whole thing if {children} not found (unlikely)
           content = content.replace(
             returnMatch[0],
-            `return (\n    <NextIntlClientProvider locale={locale} messages={messages}>\n      ${existingJsx}\n    </NextIntlClientProvider>\n  );`,
+            `return (\n    <NextIntlClientProvider locale={locale} messages={messages} timeZone={timeZone}>\n      ${existingJsx}\n    </NextIntlClientProvider>\n  );`,
           );
         }
       }
@@ -163,7 +150,7 @@ export const migrateToLocaleStructure = async (projectPath: string): Promise<voi
       content = `import { routing } from '@/i18n/routing';
 import { hasLocale } from 'next-intl';
 import { notFound } from 'next/navigation';
-import { setRequestLocale, getMessages } from 'next-intl/server';
+import { getMessages, getTimeZone, setRequestLocale } from 'next-intl/server';
 ${content}`;
     }
 
@@ -226,7 +213,7 @@ ${content}`;
 
   setRequestLocale(locale);
 
-  const messages = await getMessages();
+  const [messages, timeZone] = await Promise.all([getMessages(), getTimeZone()]);
 `;
         content = content.slice(0, bodyOpenBrace + 1) + logic + content.slice(bodyOpenBrace + 1);
       }
@@ -234,7 +221,7 @@ ${content}`;
       // 3. Update RootProvider usage
       content = content.replace(
         /<RootProvider>/,
-        '<RootProvider locale={locale} messages={messages}>',
+        '<RootProvider locale={locale} messages={messages} timeZone={timeZone}>',
       );
 
       // 4. Update html lang

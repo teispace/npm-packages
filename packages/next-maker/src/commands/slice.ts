@@ -4,7 +4,9 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
+import { kebabToCamel } from '../config/utils';
 import { detectProjectSetup, directoryExists } from '../detection';
+import { generateTest } from '../generators';
 import { createSlicePipelineSteps, executePipeline } from '../pipelines';
 import { promptForSliceDetails } from '../prompts/slice.prompt';
 
@@ -12,6 +14,8 @@ interface SliceCommandOptions {
   path?: string;
   persist?: boolean;
   noPersist?: boolean;
+  test?: boolean;
+  noTest?: boolean;
 }
 
 export const registerSliceCommand = (program: Command) => {
@@ -21,6 +25,8 @@ export const registerSliceCommand = (program: Command) => {
     .option('--path <path>', 'Custom path for slice generation (default: create new feature)')
     .option('--persist', 'Enable persistence for this slice')
     .option('--no-persist', 'Disable persistence for this slice')
+    .option('--test', 'Also generate a sibling test file')
+    .option('--no-test', 'Skip test file generation')
     .action(async (name: string | undefined, options: SliceCommandOptions) => {
       try {
         const projectPath = process.cwd();
@@ -80,7 +86,22 @@ export const registerSliceCommand = (program: Command) => {
           persistSlice: sliceOptions.persistSlice,
         });
 
-        printSliceSuccess(sliceOptions, basePath);
+        // Optional sibling test.
+        let testFile: string | null = null;
+        const shouldTest = resolveShouldTest(options, detection.hasTests);
+        if (shouldTest) {
+          const sliceFile = path.join(slicePath, `${sliceOptions.sliceName}.slice.ts`);
+          spinner.start('Generating test...');
+          testFile = await generateTest({
+            projectPath,
+            sourceFile: sliceFile,
+            kind: 'slice',
+            symbolName: kebabToCamel(sliceOptions.sliceName),
+          });
+          spinner.succeed('Test generated');
+        }
+
+        printSliceSuccess(sliceOptions, basePath, testFile, projectPath);
       } catch (error) {
         spinner.fail('Slice generation failed');
         logError(`${error}`);
@@ -114,9 +135,20 @@ const resolveSlicePaths = (
   };
 };
 
+const resolveShouldTest = (
+  options: { test?: boolean; noTest?: boolean },
+  hasTests: boolean,
+): boolean => {
+  if (options.noTest) return false;
+  if (options.test) return true;
+  return hasTests;
+};
+
 const printSliceSuccess = (
   sliceOptions: { sliceName: string; persistSlice: boolean },
   basePath: string,
+  testFile: string | null,
+  projectPath: string,
 ) => {
   const displayPath = path.join(basePath, sliceOptions.sliceName);
   log(pc.green(`\n✨ Slice '${sliceOptions.sliceName}' created successfully!\n`));
@@ -127,6 +159,7 @@ const printSliceSuccess = (
   if (sliceOptions.persistSlice) log(pc.dim(`     ├── persist.ts`));
   log(pc.dim(`     ├── ${sliceOptions.sliceName}.types.ts`));
   log(pc.dim(`     └── index.ts\n`));
+  if (testFile) log(pc.dim(`  🧪 ${path.relative(projectPath, testFile)}\n`));
 
   log(pc.cyan('Next steps:'));
   const importPath = basePath.replace(/^src\//, '@/');

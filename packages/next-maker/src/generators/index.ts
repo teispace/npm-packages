@@ -10,6 +10,8 @@ export type { PageGeneratorOptions } from './page.generator';
 export { generatePage } from './page.generator';
 export { generateService } from './service.generator';
 export { generateSlice } from './slice.generator';
+export type { GenerateTestOptions, TestKind } from './test.generator';
+export { generateTest } from './test.generator';
 export type {
   FeatureGeneratorOptions,
   ServiceGeneratorOptions,

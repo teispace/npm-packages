@@ -1,9 +1,10 @@
 export const PROJECT_PATHS = {
   // Config
   NEXT_CONFIG: 'next.config.ts',
-  TAILWIND_CONFIG: 'tailwind.config.ts',
   POSTCSS_CONFIG: 'postcss.config.mjs',
-  ESLINT_CONFIG: 'eslint.config.mjs',
+  BIOME_CONFIG: 'biome.json',
+  VITEST_CONFIG: 'vitest.config.ts',
+  TEST_DIR: 'test',
   TS_CONFIG: 'tsconfig.json',
   PACKAGE_JSON: 'package.json',
   ENV_EXAMPLE: '.env.example',
@@ -13,6 +14,8 @@ export const PROJECT_PATHS = {
   CHANGELOG: 'CHANGELOG.md',
   NVM_RC: '.nvmrc',
   NPM_RC: '.npmrc',
+  AGENTS_MD: 'AGENTS.md',
+  CLAUDE_MD: 'CLAUDE.md',
 
   // Source
   SRC: 'src',

@@ -12,7 +12,7 @@ export const crudServiceTemplate = (params: {
 
   return `import { AppApis } from '@/lib/config';
 ${clientImport}
-import { ResultAsync } from '@/types';
+import type { ResultAsync } from '@/types';
 
 /**
  * Summary type used in list responses (e.g., cards, tables).

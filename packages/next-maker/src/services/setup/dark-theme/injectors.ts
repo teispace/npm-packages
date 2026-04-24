@@ -13,66 +13,53 @@ export const updateProvidersIndex = async (projectPath: string): Promise<void> =
 
 export const updateRootProvider = async (projectPath: string): Promise<void> => {
   const rootProviderPath = path.join(projectPath, 'src/providers/RootProvider.tsx');
-  if (fileExists(rootProviderPath)) {
-    let rootProviderContent = await readFile(rootProviderPath);
+  if (!fileExists(rootProviderPath)) return;
 
-    // Handle 'use client'
-    const useClientDirective = "'use client';";
-    const hasUseClient = rootProviderContent.includes(useClientDirective);
+  let content = await readFile(rootProviderPath);
 
-    if (hasUseClient) {
-      rootProviderContent = rootProviderContent.replace(useClientDirective, '').trim();
-    }
+  const useClientDirective = "'use client';";
+  const hasUseClient = content.includes(useClientDirective);
+  if (hasUseClient) {
+    content = content.replace(useClientDirective, '').trim();
+  }
 
-    // Add import if missing
-    if (!rootProviderContent.includes('CustomThemeProvider')) {
-      rootProviderContent = rootProviderContent.replace(
-        /import \{ StoreProvider \} from '@\/providers';\n/,
-        "import { StoreProvider, CustomThemeProvider } from '@/providers';\n",
+  // Add CustomThemeProvider import if missing
+  if (!content.includes('CustomThemeProvider')) {
+    if (/import\s*\{[^}]*\}\s*from\s*'@\/providers'/.test(content)) {
+      content = content.replace(
+        /(import\s*\{)([^}]*)(\}\s*from\s*'@\/providers')/,
+        (_m, open, names, close) =>
+          `${open}${names.trim() ? `${names.trim()}, CustomThemeProvider ` : ' CustomThemeProvider '}${close}`,
       );
-      // Fallback if StoreProvider import is different or missing
-      if (!rootProviderContent.includes('CustomThemeProvider')) {
-        if (rootProviderContent.includes("from '@/providers'")) {
-          rootProviderContent = rootProviderContent.replace(
-            /\} from '@\/providers'/,
-            ", CustomThemeProvider } from '@/providers'",
-          );
-        } else {
-          rootProviderContent = `import { CustomThemeProvider } from '@/providers';\n${rootProviderContent}`;
-        }
-      }
-    }
-
-    // Re-add 'use client' at the top
-    if (hasUseClient) {
-      rootProviderContent = `${useClientDirective}\n${rootProviderContent}`;
-    }
-
-    // Wrap children
-    if (!rootProviderContent.includes('<CustomThemeProvider>')) {
-      if (rootProviderContent.includes('<StoreProvider>')) {
-        rootProviderContent = rootProviderContent.replace(
-          /<StoreProvider>/,
-          '<StoreProvider>\n      <CustomThemeProvider>',
-        );
-        rootProviderContent = rootProviderContent.replace(
-          /<\/StoreProvider>/,
-          '</CustomThemeProvider>\n    </StoreProvider>',
-        );
-      } else {
-        // Match return statement with or without parentheses
-        const returnMatch = rootProviderContent.match(/return\s*(?:\(\s*)?([\s\S]*?)(?:\s*\))?;/);
-        if (returnMatch) {
-          const existingJsx = returnMatch[1];
-          rootProviderContent = rootProviderContent.replace(
-            returnMatch[0],
-            `return (\n    <CustomThemeProvider>\n      ${existingJsx}\n    </CustomThemeProvider>\n  );`,
-          );
-        }
-      }
-      await writeFile(rootProviderPath, rootProviderContent);
+    } else {
+      content = `import { CustomThemeProvider } from '@/providers';\n${content}`;
     }
   }
+
+  if (hasUseClient) {
+    content = `${useClientDirective}\n${content}`;
+  }
+
+  // Wrap {children} with CustomThemeProvider (innermost to preserve any outer providers)
+  if (!content.includes('<CustomThemeProvider')) {
+    if (content.includes('{children}')) {
+      content = content.replace(
+        /\{children\}/,
+        '<CustomThemeProvider>{children}</CustomThemeProvider>',
+      );
+    } else {
+      // Fallback: wrap entire return JSX
+      const returnMatch = content.match(/return\s*\(\s*([\s\S]*?)\s*\);/);
+      if (returnMatch) {
+        content = content.replace(
+          returnMatch[0],
+          `return (\n    <CustomThemeProvider>\n      ${returnMatch[1]}\n    </CustomThemeProvider>\n  );`,
+        );
+      }
+    }
+  }
+
+  await writeFile(rootProviderPath, content);
 };
 
 export const updateGlobalsCss = async (projectPath: string, tempDir: string): Promise<void> => {

@@ -1,6 +1,6 @@
 # @teispace/next-maker
 
-A powerful CLI tool to scaffold Next.js applications with modern best practices and generate feature-based architecture components including pages, components, Redux slices, API services, and locales.
+A CLI that scaffolds Next.js 16+ applications (TypeScript, Tailwind v4, Biome, Pino, Zod, Redux Toolkit, next-intl, Vitest) and co-generates feature-based architecture — pages, components, hooks, Redux slices, API services, locales, and tests.
 
 ## Installation
 
@@ -34,22 +34,27 @@ During initialization, you'll be prompted to configure:
 - **Package Manager** (npm, yarn, pnpm, bun)
 - **GitHub Repository** (optional - configures remote origin)
 - **HTTP Client** (axios, fetch, both, or none)
-- **Dark Mode** (next-themes integration)
+- **Dark Mode** (@teispace/next-themes integration)
 - **Redux Toolkit** (with redux-persist)
 - **Internationalization** (next-intl)
+- **Testing** (Vitest + React Testing Library)
+- **React Compiler** (experimental — on by default)
+- **Bundle Analyzer** (@next/bundle-analyzer — off by default)
 - **Community Files** (CODE_OF_CONDUCT, CONTRIBUTING, etc.)
 - **Docker** support
 - **CI/CD** configuration
 - **Pre-commit hooks** (Husky)
 
-**Core Features:**
+**Core Features (always shipped):**
 
 - Next.js 16+ with App Router
 - TypeScript (strict mode)
 - Tailwind CSS v4
-- Result-based HTTP clients
+- Biome (single-tool lint + format; replaces ESLint + Prettier)
+- Pino structured logger with redaction
+- Zod-validated env schema
 - Feature-based DDD architecture
-- ESLint + Prettier configured
+- Result-based HTTP clients (axios / fetch)
 
 ---
 
@@ -64,9 +69,12 @@ npx @teispace/next-maker setup [options]
 **Options:**
 
 - `--http-client` - Setup HTTP client (Interactive: axios|fetch|both)
-- `--dark-theme` - Setup dark theme support (next-themes)
+- `--dark-theme` - Setup dark theme support (@teispace/next-themes)
 - `--redux` - Setup Redux Toolkit with persistence
 - `--i18n` - Setup next-intl for internationalization
+- `--tests` - Setup testing (Vitest + React Testing Library)
+- `--react-compiler` - Enable the React Compiler
+- `--bundle-analyzer` - Add @next/bundle-analyzer
 
 **Examples:**
 
@@ -79,6 +87,9 @@ npx @teispace/next-maker setup --http-client
 npx @teispace/next-maker setup --dark-theme
 npx @teispace/next-maker setup --redux
 npx @teispace/next-maker setup --i18n
+npx @teispace/next-maker setup --tests
+npx @teispace/next-maker setup --react-compiler
+npx @teispace/next-maker setup --bundle-analyzer
 ```
 
 ---
@@ -132,6 +143,7 @@ npx @teispace/next-maker component <name> [options]
 - `--client` - Add `'use client'` directive
 - `--i18n` - Add `useTranslations` hook
 - `--feature <path>` - Generate inside a feature directory
+- `--test` / `--no-test` - Co-generate a sibling `*.test.tsx` (default: on when tests are installed)
 
 **Generated structure (shared):**
 
@@ -222,6 +234,7 @@ npx @teispace/next-maker slice <name> [options]
 - `--persist` - Enable redux-persist for this slice
 - `--no-persist` - Disable persistence
 - `--path <path>` - Custom path (default: create new feature)
+- `--test` / `--no-test` - Co-generate a sibling `*.slice.test.ts` (default: on when tests are installed)
 
 **Auto-registers in rootReducer** with correct imports.
 
@@ -316,6 +329,7 @@ npx @teispace/next-maker hook <name> [options]
 
 - `--client` - Add `'use client'` directive (default: true)
 - `--feature <path>` - Generate in feature directory
+- `--test` / `--no-test` - Co-generate a sibling `*.test.ts` (default: on when tests are installed)
 
 **Examples:**
 
@@ -326,6 +340,40 @@ npx @teispace/next-maker hook auth-session
 # Hook inside a feature
 npx @teispace/next-maker hook user-profile --feature src/features/auth
 ```
+
+---
+
+### 10. Generate a Test
+
+Scaffold a sibling `*.test.{ts,tsx}` next to an existing component, hook, or slice. Handy for retrofitting tests onto code that pre-dates the `--with-test` flag.
+
+```bash
+npx @teispace/next-maker test <file> [options]
+```
+
+**Options:**
+
+- `--kind <kind>` - Override inferred kind: `component` | `hook` | `slice`
+- `--force` - Overwrite an existing test file
+
+**Inference rules:**
+
+- `*.slice.ts` → slice reducer test
+- `use*.ts` / content starts with `export function useX` → hook test (`renderHook`)
+- `*.tsx` → component test (`renderWithProviders`)
+
+The generated file imports `renderWithProviders` / `TestProviders` from `test/test-utils` using a path resolved relative to the source file, so tests work whether they're under `src/features/*/components/`, `src/hooks/`, or anywhere else in the tree.
+
+**Examples:**
+
+```bash
+npx @teispace/next-maker test src/features/auth/components/LoginForm.tsx
+npx @teispace/next-maker test src/features/auth/hooks/useLogin.ts
+npx @teispace/next-maker test src/features/auth/store/auth.slice.ts
+npx @teispace/next-maker test src/hooks/use-debounce.ts --kind hook --force
+```
+
+Requires testing to be installed (`next-maker setup --tests` if not).
 
 ---
 
@@ -419,55 +467,113 @@ All commands support `--path` for custom locations. Relative paths like `feature
 - Prevents duplicate generation
 - Validates naming conventions (kebab-case)
 
+### Test Generation
+
+- `component`, `hook`, and `slice` generators accept `--test` / `--no-test`; the default is **on** when Vitest is installed in the target project (detected via `vitest.config.ts` or the `vitest` dep).
+- Component tests use `renderWithProviders` and forward `messages: {}` / `preloadedState: {}` based on detected i18n / Redux.
+- Hook tests use `renderHook`; wrap with `TestProviders` when a Redux store is detected and the hook lives inside a feature.
+- Slice tests exercise the reducer directly (`setLoading`, `setError`, `resetState`, initial-state invariants) — no providers needed.
+- Standalone `test <file>` retrofits tests onto existing code, inferring kind from filename (`*.slice.ts`, `use*.ts`, `*.tsx`) and source content.
+- Import paths to `test/test-utils` are resolved relative to the source file, so co-generated tests compile no matter how deep in the tree they live.
+
 ---
 
 ## Command Reference
 
-| Command            | Description                      |
-| ------------------ | -------------------------------- |
-| `init [name]`      | Create a new Next.js application |
-| `setup`            | Add features to existing project |
-| `page <name>`      | Generate a new page/route        |
-| `component <name>` | Generate a shared component      |
-| `feature <name>`   | Generate a feature module        |
-| `slice <name>`     | Generate a Redux slice           |
-| `service <name>`   | Generate an API service          |
-| `locale [code]`    | Add a new locale/language        |
-| `hook <name>`      | Generate a custom React hook     |
+| Command            | Description                                              |
+| ------------------ | -------------------------------------------------------- |
+| `init [name]`      | Create a new Next.js application                         |
+| `setup`            | Add features to an existing project                      |
+| `page <name>`      | Generate a new page/route                                |
+| `component <name>` | Generate a shared component (optional sibling test)      |
+| `feature <name>`   | Generate a feature module                                |
+| `slice <name>`     | Generate a Redux slice (optional sibling test)           |
+| `service <name>`   | Generate an API service                                  |
+| `locale [code]`    | Add a new locale/language                                |
+| `hook <name>`      | Generate a custom React hook (optional sibling test)     |
+| `test <file>`      | Generate a sibling test for a component/hook/slice       |
 
 ---
 
 ## Project Structure
 
-Generated apps follow this structure:
+The full shape of a scaffolded app (branches marked `(opt)` are stripped when the matching prompt is declined during `init`):
 
 ```
 my-project/
 ├── src/
-│   ├── app/                  # Next.js App Router
-│   │   └── [locale]/        # Locale-aware routes (if i18n)
-│   ├── features/             # Feature modules (DDD)
-│   │   └── counter/
+│   ├── app/                           # Next.js App Router
+│   │   ├── [locale]/                  # (opt, i18n) locale-aware routes
+│   │   │   ├── layout.tsx
+│   │   │   ├── page.tsx
+│   │   │   ├── error.tsx
+│   │   │   └── not-found.tsx
+│   │   ├── global-error.tsx
+│   │   ├── not-found.tsx
+│   │   ├── robots.ts
+│   │   ├── sitemap.ts
+│   │   └── favicon.ico
+│   ├── proxy.ts                       # (opt, i18n) Next 16 middleware replacement
+│   ├── features/                      # Feature modules (feature-first DDD)
+│   │   └── counter/                   # (opt, redux) example feature
 │   │       ├── components/
-│   │       ├── hooks/
-│   │       ├── store/
-│   │       ├── types/
-│   │       └── index.ts
-│   ├── components/           # Shared components
-│   │   └── common/          # Reusable UI components
+│   │       │   ├── Counter.tsx
+│   │       │   └── Counter.test.tsx   # (opt, tests)
+│   │       ├── hooks/useCounter.ts
+│   │       ├── store/                 # slice + selectors + persist + barrel
+│   │       └── types/counter.types.ts
+│   ├── components/
+│   │   ├── common/                    # Shared UI (auto-wired barrel exports)
+│   │   └── index.ts
+│   ├── providers/
+│   │   ├── RootProvider.tsx           # Composes Store → Theme → Intl
+│   │   ├── StoreProvider.tsx          # (opt, redux) useRef + PersistGate
+│   │   ├── CustomThemeProvider.tsx    # (opt, dark-mode) @teispace/next-themes
+│   │   └── index.ts
+│   ├── store/                         # (opt, redux) makeStore, rootReducer, typed hooks, SSR-safe storage
+│   ├── services/
+│   │   ├── api/                       # API service barrel
+│   │   └── storage/                   # react-secure-storage wrapper
 │   ├── lib/
-│   │   ├── config/          # App configuration
-│   │   ├── utils/
-│   │   │   └── http/        # AxiosClient & FetchClient
-│   │   └── errors/          # Error classes
-│   ├── providers/           # React providers
-│   ├── store/               # Redux store setup
-│   ├── i18n/                # Internationalization
-│   │   └── translations/    # Translation files
-│   └── styles/              # Global styles
-├── public/                   # Static assets
+│   │   ├── config/                    # seo, app-apis, app-paths, app-locales, constants
+│   │   ├── env/                       # Zod-validated env schema (schema.ts, validate.ts)
+│   │   ├── logger/                    # Pino logger with auto-redaction
+│   │   ├── errors/                    # ApiException, catchError
+│   │   ├── enums/
+│   │   └── utils/
+│   │       ├── http/                  # (opt, http-client)
+│   │       │   ├── axios-client/      # interceptors, token refresh, Result-based
+│   │       │   ├── fetch-client/      # same Result pattern on native fetch
+│   │       │   ├── client-utils.ts
+│   │       │   └── token-store.ts
+│   │       └── validations/
+│   ├── i18n/                          # (opt, i18n) routing, request, navigation, translations/
+│   ├── styles/globals.css             # Tailwind v4 directives
+│   └── types/                         # common/, utility/ (Result, Either), i18n.ts
+├── test/                              # (opt, tests)
+│   ├── setup.ts                       # testing-library + jsdom setup
+│   └── test-utils.tsx                 # renderWithProviders, TestProviders
+├── scripts/
+│   ├── sync-env.ts                    # .env.example ← .env (respects `-public` markers)
+│   └── check-deprecated.ts            # fails build if @deprecated APIs are referenced
+├── public/
+├── biome.json                         # single-tool lint + format
+├── next.config.ts                     # headers, reactCompiler (opt), bundleAnalyzer (opt), withNextIntl (opt, i18n)
+├── vitest.config.ts                   # (opt, tests)
+├── postcss.config.mjs                 # @tailwindcss/postcss
+├── tsconfig.json
+├── .env.example
+├── .husky/                            # (opt, pre-commit hooks)
+├── .lintstagedrc.mjs                  # (opt, pre-commit hooks) runs `biome check --write`
+├── commitlint.config.mjs              # (opt, pre-commit hooks)
+├── Dockerfile                         # (opt, docker) multi-stage, standalone mode
+├── docker-compose.yml                 # (opt, docker)
+├── AGENTS.md                          # Agent coding rules (referenced from CLAUDE.md)
+├── CLAUDE.md
 └── package.json
 ```
+
+Features that have first-class opt-out prompts during `init`: `httpClient`, `darkMode`, `redux`, `i18n`, `tests`, `reactCompiler`, `bundleAnalyzer`, `docker`, `ci`, `preCommitHooks`, `commitizen`, `communityFiles`, `readme`. Each has a matching `setup --<feature>` command to re-add it later.
 
 ---
 
@@ -479,7 +585,7 @@ my-project/
 
 **Generated Apps:**
 
-- Next.js 16+, TypeScript, Redux Toolkit, Tailwind CSS v4, next-intl, Axios, ESLint + Prettier
+- Next.js 16+, TypeScript, Tailwind CSS v4, Biome, Pino, Zod, Redux Toolkit, @teispace/next-themes, next-intl, Axios, Vitest + RTL, React Compiler
 
 ---
 
@@ -512,9 +618,12 @@ npm run test:watch
 node dist/index.js init test-project
 cd test-project
 node ../dist/index.js page dashboard --loading --error
-node ../dist/index.js component sidebar --client
+node ../dist/index.js component sidebar --client          # co-generates Sidebar.test.tsx if tests installed
+node ../dist/index.js hook debounce                       # co-generates useDebounce.test.ts
+node ../dist/index.js slice filters --persist             # co-generates filters.slice.test.ts
 node ../dist/index.js feature auth --store persist --service axios
 node ../dist/index.js service users --fetch --crud
+node ../dist/index.js test src/hooks/useDebounce.ts --force   # retrofit sibling test
 node ../dist/index.js locale es
 ```
 

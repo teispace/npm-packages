@@ -9,6 +9,8 @@ export const cleanupRedux = async (projectPath: string, answers: ProjectPrompts)
   await deleteDirectory(path.join(projectPath, PROJECT_PATHS.STORE));
   await deleteDirectory(path.join(projectPath, PROJECT_PATHS.COUNTER_FEATURE));
   await deleteFile(path.join(projectPath, PROJECT_PATHS.STORE_PROVIDER));
+  // test-utils.tsx imports @/store — drop it so the template still builds.
+  await deleteFile(path.join(projectPath, 'test/test-utils.tsx'));
 
   await removeStoreProviderExport(projectPath);
   await removeCounterFromPages(projectPath);

@@ -7,9 +7,9 @@ export const pageTemplate = (params: {
 
   if (hasI18n) {
     return `import { generateSEOMetadata } from '@/lib/config/seo';
-import { SupportedLocale } from '@/types/i18n';
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import type { SupportedLocale } from '@/types/i18n';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -41,7 +41,7 @@ export default async function ${componentName}Page(props: Props) {
 `;
   }
 
-  return `import { Metadata } from 'next';
+  return `import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: '${componentName}',
@@ -68,9 +68,9 @@ export const dynamicPageTemplate = (params: {
 
   if (hasI18n) {
     return `import { generateSEOMetadata } from '@/lib/config/seo';
-import { SupportedLocale } from '@/types/i18n';
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import type { SupportedLocale } from '@/types/i18n';
 
 type Props = {
   params: Promise<{ locale: string; ${paramName}: string }>;
@@ -103,7 +103,7 @@ export default async function ${componentName}Page(props: Props) {
 `;
   }
 
-  return `import { Metadata } from 'next';
+  return `import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: '${componentName}',

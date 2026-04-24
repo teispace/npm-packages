@@ -1,8 +1,10 @@
 import path from 'node:path';
 import pc from 'picocolors';
+import { PROJECT_PATHS } from '../../../config/paths';
 import { startSpinner } from '../../../config/spinner';
-import { deleteDirectory } from '../../../core/files';
+import { deleteDirectory, fileExists, readFile } from '../../../core/files';
 import { detectPackageManager, installPackage, runScript } from '../../../core/package-manager';
+import { writeTestUtils } from '../../common/test-utils';
 import { copyI18nFiles, fetchAssets } from './assets';
 import { checkIsAlreadySetup, validateProjectStructure } from './checks';
 import {
@@ -49,10 +51,19 @@ export const setupI18n = async (projectPath: string): Promise<void> => {
     spinner.text = 'Installing dependencies...';
     await installPackage(projectPath, 'next-intl');
 
-    // 7. Format Code
+    // 7. If tests are present, regenerate test-utils so it wraps in i18n.
+    const vitestConfigPath = path.join(projectPath, PROJECT_PATHS.VITEST_CONFIG);
+    if (fileExists(vitestConfigPath)) {
+      const pkg = JSON.parse(await readFile(path.join(projectPath, PROJECT_PATHS.PACKAGE_JSON)));
+      const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+      const hasRedux = !!(deps['@reduxjs/toolkit'] && deps['react-redux']);
+      await writeTestUtils(projectPath, { redux: hasRedux, i18n: true });
+    }
+
+    // 8. Format Code
     spinner.text = 'Formatting code...';
     const packageManager = await detectPackageManager(projectPath);
-    await runScript(projectPath, packageManager, 'format');
+    await runScript(projectPath, packageManager, 'lint:fix');
 
     spinner.succeed(pc.green('Internationalization setup successfully!'));
   } catch (error) {

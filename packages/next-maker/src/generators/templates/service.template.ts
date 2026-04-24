@@ -11,7 +11,7 @@ export const serviceTemplate = (params: {
 
   return `import { AppApis } from '@/lib/config';
 ${clientImport}
-import { ResultAsync } from '@/types';
+import type { ResultAsync } from '@/types';
 
 export const ${camelName}Service = {
   getAll: (): ResultAsync<string> => {

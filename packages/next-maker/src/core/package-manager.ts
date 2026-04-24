@@ -90,6 +90,40 @@ export const installPackage = async (cwd: string, packageName: string): Promise<
   await installPackages(cwd, manager, [packageName]);
 };
 
+const getDevFlag = (manager: PackageManager): string => {
+  switch (manager) {
+    case 'npm':
+      return '--save-dev';
+    case 'yarn':
+    case 'pnpm':
+    case 'bun':
+      return '-D';
+    default:
+      return '--save-dev';
+  }
+};
+
+export const installDevPackages = async (
+  cwd: string,
+  manager: PackageManager,
+  packages: string[],
+): Promise<void> => {
+  if (packages.length === 0) return;
+  const installCommand = getInstallCommand(manager);
+  const flag = getDevFlag(manager);
+  const command = `${installCommand} ${flag} ${packages.join(' ')}`;
+  try {
+    await execAsync(command, { cwd });
+  } catch (error) {
+    throw new Error(`Failed to install dev packages with ${manager}: ${error}`, { cause: error });
+  }
+};
+
+export const installDevPackage = async (cwd: string, packageName: string): Promise<void> => {
+  const manager = await detectPackageManager(cwd);
+  await installDevPackages(cwd, manager, [packageName]);
+};
+
 export const uninstallPackages = async (
   cwd: string,
   manager: PackageManager,

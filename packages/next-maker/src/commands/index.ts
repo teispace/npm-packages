@@ -8,6 +8,7 @@ import { registerPageCommand } from './page';
 import { registerServiceCommand } from './service';
 import { registerSetupCommand } from './setup';
 import { registerSliceCommand } from './slice';
+import { registerTestCommand } from './test';
 
 export const registerCommands = (program: Command) => {
   registerAppCommand(program);
@@ -19,4 +20,5 @@ export const registerCommands = (program: Command) => {
   registerComponentCommand(program);
   registerLocaleCommand(program);
   registerHookCommand(program);
+  registerTestCommand(program);
 };

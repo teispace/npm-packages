@@ -4,9 +4,9 @@ export const persistTemplate = (params: {
   typesImportPath: string;
 }): string => {
   const { componentName, camelName, typesImportPath } = params;
-  return `import { PersistConfig } from 'redux-persist';
+  return `import type { PersistConfig } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
-import { ${componentName}State } from '${typesImportPath}';
+import type { ${componentName}State } from '${typesImportPath}';
 
 export const ${camelName}PersistConfig: PersistConfig<${componentName}State> = {
   key: '${camelName}',
