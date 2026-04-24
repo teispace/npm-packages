@@ -36,6 +36,9 @@ export interface ProjectPrompts {
   preCommitHooks: boolean;
   commitizen: boolean;
   copyEnv: boolean;
+  tests: boolean;
+  reactCompiler: boolean;
+  bundleAnalyzer: boolean;
 }
 
 export const promptForProjectDetails = async (initialName?: string): Promise<ProjectPrompts> => {
@@ -175,7 +178,7 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
     {
       type: 'confirm',
       name: 'darkMode',
-      message: 'Do you want to include Dark Mode (Tailwind + next-themes)?',
+      message: 'Do you want to include Dark Mode (Tailwind + @teispace/next-themes)?',
       initial: true,
     },
     {
@@ -189,6 +192,24 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
       name: 'i18n',
       message: 'Do you want to include Internationalization (next-intl)?',
       initial: true,
+    },
+    {
+      type: 'confirm',
+      name: 'tests',
+      message: 'Do you want to include testing setup (Vitest + React Testing Library)?',
+      initial: true,
+    },
+    {
+      type: 'confirm',
+      name: 'reactCompiler',
+      message: 'Do you want to enable the React Compiler?',
+      initial: true,
+    },
+    {
+      type: 'confirm',
+      name: 'bundleAnalyzer',
+      message: 'Do you want to include @next/bundle-analyzer?',
+      initial: false,
     },
     {
       type: 'multiselect',

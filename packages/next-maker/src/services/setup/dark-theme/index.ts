@@ -40,13 +40,13 @@ export const setupDarkTheme = async (projectPath: string): Promise<void> => {
     await updateLayout(layoutPath);
 
     // 6. Install Dependencies
-    spinner.text = 'Installing next-themes...';
-    await installPackage(projectPath, 'next-themes');
+    spinner.text = 'Installing @teispace/next-themes...';
+    await installPackage(projectPath, '@teispace/next-themes');
 
     // 7. Format Code
     spinner.text = 'Formatting code...';
     const packageManager = await detectPackageManager(projectPath);
-    await runScript(projectPath, packageManager, 'format');
+    await runScript(projectPath, packageManager, 'lint:fix');
 
     spinner.succeed(pc.green('Dark Theme setup successfully!'));
   } catch (error) {

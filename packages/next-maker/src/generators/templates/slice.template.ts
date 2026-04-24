@@ -4,8 +4,8 @@ export const sliceTemplate = (params: {
   typesImportPath: string;
 }): string => {
   const { componentName, camelName, typesImportPath } = params;
-  return `import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { ${componentName}State } from '${typesImportPath}';
+  return `import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { ${componentName}State } from '${typesImportPath}';
 
 const initialState: ${componentName}State = {
   loading: false,

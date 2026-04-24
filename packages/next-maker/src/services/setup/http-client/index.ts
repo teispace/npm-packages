@@ -144,7 +144,7 @@ export const setupHttpClient = async (projectPath: string): Promise<void> => {
     // 7. Format Code
     spinner.text = 'Formatting code...';
     const packageManager = await detectPackageManager(projectPath);
-    await runScript(projectPath, packageManager, 'format');
+    await runScript(projectPath, packageManager, 'lint:fix');
 
     spinner.succeed(pc.green(getSuccessMessage(action)));
   } catch (error) {

@@ -64,6 +64,7 @@ export const configurePackageJson = async (
       if (!answers.redux) {
         delete pkg.dependencies[PACKAGES.REDUX_TOOLKIT];
         delete pkg.dependencies[PACKAGES.REACT_REDUX];
+        delete pkg.dependencies[PACKAGES.REDUX];
         delete pkg.dependencies[PACKAGES.REDUX_PERSIST];
       }
 

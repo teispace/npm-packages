@@ -34,22 +34,27 @@ During initialization, you'll be prompted to configure:
 - **Package Manager** (npm, yarn, pnpm, bun)
 - **GitHub Repository** (optional - configures remote origin)
 - **HTTP Client** (axios, fetch, both, or none)
-- **Dark Mode** (next-themes integration)
+- **Dark Mode** (@teispace/next-themes integration)
 - **Redux Toolkit** (with redux-persist)
 - **Internationalization** (next-intl)
+- **Testing** (Vitest + React Testing Library)
+- **React Compiler** (experimental — on by default)
+- **Bundle Analyzer** (@next/bundle-analyzer — off by default)
 - **Community Files** (CODE_OF_CONDUCT, CONTRIBUTING, etc.)
 - **Docker** support
 - **CI/CD** configuration
 - **Pre-commit hooks** (Husky)
 
-**Core Features:**
+**Core Features (always shipped):**
 
 - Next.js 16+ with App Router
 - TypeScript (strict mode)
 - Tailwind CSS v4
-- Result-based HTTP clients
+- Biome (single-tool lint + format; replaces ESLint + Prettier)
+- Pino structured logger with redaction
+- Zod-validated env schema
 - Feature-based DDD architecture
-- ESLint + Prettier configured
+- Result-based HTTP clients (axios / fetch)
 
 ---
 
@@ -64,9 +69,12 @@ npx @teispace/next-maker setup [options]
 **Options:**
 
 - `--http-client` - Setup HTTP client (Interactive: axios|fetch|both)
-- `--dark-theme` - Setup dark theme support (next-themes)
+- `--dark-theme` - Setup dark theme support (@teispace/next-themes)
 - `--redux` - Setup Redux Toolkit with persistence
 - `--i18n` - Setup next-intl for internationalization
+- `--tests` - Setup testing (Vitest + React Testing Library)
+- `--react-compiler` - Enable the React Compiler
+- `--bundle-analyzer` - Add @next/bundle-analyzer
 
 **Examples:**
 
@@ -79,6 +87,9 @@ npx @teispace/next-maker setup --http-client
 npx @teispace/next-maker setup --dark-theme
 npx @teispace/next-maker setup --redux
 npx @teispace/next-maker setup --i18n
+npx @teispace/next-maker setup --tests
+npx @teispace/next-maker setup --react-compiler
+npx @teispace/next-maker setup --bundle-analyzer
 ```
 
 ---
@@ -132,6 +143,7 @@ npx @teispace/next-maker component <name> [options]
 - `--client` - Add `'use client'` directive
 - `--i18n` - Add `useTranslations` hook
 - `--feature <path>` - Generate inside a feature directory
+- `--test` / `--no-test` - Co-generate a sibling `*.test.tsx` (default: on when tests are installed)
 
 **Generated structure (shared):**
 
@@ -222,6 +234,7 @@ npx @teispace/next-maker slice <name> [options]
 - `--persist` - Enable redux-persist for this slice
 - `--no-persist` - Disable persistence
 - `--path <path>` - Custom path (default: create new feature)
+- `--test` / `--no-test` - Co-generate a sibling `*.slice.test.ts` (default: on when tests are installed)
 
 **Auto-registers in rootReducer** with correct imports.
 
@@ -316,6 +329,7 @@ npx @teispace/next-maker hook <name> [options]
 
 - `--client` - Add `'use client'` directive (default: true)
 - `--feature <path>` - Generate in feature directory
+- `--test` / `--no-test` - Co-generate a sibling `*.test.ts` (default: on when tests are installed)
 
 **Examples:**
 
@@ -326,6 +340,40 @@ npx @teispace/next-maker hook auth-session
 # Hook inside a feature
 npx @teispace/next-maker hook user-profile --feature src/features/auth
 ```
+
+---
+
+### 10. Generate a Test
+
+Scaffold a sibling `*.test.{ts,tsx}` next to an existing component, hook, or slice. Handy for retrofitting tests onto code that pre-dates the `--with-test` flag.
+
+```bash
+npx @teispace/next-maker test <file> [options]
+```
+
+**Options:**
+
+- `--kind <kind>` - Override inferred kind: `component` | `hook` | `slice`
+- `--force` - Overwrite an existing test file
+
+**Inference rules:**
+
+- `*.slice.ts` → slice reducer test
+- `use*.ts` / content starts with `export function useX` → hook test (`renderHook`)
+- `*.tsx` → component test (`renderWithProviders`)
+
+The generated file imports `renderWithProviders` / `TestProviders` from `test/test-utils` using a path resolved relative to the source file, so tests work whether they're under `src/features/*/components/`, `src/hooks/`, or anywhere else in the tree.
+
+**Examples:**
+
+```bash
+npx @teispace/next-maker test src/features/auth/components/LoginForm.tsx
+npx @teispace/next-maker test src/features/auth/hooks/useLogin.ts
+npx @teispace/next-maker test src/features/auth/store/auth.slice.ts
+npx @teispace/next-maker test src/hooks/use-debounce.ts --kind hook --force
+```
+
+Requires testing to be installed (`next-maker setup --tests` if not).
 
 ---
 
@@ -479,7 +527,7 @@ my-project/
 
 **Generated Apps:**
 
-- Next.js 16+, TypeScript, Redux Toolkit, Tailwind CSS v4, next-intl, Axios, ESLint + Prettier
+- Next.js 16+, TypeScript, Tailwind CSS v4, Biome, Pino, Zod, Redux Toolkit, @teispace/next-themes, next-intl, Axios, Vitest + RTL, React Compiler
 
 ---
 

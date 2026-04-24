@@ -5,6 +5,7 @@ export interface ProjectDetection {
   hasRedux: boolean;
   httpClient: 'axios' | 'fetch' | 'both' | 'none';
   hasI18n: boolean;
+  hasTests: boolean;
 }
 
 export const detectProjectSetup = async (projectPath: string): Promise<ProjectDetection> => {
@@ -51,7 +52,17 @@ export const detectProjectSetup = async (projectPath: string): Promise<ProjectDe
       httpClient = 'none';
     }
 
-    return { hasRedux, httpClient, hasI18n };
+    let hasTests = !!dependencies.vitest;
+    if (!hasTests) {
+      try {
+        await access(path.join(projectPath, 'vitest.config.ts'));
+        hasTests = true;
+      } catch {
+        /* no vitest config */
+      }
+    }
+
+    return { hasRedux, httpClient, hasI18n, hasTests };
   } catch (error) {
     throw new Error(`Failed to detect project setup: ${error}`, { cause: error });
   }

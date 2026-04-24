@@ -1,8 +1,10 @@
 import path from 'node:path';
 import pc from 'picocolors';
+import { PROJECT_PATHS } from '../../../config/paths';
 import { startSpinner } from '../../../config/spinner';
-import { deleteDirectory } from '../../../core/files';
+import { deleteDirectory, fileExists, readFile } from '../../../core/files';
 import { detectPackageManager, installPackage, runScript } from '../../../core/package-manager';
+import { writeTestUtils } from '../../common/test-utils';
 import { copyReduxFiles, createCounterFeature, fetchAssets } from './assets';
 import { checkIsAlreadySetup, validateProjectStructure } from './checks';
 import { updatePage, updateProvidersIndex, updateRootProvider } from './injectors';
@@ -49,10 +51,18 @@ export const setupRedux = async (projectPath: string): Promise<void> => {
     // Let's install it to be safe if the starter uses it elsewhere or if I missed it.
     await installPackage(projectPath, 'react-secure-storage');
 
-    // 7. Format Code
+    // 7. If tests are present, regenerate test-utils so it wraps in Redux.
+    const vitestConfigPath = path.join(projectPath, PROJECT_PATHS.VITEST_CONFIG);
+    if (fileExists(vitestConfigPath)) {
+      const pkg = JSON.parse(await readFile(path.join(projectPath, PROJECT_PATHS.PACKAGE_JSON)));
+      const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+      await writeTestUtils(projectPath, { redux: true, i18n: !!deps['next-intl'] });
+    }
+
+    // 8. Format Code
     spinner.text = 'Formatting code...';
     const packageManager = await detectPackageManager(projectPath);
-    await runScript(projectPath, packageManager, 'format');
+    await runScript(projectPath, packageManager, 'lint:fix');
 
     spinner.succeed(pc.green('Redux Toolkit setup successfully!'));
   } catch (error) {

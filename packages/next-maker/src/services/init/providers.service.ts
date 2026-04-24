@@ -8,63 +8,80 @@ export const generateRootProvider = async (
   answers: ProjectPrompts,
 ): Promise<void> => {
   const imports: string[] = [];
-  const providers: string[] = [];
 
-  if (answers.redux) {
-    imports.push("import { StoreProvider } from '@/providers';");
-    providers.push('StoreProvider');
+  if (answers.i18n) {
+    imports.push("import { type AbstractIntlMessages, NextIntlClientProvider } from 'next-intl';");
   }
 
   if (answers.darkMode) {
     imports.push("import { CustomThemeProvider } from '@/providers';");
-    providers.push('CustomThemeProvider');
+  }
+
+  if (answers.redux) {
+    imports.push("import type { AppState } from '@/store';");
   }
 
   if (answers.i18n) {
-    imports.push("import { NextIntlClientProvider, AbstractIntlMessages } from 'next-intl';");
-    imports.push("import { SupportedLocale } from '@/types/i18n';");
+    imports.push("import type { SupportedLocale } from '@/types/i18n';");
   }
 
-  let rootProviderContent = `'use client';
-${imports.join('\n')}
+  if (answers.redux) {
+    imports.push("import { StoreProvider } from './StoreProvider';");
+  }
 
-export const RootProvider = ({
-  children,
-  ${answers.i18n ? 'locale,\n  messages,' : ''}
-}: {
-  children: React.ReactNode;
-  ${answers.i18n ? 'locale: SupportedLocale;\n  messages: AbstractIntlMessages;' : ''}
-}) => {
-  return (
-`;
-
-  // Build the nesting
-  let content = '{children}';
+  const propsFields: string[] = ['children: React.ReactNode;'];
+  const destructureFields: string[] = ['children'];
 
   if (answers.i18n) {
-    content = `<NextIntlClientProvider locale={locale} messages={messages}>
-          ${content}
+    propsFields.push('locale: SupportedLocale;');
+    propsFields.push('messages: AbstractIntlMessages;');
+    propsFields.push('timeZone: string;');
+    destructureFields.push('locale', 'messages', 'timeZone');
+  }
+
+  if (answers.redux) {
+    propsFields.push('preloadedState?: Partial<AppState>;');
+    destructureFields.push('preloadedState');
+  }
+
+  // Build the nested JSX from innermost to outermost
+  let jsx = '{children}';
+
+  if (answers.i18n) {
+    jsx = `<NextIntlClientProvider locale={locale} messages={messages} timeZone={timeZone}>
+          ${jsx}
         </NextIntlClientProvider>`;
   }
 
   if (answers.darkMode) {
-    content = `<CustomThemeProvider>
-        ${content}
+    jsx = `<CustomThemeProvider>
+        ${jsx}
       </CustomThemeProvider>`;
   }
 
   if (answers.redux) {
-    content = `<StoreProvider>
-      ${content}
+    jsx = `<StoreProvider preloadedState={preloadedState}>
+      ${jsx}
     </StoreProvider>`;
   }
 
-  // If no providers are wrapped, ensure we return a valid JSX element (Fragment)
-  if (content === '{children}') {
-    content = `<>{children}</>`;
+  // Ensure a valid JSX expression even with no wrappers
+  if (jsx === '{children}') {
+    jsx = '<>{children}</>';
   }
 
-  rootProviderContent += `    ${content}
+  const propsType = `type RootProviderProps = {
+  ${propsFields.join('\n  ')}
+};`;
+
+  const rootProviderContent = `'use client';
+${imports.join('\n')}
+
+${propsType}
+
+export const RootProvider = ({ ${destructureFields.join(', ')} }: RootProviderProps) => {
+  return (
+    ${jsx}
   );
 };
 `;
@@ -76,8 +93,12 @@ export const generateLayout = async (
   projectPath: string,
   answers: ProjectPrompts,
 ): Promise<void> => {
-  if (!answers.i18n) {
-    const basicLayout = `import type { Metadata } from 'next';
+  if (answers.i18n) return;
+
+  const htmlClasses = `\`\${livvic.variable} ${answers.darkMode ? 'bg-light antialiased dark:bg-dark' : 'antialiased'}\``;
+  const providerPropsLine = answers.redux ? '' : '';
+
+  const basicLayout = `import type { Metadata } from 'next';
 import '@/styles/globals.css';
 import { Livvic } from 'next/font/google';
 import { RootProvider } from '@/providers';
@@ -100,9 +121,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning={${answers.darkMode ? 'true' : 'false'}}>
-      <body className={\`\${livvic.variable} ${answers.darkMode ? 'bg-light dark:bg-dark ' : ''}antialiased\`}>
-        <RootProvider>
+    <html lang="en"${answers.darkMode ? ' suppressHydrationWarning={true}' : ''}>
+      <body className={${htmlClasses}}>
+        <RootProvider${providerPropsLine}>
           {children}
         </RootProvider>
       </body>
@@ -110,13 +131,12 @@ export default function RootLayout({
   );
 }
 `;
-    await writeFile(path.join(projectPath, PROJECT_PATHS.ROOT_LAYOUT), basicLayout);
+  await writeFile(path.join(projectPath, PROJECT_PATHS.ROOT_LAYOUT), basicLayout);
 
-    // Generate page.tsx with Counter if Redux is enabled
-    const counterImport = answers.redux ? "import { Counter } from '@/features/counter';\n\n" : '';
-    const counterComponent = answers.redux ? '\n      <Counter />' : '';
+  const counterImport = answers.redux ? "import { Counter } from '@/features/counter';\n\n" : '';
+  const counterComponent = answers.redux ? '\n      <Counter />' : '';
 
-    const basicPage = `${counterImport}export default function Home() {
+  const basicPage = `${counterImport}export default function Home() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-24">
       <h1 className="text-4xl font-bold">Welcome to ${answers.projectName}</h1>
@@ -125,6 +145,5 @@ export default function RootLayout({
   );
 }
 `;
-    await writeFile(path.join(projectPath, PROJECT_PATHS.ROOT_PAGE), basicPage);
-  }
+  await writeFile(path.join(projectPath, PROJECT_PATHS.ROOT_PAGE), basicPage);
 };

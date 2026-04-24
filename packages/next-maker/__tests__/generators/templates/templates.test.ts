@@ -23,8 +23,8 @@ describe('sliceTemplate', () => {
       typesImportPath: './user-dashboard.types',
     });
 
-    expect(result).toContain("import { createSlice, PayloadAction } from '@reduxjs/toolkit'");
-    expect(result).toContain("import { UserDashboardState } from './user-dashboard.types'");
+    expect(result).toContain("import { createSlice, type PayloadAction } from '@reduxjs/toolkit'");
+    expect(result).toContain("import type { UserDashboardState } from './user-dashboard.types'");
     expect(result).toContain('export const userDashboardSlice = createSlice');
     expect(result).toContain("name: 'userDashboard'");
     expect(result).toContain('export const userDashboardReducer');
@@ -38,7 +38,7 @@ describe('sliceTemplate', () => {
       typesImportPath: '../types/auth.types',
     });
 
-    expect(result).toContain("import { AuthState } from '../types/auth.types'");
+    expect(result).toContain("import type { AuthState } from '../types/auth.types'");
   });
 });
 

@@ -16,8 +16,9 @@ export const checkIsAlreadySetup = async (
 
   if (fileExists(packageJsonPath)) {
     const packageJson = JSON.parse(await readFile(packageJsonPath));
-    if (packageJson.dependencies?.['next-themes'] || packageJson.devDependencies?.['next-themes']) {
-      return { isSetup: true, reason: 'next-themes is installed' };
+    const themesPkg = '@teispace/next-themes';
+    if (packageJson.dependencies?.[themesPkg] || packageJson.devDependencies?.[themesPkg]) {
+      return { isSetup: true, reason: `${themesPkg} is installed` };
     }
   }
 
