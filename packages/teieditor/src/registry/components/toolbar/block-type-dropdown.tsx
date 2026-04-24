@@ -12,7 +12,7 @@ import { $setBlocksType } from '@lexical/selection';
 import { $createParagraphNode, $getSelection, $isRangeSelection } from 'lexical';
 import { useCallback } from 'react';
 
-import { Dropdown, DropdownItem } from '../../ui/dropdown.js';
+import { Dropdown, DropdownItem } from '../../ui/dropdown';
 import {
   IconCheckSquare,
   IconCode,
@@ -23,7 +23,7 @@ import {
   IconListOrdered,
   IconQuote,
   IconType,
-} from '../../ui/icons.js';
+} from '../../ui/icons';
 
 const BLOCK_TYPES = [
   { value: 'paragraph', label: 'Paragraph', icon: <IconType size={14} /> },

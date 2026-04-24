@@ -19,12 +19,12 @@ import {
 } from '@teispace/teieditor/plugins';
 import type { SerializationFormat } from '@teispace/teieditor/utils';
 import { useEffect, useMemo, useState } from 'react';
-import { BubbleMenu } from '../components/bubble-menu/bubble-menu.js';
-import { ContextMenu } from '../components/context-menu/context-menu.js';
-import { LinkEditor } from '../components/link-editor/link-editor.js';
-import { SlashMenu } from '../components/slash-menu/slash-menu.js';
-import { TableMenu } from '../components/table-menu/table-menu.js';
-import { Toolbar } from '../components/toolbar/toolbar.js';
+import { BubbleMenu } from '../components/bubble-menu/bubble-menu';
+import { ContextMenu } from '../components/context-menu/context-menu';
+import { LinkEditor } from '../components/link-editor/link-editor';
+import { SlashMenu } from '../components/slash-menu/slash-menu';
+import { TableMenu } from '../components/table-menu/table-menu';
+import { Toolbar } from '../components/toolbar/toolbar';
 
 export interface TeiEditorProps {
   extensions?: TeiExtension[];

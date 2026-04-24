@@ -3,8 +3,8 @@
 import { useToolbarState } from '@teispace/teieditor/plugins';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { TeiButton } from '../../ui/button.js';
-import { ColorPicker } from '../../ui/color-picker.js';
+import { TeiButton } from '../../ui/button';
+import { ColorPicker } from '../../ui/color-picker';
 
 /**
  * Text color and background color buttons with color picker popover.

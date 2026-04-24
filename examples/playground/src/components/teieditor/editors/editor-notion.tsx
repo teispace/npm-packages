@@ -35,6 +35,8 @@ export interface TeiEditorNotionProps {
   className?: string;
   editorClassName?: string;
   readOnly?: boolean;
+  /** Toggle the browser's native spell-check. Default `true`. */
+  spellCheck?: boolean;
   config?: Partial<TeiEditorConfig>;
 }
 
@@ -53,6 +55,7 @@ export function TeiEditorNotion({
   className = '',
   editorClassName = '',
   readOnly = false,
+  spellCheck = true,
   config = {},
 }: TeiEditorNotionProps) {
   const [mounted, setMounted] = useState(false);
@@ -101,7 +104,11 @@ export function TeiEditorNotion({
       >
         {/* No toolbar — Notion style */}
         <div className="tei-editor-content relative">
-          <EditorContent className={editorClassName} placeholder={placeholder} />
+          <EditorContent
+            className={editorClassName}
+            placeholder={placeholder}
+            spellCheck={spellCheck}
+          />
 
           {/* Core plugins */}
           <InitialValuePlugin value={initialValue} format={initialFormat} />

@@ -1,12 +1,7 @@
 import type { Klass, LexicalEditor, LexicalNode } from 'lexical';
-import {
-  $getSelection,
-  $isRangeSelection,
-  COMMAND_PRIORITY_LOW,
-  createCommand,
-  type LexicalCommand,
-} from 'lexical';
+import { COMMAND_PRIORITY_LOW, createCommand, type LexicalCommand } from 'lexical';
 import { BaseExtension } from '../../core/extension.js';
+import { $getOrCreateRangeSelection } from '../../core/insert.js';
 import type { ExtensionConfig } from '../../core/types.js';
 import { $createCalloutNode, CalloutNode, type CalloutVariant } from './callout-node.js';
 
@@ -26,8 +21,8 @@ class CalloutExtension extends BaseExtension<ExtensionConfig> {
       INSERT_CALLOUT_COMMAND,
       (variant) => {
         editor.update(() => {
-          const selection = $getSelection();
-          if (!$isRangeSelection(selection)) return;
+          const selection = $getOrCreateRangeSelection();
+          if (!selection) return;
           const callout = $createCalloutNode(variant);
           selection.insertNodes([callout]);
           callout.select();

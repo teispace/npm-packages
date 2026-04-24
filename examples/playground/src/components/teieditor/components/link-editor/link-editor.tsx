@@ -148,12 +148,12 @@ export function LinkEditor() {
     <div
       ref={editorRef}
       className={[
-        'tei-link-editor fixed z-50 flex flex-col gap-2 rounded-lg px-3 py-2.5 shadow-lg',
+        'tei-link-editor z-50 flex flex-col gap-2 rounded-lg px-3 py-2.5 shadow-lg',
         'border border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-popover))]',
         'transition-opacity duration-150',
-        visible ? 'opacity-100' : 'pointer-events-none opacity-0',
       ].join(' ')}
-      style={{ position: 'fixed', top: -10000, left: -10000 }}
+      role="dialog"
+      aria-label="Edit link"
     >
       {editMode ? (
         /* Edit mode */
@@ -183,9 +183,7 @@ export function LinkEditor() {
               <IconUnlink size={14} />
             </TeiButton>
           </div>
-          {isInvalid && (
-            <p className="text-xs text-red-500">Please enter a valid URL</p>
-          )}
+          {isInvalid && <p className="text-xs text-red-500">Please enter a valid URL</p>}
           <label className="flex items-center gap-2 text-xs text-[hsl(var(--tei-muted-fg))]">
             <input
               type="checkbox"

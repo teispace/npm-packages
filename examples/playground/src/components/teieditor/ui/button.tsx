@@ -33,12 +33,18 @@ export const TeiButton = forwardRef<HTMLButtonElement, TeiButtonProps>(
     { className = '', variant = 'ghost', size = 'icon', active, disabled, children, ...props },
     ref,
   ) => {
+    // If a title is provided without an explicit aria-label, mirror it so
+    // screen readers have a name for icon-only buttons.
+    const ariaLabel =
+      props['aria-label'] ?? (typeof props.title === 'string' ? props.title : undefined);
+
     return (
       <button
         ref={ref}
         type="button"
         disabled={disabled}
         aria-pressed={active}
+        aria-label={ariaLabel}
         className={[
           'tei-btn inline-flex items-center justify-center rounded-md font-medium transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--tei-ring))]',

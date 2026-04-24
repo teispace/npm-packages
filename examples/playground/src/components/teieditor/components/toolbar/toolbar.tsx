@@ -195,7 +195,7 @@ export function Toolbar({ className = '', fontFamilies }: ToolbarProps) {
             <Dropdown
               trigger={
                 <span className="max-w-[100px] truncate text-xs">
-                  {resolvedFontFamilies.find((f: { label: string; value: string }) => f.value === toolbar.fontFamily)?.label ||
+                  {resolvedFontFamilies.find((f) => f.value === toolbar.fontFamily)?.label ||
                     toolbar.fontFamily ||
                     'Default'}
                 </span>

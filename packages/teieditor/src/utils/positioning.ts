@@ -105,9 +105,16 @@ export function computePointPosition(
   return { top, left };
 }
 
+// Use `visibility: hidden` so the element still has measurable dimensions
+// (opacity alone keeps layout but some browsers short-circuit measurement
+// when paired with off-screen translates). `pointer-events: none` prevents
+// the hidden element from intercepting clicks.
 function setHidden(el: HTMLElement): void {
+  el.style.position = 'fixed';
+  el.style.top = '0';
+  el.style.left = '0';
+  el.style.visibility = 'hidden';
   el.style.opacity = '0';
-  el.style.transform = 'translate(-10000px, -10000px)';
   el.style.pointerEvents = 'none';
 }
 
@@ -115,8 +122,8 @@ function setVisible(el: HTMLElement, top: number, left: number): void {
   el.style.position = 'fixed';
   el.style.top = `${top}px`;
   el.style.left = `${left}px`;
+  el.style.visibility = 'visible';
   el.style.opacity = '1';
-  el.style.transform = 'none';
   el.style.pointerEvents = '';
 }
 

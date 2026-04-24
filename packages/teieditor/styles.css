@@ -83,6 +83,39 @@
   --tei-token-important: 5 74% 50%;
 }
 
+/*
+ * Checklist items. Lexical's CheckListPlugin drives the `.tei-li-checked` and
+ * `.tei-li-unchecked` classes; we render the checkbox as a ::before pseudo so
+ * it respects theme colors and dark mode automatically.
+ */
+.tei-li-checked::before,
+.tei-li-unchecked::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.2em;
+  width: 1em;
+  height: 1em;
+  border-radius: 4px;
+  border: 1.5px solid hsl(var(--tei-muted-fg));
+  background: hsl(var(--tei-bg));
+  display: inline-block;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.tei-li-checked::before {
+  border-color: hsl(var(--tei-primary));
+  background: hsl(var(--tei-primary));
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='3,8 6.5,11.5 13,5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 0.85em 0.85em;
+}
+.tei-li-unchecked:hover::before,
+.tei-li-checked:hover::before {
+  border-color: hsl(var(--tei-fg));
+}
+
 .dark {
   --tei-bg: 0 0% 3.9%;
   --tei-fg: 0 0% 98%;
