@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.15.0...next-maker-v1.15.1) (2026-04-24)
+
+
+### Documentation
+
+* **next-maker:** react compiler is stable, not experimental ([591392b](https://github.com/teispace/npm-packages/commit/591392bb594478adc44edeb34eea067d774ef105))
+
 ## [1.15.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.14.0...next-maker-v1.15.0) (2026-04-24)
 
 
