@@ -38,7 +38,7 @@ During initialization, you'll be prompted to configure:
 - **Redux Toolkit** (with redux-persist)
 - **Internationalization** (next-intl)
 - **Testing** (Vitest + React Testing Library)
-- **React Compiler** (experimental — on by default)
+- **React Compiler** (stable — on by default)
 - **Bundle Analyzer** (@next/bundle-analyzer — off by default)
 - **Community Files** (CODE_OF_CONDUCT, CONTRIBUTING, etc.)
 - **Docker** support
