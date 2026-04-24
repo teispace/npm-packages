@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.1](https://github.com/teispace/npm-packages/compare/teieditor-v1.5.0...teieditor-v1.5.1) (2026-04-24)
+
+
+### Bug Fixes
+
+* **teieditor:** make all inserts work without a live selection ([f472a59](https://github.com/teispace/npm-packages/commit/f472a5957fea67fc4104920c759e217713e1092a))
+* **teieditor:** restore editor focus on inserts, checklist rendering, floating UI polish ([ef13390](https://github.com/teispace/npm-packages/commit/ef13390af3b93d6a0f1c192bc6b3f7a040cfafb6))
+
 ## [1.5.0](https://github.com/teispace/npm-packages/compare/teieditor-v1.4.0...teieditor-v1.5.0) (2026-04-23)
 
 
