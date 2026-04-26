@@ -156,12 +156,22 @@ export const reverseManifest = async (
     }
   }
 
-  // 2. Remove files we generated.
+  // 2. Remove files we generated. Directories flagged as
+  //    `containsUserContent` are NEVER deleted — they're listed as manual
+  //    cleanup so the user can migrate their content first. This guards
+  //    against e.g. `remove i18n` wiping every page under src/app/[locale]/.
   const { rm } = await import('node:fs/promises');
   for (const file of manifest.files) {
     if (!file.generated) continue;
     const target = path.join(projectPath, file.path);
     if (!fileExists(target)) continue;
+    if (file.containsUserContent) {
+      const description = file.removeHint
+        ? `${file.path} — ${file.removeHint}`
+        : `${file.path} (may contain user-authored files; review before deleting)`;
+      summary.manualCleanup.push({ file: file.path, description });
+      continue;
+    }
     if (!dryRun) {
       await rm(target, { recursive: true, force: true });
     }

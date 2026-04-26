@@ -30,6 +30,20 @@ export interface FileRequirement {
   isDir?: boolean;
   /** Used by `remove` to decide whether deletion is safe. */
   generated: boolean;
+  /**
+   * Set on directories that may legitimately contain user-authored files
+   * after the feature ships (e.g. `src/app/[locale]` accumulates pages,
+   * `src/store` accumulates slices). `remove` will NEVER recursively delete
+   * such paths — it surfaces them as manual cleanup with a guidance message
+   * so the user can migrate their content first.
+   */
+  containsUserContent?: boolean;
+  /**
+   * Optional guidance shown when a `containsUserContent` directory is left
+   * behind during `remove`. e.g. "Move pages out of src/app/[locale]/ before
+   * deleting".
+   */
+  removeHint?: string;
 }
 
 export interface ScriptRequirement {

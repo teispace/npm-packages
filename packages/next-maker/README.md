@@ -177,6 +177,8 @@ npx @teispace/next-maker remove <feature> [options]
 
 Anything the manifest can't safely undo (e.g. unwrapping an outer JSX wrap with multiple sibling providers) is reported as `manual cleanup` rather than guessed.
 
+`remove` will **never recursively delete a directory that may hold user-authored content** — `src/app/[locale]/` (your pages), `src/i18n/` (your translations), `src/store/` (your slices), `src/lib/utils/http/` (your service code), and `test/` (your helpers) are flagged in the manifest with `containsUserContent: true` and surface as manual-cleanup with a hint. Move what you want to keep, then `rm -rf` the rest by hand.
+
 ```bash
 # Preview the effect
 npx @teispace/next-maker remove redux --dry-run

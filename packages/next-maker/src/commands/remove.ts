@@ -15,7 +15,7 @@ interface RemoveCommandOptions {
 const formatSummary = (summary: RemoveSummary): string[] => {
   const lines: string[] = [];
   for (const file of summary.filesRemoved) {
-    lines.push(`  ${pc.red('-')} delete file: ${file}`);
+    lines.push(`  ${pc.red('-')} delete: ${file}`);
   }
   for (const block of summary.blocksStripped) {
     lines.push(`  ${pc.red('-')} strip block: ${block.description} ${pc.dim(`(${block.file})`)}`);

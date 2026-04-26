@@ -10,9 +10,23 @@ export const i18nManifest: FeatureManifest = {
     return (await detectProjectSetup(projectPath)).hasI18n;
   },
   files: [
-    { path: 'src/i18n', generated: true, isDir: true },
+    {
+      path: 'src/i18n',
+      generated: true,
+      isDir: true,
+      containsUserContent: true,
+      removeHint:
+        'holds your translation JSON files — copy any you want to keep, then delete by hand',
+    },
     { path: 'src/proxy.ts', generated: true },
-    { path: 'src/app/[locale]', generated: true, isDir: true },
+    {
+      path: 'src/app/[locale]',
+      generated: true,
+      isDir: true,
+      containsUserContent: true,
+      removeHint:
+        'holds every page you generated under the locale segment — move them to src/app/ before deleting',
+    },
   ],
   packages: [{ name: 'next-intl', kind: 'dependency' }],
   scripts: [],

@@ -188,6 +188,52 @@ describe('reverseManifest', () => {
     expect(summary.filesRemoved).toEqual([]);
   });
 
+  it('never recursively deletes directories flagged containsUserContent', async () => {
+    // Simulate a populated [locale] dir with user pages
+    await mkdir(path.join(projectPath, 'src/app/[locale]/dashboard'), { recursive: true });
+    await writeFile(path.join(projectPath, 'src/app/[locale]/dashboard/page.tsx'), '// user page');
+
+    const m = sampleManifest({
+      files: [
+        {
+          path: 'src/app/[locale]',
+          generated: true,
+          isDir: true,
+          containsUserContent: true,
+          removeHint: 'move pages out first',
+        },
+      ],
+      packages: [],
+      scripts: [],
+    });
+
+    const summary = await reverseManifest(m, projectPath);
+
+    expect(summary.filesRemoved).toEqual([]);
+    expect(summary.manualCleanup).toEqual([
+      { file: 'src/app/[locale]', description: 'src/app/[locale] — move pages out first' },
+    ]);
+
+    // User content survives
+    const stillThere = await readFile(
+      path.join(projectPath, 'src/app/[locale]/dashboard/page.tsx'),
+      'utf-8',
+    );
+    expect(stillThere).toBe('// user page');
+  });
+
+  it('uses a generic hint when removeHint is omitted', async () => {
+    await mkdir(path.join(projectPath, 'src/store'), { recursive: true });
+    const m = sampleManifest({
+      files: [{ path: 'src/store', generated: true, isDir: true, containsUserContent: true }],
+      packages: [],
+      scripts: [],
+    });
+
+    const summary = await reverseManifest(m, projectPath, { dryRun: true });
+    expect(summary.manualCleanup[0]?.description).toContain('may contain user-authored');
+  });
+
   it('dryRun does not write to disk', async () => {
     await mkdir(path.join(projectPath, 'scripts'), { recursive: true });
     await writeFile(path.join(projectPath, 'scripts/sample.ts'), '// keep');

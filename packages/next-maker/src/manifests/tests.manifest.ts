@@ -11,7 +11,14 @@ export const testsManifest: FeatureManifest = {
   detect: async (projectPath) => fileExists(path.join(projectPath, PROJECT_PATHS.VITEST_CONFIG)),
   files: [
     { path: PROJECT_PATHS.VITEST_CONFIG, generated: true },
-    { path: 'test', generated: true, isDir: true },
+    {
+      path: 'test',
+      generated: true,
+      isDir: true,
+      containsUserContent: true,
+      removeHint:
+        'holds setup.ts / test-utils.tsx and any helpers you added — review before deleting',
+    },
   ],
   packages: [
     { name: 'vitest', kind: 'devDependency' },

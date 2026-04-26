@@ -16,7 +16,13 @@ export const reduxManifest: FeatureManifest = {
     return (await detectProjectSetup(projectPath)).hasRedux;
   },
   files: [
-    { path: 'src/store', generated: true, isDir: true },
+    {
+      path: 'src/store',
+      generated: true,
+      isDir: true,
+      containsUserContent: true,
+      removeHint: 'holds the rootReducer and any slices you registered — review before deleting',
+    },
     { path: 'src/providers/StoreProvider.tsx', generated: true },
   ],
   packages: [

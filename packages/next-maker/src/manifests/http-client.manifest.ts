@@ -9,7 +9,16 @@ export const httpClientManifest: FeatureManifest = {
     const { detectProjectSetup } = await import('../detection');
     return (await detectProjectSetup(projectPath)).httpClient !== 'none';
   },
-  files: [{ path: 'src/lib/utils/http', generated: true, isDir: true }],
+  files: [
+    {
+      path: 'src/lib/utils/http',
+      generated: true,
+      isDir: true,
+      containsUserContent: true,
+      removeHint:
+        'holds the http client + any service modules you wired through it — review before deleting',
+    },
+  ],
   // No deps listed: axios is conditionally installed; the manifest can't
   // know which client variant is active without re-running detection.
   packages: [],
