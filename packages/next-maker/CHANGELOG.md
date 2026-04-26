@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.17.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.16.1...next-maker-v1.17.0) (2026-04-26)
+
+
+### Features
+
+* **next-maker:** auto-unwrap provider chains and next.config wraps on remove ([362ccd0](https://github.com/teispace/npm-packages/commit/362ccd0ef3cb98857600bc9def0e77e01f5c1779))
+
 ## [1.16.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.16.0...next-maker-v1.16.1) (2026-04-26)
 
 
