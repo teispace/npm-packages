@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { Command } from 'commander';
+import type { Ora } from 'ora';
 import pc from 'picocolors';
 import { log, printBanner } from '../config';
 import { startSpinner } from '../config/spinner';
@@ -23,6 +24,29 @@ export const registerAppCommand = (program: Command) => {
     });
 };
 
+/**
+ * Run a step with a dedicated spinner, ensuring at most one is active at a
+ * time. Sub-services that manage their own spinners must be called
+ * *outside* this helper — wrapping them would create concurrent spinners
+ * (ora 9.4+ surfaces this as a runtime warning).
+ */
+const withStepSpinner = async <T>(
+  text: string,
+  successText: string,
+  fn: () => Promise<T>,
+  ref: { current: Ora | null },
+): Promise<T> => {
+  const spinner = startSpinner(text);
+  ref.current = spinner;
+  try {
+    const result = await fn();
+    spinner.succeed(successText);
+    return result;
+  } finally {
+    if (ref.current === spinner) ref.current = null;
+  }
+};
+
 const createApp = async (initialName?: string): Promise<void> => {
   printBanner();
   log('Welcome to the Teispace Next.js App Creator!');
@@ -36,12 +60,14 @@ const createApp = async (initialName?: string): Promise<void> => {
     process.exit(1);
   }
 
-  const spinner = startSpinner('Initializing project...');
+  // Tracks the *currently* active spinner (if any) so signal/cleanup can
+  // halt it cleanly. Only one of our spinners is alive at a time.
+  const active: { current: Ora | null } = { current: null };
 
-  // Cleanup helper
   const performCleanup = async () => {
     if (fileExists(projectPath)) {
-      spinner.stop(); // Stop spinner if running
+      active.current?.stop();
+      active.current = null;
       console.log(pc.yellow(`\nCleaning up: Deleting directory ${answers.projectName}...`));
       try {
         await deleteDirectory(projectPath);
@@ -52,52 +78,66 @@ const createApp = async (initialName?: string): Promise<void> => {
     }
   };
 
-  // Signal handler
   const handleSignal = async () => {
     console.log(pc.red('\nProcess interrupted. Cleaning up...'));
     await performCleanup();
     process.exit(1);
   };
 
-  // Register signal listeners
   process.on('SIGINT', handleSignal);
   process.on('SIGTERM', handleSignal);
 
   try {
-    // 1. Clone template
+    // 1–3. Each of these owns its own spinner; do not wrap them.
     await cloneTemplate(projectPath);
-
-    // 2. Update package.json
     await configurePackageJson(projectPath, answers);
-
-    // 3. Customize Features (Cleanup)
     await cleanupFeatures(projectPath, answers);
 
-    // 4. Generate Code (Providers, Layout)
-    spinner.text = 'Generating code...';
-    await generateRootProvider(projectPath, answers);
-    await generateLayout(projectPath, answers);
+    // 4. Providers + layout — silent under one outer spinner.
+    await withStepSpinner(
+      'Generating providers and layout...',
+      'Providers and layout generated.',
+      async () => {
+        await generateRootProvider(projectPath, answers);
+        await generateLayout(projectPath, answers);
+      },
+      active,
+    );
 
-    // 5. Setup DevTools & Community Files
-    spinner.text = 'Setting up developer tools...';
-    await setupDevTools(projectPath, answers);
+    // 5. DevTools (community files, Docker, hooks, etc.) — no inner spinners.
+    await withStepSpinner(
+      'Setting up developer tools...',
+      'Developer tools configured.',
+      () => setupDevTools(projectPath, answers),
+      active,
+    );
 
-    // 6. Initialize Git
-    spinner.text = 'Initializing Git...';
-    // Pass gitRemote to initialize git with remote if provided
-    await initializeGit(projectPath, answers.gitRemote, answers.pushToRemote);
+    // 6. Git
+    await withStepSpinner(
+      'Initializing Git...',
+      'Git initialized.',
+      () => initializeGit(projectPath, answers.gitRemote, answers.pushToRemote),
+      active,
+    );
 
-    // 7. Install Dependencies
-    spinner.text = 'Installing dependencies...';
-    await installDependencies(projectPath, answers.packageManager);
+    // 7. Install
+    await withStepSpinner(
+      'Installing dependencies...',
+      'Dependencies installed.',
+      () => installDependencies(projectPath, answers.packageManager),
+      active,
+    );
 
-    // 8. Format and Lint (biome check --write does both)
-    spinner.text = 'Formatting and Linting...';
-    await runScript(projectPath, answers.packageManager, 'lint:fix');
+    // 8. Format + Lint (biome check --write does both)
+    await withStepSpinner(
+      'Formatting and linting...',
+      'Formatted.',
+      () => runScript(projectPath, answers.packageManager, 'lint:fix'),
+      active,
+    );
 
-    // 9. Copy .env.example to .env if requested
+    // 9. Copy .env.example → .env (cheap, no spinner needed)
     if (answers.copyEnv) {
-      spinner.text = 'Creating .env file...';
       const envExamplePath = path.join(projectPath, '.env.example');
       const envPath = path.join(projectPath, '.env');
       if (fileExists(envExamplePath)) {
@@ -106,11 +146,11 @@ const createApp = async (initialName?: string): Promise<void> => {
       }
     }
 
-    // Remove signal listeners on success
     process.off('SIGINT', handleSignal);
     process.off('SIGTERM', handleSignal);
 
-    spinner.succeed(pc.green(`Project ${answers.projectName} created successfully!`));
+    log('');
+    log(pc.green(`✨ Project ${answers.projectName} created successfully!`));
     log('');
     log('To get started:');
     log(pc.cyan(`  cd ${answers.projectName}`));
@@ -121,7 +161,8 @@ const createApp = async (initialName?: string): Promise<void> => {
     );
     log('');
   } catch (err) {
-    spinner.fail('Failed to create project.');
+    active.current?.fail('Failed to create project.');
+    active.current = null;
     console.error(err);
     await performCleanup();
     process.exit(1);
