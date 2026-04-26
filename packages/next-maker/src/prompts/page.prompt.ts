@@ -8,8 +8,18 @@ export interface PagePromptResult {
   withError: boolean;
 }
 
-export const promptForPageDetails = async (name?: string): Promise<PagePromptResult> => {
-  const questions = [];
+export interface PagePromptPresets {
+  /** When set, the loading prompt is skipped and this value is used. */
+  loading?: boolean;
+  /** When set, the error prompt is skipped and this value is used. */
+  error?: boolean;
+}
+
+export const promptForPageDetails = async (
+  name?: string,
+  presets: PagePromptPresets = {},
+): Promise<PagePromptResult> => {
+  const questions: any[] = [];
 
   if (!name) {
     questions.push({
@@ -26,26 +36,30 @@ export const promptForPageDetails = async (name?: string): Promise<PagePromptRes
     });
   }
 
-  questions.push(
-    {
+  if (presets.loading === undefined) {
+    questions.push({
       type: 'confirm',
       name: 'withLoading',
       message: 'Generate loading.tsx?',
       initial: true,
-    },
-    {
+    });
+  }
+
+  if (presets.error === undefined) {
+    questions.push({
       type: 'confirm',
       name: 'withError',
       message: 'Generate error.tsx?',
       initial: true,
-    },
-  );
+    });
+  }
 
-  const answers = (await prompt(questions)) as unknown as PagePromptResult;
+  const answers =
+    questions.length > 0 ? ((await prompt(questions)) as unknown as Partial<PagePromptResult>) : {};
 
   return {
-    pageName: name || answers.pageName,
-    withLoading: answers.withLoading,
-    withError: answers.withError,
+    pageName: name ?? (answers.pageName as string),
+    withLoading: presets.loading ?? answers.withLoading ?? true,
+    withError: presets.error ?? answers.withError ?? true,
   };
 };

@@ -35,10 +35,12 @@ export const registerComponentCommand = (program: Command) => {
         const detection = await detectProjectSetup(projectPath);
         spinner.succeed('Project setup detected');
 
-        // Prompt
-        const componentOptions = await promptForComponentDetails(name);
+        // Prompt — skip questions whose answers were already given via flags.
+        const componentOptions = await promptForComponentDetails(name, {
+          client: options.client,
+        });
         const componentName = kebabToPascal(componentOptions.componentName);
-        const isClient = options.client ?? componentOptions.isClient;
+        const isClient = componentOptions.isClient;
         const hasI18n = options.i18n ?? false;
         const shouldTest = resolveShouldTest(options, detection.hasTests);
 

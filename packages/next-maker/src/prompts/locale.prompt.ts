@@ -10,8 +10,16 @@ export interface LocalePromptResult {
   copyTranslations: boolean;
 }
 
-export const promptForLocaleDetails = async (code?: string): Promise<LocalePromptResult> => {
-  const questions = [];
+export interface LocalePromptPresets {
+  /** When set, the copy-translations prompt is skipped and this value is used. */
+  copyTranslations?: boolean;
+}
+
+export const promptForLocaleDetails = async (
+  code?: string,
+  presets: LocalePromptPresets = {},
+): Promise<LocalePromptResult> => {
+  const questions: any[] = [];
 
   if (!code) {
     questions.push({
@@ -47,21 +55,24 @@ export const promptForLocaleDetails = async (code?: string): Promise<LocalePromp
       message: 'Flag emoji (e.g., 🇪🇸, 🇫🇷):',
       validate: (value: string) => (value ? true : 'Flag emoji is required'),
     },
-    {
+  );
+
+  if (presets.copyTranslations === undefined) {
+    questions.push({
       type: 'confirm',
       name: 'copyTranslations',
       message: 'Copy translations from English? (No = empty values)',
       initial: false,
-    },
-  );
+    });
+  }
 
-  const answers = (await prompt(questions)) as unknown as LocalePromptResult;
+  const answers = (await prompt(questions)) as unknown as Partial<LocalePromptResult>;
 
   return {
-    code: code || answers.code,
-    name: answers.name,
-    country: answers.country,
-    flag: answers.flag,
-    copyTranslations: answers.copyTranslations,
+    code: code ?? (answers.code as string),
+    name: answers.name as string,
+    country: answers.country as string,
+    flag: answers.flag as string,
+    copyTranslations: presets.copyTranslations ?? answers.copyTranslations ?? false,
   };
 };

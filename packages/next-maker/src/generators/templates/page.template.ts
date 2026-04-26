@@ -152,7 +152,7 @@ export default function ${params.componentName}Error({
     <div className="flex h-full flex-col items-center justify-center gap-4">
       <h2>Something went wrong!</h2>
       <p>{error.message}</p>
-      <button onClick={() => reset()}>Try again</button>
+      <button type="button" onClick={() => reset()}>Try again</button>
     </div>
   );
 }

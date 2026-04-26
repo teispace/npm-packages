@@ -34,8 +34,11 @@ export const registerPageCommand = (program: Command) => {
 
         log(pc.dim(`  i18n: ${detection.hasI18n ? '✓' : '✗'}\n`));
 
-        // Prompt
-        const pageOptions = await promptForPageDetails(name);
+        // Prompt — skip questions whose answers were already given via flags.
+        const pageOptions = await promptForPageDetails(name, {
+          loading: options.loading,
+          error: options.error,
+        });
         const pageName = pageOptions.pageName;
         const componentName = kebabToPascal(pageName);
 

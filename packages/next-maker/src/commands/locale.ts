@@ -34,8 +34,10 @@ export const registerLocaleCommand = (program: Command) => {
           process.exit(1);
         }
 
-        // Prompt
-        const localeOptions = await promptForLocaleDetails(code);
+        // Prompt — skip questions whose answers were already given via flags.
+        const localeOptions = await promptForLocaleDetails(code, {
+          copyTranslations: options.copyTranslations,
+        });
 
         // Check if locale already exists
         const translationFile = path.join(
@@ -55,7 +57,6 @@ export const registerLocaleCommand = (program: Command) => {
         await generateLocale({
           ...localeOptions,
           projectPath,
-          copyTranslations: options.copyTranslations ?? localeOptions.copyTranslations,
         });
         spinner.succeed('Locale added');
 

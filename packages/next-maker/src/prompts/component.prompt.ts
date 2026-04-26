@@ -7,8 +7,16 @@ export interface ComponentPromptResult {
   isClient: boolean;
 }
 
-export const promptForComponentDetails = async (name?: string): Promise<ComponentPromptResult> => {
-  const questions = [];
+export interface ComponentPromptPresets {
+  /** When set, the `'use client'` prompt is skipped and this value is used. */
+  client?: boolean;
+}
+
+export const promptForComponentDetails = async (
+  name?: string,
+  presets: ComponentPromptPresets = {},
+): Promise<ComponentPromptResult> => {
+  const questions: any[] = [];
 
   if (!name) {
     questions.push({
@@ -25,17 +33,22 @@ export const promptForComponentDetails = async (name?: string): Promise<Componen
     });
   }
 
-  questions.push({
-    type: 'confirm',
-    name: 'isClient',
-    message: "Add 'use client' directive?",
-    initial: false,
-  });
+  if (presets.client === undefined) {
+    questions.push({
+      type: 'confirm',
+      name: 'isClient',
+      message: "Add 'use client' directive?",
+      initial: false,
+    });
+  }
 
-  const answers = (await prompt(questions)) as unknown as ComponentPromptResult;
+  const answers =
+    questions.length > 0
+      ? ((await prompt(questions)) as unknown as Partial<ComponentPromptResult>)
+      : {};
 
   return {
-    componentName: name || answers.componentName,
-    isClient: answers.isClient,
+    componentName: name ?? (answers.componentName as string),
+    isClient: presets.client ?? answers.isClient ?? false,
   };
 };
