@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.18.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.17.1...next-maker-v1.18.0) (2026-04-26)
+
+
+### Features
+
+* **next-maker:** add init --yes for one-shot opinionated install ([661bbb2](https://github.com/teispace/npm-packages/commit/661bbb29040b46a60a81fd2775fdc0a3dec56fac))
+
 ## [1.17.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.17.0...next-maker-v1.17.1) (2026-04-26)
 
 
