@@ -48,8 +48,36 @@ Run `npx @teispace/next-maker <command> --help` for the full option list of any 
 ### `init` — Create a New App
 
 ```bash
-npx @teispace/next-maker init [project-name]
+npx @teispace/next-maker init [project-name] [options]
 ```
+
+| Flag | Effect |
+| --- | --- |
+| `-y, --yes` | Skip every prompt and bootstrap with the recommended production defaults (see below) |
+| `--package-manager <pm>` | Override the package manager (`npm` \| `yarn` \| `pnpm` \| `bun`). Works with or without `--yes`. |
+
+```bash
+# Interactive (default)
+npx @teispace/next-maker init my-app
+
+# One-shot opinionated install
+npx @teispace/next-maker init my-app --yes
+
+# One-shot with a different package manager
+npx @teispace/next-maker init my-app -y --package-manager pnpm
+```
+
+**`--yes` defaults** — every architecture feature on, heavyweight integrations off:
+
+| | |
+| --- | --- |
+| package manager | `yarn` |
+| HTTP client | `fetch` |
+| dark mode, redux, i18n, tests, react-compiler | ✅ on |
+| pre-commit hooks, commitizen, copy `.env` | ✅ on |
+| docker, GitHub Actions, bundle-analyzer, community files (CODE_OF_CONDUCT etc.) | ⏭ off |
+
+Anything you don't want? `next-maker remove <feature>` after init.
 
 The starter at [`teispace/nextjs-starter`](https://github.com/teispace/nextjs-starter) is cloned via `degit` and trimmed to match your prompt answers. The `cleanup` step strips opted-out features so the generated project compiles end-to-end on first install.
 

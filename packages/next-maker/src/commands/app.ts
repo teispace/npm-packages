@@ -2,25 +2,57 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import type { Ora } from 'ora';
 import pc from 'picocolors';
-import { log, printBanner } from '../config';
+import { log, logError, printBanner } from '../config';
 import { startSpinner } from '../config/spinner';
 import { deleteDirectory, fileExists } from '../core/files';
 import { initializeGit } from '../core/git';
-import { installDependencies, runScript } from '../core/package-manager';
-import { promptForProjectDetails } from '../prompts/create-app.prompt';
+import { installDependencies, type PackageManager, runScript } from '../core/package-manager';
+import {
+  defaultProjectAnswers,
+  type ProjectPrompts,
+  promptForProjectDetails,
+} from '../prompts/create-app.prompt';
 import { cleanupFeatures } from '../services/init/cleanup';
 import { configurePackageJson } from '../services/init/config.service';
 import { setupDevTools } from '../services/init/devtools.service';
 import { generateLayout, generateRootProvider } from '../services/init/providers.service';
 import { cloneTemplate } from '../services/init/template.service';
 
+interface InitCommandOptions {
+  yes?: boolean;
+  packageManager?: string;
+}
+
+const VALID_PACKAGE_MANAGERS: ReadonlyArray<PackageManager> = ['npm', 'yarn', 'pnpm', 'bun'];
+
+const validatePackageManagerOverride = (raw: string | undefined): PackageManager | undefined => {
+  if (raw === undefined) return undefined;
+  if (!VALID_PACKAGE_MANAGERS.includes(raw as PackageManager)) {
+    throw new Error(
+      `Invalid --package-manager "${raw}". Valid: ${VALID_PACKAGE_MANAGERS.join(', ')}.`,
+    );
+  }
+  return raw as PackageManager;
+};
+
 export const registerAppCommand = (program: Command) => {
   program
     .command('init')
     .description('Initialize a new Next.js project')
     .argument('[name]', 'Project name')
-    .action(async (name) => {
-      await createApp(name);
+    .option('-y, --yes', 'Skip all prompts and use the recommended production defaults')
+    .option(
+      '--package-manager <pm>',
+      `Override the package manager (one of: ${VALID_PACKAGE_MANAGERS.join(', ')})`,
+    )
+    .action(async (name: string | undefined, options: InitCommandOptions) => {
+      try {
+        const packageManager = validatePackageManagerOverride(options.packageManager);
+        await createApp(name, { yes: options.yes ?? false, packageManager });
+      } catch (err) {
+        logError(`${err instanceof Error ? err.message : err}`);
+        process.exit(1);
+      }
     });
 };
 
@@ -47,12 +79,48 @@ const withStepSpinner = async <T>(
   }
 };
 
-const createApp = async (initialName?: string): Promise<void> => {
-  printBanner();
-  log('Welcome to the Teispace Next.js App Creator!');
-  log('');
+interface CreateAppFlags {
+  yes: boolean;
+  packageManager?: PackageManager;
+}
 
-  const answers = await promptForProjectDetails(initialName);
+const summariseDefaults = (answers: ProjectPrompts): void => {
+  const features: string[] = [];
+  if (answers.darkMode) features.push('dark mode');
+  if (answers.redux) features.push('redux');
+  if (answers.i18n) features.push('i18n');
+  if (answers.tests) features.push('tests');
+  if (answers.reactCompiler) features.push('react-compiler');
+  if (answers.preCommitHooks) features.push('pre-commit hooks');
+  if (answers.commitizen) features.push('commitizen');
+  if (answers.httpClient !== 'none') features.push(`http (${answers.httpClient})`);
+
+  log(pc.dim('Defaults applied (run `next-maker remove <feature>` to undo any of them):'));
+  log(pc.dim(`  package manager : ${answers.packageManager}`));
+  log(pc.dim(`  features        : ${features.join(', ')}`));
+  log('');
+};
+
+const createApp = async (initialName: string | undefined, flags: CreateAppFlags): Promise<void> => {
+  printBanner();
+
+  let answers: ProjectPrompts;
+  if (flags.yes) {
+    answers = defaultProjectAnswers(initialName, {
+      packageManager: flags.packageManager,
+    });
+    log(pc.cyan(`✨ Bootstrapping ${answers.projectName} with the recommended defaults`));
+    log('');
+    summariseDefaults(answers);
+  } else {
+    log('Welcome to the Teispace Next.js App Creator!');
+    log('');
+    answers = await promptForProjectDetails(initialName);
+    if (flags.packageManager) {
+      answers = { ...answers, packageManager: flags.packageManager };
+    }
+  }
+
   const projectPath = path.resolve(process.cwd(), answers.projectName);
 
   if (fileExists(projectPath)) {

@@ -1,6 +1,72 @@
 import Enquirer from 'enquirer';
 import type { PackageManager } from '../core/package-manager';
 
+const PROJECT_NAME_RE = /^[a-z0-9-_]+$/;
+const SEMVER_RE = /^\d+\.\d+\.\d+$/;
+
+const isValidProjectName = (value: string): boolean => PROJECT_NAME_RE.test(value);
+const isValidSemver = (value: string): boolean => SEMVER_RE.test(value);
+
+/**
+ * The opinionated production defaults `init --yes` ships. Mirrors the
+ * "should I include X?" answer the prompt walkthrough would suggest as
+ * `initial`/`default` for each question — every architecture feature ON,
+ * the heavyweight integrations (Docker, GitHub Actions, bundle analyzer)
+ * OFF. Users who want a leaner install run `next-maker remove <feature>`
+ * after init.
+ */
+export const defaultProjectAnswers = (
+  initialName: string | undefined,
+  overrides: Partial<ProjectPrompts> = {},
+): ProjectPrompts => {
+  const projectName = overrides.projectName ?? initialName ?? 'my-app';
+  if (!isValidProjectName(projectName)) {
+    throw new Error(
+      `Invalid project name "${projectName}". Use lowercase letters, digits, hyphens, and underscores only.`,
+    );
+  }
+  const version = overrides.version ?? '0.1.0';
+  if (!isValidSemver(version)) {
+    throw new Error(`Invalid version "${version}". Expected semver (e.g. 0.1.0).`);
+  }
+
+  const author = overrides.author ?? 'Teispace';
+  const company = overrides.company ?? author;
+
+  return {
+    projectName,
+    description: overrides.description ?? 'A Next.js application',
+    author,
+    version,
+    packageManager: overrides.packageManager ?? 'yarn',
+    gitRemote: overrides.gitRemote ?? '',
+    pushToRemote: overrides.pushToRemote ?? false,
+    gitIssues: overrides.gitIssues ?? '',
+    gitHomepage: overrides.gitHomepage ?? '',
+    httpClient: overrides.httpClient ?? 'fetch',
+    reactSecureStorage: overrides.reactSecureStorage ?? true,
+    email: overrides.email ?? 'support@example.com',
+    company,
+    keepTemplates: overrides.keepTemplates ?? false,
+    darkMode: overrides.darkMode ?? true,
+    redux: overrides.redux ?? true,
+    i18n: overrides.i18n ?? true,
+    communityFiles: overrides.communityFiles ?? [],
+    readme: overrides.readme ?? true,
+    docker: overrides.docker ?? false,
+    containerName: overrides.containerName,
+    imageName: overrides.imageName,
+    imageTag: overrides.imageTag,
+    ci: overrides.ci ?? false,
+    preCommitHooks: overrides.preCommitHooks ?? true,
+    commitizen: overrides.commitizen ?? true,
+    copyEnv: overrides.copyEnv ?? true,
+    tests: overrides.tests ?? true,
+    reactCompiler: overrides.reactCompiler ?? true,
+    bundleAnalyzer: overrides.bundleAnalyzer ?? false,
+  };
+};
+
 const { prompt } = Enquirer;
 
 type PromptContext = {
