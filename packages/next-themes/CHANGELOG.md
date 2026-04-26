@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/teispace/npm-packages/compare/next-themes-v0.2.0...next-themes-v0.2.1) (2026-04-26)
+
+
+### Miscellaneous Chores
+
+* **deps:** bump biome, commitlint, ora, vitest, types, tailwind ([245f464](https://github.com/teispace/npm-packages/commit/245f464ddca8163e549042ae3cfcab17aa09a7ed))
+
 ## [0.2.0](https://github.com/teispace/npm-packages/compare/next-themes-v0.1.0...next-themes-v0.2.0) (2026-04-23)
 
 

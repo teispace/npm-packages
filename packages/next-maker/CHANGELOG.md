@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.16.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.15.1...next-maker-v1.16.0) (2026-04-26)
+
+
+### Features
+
+* **next-maker:** add layout/provider/env generators, doctor & remove commands ([c5c8db3](https://github.com/teispace/npm-packages/commit/c5c8db3da73c55ef01e32c3f4aa08441e4849a56))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump biome, commitlint, ora, vitest, types, tailwind ([245f464](https://github.com/teispace/npm-packages/commit/245f464ddca8163e549042ae3cfcab17aa09a7ed))
+
 ## [1.15.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.15.0...next-maker-v1.15.1) (2026-04-24)
 
 

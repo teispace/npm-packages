@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.2](https://github.com/teispace/npm-packages/compare/teieditor-v1.5.1...teieditor-v1.5.2) (2026-04-26)
+
+
+### Miscellaneous Chores
+
+* **deps:** bump biome, commitlint, ora, vitest, types, tailwind ([245f464](https://github.com/teispace/npm-packages/commit/245f464ddca8163e549042ae3cfcab17aa09a7ed))
+
 ## [1.5.1](https://github.com/teispace/npm-packages/compare/teieditor-v1.5.0...teieditor-v1.5.1) (2026-04-24)
 
 
