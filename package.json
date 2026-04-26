@@ -44,8 +44,8 @@
     "test:workspaces": "yarn workspaces foreach -Apt --no-private run test"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.11",
-    "@commitlint/cli": "^20.5.0",
+    "@biomejs/biome": "^2.4.13",
+    "@commitlint/cli": "^20.5.2",
     "@commitlint/config-conventional": "^20.5.0",
     "@lexical/code": "^0.43.0",
     "@lexical/history": "^0.43.0",
@@ -65,8 +65,8 @@
     "lint-staged": "^16.4.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "typescript": "^6.0.2",
-    "vitest": "^4.1.4"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
   },
   "resolutions": {
     "lexical": "0.43.0",
