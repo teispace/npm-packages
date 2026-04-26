@@ -147,7 +147,22 @@ export const reverseManifest = async (
     }
     const content = await readFile(filePath);
     if (!injection.presence.test(content)) continue;
-    const stripped = content.replace(injection.removePattern, '');
+
+    // RemoveTransform supports two shapes — RegExp for simple replace, or a
+    // function that returns the transformed content (or null to bail out to
+    // manual cleanup when the file shape has drifted from expectations).
+    let stripped: string;
+    if (typeof injection.removePattern === 'function') {
+      const out = injection.removePattern(content);
+      if (out === null) {
+        summary.manualCleanup.push({ file: injection.file, description: injection.description });
+        continue;
+      }
+      stripped = out;
+    } else {
+      stripped = content.replace(injection.removePattern, '');
+    }
+
     if (stripped !== content) {
       if (!dryRun) await writeFile(filePath, stripped);
       summary.blocksStripped.push({ file: injection.file, description: injection.description });

@@ -1,4 +1,6 @@
 import { setupI18n } from '../services/setup/i18n';
+import { unwrapNextIntlPlugin } from './transforms/next-config';
+import { unwrapJsxChain } from './transforms/unwrap-jsx';
 import type { FeatureManifest } from './types';
 
 export const i18nManifest: FeatureManifest = {
@@ -35,11 +37,13 @@ export const i18nManifest: FeatureManifest = {
       file: 'next.config.ts',
       description: 'createNextIntlPlugin wrap in next.config.ts',
       presence: /next-intl\/plugin/,
+      removePattern: unwrapNextIntlPlugin,
     },
     {
       file: 'src/providers/RootProvider.tsx',
       description: '<NextIntlClientProvider> wrap',
       presence: /NextIntlClientProvider/,
+      removePattern: unwrapJsxChain('NextIntlClientProvider'),
     },
   ],
   apply: setupI18n,

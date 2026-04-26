@@ -2,6 +2,7 @@ import path from 'node:path';
 import { PROJECT_PATHS } from '../config/paths';
 import { fileExists, readFile } from '../core/files';
 import { setupBundleAnalyzer } from '../services/setup/bundle-analyzer';
+import { unwrapBundleAnalyzer } from './transforms/next-config';
 import type { FeatureManifest } from './types';
 
 export const bundleAnalyzerManifest: FeatureManifest = {
@@ -21,8 +22,7 @@ export const bundleAnalyzerManifest: FeatureManifest = {
       file: PROJECT_PATHS.NEXT_CONFIG,
       description: 'withBundleAnalyzer import + wrapping',
       presence: /@next\/bundle-analyzer/,
-      // No safe removePattern — undoing the `bundleAnalyzer(...)` wrap requires
-      // unwrapping the export. Reported as manual cleanup for now.
+      removePattern: unwrapBundleAnalyzer,
     },
   ],
   apply: setupBundleAnalyzer,

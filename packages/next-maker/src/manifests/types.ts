@@ -53,6 +53,16 @@ export interface ScriptRequirement {
   expectedValue?: string;
 }
 
+/**
+ * Custom remove transform.
+ *
+ * Receives the file's full content; returns either the transformed content
+ * (auto-removal succeeded) or `null` to fall back to manual cleanup
+ * (the file shape has drifted from what we expected and we'd rather
+ * surface it for human review than guess).
+ */
+export type RemoveTransform = (content: string) => string | null;
+
 export interface CodeBlockRequirement {
   /** File the block lives in, relative to the project root. */
   file: string;
@@ -61,10 +71,14 @@ export interface CodeBlockRequirement {
   /** RegExp that matches when the block is present (for both detection and drift). */
   presence: RegExp;
   /**
-   * RegExp matching the full block when removing. If omitted, `remove` will
-   * report "manual removal needed" rather than guessing.
+   * Strategy for removal. Either:
+   * - `RegExp`: matched content is replaced with empty string.
+   * - `RemoveTransform` function: returns the transformed file content, or
+   *   `null` to surface as manual cleanup.
+   *
+   * If omitted entirely, `remove` reports the block as manual cleanup.
    */
-  removePattern?: RegExp;
+  removePattern?: RegExp | RemoveTransform;
 }
 
 export interface FeatureFootprint {

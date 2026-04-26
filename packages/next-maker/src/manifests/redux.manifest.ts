@@ -1,4 +1,5 @@
 import { setupRedux } from '../services/setup/redux';
+import { unwrapJsxChain } from './transforms/unwrap-jsx';
 import type { FeatureManifest } from './types';
 
 /**
@@ -36,6 +37,7 @@ export const reduxManifest: FeatureManifest = {
       file: 'src/providers/RootProvider.tsx',
       description: '<StoreProvider> wrap in RootProvider',
       presence: /<StoreProvider/,
+      removePattern: unwrapJsxChain('StoreProvider'),
     },
   ],
   apply: setupRedux,

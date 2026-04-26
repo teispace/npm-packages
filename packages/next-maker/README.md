@@ -175,7 +175,7 @@ npx @teispace/next-maker remove <feature> [options]
 | `--dry-run` | Print the planned changes without writing |
 | `-y, --yes` | Skip the confirmation prompt |
 
-Anything the manifest can't safely undo (e.g. unwrapping an outer JSX wrap with multiple sibling providers) is reported as `manual cleanup` rather than guessed.
+**Auto-removed when possible:** provider chain unwraps (`<NextIntlClientProvider>`, `<StoreProvider>`, `<CustomThemeProvider>`), the `withNextIntl(...)` and `bundleAnalyzer(...)` wraps in `next.config.ts`, and their orphan import statements. The transforms are conservative — if the file shape has drifted from the canonical pattern (e.g. a multi-line opening tag, no matching close at the same indent), the runner bails out and surfaces it as manual cleanup rather than corrupting your code.
 
 `remove` will **never recursively delete a directory that may hold user-authored content** — `src/app/[locale]/` (your pages), `src/i18n/` (your translations), `src/store/` (your slices), `src/lib/utils/http/` (your service code), and `test/` (your helpers) are flagged in the manifest with `containsUserContent: true` and surface as manual-cleanup with a hint. Move what you want to keep, then `rm -rf` the rest by hand.
 
