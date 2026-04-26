@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.17.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.17.0...next-maker-v1.17.1) (2026-04-26)
+
+
+### Bug Fixes
+
+* **next-maker:** respect cli flags in prompts; add type=button to error tsx ([2718aad](https://github.com/teispace/npm-packages/commit/2718aad9f74559e854c7332841daca63b4ec503e))
+
 ## [1.17.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.16.1...next-maker-v1.17.0) (2026-04-26)
 
 
