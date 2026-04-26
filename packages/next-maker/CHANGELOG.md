@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.16.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.16.0...next-maker-v1.16.1) (2026-04-26)
+
+
+### Bug Fixes
+
+* **next-maker:** eliminate concurrent spinners in init flow ([aa0f9d2](https://github.com/teispace/npm-packages/commit/aa0f9d255772b3b76d76a3963e95ecb73ec07d2b))
+* **next-maker:** never auto-delete user-content dirs in remove ([f862698](https://github.com/teispace/npm-packages/commit/f862698fa9ab63e6fde56494a2286e65b45e2afd))
+
 ## [1.16.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.15.1...next-maker-v1.16.0) (2026-04-26)
 
 
