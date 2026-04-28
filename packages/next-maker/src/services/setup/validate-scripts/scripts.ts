@@ -11,6 +11,8 @@
 export const SYNC_ENV_SCRIPT = `import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+const checkOnly = process.argv.includes('--check');
+
 const envPath = path.join(process.cwd(), '.env');
 const examplePath = path.join(process.cwd(), '.env.example');
 
@@ -68,12 +70,18 @@ if (fs.existsSync(examplePath)) {
   currentExampleContent = fs.readFileSync(examplePath, 'utf-8');
 }
 
-if (currentExampleContent !== newExampleContent) {
-  fs.writeFileSync(examplePath, newExampleContent);
-  console.log('✅ Synchronized .env.example with .env');
-} else {
+if (currentExampleContent === newExampleContent) {
   console.log('✨ .env.example is already up to date');
+  process.exit(0);
 }
+
+if (checkOnly) {
+  console.error('❌ .env.example is out of sync with .env. Run "yarn env:sync" to update.');
+  process.exit(1);
+}
+
+fs.writeFileSync(examplePath, newExampleContent);
+console.log('✅ Synchronized .env.example with .env');
 `;
 
 export const CHECK_DEPRECATED_SCRIPT = `/**

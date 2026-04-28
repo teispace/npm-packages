@@ -151,6 +151,7 @@ export const migrateToLocaleStructure = async (projectPath: string): Promise<voi
 import { hasLocale } from 'next-intl';
 import { notFound } from 'next/navigation';
 import { getMessages, getTimeZone, setRequestLocale } from 'next-intl/server';
+import { getLocaleDirection } from '@/lib/config/app-locales';
 ${content}`;
     }
 
@@ -224,8 +225,11 @@ ${content}`;
         '<RootProvider locale={locale} messages={messages} timeZone={timeZone}>',
       );
 
-      // 4. Update html lang
-      content = content.replace(/<html lang="en"/, '<html lang={locale}');
+      // 4. Update html lang and direction
+      content = content.replace(
+        /<html lang="en"/,
+        '<html lang={locale} dir={getLocaleDirection(locale)}',
+      );
     }
 
     await writeFile(destLayoutPath, content);
