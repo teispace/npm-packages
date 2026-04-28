@@ -1,6 +1,6 @@
 {
   "name": "@teispace/next-maker",
-  "version": "1.18.0",
+  "version": "1.19.0",
   "description": "Create a new Teispace Next.js application with interactive setup.",
   "keywords": [
     "nextjs",
