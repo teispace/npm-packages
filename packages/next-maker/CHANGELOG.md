@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.19.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.18.0...next-maker-v1.19.0) (2026-04-28)
+
+
+### Features
+
+* enhance persist template with migrations and versioning; update HTML lang direction in injectors; add check-only option in env sync script ([e49240c](https://github.com/teispace/npm-packages/commit/e49240c97064a10f3f43bee518b9a02da2879545))
+
 ## [1.18.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.17.1...next-maker-v1.18.0) (2026-04-26)
 
 
