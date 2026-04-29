@@ -14,12 +14,10 @@ export const ${hookName} = () => {
 
   const handleSetLoading = (loading: boolean) => {
     dispatch(setLoading(loading));
-    console.log('Loading state updated:', loading);
   };
 
   const handleSetError = (error: string | null) => {
     dispatch(setError(error));
-    console.log('Error state updated:', error);
   };
 
   return {
