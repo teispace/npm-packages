@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.19.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.19.0...next-maker-v1.19.1) (2026-04-29)
+
+
+### Code Refactoring
+
+* remove console logs from loading and error state handlers in hook template ([6cd953a](https://github.com/teispace/npm-packages/commit/6cd953a3f9b82dc37d249644913bbf6110c878b3))
+
 ## [1.19.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.18.0...next-maker-v1.19.0) (2026-04-28)
 
 
