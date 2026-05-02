@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/teispace/npm-packages/compare/next-themes-v0.3.2...next-themes-v0.4.0) (2026-05-02)
+
+
+### Features
+
+* enhance ThemeProvider and store with scriptProps and setTheme updater function support ([dd0e9a9](https://github.com/teispace/npm-packages/commit/dd0e9a92e5499de291bd1882af49ff2ad945878c))
+
 ## [0.3.2](https://github.com/teispace/npm-packages/compare/next-themes-v0.3.1...next-themes-v0.3.2) (2026-05-02)
 
 
