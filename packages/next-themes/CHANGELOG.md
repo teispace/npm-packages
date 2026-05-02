@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/teispace/npm-packages/compare/next-themes-v0.3.0...next-themes-v0.3.1) (2026-05-02)
+
+
+### Miscellaneous Chores
+
+* update package versions and dependencies ([e4cf6a6](https://github.com/teispace/npm-packages/commit/e4cf6a65d6a2c5d1810b3e307f9a1e20eea126b3))
+
 ## [0.3.0](https://github.com/teispace/npm-packages/compare/next-themes-v0.2.1...next-themes-v0.3.0) (2026-05-02)
 
 
