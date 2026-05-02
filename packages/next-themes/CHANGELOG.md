@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/teispace/npm-packages/compare/next-themes-v0.2.1...next-themes-v0.3.0) (2026-05-02)
+
+
+### Features
+
+* enhance theme management with followSystem option and anti-FOUC improvements ([4689e3e](https://github.com/teispace/npm-packages/commit/4689e3e1642d5f1efc0dd5ac8adcc6d27370464d))
+
 ## [0.2.1](https://github.com/teispace/npm-packages/compare/next-themes-v0.2.0...next-themes-v0.2.1) (2026-04-26)
 
 
