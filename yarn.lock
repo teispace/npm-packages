@@ -2738,7 +2738,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@teispace/next-themes@npm:^0.2.1, @teispace/next-themes@workspace:packages/next-themes":
+"@teispace/next-themes@npm:^0.3.1, @teispace/next-themes@workspace:packages/next-themes":
   version: 0.0.0-use.local
   resolution: "@teispace/next-themes@workspace:packages/next-themes"
   dependencies:
@@ -5601,7 +5601,7 @@ __metadata:
   resolution: "next-themes-examples@workspace:examples/next-themes"
   dependencies:
     "@tailwindcss/postcss": "npm:^4.2.4"
-    "@teispace/next-themes": "npm:^0.2.1"
+    "@teispace/next-themes": "npm:^0.3.1"
     "@types/node": "npm:^25.6.0"
     "@types/react": "npm:^19.2.14"
     "@types/react-dom": "npm:^19.2.3"
