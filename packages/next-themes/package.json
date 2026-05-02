@@ -1,6 +1,6 @@
 {
   "name": "@teispace/next-themes",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "Feature-rich, lightweight theme management for Next.js and React. Zero-flash SSR, hybrid storage, view transitions, typed themes.",
   "type": "module",
   "license": "MIT",
