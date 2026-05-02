@@ -1,3 +1,5 @@
+'use client';
+
 import { type ElementType, type ReactNode, useMemo } from 'react';
 import type { ThemeStore } from '../core/store';
 import type { Attribute, Listener, ThemeState } from '../core/types';

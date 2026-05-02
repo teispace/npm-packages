@@ -46,6 +46,14 @@ export interface ThemeProviderProps {
   nonce?: string;
 
   /**
+   * Skip injecting the inline anti-FOUC script. Use this when you have
+   * already rendered the script in `<head>` via `getThemeScript()` from
+   * `@teispace/next-themes/server` — that placement runs strictly before
+   * the body's first paint and is the most flicker-resistant option.
+   */
+  noScript?: boolean;
+
+  /**
    * Animate theme changes with the View Transitions API. Pass `true` for the
    * default fade, `'circular'` for a cursor-origin circular reveal, or a
    * config object for fine-grained control. Gracefully no-ops in browsers

@@ -1,3 +1,5 @@
+'use client';
+
 import { useTheme } from './use-theme';
 
 export type ThemeValueMap<T extends string, V> = Partial<Record<T | 'system', V>> & {

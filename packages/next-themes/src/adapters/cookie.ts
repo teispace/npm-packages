@@ -1,3 +1,4 @@
+import { hasDocumentCookie } from '../core/env';
 import type { CookieOptions } from '../core/types';
 import type { AdapterFactory, StorageAdapter } from './types';
 
@@ -39,12 +40,20 @@ export const cookieAdapter: AdapterFactory = ({ cookie }): StorageAdapter => {
   const { name, ...rest } = cookie;
   return {
     get() {
-      if (typeof document === 'undefined') return null;
-      return readCookieFromString(document.cookie, name);
+      if (!hasDocumentCookie()) return null;
+      try {
+        return readCookieFromString(document.cookie, name);
+      } catch (_e) {
+        return null;
+      }
     },
     set(value) {
-      if (typeof document === 'undefined') return;
-      document.cookie = serializeCookie(name, value, rest);
+      if (!hasDocumentCookie()) return;
+      try {
+        document.cookie = serializeCookie(name, value, rest);
+      } catch (_e) {
+        /* sandboxed iframe, etc. */
+      }
     },
   };
 };

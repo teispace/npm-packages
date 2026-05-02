@@ -15,6 +15,7 @@ function runScript(script: string): void {
     'matchMedia',
     'getComputedStyle',
     'requestAnimationFrame',
+    'addEventListener',
     script,
   );
   fn(
@@ -24,6 +25,7 @@ function runScript(script: string): void {
     window.matchMedia.bind(window),
     window.getComputedStyle.bind(window),
     window.requestAnimationFrame.bind(window),
+    window.addEventListener.bind(window),
   );
 }
 
@@ -208,5 +210,78 @@ describe('buildScript', () => {
   it('strips minifier __name artifacts from the serialized body', () => {
     const s = buildScript({});
     expect(s).not.toMatch(/__name\(/);
+  });
+
+  it('contains a pageshow handler for bfcache restoration', () => {
+    const s = buildScript({});
+    expect(s).toMatch(/pageshow/);
+    expect(s).toMatch(/persisted/);
+  });
+
+  it('does not inject the disable-transition style on a no-op apply', () => {
+    // Pre-populate the DOM with the same theme the script will apply.
+    document.documentElement.classList.add('dark');
+    document.documentElement.style.colorScheme = 'dark';
+    window.localStorage.setItem('theme', 'dark');
+    const headStylesBefore = document.head.querySelectorAll('style').length;
+    const s = buildScript({
+      attribute: 'class',
+      storageMode: 'local',
+      themes: ['light', 'dark'],
+      disableTransitionOnChange: '*,*::before,*::after{transition:none!important;}',
+    });
+    runScript(s);
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    // No new <style> tag should have been added since the DOM was already
+    // in the requested state — that <style> is itself a flicker source.
+    expect(document.head.querySelectorAll('style').length).toBe(headStylesBefore);
+  });
+
+  it('escapes </script> in user-supplied config (XSS via #213 surface)', () => {
+    const evil = '</script><script>window.__pwn=1;</script>';
+    const s = buildScript({
+      forcedTheme: evil,
+      themes: ['light', 'dark', evil],
+      themeColor: { light: evil, dark: '#000' },
+    });
+    // The literal closing-tag sequence must NOT appear anywhere in the
+    // emitted script; the inline <script> would otherwise terminate early
+    // and the trailing payload would become live HTML.
+    expect(s).not.toContain('</script>');
+    // The payload is preserved as a JS-string-equivalent escape form so
+    // runtime behavior is unchanged for legitimate inputs.
+    expect(s).toContain('\\u003c/script>');
+    // Sanity: running the script does not pollute global state with the
+    // attempted exploit.
+    runScript(s);
+    expect((window as { __pwn?: unknown }).__pwn).toBeUndefined();
+  });
+
+  it('escapes U+2028 and U+2029 which would otherwise crash the script', () => {
+    const ls = ' ';
+    const ps = ' ';
+    const s = buildScript({ forcedTheme: `${ls}${ps}` });
+    expect(s).not.toContain(ls);
+    expect(s).not.toContain(ps);
+    expect(() => runScript(s)).not.toThrow();
+  });
+
+  it('re-applies on bfcache pageshow', () => {
+    const s = buildScript({
+      storageMode: 'local',
+      themes: ['light', 'dark'],
+      enableSystem: false,
+      defaultTheme: 'light',
+    });
+    window.localStorage.setItem('theme', 'light');
+    runScript(s);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    // Simulate user changing theme in another tab while this page sits in bfcache.
+    window.localStorage.setItem('theme', 'dark');
+    // Fire a persisted pageshow.
+    const event = new Event('pageshow') as PageTransitionEvent;
+    Object.defineProperty(event, 'persisted', { value: true });
+    window.dispatchEvent(event);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 });

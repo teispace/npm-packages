@@ -115,6 +115,24 @@ describe('hybridAdapter', () => {
     const a = hybridAdapter(baseOpts);
     expect(a.get()).toBe('dark');
   });
+
+  it('heals divergence by writing localStorage value back to the cookie', () => {
+    // Cookie absent (e.g. expired or blocked), localStorage remembers.
+    document.cookie = 'theme=; Max-Age=0; Path=/';
+    window.localStorage.setItem('theme', 'dark');
+    const a = hybridAdapter(baseOpts);
+    expect(a.get()).toBe('dark');
+    // Cookie should now be re-seeded so the server picks it up next request.
+    expect(document.cookie).toContain('theme=dark');
+  });
+
+  it('does not heal when neither channel has a value', () => {
+    document.cookie = 'theme=; Max-Age=0; Path=/';
+    window.localStorage.removeItem('theme');
+    const a = hybridAdapter(baseOpts);
+    expect(a.get()).toBeNull();
+    expect(document.cookie).not.toContain('theme=');
+  });
 });
 
 describe('resolveAdapter', () => {

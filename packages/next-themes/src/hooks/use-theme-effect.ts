@@ -1,3 +1,5 @@
+'use client';
+
 import { type DependencyList, useEffect, useRef } from 'react';
 import { useTheme } from './use-theme';
 

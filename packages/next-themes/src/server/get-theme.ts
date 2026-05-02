@@ -1,4 +1,5 @@
 import { readCookieFromString, serializeCookie } from '../adapters/cookie';
+import { type BuildScriptOptions, buildScript } from '../core/script';
 import type { CookieOptions } from '../core/types';
 import { readColorSchemeHint } from './client-hint';
 
@@ -117,4 +118,42 @@ export async function writeThemeCookie(
   } catch (_e) {
     /* not in a Next server context */
   }
+}
+
+/**
+ * Build the inline anti-FOUC script as an HTML-safe string. Place this
+ * inside the `<head>` of your root layout — that is where it can run
+ * synchronously before the browser paints any body pixels, eliminating
+ * the dark → light → dark flicker that `useServerInsertedHTML` placement
+ * inside `<body>` allows.
+ *
+ * Recommended usage in Next.js App Router:
+ *
+ * ```tsx
+ * // app/layout.tsx
+ * import { getTheme, getThemeScript } from '@teispace/next-themes/server';
+ *
+ * export default async function RootLayout({ children }) {
+ *   const initialTheme = await getTheme();
+ *   const script = getThemeScript({ attribute: 'class', initialTheme });
+ *   return (
+ *     <html lang="en" suppressHydrationWarning>
+ *       <head>
+ *         <script dangerouslySetInnerHTML={{ __html: script }} />
+ *       </head>
+ *       <body>
+ *         <Providers initialTheme={initialTheme}>{children}</Providers>
+ *       </body>
+ *     </html>
+ *   );
+ * }
+ * ```
+ *
+ * When this helper is used, the `ThemeProvider` skips its own script
+ * injection (passing `nonce` is enough — see the `noScript` provider
+ * prop). Pass the same configuration object to both call sites to keep
+ * them in sync, or use `createThemes()` so the config lives in one place.
+ */
+export function getThemeScript(options: BuildScriptOptions = {}): string {
+  return buildScript(options);
 }

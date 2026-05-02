@@ -5,9 +5,11 @@ import {
   applyThemeColor,
   disableTransition,
   getSystemTheme,
+  isAttributeAlreadyApplied,
   resolveTarget,
   subscribeSystem,
 } from './dom';
+import { hasWindowEvents, isDom } from './env';
 import { normalizeSelection } from './resolve';
 import type { Attribute, Listener, SetThemeOptions, ThemeState, TransitionConfig } from './types';
 import { resolveTransition, startViewTransition } from './view-transition';
@@ -100,33 +102,43 @@ export function createStore(opts: StoreOptions): ThemeStore {
   let mounted = false;
   let unsubSystem: (() => void) | null = null;
   let unsubStorage: (() => void) | null = null;
+  let unsubPageShow: (() => void) | null = null;
 
   function emit(): void {
     for (const l of listeners) l(state);
   }
 
   function apply(next: ThemeState, skipTransitionDisable = false): void {
-    if (typeof document === 'undefined') return;
+    if (!isDom()) return;
     const el = resolveTarget(target);
     const applied =
       value && value[next.resolvedTheme] != null ? value[next.resolvedTheme] : next.resolvedTheme;
 
+    // Compare against current DOM state so a no-op apply does not inject
+    // the disable-transition <style> needlessly. This is the silent flicker
+    // source — every re-apply was inserting + removing a style tag, even
+    // when the resolved theme had not changed.
+    const domUnchanged =
+      previousApplied === applied && isAttributeAlreadyApplied(el, attribute, applied);
+
     let restore: (() => void) | null = null;
-    if (!skipTransitionDisable && disableTransitionOnChange) {
+    if (!skipTransitionDisable && disableTransitionOnChange && !domUnchanged) {
       restore = disableTransition(
         typeof disableTransitionOnChange === 'string' ? disableTransitionOnChange : DISABLE_CSS,
         respectReducedMotion,
       );
     }
 
-    applyAttribute(
-      el,
-      attribute,
-      next.resolvedTheme,
-      previousApplied,
-      value ?? undefined,
-      allThemes,
-    );
+    if (!domUnchanged) {
+      applyAttribute(
+        el,
+        attribute,
+        next.resolvedTheme,
+        previousApplied,
+        value ?? undefined,
+        allThemes,
+      );
+    }
     if (enableColorScheme) applyColorScheme(el, next.resolvedTheme);
     applyThemeColor(next.theme, next.resolvedTheme, themeColor ?? undefined);
 
@@ -134,14 +146,14 @@ export function createStore(opts: StoreOptions): ThemeStore {
     restore?.();
   }
 
-  function setState(next: ThemeState): void {
+  function setState(next: ThemeState, skipTransitionDisable = false): void {
     const same =
       state.theme === next.theme &&
       state.resolvedTheme === next.resolvedTheme &&
       state.systemTheme === next.systemTheme;
     state = next;
     if (same) return;
-    apply(next);
+    apply(next, skipTransitionDisable);
     emit();
     onChange?.(next.theme, next.resolvedTheme);
   }
@@ -198,13 +210,16 @@ export function createStore(opts: StoreOptions): ThemeStore {
   function mount(): void {
     if (mounted) return;
     mounted = true;
-    // Re-read in case storage changed between SSR and hydration (hybrid case).
+    // Re-read storage on hydration. The inline script already painted the
+    // DOM, so on first mount we MUST skip the transition-disable <style>:
+    // the script handled FOUC suppression already, and re-injecting a
+    // style here is itself a flicker source.
     const fresh = initial();
     if (fresh.theme !== state.theme || fresh.resolvedTheme !== state.resolvedTheme) {
-      setState(fresh);
+      setState(fresh, true);
     } else {
-      // Ensure DOM matches store (idempotent; also catches cases where the
-      // script didn't run, e.g. CSR-only env).
+      // State matches; just ensure the DOM does too (CSR-only path where
+      // the script never ran).
       apply(state, true);
     }
     if (enableSystem) {
@@ -213,14 +228,33 @@ export function createStore(opts: StoreOptions): ThemeStore {
     if (storage.subscribe) {
       unsubStorage = storage.subscribe(onStorageChange);
     }
+    // bfcache: when the page is restored from back/forward cache, storage
+    // may have changed in another tab. Re-read and reconcile.
+    if (hasWindowEvents()) {
+      const onPageShow = (e: PageTransitionEvent): void => {
+        if (!e.persisted) return;
+        const next = initial();
+        if (next.theme !== state.theme || next.resolvedTheme !== state.resolvedTheme) {
+          setState(next, true);
+        }
+      };
+      try {
+        window.addEventListener('pageshow', onPageShow);
+        unsubPageShow = () => window.removeEventListener('pageshow', onPageShow);
+      } catch (_e) {
+        unsubPageShow = null;
+      }
+    }
   }
 
   function unmount(): void {
     mounted = false;
     unsubSystem?.();
     unsubStorage?.();
+    unsubPageShow?.();
     unsubSystem = null;
     unsubStorage = null;
+    unsubPageShow = null;
   }
 
   function subscribe(l: Listener): () => void {

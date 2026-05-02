@@ -8,6 +8,13 @@ export interface ScriptConfig {
   themes: string[];
   defaultTheme: string;
   enableSystem: boolean;
+  /**
+   * Always use the system preference, ignoring any stored theme value.
+   * When true, the script behaves as if `theme: 'system'` is selected on
+   * every load, regardless of what is in the cookie / localStorage.
+   * Mirrors the React provider's `followSystem` prop.
+   */
+  followSystem: boolean;
   forcedTheme: string | null;
   initialTheme: string | null;
   value: Record<string, string> | null;
@@ -30,6 +37,7 @@ function normalize(opts: BuildScriptOptions): ScriptConfig {
     themes: opts.themes ?? ['light', 'dark'],
     defaultTheme: opts.defaultTheme ?? 'system',
     enableSystem: opts.enableSystem ?? true,
+    followSystem: opts.followSystem ?? false,
     forcedTheme: opts.forcedTheme ?? null,
     initialTheme: opts.initialTheme ?? null,
     value: opts.value ?? null,
@@ -45,12 +53,17 @@ function normalize(opts: BuildScriptOptions): ScriptConfig {
 }
 
 /**
- * Build the inline, blocking anti-FOUC script that runs before hydration.
- * Returns a single-line IIFE string; the caller wraps it in a <script> tag.
+ * Build the inline anti-FOUC script.
  *
- * The body is delivered as a function serialized via toString(). Function
- * name artifacts injected by some minifiers (e.g. the esbuild __name helper)
- * are stripped before the script ships to the client.
+ * The script body is a raw string literal — NOT a serialized function. This
+ * is intentional: bundlers (esbuild, swc) inject `__name(fn,"name")` wrappers
+ * around named functions when `keepNames` is on, which crashes any
+ * deserialized function body that lacks a global `__name`. Storing the body
+ * as data means no bundler ever rewrites it.
+ *
+ * The body also self-rebinds via `pageshow` so theme is re-applied when a
+ * page is restored from the browser back/forward cache — bfcache snapshots
+ * the DOM at navigation time, and storage may have changed in another tab.
  */
 export function buildScript(opts: BuildScriptOptions): string {
   const c = normalize(opts);
@@ -66,173 +79,147 @@ export function buildScript(opts: BuildScriptOptions): string {
     k: c.storageKey,
     n: c.cookieName,
     s: c.enableSystem ? 1 : 0,
+    fs: c.followSystem ? 1 : 0,
     cs: c.enableColorScheme ? 1 : 0,
     tc: c.themeColor,
     dt: c.disableTransitionOnChange,
     rrm: c.respectReducedMotion ? 1 : 0,
     tg: c.target,
   };
-  const body = stripNameArtifacts(themeScript.toString());
-  return `!function(){try{(${body})(${JSON.stringify(cfg)})}catch(e){}}();`;
+  return `!function(){try{var c=${safeJson(cfg)};${SCRIPT_BODY}}catch(e){}}();`;
 }
 
 /**
- * Strip esbuild/swc `__name(fn,"...")` wrappers that some bundlers inject for
- * stack traces. The script must not reference outer symbols, so these would
- * throw at runtime.
+ * `JSON.stringify` does not escape sequences that would prematurely close
+ * an inline `<script>` tag or break the parser. A `forcedTheme`,
+ * `themeColor`, `value` map, or `disableTransitionOnChange` CSS string
+ * sourced from user input could otherwise contain literal `</script>` and
+ * break out of the tag — XSS via the same surface reported as upstream
+ * issue #213. U+2028 / U+2029 are valid JSON whitespace but invalid in
+ * JS string literals and would crash the script.
+ *
+ * The escapes are equivalent in JS-string semantics (the runtime value is
+ * unchanged), so the script behaves identically with or without them.
  */
-function stripNameArtifacts(src: string): string {
-  return src.replace(/__name\(([^,]+),\s*["'][^"']*["']\)/g, '$1');
+function safeJson(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
 }
 
-type Cfg = {
-  a: string[];
-  t: string[];
-  v: Record<string, string> | null;
-  d: string;
-  f: string | null;
-  i: string | null;
-  m: StorageMode;
-  k: string;
-  n: string;
-  s: 0 | 1;
-  cs: 0 | 1;
-  tc: string | Record<string, string> | null;
-  dt: string | null;
-  rrm: 0 | 1;
-  tg: string;
-};
-
-// This function is serialized to string and embedded inline. It MUST NOT
-// reference any outer identifier (imports, module constants) — every value
-// it needs is passed in via `c`. Keep identifiers short to minimize payload.
-function themeScript(c: Cfg): void {
-  const d = document;
-  // querySelector can throw DOMException for invalid CSS selectors — fall
-  // back to <html> so the theme still applies instead of crashing the script.
-  let el: HTMLElement = d.documentElement;
-  try {
-    const found = d.querySelector(c.tg) as HTMLElement | null;
-    if (found) el = found;
-  } catch (_e) {
-    /* invalid selector — keep documentElement */
-  }
-
-  const readCookie = (name: string): string | null => {
-    const parts = d.cookie ? d.cookie.split('; ') : [];
-    for (let i = 0; i < parts.length; i++) {
-      const eq = parts[i].indexOf('=');
-      if (eq < 0) continue;
-      if (parts[i].substring(0, eq) === name) {
-        const raw = parts[i].substring(eq + 1);
-        if (!raw) return null;
-        try {
-          return decodeURIComponent(raw);
-        } catch (_e) {
-          return raw;
-        }
+/**
+ * The script body. Written as a single raw string so bundlers can never
+ * insert `__name(...)` wrappers, rename identifiers, or otherwise rewrite
+ * what ships to the browser. Identifiers inside reference `c` (the inlined
+ * config object) and globals only.
+ *
+ * Behaviors:
+ *   1. Resolve theme: forced → cookie → local → session → initial → default.
+ *   2. Coerce `'system'` to a concrete theme based on `prefers-color-scheme`.
+ *   3. Apply attribute(s) and `color-scheme` style on the target element.
+ *   4. Set `<meta name="theme-color">` if requested.
+ *   5. Inject a transient transition-disable `<style>` if requested.
+ *   6. Re-run on `pageshow` when restored from bfcache (event.persisted).
+ */
+const SCRIPT_BODY = `
+var d=document;
+function rt(){
+  var el=d.documentElement;
+  try{var f=d.querySelector(c.tg);if(f)el=f;}catch(_){}
+  function rc(n){
+    var p=d.cookie?d.cookie.split('; '):[];
+    for(var i=0;i<p.length;i++){
+      var e=p[i].indexOf('=');
+      if(e<0)continue;
+      if(p[i].substring(0,e)===n){
+        var r=p[i].substring(e+1);
+        if(!r)return null;
+        try{return decodeURIComponent(r);}catch(_){return r;}
       }
     }
     return null;
-  };
-  const readLocal = (k: string): string | null => {
-    try {
-      return localStorage.getItem(k);
-    } catch (_e) {
-      return null;
-    }
-  };
-  const readSession = (k: string): string | null => {
-    try {
-      return sessionStorage.getItem(k);
-    } catch (_e) {
-      return null;
-    }
-  };
-
-  let theme: string | null = null;
-  if (c.f) {
-    theme = c.f;
-  } else {
-    const chain: StorageMode[] =
-      c.m === 'hybrid' ? (['cookie', 'local'] as StorageMode[]) : c.m === 'none' ? [] : [c.m];
-    for (let x = 0; x < chain.length && !theme; x++) {
-      const mm = chain[x];
-      if (mm === 'cookie') theme = readCookie(c.n);
-      else if (mm === 'local') theme = readLocal(c.k);
-      else if (mm === 'session') theme = readSession(c.k);
-    }
-    if (!theme && c.i) theme = c.i;
-    if (!theme) theme = c.d;
   }
-
-  // Normalize — `'system'` is only valid when enableSystem (c.s) is truthy.
-  // Fall through any misconfig (defaultTheme='system' with enableSystem=false)
-  // to the first configured theme, mirroring `normalizeSelection` in TS.
-  const systemAllowed = !!c.s;
-  if (theme === 'system' && !systemAllowed) theme = c.d;
-  if (theme !== 'system' && c.t.indexOf(theme) < 0) theme = c.d;
-  if (theme === 'system' && !systemAllowed) theme = c.t[0] || 'light';
-
-  let resolved = theme;
-  if (theme === 'system') {
-    resolved = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  function rl(k){try{return localStorage.getItem(k);}catch(_){return null;}}
+  function rs(k){try{return sessionStorage.getItem(k);}catch(_){return null;}}
+  var t=null;
+  if(c.f){t=c.f;}
+  else if(c.fs&&c.s){t='system';}
+  else{
+    var ch=c.m==='hybrid'?['cookie','local']:c.m==='none'?[]:[c.m];
+    for(var x=0;x<ch.length&&!t;x++){
+      var mm=ch[x];
+      if(mm==='cookie')t=rc(c.n);
+      else if(mm==='local')t=rl(c.k);
+      else if(mm==='session')t=rs(c.k);
+    }
+    if(!t&&c.i)t=c.i;
+    if(!t)t=c.d;
   }
+  var sa=!!c.s;
+  if(t==='system'&&!sa)t=c.d;
+  if(t!=='system'&&c.t.indexOf(t)<0)t=c.d;
+  if(t==='system'&&!sa)t=c.t[0]||'light';
+  var rv=t;
+  if(t==='system'){rv=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
+  var ap=c.v&&c.v[rv]!=null?c.v[rv]:rv;
 
-  const applied = c.v && c.v[resolved] != null ? c.v[resolved] : resolved;
-
-  for (let ai = 0; ai < c.a.length; ai++) {
-    const a = c.a[ai];
-    if (a === 'class') {
-      const all: Record<string, 1> = {};
-      for (let ti = 0; ti < c.t.length; ti++) {
-        const tn = c.t[ti];
-        const mv = c.v && c.v[tn] != null ? c.v[tn] : tn;
-        const pp = mv.split(/\s+/);
-        for (let pi = 0; pi < pp.length; pi++) if (pp[pi]) all[pp[pi]] = 1;
+  var changed=false;
+  for(var ai=0;ai<c.a.length;ai++){
+    var a=c.a[ai];
+    if(a==='class'){
+      var all={};
+      for(var ti=0;ti<c.t.length;ti++){
+        var tn=c.t[ti];
+        var mv=c.v&&c.v[tn]!=null?c.v[tn]:tn;
+        var pp=mv.split(/\\s+/);
+        for(var pi=0;pi<pp.length;pi++)if(pp[pi])all[pp[pi]]=1;
       }
-      if (c.s) {
-        const sv = c.v && c.v.system != null ? c.v.system : 'system';
-        const sp = sv.split(/\s+/);
-        for (let pi = 0; pi < sp.length; pi++) if (sp[pi]) all[sp[pi]] = 1;
+      if(c.s){
+        var sv=c.v&&c.v.system!=null?c.v.system:'system';
+        var sp=sv.split(/\\s+/);
+        for(var pi2=0;pi2<sp.length;pi2++)if(sp[pi2])all[sp[pi2]]=1;
       }
-      for (const k in all) el.classList.remove(k);
-      const ap = applied.split(/\s+/);
-      for (let pi = 0; pi < ap.length; pi++) if (ap[pi]) el.classList.add(ap[pi]);
-    } else {
-      el.setAttribute(a, applied);
+      var apl=ap.split(/\\s+/);
+      for(var pi3=0;pi3<apl.length;pi3++)if(apl[pi3])delete all[apl[pi3]];
+      for(var k in all)if(el.classList.contains(k)){el.classList.remove(k);changed=true;}
+      for(var pi4=0;pi4<apl.length;pi4++){
+        if(apl[pi4]&&!el.classList.contains(apl[pi4])){
+          el.classList.add(apl[pi4]);changed=true;
+        }
+      }
+    }else{
+      if(el.getAttribute(a)!==ap){el.setAttribute(a,ap);changed=true;}
     }
   }
 
-  if (c.cs && (resolved === 'light' || resolved === 'dark')) {
-    el.style.colorScheme = resolved;
+  if(c.cs&&(rv==='light'||rv==='dark')){
+    if(el.style.colorScheme!==rv)el.style.colorScheme=rv;
   }
 
-  if (c.tc) {
-    const col = typeof c.tc === 'string' ? c.tc : c.tc[resolved] || c.tc[theme];
-    if (col) {
-      let mt = d.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
-      if (!mt) {
-        mt = d.createElement('meta');
-        mt.name = 'theme-color';
-        d.head.appendChild(mt);
-      }
-      mt.setAttribute('content', col);
+  if(c.tc){
+    var col=typeof c.tc==='string'?c.tc:(c.tc[rv]||c.tc[t]);
+    if(col){
+      var mt=d.querySelector('meta[name="theme-color"]');
+      if(!mt){mt=d.createElement('meta');mt.name='theme-color';d.head.appendChild(mt);}
+      if(mt.getAttribute('content')!==col)mt.setAttribute('content',col);
     }
   }
 
-  if (c.dt) {
-    const rm = !!c.rrm && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!rm) {
-      const st = d.createElement('style');
+  if(c.dt&&changed){
+    var rm=!!c.rrm&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(!rm){
+      var st=d.createElement('style');
       st.appendChild(d.createTextNode(c.dt));
       d.head.appendChild(st);
-      if (d.body) void getComputedStyle(d.body).opacity;
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          st.remove();
-        });
-      });
+      if(d.body)void getComputedStyle(d.body).opacity;
+      requestAnimationFrame(function(){requestAnimationFrame(function(){st.remove();});});
     }
   }
 }
+rt();
+addEventListener('pageshow',function(e){if(e.persisted)rt();});
+`
+  // Collapse whitespace for a smaller payload. Keep this dumb — just
+  // newlines and indentation, never inside string literals.
+  .replace(/\n\s*/g, '');

@@ -1,3 +1,5 @@
+'use client';
+
 import { createContext, useContext, useSyncExternalStore } from 'react';
 import type { ThemeStore } from '../core/store';
 import type { SetThemeOptions, ThemeContract, ThemeState } from '../core/types';

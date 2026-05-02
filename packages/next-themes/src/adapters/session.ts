@@ -1,8 +1,9 @@
+import { hasSessionStorage } from '../core/env';
 import type { AdapterFactory, StorageAdapter } from './types';
 
 export const sessionAdapter: AdapterFactory = ({ key }): StorageAdapter => ({
   get() {
-    if (typeof window === 'undefined') return null;
+    if (!hasSessionStorage()) return null;
     try {
       return window.sessionStorage.getItem(key);
     } catch (_e) {
@@ -10,7 +11,7 @@ export const sessionAdapter: AdapterFactory = ({ key }): StorageAdapter => ({
     }
   },
   set(value) {
-    if (typeof window === 'undefined') return;
+    if (!hasSessionStorage()) return;
     try {
       window.sessionStorage.setItem(key, value);
     } catch (_e) {

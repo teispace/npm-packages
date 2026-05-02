@@ -1,3 +1,5 @@
+import { isDom } from './env';
+
 let lastPos: { x: number; y: number } | null = null;
 let installed = false;
 
@@ -12,9 +14,14 @@ function handler(e: PointerEvent): void {
  * transitions so the theme reveal expands from the point the user tapped.
  */
 export function ensureCursorTracker(): void {
-  if (installed || typeof document === 'undefined') return;
+  if (installed || !isDom()) return;
   installed = true;
-  document.addEventListener('pointerdown', handler, { capture: true, passive: true });
+  try {
+    document.addEventListener('pointerdown', handler, { capture: true, passive: true });
+  } catch (_e) {
+    /* environment doesn't support addEventListener — bail */
+    installed = false;
+  }
 }
 
 /** Get the last observed pointerdown position, or `null` if none yet. */

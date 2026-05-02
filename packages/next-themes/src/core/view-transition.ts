@@ -1,4 +1,5 @@
 import { getLastPointerPosition } from './cursor-tracker';
+import { hasMatchMedia, isDom } from './env';
 import type { TransitionConfig, TransitionOptions, TransitionOrigin } from './types';
 
 const MEDIA_REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
@@ -35,12 +36,12 @@ export function resolveTransition(
   const opts = toOptions(config);
   if (!opts) return null;
 
-  if (
-    respectReducedMotion &&
-    typeof window !== 'undefined' &&
-    window.matchMedia?.(MEDIA_REDUCED_MOTION).matches
-  ) {
-    return null;
+  if (respectReducedMotion && hasMatchMedia()) {
+    try {
+      if (window.matchMedia(MEDIA_REDUCED_MOTION).matches) return null;
+    } catch (_e) {
+      /* ignore — proceed with transition */
+    }
   }
 
   const duration = opts.duration ?? 250;
@@ -52,8 +53,8 @@ export function resolveTransition(
   if (type === 'fade') return { css: fadeCss(duration, easing), duration };
   if (type === 'circular') {
     const viewport = {
-      w: typeof window !== 'undefined' ? window.innerWidth : 1024,
-      h: typeof window !== 'undefined' ? window.innerHeight : 768,
+      w: isDom() ? window.innerWidth : 1024,
+      h: isDom() ? window.innerHeight : 768,
     };
     const origin = resolveOrigin(opts.origin, viewport);
     return { css: circularCss(origin, duration, easing), duration };

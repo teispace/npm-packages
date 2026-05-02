@@ -1,3 +1,5 @@
+'use client';
+
 import { useServerInsertedHTML } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { resolveAdapter } from '../adapters/index';
@@ -36,6 +38,7 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     themeColor,
     initialTheme,
     nonce,
+    noScript = false,
     transition,
     onChange,
   } = props;
@@ -73,7 +76,7 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
 
   const insertedRef = useRef(false);
   useServerInsertedHTML(() => {
-    if (insertedRef.current) return null;
+    if (insertedRef.current || noScript) return null;
     insertedRef.current = true;
     const script = buildScript({
       storageMode: storage,
@@ -83,6 +86,7 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
       themes,
       defaultTheme,
       enableSystem,
+      followSystem,
       forcedTheme: forcedTheme ?? null,
       initialTheme: initialTheme ?? null,
       value: value ?? null,

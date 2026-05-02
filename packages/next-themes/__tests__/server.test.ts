@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { acceptClientHintsHeader, readColorSchemeHint } from '../src/server/client-hint';
-import { getTheme, setThemeCookie } from '../src/server/get-theme';
+import { getTheme, getThemeScript, setThemeCookie } from '../src/server/get-theme';
 
 describe('readColorSchemeHint', () => {
   it('reads light from a Headers object', () => {
@@ -81,5 +81,27 @@ describe('getTheme', () => {
       headers: new Headers({ 'sec-ch-prefers-color-scheme': 'dark' }),
     });
     expect(t).toBe('light');
+  });
+});
+
+describe('getThemeScript', () => {
+  it('returns an IIFE-wrapped inline script', () => {
+    const s = getThemeScript({});
+    expect(s.startsWith('!function')).toBe(true);
+    expect(s.endsWith('}();')).toBe(true);
+  });
+
+  it('honors the same options as the provider script', () => {
+    const s = getThemeScript({
+      attribute: 'class',
+      themes: ['light', 'dark', 'sepia'],
+      defaultTheme: 'sepia',
+    });
+    expect(s).toContain('"sepia"');
+    expect(s).toContain('"d":"sepia"');
+  });
+
+  it('contains no esbuild __name artifacts', () => {
+    expect(getThemeScript({})).not.toMatch(/__name\(/);
   });
 });

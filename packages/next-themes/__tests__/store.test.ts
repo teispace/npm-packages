@@ -98,4 +98,50 @@ describe('createStore', () => {
     expect(document.documentElement.style.colorScheme).toBe('dark');
     s.unmount();
   });
+
+  it('does not inject disable-transition <style> on first mount', () => {
+    document.head.querySelectorAll('style[data-test-leftover]').forEach((el) => el.remove());
+    window.localStorage.setItem('theme', 'dark');
+    document.documentElement.classList.add('dark');
+    const beforeStyles = document.head.querySelectorAll('style').length;
+    const s = createStore({
+      ...defaults(),
+      disableTransitionOnChange: true,
+    });
+    s.mount();
+    // Style count should not increase on mount — the inline script handled
+    // the initial paint, so re-injecting a disable-transition style is
+    // wasted DOM thrash and itself a flicker source.
+    expect(document.head.querySelectorAll('style').length).toBe(beforeStyles);
+    s.unmount();
+  });
+
+  it('re-reads storage on bfcache pageshow', () => {
+    window.localStorage.setItem('theme', 'light');
+    const s = createStore({ ...defaults(), enableSystem: false, defaultTheme: 'light' });
+    s.mount();
+    expect(s.getState().theme).toBe('light');
+    // Simulate a bfcache restore where another tab changed the theme.
+    window.localStorage.setItem('theme', 'dark');
+    const event = new Event('pageshow') as PageTransitionEvent;
+    Object.defineProperty(event, 'persisted', { value: true });
+    window.dispatchEvent(event);
+    expect(s.getState().theme).toBe('dark');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    s.unmount();
+  });
+
+  it('ignores non-persisted pageshow (normal navigation)', () => {
+    window.localStorage.setItem('theme', 'light');
+    const s = createStore({ ...defaults(), enableSystem: false, defaultTheme: 'light' });
+    s.mount();
+    window.localStorage.setItem('theme', 'dark');
+    const event = new Event('pageshow') as PageTransitionEvent;
+    Object.defineProperty(event, 'persisted', { value: false });
+    window.dispatchEvent(event);
+    // Non-persisted pageshow fires on every load; we should NOT react,
+    // since the inline script already handled this case.
+    expect(s.getState().theme).toBe('light');
+    s.unmount();
+  });
 });

@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useRef } from 'react';
 import { resolveAdapter } from '../adapters/index';
 import { ensureCursorTracker } from '../core/cursor-tracker';
@@ -37,6 +39,7 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     themeColor,
     initialTheme,
     nonce,
+    noScript = false,
     transition,
     onChange,
   } = props;
@@ -72,37 +75,42 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     };
   }, []);
 
-  const script = buildScript({
-    storageMode: storage,
-    storageKey,
-    cookieName: cookieOptions?.name ?? storageKey,
-    attribute,
-    themes,
-    defaultTheme,
-    enableSystem,
-    forcedTheme: forcedTheme ?? null,
-    initialTheme: initialTheme ?? null,
-    value: value ?? null,
-    enableColorScheme,
-    themeColor: themeColor ?? null,
-    disableTransitionOnChange:
-      disableTransitionOnChange === true
-        ? DISABLE_CSS
-        : typeof disableTransitionOnChange === 'string'
-          ? disableTransitionOnChange
-          : null,
-    respectReducedMotion,
-    target,
-  });
+  const script = noScript
+    ? null
+    : buildScript({
+        storageMode: storage,
+        storageKey,
+        cookieName: cookieOptions?.name ?? storageKey,
+        attribute,
+        themes,
+        defaultTheme,
+        enableSystem,
+        followSystem,
+        forcedTheme: forcedTheme ?? null,
+        initialTheme: initialTheme ?? null,
+        value: value ?? null,
+        enableColorScheme,
+        themeColor: themeColor ?? null,
+        disableTransitionOnChange:
+          disableTransitionOnChange === true
+            ? DISABLE_CSS
+            : typeof disableTransitionOnChange === 'string'
+              ? disableTransitionOnChange
+              : null,
+        respectReducedMotion,
+        target,
+      });
 
   return (
     <ThemeStoreContext.Provider value={storeRef.current}>
-      <script
-        suppressHydrationWarning
-        nonce={nonce}
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: anti-FOUC inline script
-        dangerouslySetInnerHTML={{ __html: script }}
-      />
+      {script ? (
+        <script
+          suppressHydrationWarning
+          nonce={nonce}
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: anti-FOUC inline script
+          dangerouslySetInnerHTML={{ __html: script }}
+        />
+      ) : null}
       {children}
     </ThemeStoreContext.Provider>
   );

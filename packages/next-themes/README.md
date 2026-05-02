@@ -96,41 +96,25 @@ bun add @teispace/next-themes
 Three files: a provider boundary, a server-side seed, and your app code.
 
 ```tsx
-// app/providers.tsx
-'use client';
+// app/layout.tsx — STAYS A SERVER COMPONENT
 import { ThemeProvider } from '@teispace/next-themes';
-
-export function Providers({
-  children,
-  initialTheme,
-}: {
-  children: React.ReactNode;
-  initialTheme: string | null;
-}) {
-  return (
-    <ThemeProvider attribute="class" initialTheme={initialTheme ?? undefined}>
-      {children}
-    </ThemeProvider>
-  );
-}
-```
-
-```tsx
-// app/layout.tsx
 import { getTheme } from '@teispace/next-themes/server';
-import { Providers } from './providers';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const initialTheme = await getTheme();
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <Providers initialTheme={initialTheme}>{children}</Providers>
+        <ThemeProvider attribute="class" initialTheme={initialTheme ?? undefined}>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
 }
 ```
+
+**No `'use client'` required in your code.** `<ThemeProvider>` ships its own client boundary, so you can drop it into a server component (including `app/layout.tsx`) and Next.js handles the boundary automatically. Your `<html>`, `<body>`, and any siblings remain server-rendered.
 
 ```tsx
 // any client component
@@ -148,6 +132,39 @@ export function Toggle() {
 ```
 
 That's it. The anti-FOUC script is injected server-side via `useServerInsertedHTML`, the theme is read from the cookie on the server, and the client picks up without mismatch.
+
+#### Zero-flicker setup (recommended for production)
+
+`useServerInsertedHTML` places the script wherever React reaches its first flush boundary — usually inside `<body>`. With streaming, partial prerendering, or `cacheComponents`, the body's first bytes can paint before the script lands, briefly showing the wrong theme. To eliminate every possible flicker source, render the script directly in `<head>` and tell the provider to skip its own injection:
+
+```tsx
+// app/layout.tsx — still a server component
+import { ThemeProvider } from '@teispace/next-themes';
+import { getTheme, getThemeScript } from '@teispace/next-themes/server';
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const initialTheme = await getTheme();
+  const themeScript = getThemeScript({
+    attribute: 'class',
+    initialTheme: initialTheme ?? undefined,
+  });
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: anti-FOUC */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body>
+        <ThemeProvider attribute="class" initialTheme={initialTheme ?? undefined} noScript>
+          {children}
+        </ThemeProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+This guarantees the inline script runs **before** the browser paints any body pixels, regardless of how Next.js streams the response. Pass the same options to `getThemeScript()` and `<ThemeProvider>` so they stay in sync — or use [`createThemes()`](#typed-factory--createthemes) so the configuration lives in one place.
 
 ### Vite / Remix / Generic React
 
@@ -445,7 +462,7 @@ useThemeEffect((theme) => { /* ... */ }, [user.id]);
 
 ### `<ThemedImage />`
 
-Swap `<img src>` based on the active theme. Hydration-safe via a mount flag — the fallback renders on the server and for the first client frame, then the correct variant swaps in.
+Swap `<img src>` based on the active theme. Reads from the external store directly, so when the provider is seeded with `initialTheme` from the server cookie, the **very first render** (server and client) picks the correct variant — no mount flag, no post-hydration swap, no flash.
 
 ```tsx
 import { ThemedImage } from '@teispace/next-themes';
@@ -460,7 +477,9 @@ import { ThemedImage } from '@teispace/next-themes';
 />
 ```
 
-For pixel-perfect SSR switching without a mount flag (advanced), use CSS with theme-scoped `display`:
+If the resolved theme could legitimately differ between server and client (e.g. `theme="system"` with no client hint), wrap the usage in a `<span suppressHydrationWarning>` or use the CSS pattern below.
+
+For pixel-perfect SSR switching driven entirely by CSS, use theme-scoped `display`:
 
 ```css
 html[data-theme="dark"] .logo-light { display: none; }
@@ -693,6 +712,46 @@ npx jscodeshift --parser=tsx \
 1. Default `storage` is `'hybrid'` (was localStorage-only). To preserve exact old behavior, set `storage="local"`.
 2. `onChange(theme, resolvedTheme)` in this lib receives both values (was just the selected value). Harmless change unless you branched on the single argument.
 3. Nested `<ThemeProvider>` in this lib maintain independent state — the outer one no longer leaks. If you were relying on nested providers being no-ops, remove the inner ones.
+4. `<ThemedImage>` / `<ThemedIcon>` no longer use a mount-flag delay — when the provider has `initialTheme` seeded from the cookie, the first render is correct. If you relied on `fallbackSrc` showing for a frame, remove that expectation; otherwise this is a strict improvement.
+5. `ThemeProvider`, hooks, and theme-aware components ship with the `'use client'` directive baked in. You can drop `<ThemeProvider>` directly into a server `app/layout.tsx` — no wrapper file needed.
+
+**Upstream `next-themes` issues this package resolves:**
+
+| # | Issue | How we fix it |
+|---|---|---|
+| #389 | `localStorage.getItem is not a function` on Node 25 (`window === globalThis`) | Capability probes (`hasLocalStorage()`, `isDom()`, ...) instead of `typeof window` checks. |
+| #387 / #385 | Inline `<script>` warning in React 19 / Next 16 | Script injected via `useServerInsertedHTML`, or out of the React tree via `getThemeScript()` in `<head>`. |
+| #375 | Stale theme with `cacheComponents` / `Activity` | Store lives outside React via `useSyncExternalStore` — never stale. |
+| #374 | `react-hooks/set-state-in-effect` ESLint warning | We never `setState` in effect; external store updates flow through `useSyncExternalStore`. |
+| #373 | Tailwind v4 toggle failure | First-class v4 preset at `@teispace/next-themes/tailwind.css`. |
+| #371 | `prefers-color-scheme` ignored | Script + store both subscribe to the media query directly. |
+| #370 / #369 / #368 | `__name is not defined` / minification / Cloudflare flash | Inline script body is a raw string literal (not a serialized function); build asserts no `__name(` survives. |
+| #367 | `children` missing on `ThemeProviderProps` | Props include `children?: ReactNode`. |
+| #351 | Theme class removed on back/forward | `pageshow` re-resolves on bfcache restore (script + store). |
+| #349 | Generate script string at build time | `getThemeScript()` exported from `/server`. |
+| #345 | LS overrides system after `setTheme` | `followSystem` prop forces system tracking and is honored by the inline script. |
+| #326 / #325 | Suspense / hydration boundary breaks with provider | `useSyncExternalStore` instead of `useState` + effect. |
+| #311 | Image example flickers on initial load | `<ThemedImage>` no longer waits for mount; honors `initialTheme`. |
+| #308 / #240 | `enableSystem={false}` + `defaultTheme` | `normalizeSelection` enforces the contract end-to-end. |
+| #295 | Don't store in localStorage | `storage="none"`. |
+| #292 | Multiple classes per theme | `value` map accepts space-separated class strings. |
+| #254 / #215 / #219 | Nested / multi-provider | Per-instance stores; `<ScopedTheme>` for sub-tree overrides. |
+| #242 | Flash with `basePath` | Script doesn't depend on path; pre-paint placement via `getThemeScript()` eliminates flash. |
+| #236 | Multiple attributes | `attribute={['class', 'data-theme']}`. |
+| #226 / #187 | Force theme per route (App Router) | Route-group `<ThemeProvider forcedTheme="...">`. |
+| #213 | XSS via cookie / `forcedTheme` value | Inline-script JSON is HTML-safe encoded (`</script>`, U+2028/9 escaped). |
+| #199 | Theme flips after login | Hybrid heal-on-read + bfcache `pageshow`. |
+| #164 | Track system after `setTheme` | `setTheme('system')` returns to system tracking; or use `followSystem`. |
+| #149 | Type-safe themes | `createThemes<T>()` factory with literal-tuple inference. |
+| #144 | Class on `<body>` | `target="body"`. |
+| #142 | Custom resolved theme | `value` map. |
+| #78 | `theme-color` meta sync | `themeColor` prop. |
+| #72 | sessionStorage | `storage="session"`. |
+| #70 | `finalTheme` | Exposed as `resolvedTheme`. |
+| #63 | Storybook `forcedTheme` not applying class | Forced themes apply to DOM on mount. |
+| #48 | Init from server DB | `initialTheme` prop, paired with `getTheme()` for cookie reads. |
+
+Genuine open feature requests not in scope: themes-with-themes (#309, #73), storybook addon (#63 has a workaround).
 
 ---
 
@@ -720,6 +779,7 @@ npx jscodeshift --parser=tsx \
 | `themeColor` | `string \| Record<string, string>` | — | Sync `<meta name="theme-color">`. |
 | `initialTheme` | `string` | — | Seed from the server (cookie, DB, session). |
 | `nonce` | `string` | — | CSP nonce for the inline anti-FOUC script. |
+| `noScript` | `boolean` | `false` | Skip the inline script. Use when you have rendered `getThemeScript()` in `<head>` yourself — most flicker-resistant placement. |
 | `transition` | `TransitionConfig` | — | Animate theme changes via View Transitions. |
 | `onChange` | `(theme, resolvedTheme) => void` | — | Fires on every theme change. |
 
@@ -775,7 +835,7 @@ interface ThemeState {
 |---|---|
 | `@teispace/next-themes` | Next.js App Router provider + hooks + components + `createThemes` |
 | `@teispace/next-themes/client` | Same API, generic React (Vite, Remix, CRA) |
-| `@teispace/next-themes/server` | `getTheme`, `setThemeCookie`, `writeThemeCookie`, `readColorSchemeHint`, `acceptClientHintsHeader` |
+| `@teispace/next-themes/server` | `getTheme`, `getThemeScript`, `setThemeCookie`, `writeThemeCookie`, `readColorSchemeHint`, `acceptClientHintsHeader` |
 | `@teispace/next-themes/adapters` | Storage adapter factories + cookie helpers |
 | `@teispace/next-themes/script` | `buildScript({...})` — raw inline script builder |
 | `@teispace/next-themes/tailwind` | v3 `darkMode` + `themeVariant(name)` helpers |
@@ -906,14 +966,20 @@ Add `suppressHydrationWarning` to your `<html>` tag. The library already does th
 
 ### The first paint is still flashing
 
-Two causes:
+Causes, in order of likelihood:
 
-1. You're on `storage="local"` or `storage="session"`, which aren't server-readable. Switch to `'hybrid'` or `'cookie'`.
-2. You're on `'hybrid'` / `'cookie'` but haven't wired `getTheme()` into your layout. Without `initialTheme`, the server renders with `defaultTheme`, which may disagree with the cookie-stored preference. Add:
+1. **Script runs too late.** `useServerInsertedHTML` places the inline script at the next React flush boundary, which on streamed responses can be inside `<body>` — after some pixels paint. Switch to the [zero-flicker setup](#zero-flicker-setup-recommended-for-production): render `getThemeScript()` directly in `<head>` and pass `noScript` to your provider. This is the most reliable fix.
+2. **Storage isn't server-readable.** `storage="local"` and `storage="session"` are client-only. Switch to `'hybrid'` (default) or `'cookie'`.
+3. **`initialTheme` not wired.** Without it, the server renders with `defaultTheme`, which may disagree with the cookie-stored preference and cause a one-frame flip:
    ```tsx
    const initialTheme = await getTheme();
    <ThemeProvider initialTheme={initialTheme ?? undefined}>
    ```
+4. **Cookie blocked / expired.** Hybrid storage now self-heals: when the cookie is missing but localStorage has a value, the cookie is rewritten on read so the server sees it on the next request. If you still see a flash, check that the cookie isn't blocked by an iframe sandbox, ITP, or a CDN that strips `Set-Cookie`.
+
+### Theme briefly flips when navigating back from another page
+
+This is the browser's bfcache (back/forward cache) showing a stale snapshot. The library now re-runs the inline script on `pageshow` when `event.persisted === true`, and the React store also re-reads storage at the same time. If you've forked the script or pinned an old version, upgrade.
 
 ### The circular reveal doesn't expand from the click
 

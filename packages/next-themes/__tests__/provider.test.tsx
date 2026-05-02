@@ -99,4 +99,14 @@ describe('ThemeProvider (client)', () => {
     expect(scripts.length).toBeGreaterThan(0);
     expect(scripts[0].innerHTML).toContain('!function');
   });
+
+  it('omits the inline script when noScript is set', () => {
+    const { container } = render(
+      <ThemeProvider storage="local" noScript>
+        <Consumer />
+      </ThemeProvider>,
+    );
+    const scripts = container.querySelectorAll('script');
+    expect(scripts.length).toBe(0);
+  });
 });
