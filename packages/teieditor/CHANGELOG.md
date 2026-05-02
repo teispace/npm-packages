@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.4](https://github.com/teispace/npm-packages/compare/teieditor-v1.5.3...teieditor-v1.5.4) (2026-05-02)
+
+
+### Miscellaneous Chores
+
+* update react and react-dom dependencies to version ^19.2.5 ([9c119bf](https://github.com/teispace/npm-packages/commit/9c119bfd1444eff3761670e13f36c60fa9d6006f))
+
 ## [1.5.3](https://github.com/teispace/npm-packages/compare/teieditor-v1.5.2...teieditor-v1.5.3) (2026-05-02)
 
 
