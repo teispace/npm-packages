@@ -144,4 +144,16 @@ describe('createStore', () => {
     expect(s.getState().theme).toBe('light');
     s.unmount();
   });
+
+  it('setTheme accepts an updater function (upstream SetStateAction parity)', () => {
+    // Mirrors React's `Dispatch<SetStateAction<string>>` so existing
+    // upstream `next-themes` code (`setTheme(prev => ...)`) keeps working.
+    window.localStorage.setItem('theme', 'light');
+    const s = createStore({ ...defaults(), enableSystem: false, defaultTheme: 'light' });
+    expect(s.getState().theme).toBe('light');
+    s.setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+    expect(s.getState().theme).toBe('dark');
+    s.setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    expect(s.getState().theme).toBe('light');
+  });
 });

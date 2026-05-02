@@ -109,4 +109,56 @@ describe('ThemeProvider (client)', () => {
     const scripts = container.querySelectorAll('script');
     expect(scripts.length).toBe(0);
   });
+
+  it('forwards scriptProps onto the inline <script> (upstream parity)', () => {
+    // Upstream `next-themes` exposes `scriptProps` for things like
+    // `data-*` attributes or the `type: 'application/json'` workaround.
+    // We accept it for migration parity and forward onto our existing tag.
+    const { container } = render(
+      <ThemeProvider
+        storage="local"
+        nonce="abc123"
+        scriptProps={{ id: 'theme-init', 'data-test': 'forwarded' } as never}
+      >
+        <Consumer />
+      </ThemeProvider>,
+    );
+    const script = container.querySelector('script');
+    expect(script).not.toBeNull();
+    expect(script?.id).toBe('theme-init');
+    expect(script?.getAttribute('data-test')).toBe('forwarded');
+    // nonce is set by us LAST so user-supplied scriptProps cannot strip it.
+    expect(script?.getAttribute('nonce')).toBe('abc123');
+  });
+
+  it('useTheme.setTheme accepts an updater function', () => {
+    function FnConsumer() {
+      const { theme, setTheme } = useTheme();
+      return (
+        <div>
+          <span data-testid="theme">{theme}</span>
+          <button
+            type="button"
+            onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+          >
+            toggle
+          </button>
+        </div>
+      );
+    }
+    render(
+      <ThemeProvider storage="local" defaultTheme="light" enableSystem={false}>
+        <FnConsumer />
+      </ThemeProvider>,
+    );
+    expect(screen.getByTestId('theme').textContent).toBe('light');
+    act(() => {
+      fireEvent.click(screen.getByText('toggle'));
+    });
+    expect(screen.getByTestId('theme').textContent).toBe('dark');
+    act(() => {
+      fireEvent.click(screen.getByText('toggle'));
+    });
+    expect(screen.getByTestId('theme').textContent).toBe('light');
+  });
 });

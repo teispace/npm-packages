@@ -64,8 +64,16 @@ export interface SetThemeOptions {
   transition?: TransitionConfig;
 }
 
+/**
+ * Accepts either a concrete theme string or an updater function that receives
+ * the currently-selected theme and returns the next one. Mirrors React's
+ * `Dispatch<SetStateAction<string>>` so code written for upstream `next-themes`
+ * (`setTheme(prev => prev === 'dark' ? 'light' : 'dark')`) keeps working.
+ */
+export type SetThemeAction = string | ((prev: string) => string);
+
 export type ThemeContract = ThemeState & {
-  setTheme: (theme: string, options?: SetThemeOptions) => void;
+  setTheme: (theme: SetThemeAction, options?: SetThemeOptions) => void;
 };
 
 export type Listener = (state: ThemeState) => void;

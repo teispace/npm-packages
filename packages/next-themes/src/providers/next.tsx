@@ -39,6 +39,7 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     initialTheme,
     nonce,
     noScript = false,
+    scriptProps,
     transition,
     onChange,
   } = props;
@@ -103,6 +104,7 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     });
     return (
       <script
+        {...scriptProps}
         nonce={nonce}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: anti-FOUC inline script
         dangerouslySetInnerHTML={{ __html: script }}

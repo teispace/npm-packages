@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, ScriptHTMLAttributes } from 'react';
 import type { Attribute, CookieOptions, StorageMode, TransitionConfig } from '../core/types';
 
 export interface ThemeProviderProps {
@@ -44,6 +44,25 @@ export interface ThemeProviderProps {
 
   /** CSP nonce for the inline script. */
   nonce?: string;
+
+  /**
+   * Extra props forwarded to the inline anti-FOUC `<script>` element. Mirrors
+   * upstream `next-themes`'s prop of the same name so existing code migrates
+   * unchanged. We control `dangerouslySetInnerHTML` and the `nonce`; anything
+   * else (e.g. `data-*` attributes) is forwarded as-is.
+   *
+   * Note: this provider already injects the script via `useServerInsertedHTML`,
+   * so the React-19 "scripts inside components are never executed" warning
+   * does NOT occur here — you do not need the `type: 'application/json'`
+   * workaround that some upstream users adopt. The prop is accepted for
+   * compatibility.
+   */
+  scriptProps?: Omit<
+    ScriptHTMLAttributes<HTMLScriptElement>,
+    'dangerouslySetInnerHTML' | 'children' | 'nonce'
+  > & {
+    [dataAttribute: `data-${string}`]: string | number | boolean | undefined;
+  };
 
   /**
    * Skip injecting the inline anti-FOUC script. Use this when you have

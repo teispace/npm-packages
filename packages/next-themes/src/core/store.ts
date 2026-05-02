@@ -11,7 +11,14 @@ import {
 } from './dom';
 import { hasWindowEvents, isDom } from './env';
 import { normalizeSelection } from './resolve';
-import type { Attribute, Listener, SetThemeOptions, ThemeState, TransitionConfig } from './types';
+import type {
+  Attribute,
+  Listener,
+  SetThemeAction,
+  SetThemeOptions,
+  ThemeState,
+  TransitionConfig,
+} from './types';
 import { resolveTransition, startViewTransition } from './view-transition';
 
 export interface StoreOptions {
@@ -36,7 +43,7 @@ export interface StoreOptions {
 export interface ThemeStore {
   getState: () => ThemeState;
   subscribe: (l: Listener) => () => void;
-  setTheme: (theme: string, options?: SetThemeOptions) => void;
+  setTheme: (theme: SetThemeAction, options?: SetThemeOptions) => void;
   /** Start side-effect subscriptions (system/storage). Idempotent. */
   mount: () => void;
   /** Tear down subscriptions. */
@@ -158,8 +165,11 @@ export function createStore(opts: StoreOptions): ThemeStore {
     onChange?.(next.theme, next.resolvedTheme);
   }
 
-  function setTheme(raw: string, options?: SetThemeOptions): void {
+  function setTheme(action: SetThemeAction, options?: SetThemeOptions): void {
     if (forcedTheme) return;
+    // Mirror React's SetStateAction: when given an updater, resolve against
+    // the currently-selected theme so consumers can do `setTheme(p => ...)`.
+    const raw = typeof action === 'function' ? action(state.theme) : action;
     const isSys = raw === 'system' && enableSystem;
     // Reject unknown values — `'system'` is only valid when `enableSystem`.
     if (!isSys && !themes.includes(raw)) return;

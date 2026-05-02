@@ -10,6 +10,7 @@ export { ScopedTheme, ThemedIcon, ThemedImage } from './components/index';
 export type {
   Attribute,
   CookieOptions,
+  SetThemeAction,
   SetThemeOptions,
   StorageConfig,
   StorageMode,

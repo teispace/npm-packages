@@ -21,7 +21,10 @@ const EMPTY: ThemeState = {
 export function useTheme<T extends string = string>(): ThemeContract & {
   theme: T | 'system';
   resolvedTheme: T;
-  setTheme: (theme: T | 'system', options?: SetThemeOptions) => void;
+  setTheme: (
+    theme: T | 'system' | ((prev: T | 'system') => T | 'system'),
+    options?: SetThemeOptions,
+  ) => void;
 } {
   const store = useContext(ThemeStoreContext);
   const state = useSyncExternalStore(
