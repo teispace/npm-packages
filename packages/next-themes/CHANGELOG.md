@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/teispace/npm-packages/compare/next-themes-v0.4.0...next-themes-v0.4.1) (2026-05-03)
+
+
+### Documentation
+
+* clarify useTheme() error handling and troubleshooting steps in README ([d0be2a8](https://github.com/teispace/npm-packages/commit/d0be2a8d9bb4178a5050c4376cf7e2bb29e8a855))
+
 ## [0.4.0](https://github.com/teispace/npm-packages/compare/next-themes-v0.3.2...next-themes-v0.4.0) (2026-05-02)
 
 
