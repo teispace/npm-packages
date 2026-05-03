@@ -995,7 +995,17 @@ Either import the v4 preset (`@import "@teispace/next-themes/tailwind.css";`) or
 
 ### I get "useTheme() called outside a ThemeProvider"
 
-Exactly that — the component is rendered outside the provider tree. In dev the hook logs a warning and returns inert values. Wrap your app in `<ThemeProvider>` (or a factory-returned provider).
+The hook logs this in dev when `useContext(ThemeStoreContext)` returns `null` — i.e. there's no `<ThemeProvider>` ancestor in the React tree at the point `useTheme()` runs. The hook then returns inert defaults instead of throwing, so the page still renders. In React Strict Mode you'll see the message printed twice (one render per pass) — that's expected, not a second bug.
+
+If your code clearly wraps the consumer in `<ThemeProvider>` and you still see this, check in order:
+
+1. **The consumer really is a descendant.** It's easy to read your tree and miss that the call lives in a parallel route slot, an `error.tsx` / `not-found.tsx` rendered above the provider, a server-side path (Route Handler, `metadata`, RSC running before the client provider mounts), or a portal that escapes the subtree. The provider only covers what's rendered as `children`.
+
+2. **Two copies of `@teispace/next-themes` in `node_modules`.** If a dependency pulls in its own copy at a different version, your code and that dependency import different `ThemeStoreContext` objects, so `useContext` on one returns `null` even though the other is mounted. Run `npm ls @teispace/next-themes` (or `pnpm why` / `yarn why`); if you see more than one entry, dedupe (`npm dedupe`, `pnpm dedupe`).
+
+3. **Stale build cache after upgrade.** `rm -rf node_modules .next && <your-pkg-mgr> install` rules this out.
+
+4. **Mixed entries are fine.** Importing `<ThemeProvider>` from `@teispace/next-themes` and `useTheme` from `@teispace/next-themes/client` (or vice versa) shares the same context — the subpaths re-export the same module — so this isn't the cause.
 
 ### My CSP blocks the inline script
 
