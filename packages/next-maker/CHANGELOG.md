@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.19.2](https://github.com/teispace/npm-packages/compare/next-maker-v1.19.1...next-maker-v1.19.2) (2026-05-06)
+
+
+### Miscellaneous Chores
+
+* upgrade deps to latest and clean up workspace dep boundaries ([d5a2137](https://github.com/teispace/npm-packages/commit/d5a2137079de7db9becdeb3f27fbf00b1b7c1ba7))
+* upgrade deps to latest and clean up workspace dep boundaries ([81e201c](https://github.com/teispace/npm-packages/commit/81e201c9f6c21b80fa37fd61ea0890d37181cd73))
+
 ## [1.19.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.19.0...next-maker-v1.19.1) (2026-04-29)
 
 

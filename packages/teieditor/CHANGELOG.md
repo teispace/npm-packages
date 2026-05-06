@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.5](https://github.com/teispace/npm-packages/compare/teieditor-v1.5.4...teieditor-v1.5.5) (2026-05-06)
+
+
+### Miscellaneous Chores
+
+* upgrade deps to latest and clean up workspace dep boundaries ([d5a2137](https://github.com/teispace/npm-packages/commit/d5a2137079de7db9becdeb3f27fbf00b1b7c1ba7))
+* upgrade deps to latest and clean up workspace dep boundaries ([81e201c](https://github.com/teispace/npm-packages/commit/81e201c9f6c21b80fa37fd61ea0890d37181cd73))
+
 ## [1.5.4](https://github.com/teispace/npm-packages/compare/teieditor-v1.5.3...teieditor-v1.5.4) (2026-05-02)
 
 
