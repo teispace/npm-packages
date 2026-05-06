@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.1](https://github.com/teispace/npm-packages/compare/next-maker-v1.20.0...next-maker-v1.20.1) (2026-05-06)
+
+
+### Bug Fixes
+
+* **next-themes:** sync runtime props, validate cookies, harden hooks ([#68](https://github.com/teispace/npm-packages/issues/68)) ([05dc87c](https://github.com/teispace/npm-packages/commit/05dc87c5155d0919a1b179b8e7b842beebe65596))
+
 ## [1.20.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.19.2...next-maker-v1.20.0) (2026-05-06)
 
 
