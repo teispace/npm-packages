@@ -156,4 +156,62 @@ describe('createStore', () => {
     s.setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
     expect(s.getState().theme).toBe('light');
   });
+
+  it('update({ forcedTheme }) snaps state to the forced value', () => {
+    window.localStorage.setItem('theme', 'light');
+    const s = createStore({ ...defaults(), enableSystem: false, defaultTheme: 'light' });
+    s.mount();
+    expect(s.getState().theme).toBe('light');
+    s.update({ forcedTheme: 'dark' });
+    expect(s.getState().theme).toBe('dark');
+    expect(s.getState().forcedTheme).toBe('dark');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    s.unmount();
+  });
+
+  it('update({ forcedTheme: null }) restores stored selection', () => {
+    window.localStorage.setItem('theme', 'light');
+    const s = createStore({
+      ...defaults(),
+      enableSystem: false,
+      defaultTheme: 'light',
+      forcedTheme: 'dark',
+    });
+    s.mount();
+    expect(s.getState().theme).toBe('dark');
+    s.update({ forcedTheme: null });
+    expect(s.getState().theme).toBe('light');
+    expect(s.getState().forcedTheme).toBe(null);
+    s.unmount();
+  });
+
+  it('update({ onChange }) swaps the callback live', () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const s = createStore({
+      ...defaults(),
+      enableSystem: false,
+      defaultTheme: 'light',
+      onChange: first,
+    });
+    s.mount();
+    s.setTheme('dark');
+    expect(first).toHaveBeenCalledTimes(1);
+    s.update({ onChange: second });
+    s.setTheme('light');
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).toHaveBeenCalledTimes(1);
+    s.unmount();
+  });
+
+  it('update({ themeColor }) re-applies <meta theme-color> without changing state', () => {
+    window.localStorage.setItem('theme', 'dark');
+    const s = createStore({ ...defaults(), enableSystem: false, defaultTheme: 'dark' });
+    s.mount();
+    expect(document.querySelector('meta[name="theme-color"]')).toBeNull();
+    s.update({ themeColor: { light: '#fff', dark: '#000' } });
+    const meta = document.querySelector('meta[name="theme-color"]');
+    expect(meta?.getAttribute('content')).toBe('#000');
+    s.unmount();
+  });
 });

@@ -82,5 +82,8 @@ function makeScopedStore(theme: string): ThemeStore {
     },
     mount: () => {},
     unmount: () => {},
+    update: () => {
+      /* scoped trees are forced — no runtime updates */
+    },
   };
 }

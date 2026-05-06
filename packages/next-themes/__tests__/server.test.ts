@@ -82,6 +82,42 @@ describe('getTheme', () => {
     });
     expect(t).toBe('light');
   });
+
+  it('rejects a cookie value not in the themes whitelist', async () => {
+    // Stale cookie from a previous theme configuration. Without validation
+    // the server would render a stale attribute the client then normalizes
+    // away — a real hydration mismatch source.
+    const t = await getTheme({
+      cookieHeader: 'theme=sepia',
+      themes: ['light', 'dark'],
+    });
+    expect(t).toBeNull();
+  });
+
+  it('accepts "system" as a cookie value regardless of the whitelist', async () => {
+    const t = await getTheme({
+      cookieHeader: 'theme=system',
+      themes: ['light', 'dark'],
+    });
+    expect(t).toBe('system');
+  });
+
+  it('accepts a cookie value that is in the whitelist', async () => {
+    const t = await getTheme({
+      cookieHeader: 'theme=dark',
+      themes: ['light', 'dark'],
+    });
+    expect(t).toBe('dark');
+  });
+
+  it('falls back to the hint when the cookie fails the whitelist', async () => {
+    const t = await getTheme({
+      cookieHeader: 'theme=garbage',
+      headers: new Headers({ 'sec-ch-prefers-color-scheme': 'dark' }),
+      themes: ['light', 'dark'],
+    });
+    expect(t).toBe('dark');
+  });
 });
 
 describe('getThemeScript', () => {

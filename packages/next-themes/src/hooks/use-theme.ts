@@ -6,13 +6,36 @@ import type { SetThemeOptions, ThemeContract, ThemeState } from '../core/types';
 
 export const ThemeStoreContext = createContext<ThemeStore | null>(null);
 
+/**
+ * Inert state used when `useTheme()` is called outside a `ThemeProvider`.
+ * Empty strings (rather than the previous `'system'`/`'light'` placeholders)
+ * are deliberate: a consumer that branches on `theme === 'dark'` should NOT
+ * accidentally match because there happened to be a default sentinel value.
+ *
+ * `themes: []` is the load-bearing invariant — code can robustly detect
+ * "provider not mounted yet" via `themes.length === 0`.
+ */
 const EMPTY: ThemeState = {
-  theme: 'system',
-  resolvedTheme: 'light',
+  theme: '',
+  resolvedTheme: '',
   systemTheme: null,
   forcedTheme: null,
   themes: [],
 };
+
+const NOOP_SET = (): void => {
+  /* no provider — set is inert */
+};
+
+let warned = false;
+function warnNoProvider(): void {
+  if (warned) return;
+  warned = true;
+  // Once-per-session warn so noisy consumer trees don't flood the console.
+  console.warn(
+    '[@teispace/next-themes] useTheme() called outside a ThemeProvider. Returning inert values (theme="", themes=[]).',
+  );
+}
 
 /**
  * Read the current theme state and obtain a setter. Must be called inside a
@@ -33,14 +56,10 @@ export function useTheme<T extends string = string>(): ThemeContract & {
     getEmpty,
   );
   if (!store) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn(
-        '[@teispace/next-themes] useTheme() called outside a ThemeProvider. Returning inert values.',
-      );
-    }
+    if (process.env.NODE_ENV !== 'production') warnNoProvider();
     return {
       ...state,
-      setTheme: () => {},
+      setTheme: NOOP_SET,
     } as ThemeContract as ReturnType<typeof useTheme<T>>;
   }
   return {

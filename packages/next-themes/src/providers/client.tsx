@@ -76,6 +76,29 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     };
   }, []);
 
+  // See the matching effect in providers/next.tsx for the why.
+  useEffect(() => {
+    storeRef.current?.update({
+      forcedTheme: forcedTheme ?? null,
+      followSystem,
+      value: value ?? null,
+      themeColor: themeColor ?? null,
+      disableTransitionOnChange,
+      respectReducedMotion,
+      transition,
+      onChange,
+    });
+  }, [
+    forcedTheme,
+    followSystem,
+    value,
+    themeColor,
+    disableTransitionOnChange,
+    respectReducedMotion,
+    transition,
+    onChange,
+  ]);
+
   const script = noScript
     ? null
     : buildScript({

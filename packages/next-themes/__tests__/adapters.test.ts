@@ -56,6 +56,32 @@ describe('serializeCookie', () => {
     const s = serializeCookie('theme', 'dark theme');
     expect(s).toContain('theme=dark%20theme');
   });
+
+  it('rejects invalid cookie names (RFC 6265 token rules)', () => {
+    // Whitespace is forbidden.
+    expect(() => serializeCookie('with space', 'dark')).toThrow(/invalid cookie name/i);
+    // Separators are forbidden.
+    expect(() => serializeCookie('with;semi', 'dark')).toThrow(/invalid cookie name/i);
+    expect(() => serializeCookie('with=eq', 'dark')).toThrow(/invalid cookie name/i);
+    // Control chars are forbidden.
+    expect(() => serializeCookie('with\nnewline', 'dark')).toThrow(/invalid cookie name/i);
+    // Empty is forbidden.
+    expect(() => serializeCookie('', 'dark')).toThrow(/non-empty/);
+  });
+
+  it('rejects cookie attribute values containing CR/LF or ;', () => {
+    expect(() => serializeCookie('theme', 'dark', { path: '/foo\nBad: header' })).toThrow(
+      /invalid cookie path/i,
+    );
+    expect(() => serializeCookie('theme', 'dark', { domain: 'evil.com;Path=/' })).toThrow(
+      /invalid cookie domain/i,
+    );
+  });
+
+  it('accepts valid token characters (RFC 6265 §4.1.1)', () => {
+    // !#$%&'*+-.^_`|~ and alphanumerics are all valid token chars.
+    expect(() => serializeCookie("my!#$%&'*+-.^_`|~theme0", 'dark')).not.toThrow();
+  });
 });
 
 describe('localAdapter', () => {

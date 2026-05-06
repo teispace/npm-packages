@@ -40,6 +40,26 @@ export interface StoreOptions {
   onChange?: (theme: string, resolvedTheme: string) => void;
 }
 
+/**
+ * Subset of `StoreOptions` that the host provider may legitimately change at
+ * runtime. Storage backend, attribute, themes list, and target selector are
+ * intentionally *not* updateable: they are baked into the inline anti-FOUC
+ * script at SSR and changing them post-hydration would create a mismatch.
+ *
+ * `forcedTheme` is the headline use case — App Router users toggle it per
+ * route group (e.g. always-dark marketing pages, always-light dashboards).
+ */
+export interface UpdatableStoreOptions {
+  forcedTheme?: string | null;
+  followSystem?: boolean;
+  value?: Record<string, string> | null;
+  themeColor?: string | Record<string, string> | null;
+  transition?: TransitionConfig;
+  onChange?: (theme: string, resolvedTheme: string) => void;
+  disableTransitionOnChange?: boolean | string;
+  respectReducedMotion?: boolean;
+}
+
 export interface ThemeStore {
   getState: () => ThemeState;
   subscribe: (l: Listener) => () => void;
@@ -48,30 +68,39 @@ export interface ThemeStore {
   mount: () => void;
   /** Tear down subscriptions. */
   unmount: () => void;
+  /** Sync runtime-mutable provider props into the store. */
+  update: (opts: UpdatableStoreOptions) => void;
 }
 
 const DISABLE_CSS =
   '*,*::before,*::after{-webkit-transition:none!important;transition:none!important;-moz-transition:none!important;-o-transition:none!important;}';
 
 export function createStore(opts: StoreOptions): ThemeStore {
+  // Frozen-at-construction options. Changing any of these would require
+  // rebuilding the inline anti-FOUC script (which is already serialized into
+  // the document) so we deliberately do not surface setters for them.
   const {
     themes,
     defaultTheme,
     enableSystem,
-    forcedTheme,
     initialTheme,
-    followSystem,
     attribute,
-    value,
     enableColorScheme,
-    themeColor,
-    disableTransitionOnChange,
-    respectReducedMotion,
     target,
     storage,
-    transition,
-    onChange,
   } = opts;
+
+  // Mutable through `update()`. Using `let` so `setTheme`, `apply`, and the
+  // event handlers below all read the latest value when the host provider
+  // re-renders with new props.
+  let forcedTheme: string | null = opts.forcedTheme;
+  let followSystem: boolean = opts.followSystem;
+  let value: Record<string, string> | null = opts.value;
+  let themeColor: string | Record<string, string> | null = opts.themeColor;
+  let disableTransitionOnChange: boolean | string = opts.disableTransitionOnChange;
+  let respectReducedMotion: boolean = opts.respectReducedMotion;
+  let transition: TransitionConfig | undefined = opts.transition;
+  let onChange: ((theme: string, resolvedTheme: string) => void) | undefined = opts.onChange;
 
   const allThemes = enableSystem ? [...themes, 'system'] : themes;
 
@@ -278,5 +307,56 @@ export function createStore(opts: StoreOptions): ThemeStore {
     return state;
   }
 
-  return { getState, subscribe, setTheme, mount, unmount };
+  function update(next: UpdatableStoreOptions): void {
+    let touched = false;
+
+    if ('value' in next) {
+      value = next.value ?? null;
+      touched = true;
+    }
+    if ('themeColor' in next) {
+      themeColor = next.themeColor ?? null;
+      touched = true;
+    }
+    if ('disableTransitionOnChange' in next && next.disableTransitionOnChange !== undefined) {
+      disableTransitionOnChange = next.disableTransitionOnChange;
+    }
+    if ('respectReducedMotion' in next && next.respectReducedMotion !== undefined) {
+      respectReducedMotion = next.respectReducedMotion;
+    }
+    if ('transition' in next) {
+      transition = next.transition;
+    }
+    if ('onChange' in next) {
+      onChange = next.onChange;
+    }
+    let needsResolve = false;
+    if ('followSystem' in next && next.followSystem !== undefined) {
+      if (followSystem !== next.followSystem) needsResolve = true;
+      followSystem = next.followSystem;
+    }
+
+    // forcedTheme is the headline live-update use case. Re-resolve and apply
+    // immediately so a route-group <ThemeProvider forcedTheme="dark"> snaps to
+    // the forced value on entry and back to the user's choice on exit.
+    if ('forcedTheme' in next) {
+      const before = forcedTheme;
+      forcedTheme = next.forcedTheme ?? null;
+      if (before !== forcedTheme) needsResolve = true;
+    }
+
+    if (needsResolve) {
+      const fresh = initial();
+      // Always emit on transitions even if the resolved value happens to
+      // match — `state.forcedTheme` is part of the contract.
+      setState(fresh, true);
+      return;
+    }
+
+    // For non-theme-affecting prop changes (themeColor, value remap), nudge
+    // the DOM so the new mapping is applied without changing `state`.
+    if (touched && mounted) apply(state, true);
+  }
+
+  return { getState, subscribe, setTheme, mount, unmount, update };
 }
