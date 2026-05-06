@@ -107,10 +107,9 @@ export function startViewTransition(apply: () => void, transition: ResolvedTrans
     return;
   }
 
-  // Use a data-attribute marker instead of a fixed `id` so rapid successive
-  // switches or nested providers can have multiple concurrent transitions
-  // without colliding on id. Each call owns its own <style> element and
-  // cleans it up via the direct reference.
+  // Each call owns its own <style> element. Marker attribute (not `id`) so
+  // rapid successive switches or nested providers don't collide. The marker
+  // also lets external test harnesses or debug overlays find these tags.
   const style = document.createElement('style');
   style.setAttribute(STYLE_MARKER, '');
   style.appendChild(document.createTextNode(transition.css));

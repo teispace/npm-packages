@@ -16,6 +16,16 @@ export interface GetThemeOptions {
    * theme cookie is not set.
    */
   headers?: Headers | Record<string, string>;
+  /**
+   * Whitelist of acceptable theme names. When provided, a cookie value or
+   * client hint that doesn't match (e.g. a stale value from a previous theme
+   * configuration, or a hand-crafted cookie) is treated as missing.
+   *
+   * Without this, server components branching on `getTheme()` could render
+   * with an attribute the runtime would later normalize away — a real
+   * hydration mismatch source.
+   */
+  themes?: string[];
 }
 
 /**
@@ -32,35 +42,65 @@ export interface GetThemeOptions {
  */
 export async function getTheme(options: GetThemeOptions = {}): Promise<string | null> {
   const name = options.cookieName ?? 'theme';
+  const allow = options.themes;
+  // 'system' is always an acceptable cookie value; the provider resolves it.
+  const accept = (v: string | null): string | null => {
+    if (!v) return null;
+    if (!allow) return v;
+    if (v === 'system') return v;
+    return allow.includes(v) ? v : null;
+  };
+
+  // Single dynamic import — `next/headers` is the same module for both
+  // `cookies()` and `headers()`. Doing it twice is wasted module-resolution work.
+  type NextHeaders = {
+    cookies?: () => Promise<{ get: (n: string) => { value: string } | undefined }>;
+    headers?: () => Promise<Headers>;
+  };
+  let nextHeaders: NextHeaders | null = null;
+  const loadNext = async (): Promise<NextHeaders | null> => {
+    if (nextHeaders !== null) return nextHeaders;
+    try {
+      nextHeaders = (await import('next/headers')) as NextHeaders;
+    } catch (_e) {
+      nextHeaders = {};
+    }
+    return nextHeaders;
+  };
 
   let cookieValue: string | null = null;
   if (options.cookieHeader !== undefined) {
     cookieValue = readCookieFromString(options.cookieHeader, name);
   } else {
-    try {
-      const mod = (await import('next/headers')) as {
-        cookies: () => Promise<{ get: (n: string) => { value: string } | undefined }>;
-      };
-      const jar = await mod.cookies();
-      cookieValue = jar.get(name)?.value ?? null;
-    } catch (_e) {
-      cookieValue = null;
+    const mod = await loadNext();
+    if (mod?.cookies) {
+      try {
+        const jar = await mod.cookies();
+        cookieValue = jar.get(name)?.value ?? null;
+      } catch (_e) {
+        cookieValue = null;
+      }
     }
   }
-  if (cookieValue) return cookieValue;
+  const validatedCookie = accept(cookieValue);
+  if (validatedCookie) return validatedCookie;
 
   let headers = options.headers;
   if (!headers) {
-    try {
-      const mod = (await import('next/headers')) as { headers: () => Promise<Headers> };
-      headers = await mod.headers();
-    } catch (_e) {
-      headers = undefined;
+    const mod = await loadNext();
+    if (mod?.headers) {
+      try {
+        headers = await mod.headers();
+      } catch (_e) {
+        headers = undefined;
+      }
     }
   }
   if (headers) {
     const hint = readColorSchemeHint(headers);
-    if (hint) return hint;
+    // Hint is already constrained to 'light' | 'dark'; only filter if those
+    // aren't in the user's `themes` list (rare custom-themes setup).
+    if (hint && (!allow || allow.includes(hint))) return hint;
   }
 
   return null;

@@ -200,8 +200,8 @@ function rt(){
   if(c.tc){
     var col=typeof c.tc==='string'?c.tc:(c.tc[rv]||c.tc[t]);
     if(col){
-      var mt=d.querySelector('meta[name="theme-color"]');
-      if(!mt){mt=d.createElement('meta');mt.name='theme-color';d.head.appendChild(mt);}
+      var mt=d.querySelector('meta[name="theme-color"][data-teispace-themes]');
+      if(!mt){mt=d.createElement('meta');mt.name='theme-color';mt.setAttribute('data-teispace-themes','');d.head.appendChild(mt);}
       if(mt.getAttribute('content')!==col)mt.setAttribute('content',col);
     }
   }

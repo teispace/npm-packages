@@ -75,6 +75,31 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     };
   }, []);
 
+  // Sync runtime-mutable props into the store. The store is built once
+  // (storeRef) so without this, changes to forcedTheme/value/themeColor/etc.
+  // never propagate. Limited to props that don't invalidate the inline script.
+  useEffect(() => {
+    storeRef.current?.update({
+      forcedTheme: forcedTheme ?? null,
+      followSystem,
+      value: value ?? null,
+      themeColor: themeColor ?? null,
+      disableTransitionOnChange,
+      respectReducedMotion,
+      transition,
+      onChange,
+    });
+  }, [
+    forcedTheme,
+    followSystem,
+    value,
+    themeColor,
+    disableTransitionOnChange,
+    respectReducedMotion,
+    transition,
+    onChange,
+  ]);
+
   const insertedRef = useRef(false);
   useServerInsertedHTML(() => {
     if (insertedRef.current || noScript) return null;

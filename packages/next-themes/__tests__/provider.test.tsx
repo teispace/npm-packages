@@ -19,6 +19,34 @@ function Consumer() {
   );
 }
 
+describe('useTheme outside a provider', () => {
+  it('returns inert empty values (does not lie about the active theme)', () => {
+    function NoProvider() {
+      const { theme, resolvedTheme, themes } = useTheme();
+      return (
+        <div>
+          <span data-testid="theme">{`[${theme}]`}</span>
+          <span data-testid="resolved">{`[${resolvedTheme}]`}</span>
+          <span data-testid="themes">{themes.length}</span>
+        </div>
+      );
+    }
+    // Suppress the dev-only warn.
+    const origWarn = console.warn;
+    console.warn = () => {};
+    try {
+      render(<NoProvider />);
+      // Empty strings, not the previous `'system'` / `'light'` placeholders —
+      // a consumer doing `theme === 'dark'` must not accidentally match.
+      expect(screen.getByTestId('theme').textContent).toBe('[]');
+      expect(screen.getByTestId('resolved').textContent).toBe('[]');
+      expect(screen.getByTestId('themes').textContent).toBe('0');
+    } finally {
+      console.warn = origWarn;
+    }
+  });
+});
+
 describe('ThemeProvider (client)', () => {
   it('provides theme state via useTheme', () => {
     render(
@@ -129,6 +157,28 @@ describe('ThemeProvider (client)', () => {
     expect(script?.getAttribute('data-test')).toBe('forwarded');
     // nonce is set by us LAST so user-supplied scriptProps cannot strip it.
     expect(script?.getAttribute('nonce')).toBe('abc123');
+  });
+
+  it('honors a runtime forcedTheme prop change (route-group pattern)', () => {
+    function App({ force }: { force?: string }) {
+      return (
+        <ThemeProvider
+          storage="local"
+          defaultTheme="light"
+          enableSystem={false}
+          forcedTheme={force}
+        >
+          <Consumer />
+        </ThemeProvider>
+      );
+    }
+    const { rerender } = render(<App />);
+    expect(screen.getByTestId('theme').textContent).toBe('light');
+    rerender(<App force="dark" />);
+    expect(screen.getByTestId('theme').textContent).toBe('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    rerender(<App />);
+    expect(screen.getByTestId('theme').textContent).toBe('light');
   });
 
   it('useTheme.setTheme accepts an updater function', () => {

@@ -38,6 +38,7 @@ next-maker <command> [args] [options]
 | Config | `locale [code]` | Add a new language/locale |
 | Code | `hook <name>` | Custom React hook |
 | Code | `test <file>` | Sibling test stub for a component/hook/slice |
+| Assets | `favicon` | Generate `favicon.ico` (and optionally PWA / OG / Apple icons) from a source image |
 
 Run `npx @teispace/next-maker <command> --help` for the full option list of any command.
 
@@ -540,6 +541,64 @@ Requires `setup --tests` first.
 
 ---
 
+### `favicon` — Generate icons from a source image
+
+Generates `favicon.ico` (multi-size) into the App Router root, with optional `icon.png`, `apple-icon.png`, `opengraph-image.png`, `twitter-image.png`, and PWA manifest icons. Source can be PNG, JPG, JPEG, WebP, SVG, or AVIF.
+
+```bash
+npx @teispace/next-maker favicon [options]
+```
+
+| Flag | Effect |
+| --- | --- |
+| `--path <file>` | Source image. If omitted, you'll be prompted. |
+| `--out <dir>` | Output directory (default: auto-detected `src/app` or `app`) |
+| `--icon` | Also emit `icon.png` (512×512) |
+| `--apple` | Also emit `apple-icon.png` (180×180) |
+| `--og` | Also emit `opengraph-image.png` (1200×630) |
+| `--og-source <file>` | Use a separate image for the OG/Twitter card |
+| `--twitter` | Also emit `twitter-image.png` (1200×600) |
+| `--all` | Shorthand for `--icon --apple --og` |
+| `--pwa` | Detect PWA setup and emit manifest icons (192/512); errors if not detected |
+| `--pwa-init` | Bootstrap `public/manifest.webmanifest` with icons |
+| `--shape <shape>` | `square` \| `rounded` \| `circle` \| `squircle` (default: `square`) |
+| `--radius <percent>` | Corner radius % when `--shape=rounded` (0–50, default: 20) |
+| `--bg <color>` | Background: `transparent`, hex (`#0f172a`), CSS name, or `rgb()`/`rgba()`/`hsl()`/`hsla()` (default: `transparent`) |
+| `--padding <percent>` | Padding around source content (0–30, default: 0) |
+| `--fit <fit>` | `contain` \| `cover` \| `clip` (default: `contain`) |
+| `--sizes <list>` | Comma-separated ICO sizes (default: `16,32,48`) |
+| `--quality <n>` | PNG compression 1–100 (higher = smaller; PNG is lossless, default: 90) |
+| `--force` | Overwrite existing files without prompt |
+| `--dry-run` | Show what would be written without writing |
+
+```bash
+# Minimal: just favicon.ico from a source PNG
+npx @teispace/next-maker favicon --path ./brand/logo.png
+
+# Full set: favicon + icon + apple-icon + OG image, rounded with brand background
+npx @teispace/next-maker favicon \
+  --path ./brand/logo.svg \
+  --all \
+  --shape rounded --radius 24 \
+  --bg "#0f172a" \
+  --padding 8
+
+# PWA: emit manifest icons and bootstrap public/manifest.webmanifest
+npx @teispace/next-maker favicon --path ./brand/logo.png --pwa-init
+
+# Separate OG art
+npx @teispace/next-maker favicon \
+  --path ./brand/logo.png \
+  --og --og-source ./brand/social-card.png
+
+# Preview without writing
+npx @teispace/next-maker favicon --path ./brand/logo.png --all --dry-run
+```
+
+Outputs land in your App Router root (`src/app/` or `app/`) so Next.js auto-resolves them via the file conventions for [`favicon.ico`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons), [`opengraph-image`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/opengraph-image), and [`apple-icon`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons) — no `<head>` wiring required.
+
+---
+
 ## End-to-end examples
 
 ### Quick start
@@ -663,7 +722,11 @@ my-project/
 │   │   ├── not-found.tsx
 │   │   ├── robots.ts
 │   │   ├── sitemap.ts
-│   │   └── favicon.ico
+│   │   ├── favicon.ico                # `favicon` command
+│   │   ├── icon.png                   # (opt, `favicon --icon`/`--all`) 512×512
+│   │   ├── apple-icon.png             # (opt, `favicon --apple`/`--all`) 180×180
+│   │   ├── opengraph-image.png        # (opt, `favicon --og`/`--all`) 1200×630
+│   │   └── twitter-image.png          # (opt, `favicon --twitter`) 1200×600
 │   ├── proxy.ts                       # (opt, i18n) Next 16 middleware replacement
 │   ├── features/                      # Feature modules (feature-first DDD)
 │   │   └── counter/                   # (opt, redux) example feature

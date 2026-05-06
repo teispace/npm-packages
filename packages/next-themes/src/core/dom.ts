@@ -137,22 +137,45 @@ export function applyColorScheme(el: HTMLElement, theme: string): void {
   }
 }
 
+/**
+ * Track meta tags WE created so we can remove them cleanly when the user
+ * later disables `themeColor`. Without this, removing the prop leaves a
+ * stale `<meta name="theme-color">` behind — which on iOS Safari pins the
+ * status-bar color to whatever theme was active at the time.
+ *
+ * We only manage tags we own. A tag the developer hand-rolled in their
+ * `<head>` is left untouched.
+ */
+const OWNED_META_MARKER = 'data-teispace-themes';
+
 export function applyThemeColor(
   theme: string,
   resolvedTheme: string,
   themeColor: string | Record<string, string> | undefined,
 ): void {
-  if (!themeColor || !isDom()) return;
-  const color =
-    typeof themeColor === 'string' ? themeColor : (themeColor[resolvedTheme] ?? themeColor[theme]);
-  if (!color) return;
-  let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  if (!isDom()) return;
+  const color = !themeColor
+    ? null
+    : typeof themeColor === 'string'
+      ? themeColor
+      : (themeColor[resolvedTheme] ?? themeColor[theme] ?? null);
+
+  let meta = document.querySelector<HTMLMetaElement>(
+    `meta[name="theme-color"][${OWNED_META_MARKER}]`,
+  );
+  if (!color) {
+    // Theme color disabled (or no mapping for the current theme). Remove our
+    // owned tag if any; never touch a hand-authored one.
+    if (meta) meta.remove();
+    return;
+  }
   if (!meta) {
     meta = document.createElement('meta');
     meta.name = 'theme-color';
+    meta.setAttribute(OWNED_META_MARKER, '');
     document.head.appendChild(meta);
   }
-  meta.setAttribute('content', color);
+  if (meta.getAttribute('content') !== color) meta.setAttribute('content', color);
 }
 
 export function disableTransition(value: string | true, respectReducedMotion: boolean): () => void {
