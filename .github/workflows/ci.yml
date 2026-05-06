@@ -7,12 +7,6 @@ on:
       - develop
       - alpha
       - beta
-  push:
-    branches:
-      - main
-      - develop
-      - alpha
-      - beta
 
 jobs:
   quality:
