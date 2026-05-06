@@ -8,7 +8,16 @@
     "start": "next start"
   },
   "dependencies": {
+    "@lexical/code": "^0.44.0",
+    "@lexical/link": "^0.44.0",
+    "@lexical/list": "^0.44.0",
+    "@lexical/react": "^0.44.0",
+    "@lexical/rich-text": "^0.44.0",
+    "@lexical/selection": "^0.44.0",
+    "@lexical/table": "^0.44.0",
+    "@lexical/utils": "^0.44.0",
     "@teispace/teieditor": "workspace:^",
+    "lexical": "^0.44.0",
     "next": "^16.2.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
