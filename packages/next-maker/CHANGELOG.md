@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.19.2...next-maker-v1.20.0) (2026-05-06)
+
+
+### Features
+
+* **next-maker:** add favicon command for icon and metadata generation ([#64](https://github.com/teispace/npm-packages/issues/64)) ([a68eb48](https://github.com/teispace/npm-packages/commit/a68eb48e6cf1363f57893d12e4f94c27118e44a8))
+
 ## [1.19.2](https://github.com/teispace/npm-packages/compare/next-maker-v1.19.1...next-maker-v1.19.2) (2026-05-06)
 
 
