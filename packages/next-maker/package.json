@@ -44,7 +44,9 @@
     "degit": "^2.8.4",
     "enquirer": "^2.4.1",
     "ora": "^9.4.0",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@types/degit": "^2.8.6",

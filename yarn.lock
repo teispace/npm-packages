@@ -2543,6 +2543,8 @@ __metadata:
     esbuild: "npm:^0.28.0"
     ora: "npm:^9.4.0"
     picocolors: "npm:^1.1.1"
+    png-to-ico: "npm:^3.0.1"
+    sharp: "npm:^0.34.5"
     tsx: "npm:^4.21.0"
     typescript: "npm:^6.0.3"
     vitest: "npm:^4.1.5"
@@ -2750,6 +2752,15 @@ __metadata:
   dependencies:
     undici-types: "npm:~7.16.0"
   checksum: 10c0/d6bca7a78f550fbb376f236f92b405d676003a8a09a1b411f55920ef34286ee3ee51f566203920e835478784df52662b5b2af89159d9d319352e9ea21801c002
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^22.10.3":
+  version: 22.19.17
+  resolution: "@types/node@npm:22.19.17"
+  dependencies:
+    undici-types: "npm:~6.21.0"
+  checksum: 10c0/b66c484c0a9f6d88b1ef360b0f487717234ee1a482cb2551ff73d9f3c43a42a777daf4c8a5eee970960728f8fe1f3877d3d8c6ffabcbca74cb401a59db700fa4
   languageName: node
   linkType: hard
 
@@ -5464,6 +5475,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"png-to-ico@npm:^3.0.1":
+  version: 3.0.1
+  resolution: "png-to-ico@npm:3.0.1"
+  dependencies:
+    "@types/node": "npm:^22.10.3"
+    minimist: "npm:^1.2.8"
+    pngjs: "npm:^7.0.0"
+  bin:
+    png-to-ico: bin/cli.js
+  checksum: 10c0/71532b59eaf9deb8a7b97a02b8f84a484ac0dcfeb41c8f80f9f4263553c521f9f9e2c7b12bbce47cc835cc241e13440f0ab616530b02cf4c2317e701efef5787
+  languageName: node
+  linkType: hard
+
+"pngjs@npm:^7.0.0":
+  version: 7.0.0
+  resolution: "pngjs@npm:7.0.0"
+  checksum: 10c0/0d4c7a0fd476a9c33df7d0a2a73e1d56537628a668841f6995c2bca070cf30819f9254a64363266bc14ef2fee47659dd3b4f2b18eec7ab65143015139f497b38
+  languageName: node
+  linkType: hard
+
 "postcss-load-config@npm:^6.0.1":
   version: 6.0.1
   resolution: "postcss-load-config@npm:6.0.1"
@@ -6518,6 +6549,13 @@ __metadata:
   version: 1.6.4
   resolution: "ufo@npm:1.6.4"
   checksum: 10c0/3a2b29e7e3d772fbf6893d7d23bf442981457adb2fe122828abdbda89bedcb81aafd0dcc080e41b45f9a877db00cb42cbfee9639753a19d9b9bd39b5627039cf
+  languageName: node
+  linkType: hard
+
+"undici-types@npm:~6.21.0":
+  version: 6.21.0
+  resolution: "undici-types@npm:6.21.0"
+  checksum: 10c0/c01ed51829b10aa72fc3ce64b747f8e74ae9b60eafa19a7b46ef624403508a54c526ffab06a14a26b3120d055e1104d7abe7c9017e83ced038ea5cf52f8d5e04
   languageName: node
   linkType: hard
 

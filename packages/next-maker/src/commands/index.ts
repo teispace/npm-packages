@@ -3,6 +3,7 @@ import { registerAppCommand } from './app';
 import { registerComponentCommand } from './component';
 import { registerDoctorCommand } from './doctor';
 import { registerEnvCommand } from './env';
+import { registerFaviconCommand } from './favicon';
 import { registerFeatureCommand } from './feature';
 import { registerHookCommand } from './hook';
 import { registerLayoutCommand } from './layout';
@@ -28,6 +29,7 @@ export const registerCommands = (program: Command) => {
   registerHookCommand(program);
   registerProviderCommand(program);
   registerEnvCommand(program);
+  registerFaviconCommand(program);
   registerDoctorCommand(program);
   registerRemoveCommand(program);
   registerTestCommand(program);
