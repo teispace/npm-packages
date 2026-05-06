@@ -4,6 +4,7 @@ import pc from 'picocolors';
 import { log, logError, spinner, warning } from '../config';
 import { promptForFaviconSource } from '../prompts/favicon.prompt';
 import { detectAppDir, runFavicon } from '../services/favicon';
+import { CSS_NAMED_COLORS } from '../services/favicon/css-colors';
 import type { FaviconFit, FaviconOptions, FaviconShape } from '../services/favicon/types';
 import { parseSizes } from '../services/favicon/validate';
 
@@ -69,7 +70,7 @@ export const registerFaviconCommand = (program: Command) => {
   program
     .command('favicon')
     .description('Generate favicon.ico (and optionally icons, OG image, PWA manifest icons)')
-    .option('--path <file>', 'Path to source image (PNG, JPG, WebP, SVG, AVIF)')
+    .option('--path <file>', 'Path to source image (PNG, JPG, JPEG, WebP, SVG, AVIF)')
     .option('--out <dir>', 'Output dir (default: src/app or app)')
     .option('--force', 'Overwrite existing files without prompt', false)
     .option('--dry-run', 'Show what would be written without writing', false)
@@ -91,7 +92,11 @@ export const registerFaviconCommand = (program: Command) => {
     .option('--padding <percent>', 'Padding around source content (0-30)', '0')
     .option('--fit <fit>', 'How source fits target: contain | cover | clip', 'contain')
     .option('--sizes <list>', 'Comma-separated ICO sizes (default: 16,32,48)')
-    .option('--quality <n>', 'PNG quality 1-100 (default: 90)', '90')
+    .option(
+      '--quality <n>',
+      'PNG compression 1-100 (higher = smaller file; PNG is lossless, default: 90)',
+      '90',
+    )
     .action(async (raw: RawFaviconCliOptions) => {
       try {
         const projectPath = process.cwd();
@@ -107,6 +112,8 @@ export const registerFaviconCommand = (program: Command) => {
         const padding = parseNumberOption(raw.padding, 0, 'padding', 0, 30);
         const quality = parseNumberOption(raw.quality, 90, 'quality', 1, 100);
         const icoSizes = parseSizes(raw.sizes, [16, 32, 48]);
+        const bg = raw.bg ?? 'transparent';
+        validateBg(bg);
 
         const all = raw.all === true;
         const options: FaviconOptions = {
@@ -123,7 +130,7 @@ export const registerFaviconCommand = (program: Command) => {
           pwaInit: !!raw.pwaInit,
           shape,
           radius,
-          bg: raw.bg ?? 'transparent',
+          bg,
           padding,
           fit,
           icoSizes,
@@ -168,6 +175,19 @@ const resolveOutDir = async (projectPath: string, override?: string): Promise<st
   if (detected) return detected;
   warning('Could not detect app/ or src/app/ — falling back to src/app');
   return path.join(projectPath, 'src', 'app');
+};
+
+const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+const FUNCTIONAL_RE = /^(?:rgb|rgba|hsl|hsla)\(\s*[\d.,%\s/]+\)$/i;
+
+const validateBg = (bg: string): void => {
+  if (bg === 'transparent') return;
+  if (HEX_RE.test(bg)) return;
+  if (FUNCTIONAL_RE.test(bg)) return;
+  if (CSS_NAMED_COLORS.has(bg.toLowerCase())) return;
+  throw new Error(
+    `Invalid value for --bg: '${bg}'. Use 'transparent', a hex code (e.g. #0f172a), a CSS color name, or rgb()/rgba()/hsl()/hsla().`,
+  );
 };
 
 const formatBytes = (n: number): string => {

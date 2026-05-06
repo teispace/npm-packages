@@ -1,7 +1,7 @@
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import {
   buildBootstrapManifest,
   buildIconEntries,
@@ -15,6 +15,18 @@ const sampleEntries = () =>
     { src: '/icon-192.png', size: 192 },
     { src: '/icon-512.png', size: 512 },
   ]);
+
+const tmpRoots: string[] = [];
+
+const mktmp = async (): Promise<string> => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'next-maker-manifest-'));
+  tmpRoots.push(dir);
+  return dir;
+};
+
+afterAll(async () => {
+  await Promise.all(tmpRoots.map((dir) => rm(dir, { recursive: true, force: true })));
+});
 
 describe('buildIconEntries', () => {
   it('builds entries with sizes string and PNG mime', () => {
@@ -31,7 +43,7 @@ describe('buildIconEntries', () => {
 
 describe('patchJsonManifest', () => {
   it('merges new icons with existing, dedupes by src', async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), 'next-maker-manifest-'));
+    const dir = await mktmp();
     const manifestPath = path.join(dir, 'manifest.json');
     await writeFile(
       manifestPath,
@@ -58,7 +70,7 @@ describe('patchJsonManifest', () => {
   });
 
   it('seeds icons array when manifest has none', async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), 'next-maker-manifest-'));
+    const dir = await mktmp();
     const manifestPath = path.join(dir, 'manifest.json');
     await writeFile(manifestPath, JSON.stringify({ name: 'App' }), 'utf-8');
     const next = await patchJsonManifest(manifestPath, sampleEntries());
@@ -69,7 +81,7 @@ describe('patchJsonManifest', () => {
 
 describe('writeJsonManifest', () => {
   it('writes the patched manifest back to disk', async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), 'next-maker-manifest-'));
+    const dir = await mktmp();
     const manifestPath = path.join(dir, 'manifest.json');
     await writeFile(manifestPath, JSON.stringify({ name: 'App' }), 'utf-8');
     await writeJsonManifest(manifestPath, sampleEntries());

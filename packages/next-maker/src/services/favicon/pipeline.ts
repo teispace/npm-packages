@@ -1,4 +1,4 @@
-import { mkdir, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import { detectPwa } from './detect';
@@ -6,8 +6,8 @@ import { encodeIco, flatColor, renderPng } from './encoders';
 import {
   buildBootstrapManifest,
   buildIconEntries,
+  patchJsonManifest,
   renderManifestSnippet,
-  writeJsonManifest,
 } from './manifest';
 import type { FaviconOptions, FaviconRunResult, FaviconWriteResult } from './types';
 import { validateSource } from './validate';
@@ -24,6 +24,8 @@ const fileExists = async (p: string): Promise<boolean> => {
 interface WriteJob {
   outPath: string;
   bytes: Buffer;
+  /** When true, overwrite even if the target exists and --force is not set. */
+  alwaysWrite?: boolean;
 }
 
 const writeAll = async (
@@ -34,7 +36,7 @@ const writeAll = async (
   const results: FaviconWriteResult[] = [];
   for (const job of jobs) {
     const exists = await fileExists(job.outPath);
-    if (exists && !force) {
+    if (exists && !force && !job.alwaysWrite) {
       results.push({ path: job.outPath, bytes: job.bytes.length, skipped: true });
       continue;
     }
@@ -52,7 +54,10 @@ export const runFavicon = async (
   options: FaviconOptions,
 ): Promise<FaviconRunResult> => {
   const source = await validateSource(options.source);
-  const ogSource = options.ogSource ? await validateSource(options.ogSource) : source;
+  const sourceBuffer = await readFile(source.absolutePath);
+  const ogSourceBuffer = options.ogSource
+    ? await readFile((await validateSource(options.ogSource)).absolutePath)
+    : sourceBuffer;
 
   const jobs: WriteJob[] = [];
 
@@ -61,7 +66,7 @@ export const runFavicon = async (
   for (const size of options.icoSizes) {
     icoFrames.push(
       await renderPng({
-        source: source.absolutePath,
+        sourceBuffer,
         size,
         shape: 'square',
         radiusPercent: options.radius,
@@ -79,7 +84,7 @@ export const runFavicon = async (
   // 2. icon.png (512×512)
   if (options.emitIcon) {
     const buf = await renderPng({
-      source: source.absolutePath,
+      sourceBuffer,
       size: 512,
       shape: options.shape,
       radiusPercent: options.radius,
@@ -95,7 +100,7 @@ export const runFavicon = async (
   if (options.emitApple) {
     const appleBg = options.bg === 'transparent' ? '#ffffff' : options.bg;
     const buf = await renderPng({
-      source: source.absolutePath,
+      sourceBuffer,
       size: 180,
       shape: options.shape,
       radiusPercent: options.radius,
@@ -109,13 +114,13 @@ export const runFavicon = async (
 
   // 4. opengraph-image.png (1200×630, contained on bg)
   if (options.emitOg) {
-    const buf = await renderOgImage(ogSource.absolutePath, options, false);
+    const buf = await renderOgImage(ogSourceBuffer, options, false);
     jobs.push({ outPath: path.join(options.outDir, 'opengraph-image.png'), bytes: buf });
   }
 
-  // 5. twitter-image.png (1200×630)
+  // 5. twitter-image.png (1200×600)
   if (options.emitTwitter) {
-    const buf = await renderOgImage(ogSource.absolutePath, options, true);
+    const buf = await renderOgImage(ogSourceBuffer, options, true);
     jobs.push({ outPath: path.join(options.outDir, 'twitter-image.png'), bytes: buf });
   }
 
@@ -134,7 +139,7 @@ export const runFavicon = async (
     const iconJobs: { src: string; size: number }[] = [];
     for (const size of sizes) {
       const buf = await renderPng({
-        source: source.absolutePath,
+        sourceBuffer,
         size,
         shape: options.shape,
         radiusPercent: options.radius,
@@ -150,7 +155,13 @@ export const runFavicon = async (
 
     const icons = buildIconEntries(iconJobs);
     if (pwa.publicManifestPath) {
-      if (!options.dryRun) await writeJsonManifest(pwa.publicManifestPath, icons);
+      // Patched manifest merges with existing content, so always write it back.
+      const next = await patchJsonManifest(pwa.publicManifestPath, icons);
+      jobs.push({
+        outPath: pwa.publicManifestPath,
+        bytes: Buffer.from(next, 'utf-8'),
+        alwaysWrite: true,
+      });
     } else if (pwa.appManifestPath) {
       pwaSnippet = renderManifestSnippet(icons);
     } else if (options.pwaInit) {
@@ -165,7 +176,7 @@ export const runFavicon = async (
 };
 
 const renderOgImage = async (
-  source: string,
+  sourceBuffer: Buffer,
   options: FaviconOptions,
   isTwitter: boolean,
 ): Promise<Buffer> => {
@@ -176,7 +187,7 @@ const renderOgImage = async (
   );
 
   const inner = await renderPng({
-    source,
+    sourceBuffer,
     size: innerSize,
     shape: options.shape,
     radiusPercent: options.radius,

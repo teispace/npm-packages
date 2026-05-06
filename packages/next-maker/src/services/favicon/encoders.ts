@@ -1,36 +1,40 @@
-import { readFile } from 'node:fs/promises';
 import pngToIco from 'png-to-ico';
 import sharp from 'sharp';
 import { buildBackground, buildShapeMask } from './shapes';
 import type { FaviconFit, FaviconShape } from './types';
 
 export interface RenderOptions {
-  source: string;
+  /** Pre-loaded source bytes — read once by the pipeline and reused per size. */
+  sourceBuffer: Buffer;
   size: number;
   shape: FaviconShape;
   radiusPercent: number;
   bg: string;
   paddingPercent: number;
   fit: FaviconFit;
-  /** Compress level for PNG. */
+  /** PNG compression level mapped 1..100 → 9..0; lossless, affects file size only. */
   quality: number;
   /** When true, never apply shape clipping (used for ICO frames). */
   forceSquare?: boolean;
 }
 
-/**
- * Render a single PNG buffer at the requested size, applying fit/padding/bg/shape.
- */
 export const renderPng = async (opts: RenderOptions): Promise<Buffer> => {
-  const { size, paddingPercent, bg, fit, shape, radiusPercent, quality, forceSquare, source } =
-    opts;
+  const {
+    size,
+    paddingPercent,
+    bg,
+    fit,
+    shape,
+    radiusPercent,
+    quality,
+    forceSquare,
+    sourceBuffer,
+  } = opts;
 
-  const sourceInput = await readFile(source);
   const innerSize = Math.max(1, Math.round(size * (1 - (paddingPercent * 2) / 100)));
 
-  // Stage 1: resize the source content to innerSize, with the chosen fit.
   const sharpFit = fit === 'cover' ? 'cover' : 'contain';
-  const resized = await sharp(sourceInput, { density: 384 })
+  const resized = await sharp(sourceBuffer, { density: 384 })
     .resize(innerSize, innerSize, {
       fit: sharpFit,
       background: { r: 0, g: 0, b: 0, alpha: 0 },
@@ -38,7 +42,6 @@ export const renderPng = async (opts: RenderOptions): Promise<Buffer> => {
     .png()
     .toBuffer();
 
-  // Stage 2: place onto a `size`-square canvas (handles padding via offset).
   const offset = Math.round((size - innerSize) / 2);
   const canvasBg = bg === 'transparent' ? { r: 0, g: 0, b: 0, alpha: 0 } : await flatColor(bg);
 
@@ -54,17 +57,16 @@ export const renderPng = async (opts: RenderOptions): Promise<Buffer> => {
     .png()
     .toBuffer();
 
-  // Stage 3: shape clipping (skip for ICO frames where we always want square).
-  const effectiveShape: FaviconShape = forceSquare ? 'square' : shape;
-  if (effectiveShape !== 'square' || fit === 'clip') {
-    const clipShape: FaviconShape = effectiveShape === 'square' ? 'rounded' : effectiveShape;
+  // forceSquare wins absolutely — ICO frames must stay rectangular regardless of --fit.
+  const shouldClip = !forceSquare && (shape !== 'square' || fit === 'clip');
+  if (shouldClip) {
+    const clipShape: FaviconShape = shape === 'square' ? 'rounded' : shape;
     const mask = Buffer.from(buildShapeMask(clipShape, size, radiusPercent));
     composed = await sharp(composed)
       .composite([{ input: mask, blend: 'dest-in' }])
       .png({ compressionLevel: clampCompression(quality) })
       .toBuffer();
   } else {
-    // Re-encode at the requested compression level.
     composed = await sharp(composed)
       .png({ compressionLevel: clampCompression(quality) })
       .toBuffer();

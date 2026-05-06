@@ -1,10 +1,18 @@
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 const exists = async (p: string): Promise<boolean> => {
   try {
     await access(p);
     return true;
+  } catch {
+    return false;
+  }
+};
+
+const isDirectory = async (p: string): Promise<boolean> => {
+  try {
+    return (await stat(p)).isDirectory();
   } catch {
     return false;
   }
@@ -17,7 +25,7 @@ const exists = async (p: string): Promise<boolean> => {
 export const detectAppDir = async (projectPath: string): Promise<string | null> => {
   const candidates = [path.join(projectPath, 'src', 'app'), path.join(projectPath, 'app')];
   for (const candidate of candidates) {
-    if (await exists(candidate)) return candidate;
+    if (await isDirectory(candidate)) return candidate;
   }
   return null;
 };

@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -13,7 +13,7 @@ const mktmp = async (): Promise<string> => {
 };
 
 afterAll(async () => {
-  // best-effort cleanup; on test failure we leave tmp dirs for inspection
+  await Promise.all(tmpRoots.map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
 describe('validateSource', () => {

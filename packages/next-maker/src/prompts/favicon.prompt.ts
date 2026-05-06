@@ -14,7 +14,7 @@ export const promptForFaviconSource = async (
   const answer = (await prompt({
     type: 'input',
     name: 'source',
-    message: 'Path to source image (PNG/JPG/SVG/WebP/AVIF):',
+    message: 'Path to source image (PNG/JPG/JPEG/SVG/WebP/AVIF):',
     validate: (value: string) => {
       if (!value) return 'Source path is required';
       return true;
