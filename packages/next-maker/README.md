@@ -100,7 +100,7 @@ The starter at [`teispace/nextjs-starter`](https://github.com/teispace/nextjs-st
 - Pino structured logger with redaction
 - Zod-validated env schema in `src/lib/env/`
 - Feature-based DDD architecture
-- Result-based HTTP clients (when enabled)
+- Dual HTTP clients (`fetchClient` + `axiosClient`) on a shared foundation: runtime-aware cookie forwarding (browser jar in CSR, `next/headers` injection in RSC), automatic `X-Request-Id` correlation, single `parseApiError` pipeline, cookie-mode auth by default, typed query params via `{ params }`
 - Hardened security headers in `next.config.ts`
 - `scripts/sync-env.ts` and `scripts/check-deprecated.ts` (used by the `validate` chain)
 
@@ -392,6 +392,8 @@ npx @teispace/next-maker service <name> [options]
 | `--path <path>` | Custom path |
 
 CRUD mode also generates `<Name>Summary` (list view) and `<Name>Detail` (detail view) types, `Create<Name>Dto`, `Update<Name>Dto`, and registers the endpoints in `app-apis.ts`.
+
+Endpoints are emitted as **bare paths** (e.g. `'/users'`, `` `/users/${id}` ``) — the `/api/v{n}` prefix is owned by `getApiBaseUrl()` in `src/lib/config/api-url.ts` and applied at request time. Don't add `${API_PREFIX}` interpolation in `app-apis.ts`; the base URL composer handles it.
 
 ```bash
 npx @teispace/next-maker service payment --axios
@@ -749,17 +751,18 @@ my-project/
 │   │   ├── api/                       # API service barrel
 │   │   └── storage/                   # react-secure-storage wrapper
 │   ├── lib/
-│   │   ├── config/                    # seo, app-apis, app-paths, app-locales, constants
+│   │   ├── config/                    # seo, app-apis, app-paths, app-locales, constants, api-url (getApiBaseUrl)
 │   │   ├── env/                       # Zod-validated env schema (schema.ts, validate.ts)
 │   │   ├── logger/                    # Pino logger with auto-redaction
-│   │   ├── errors/                    # ApiException, catchError
+│   │   ├── errors/                    # ApiException (carries requestId), catchError
 │   │   ├── enums/
 │   │   └── utils/
 │   │       ├── http/                  # (opt, http-client)
+│   │       │   ├── shared/            # runtime detection, cookie injection, request-id, parseApiError, toSearchParams
 │   │       │   ├── axios-client/      # interceptors, token refresh, Result-based
-│   │       │   ├── fetch-client/      # same Result pattern on native fetch
+│   │       │   ├── fetch-client/      # same Result pattern on native fetch, typed `params`
 │   │       │   ├── client-utils.ts
-│   │       │   └── token-store.ts
+│   │       │   └── token-store.ts    # inert in cookie-mode (the default)
 │   │       └── validations/
 │   ├── i18n/                          # (opt, i18n) routing, request, navigation, translations/
 │   ├── styles/globals.css             # Tailwind v4 directives
@@ -796,7 +799,7 @@ Features that have first-class opt-out prompts during `init`: `httpClient`, `dar
 
 **CLI:** TypeScript, esbuild, Commander.js, Enquirer, Vitest, degit.
 
-**Generated apps:** Next.js 16+, TypeScript, Tailwind CSS v4, Biome, Pino, Zod, Redux Toolkit, `@teispace/next-themes`, next-intl, Axios, Vitest + RTL, React Compiler.
+**Generated apps:** Next.js 16+, TypeScript, Tailwind CSS v4, Biome, Pino, Zod, Redux Toolkit, `@teispace/next-themes`, next-intl, Fetch / Axios HTTP clients (shared foundation), Vitest + RTL, React Compiler.
 
 ---
 
