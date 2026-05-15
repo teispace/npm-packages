@@ -2,7 +2,12 @@ import path from 'node:path';
 import { PROJECT_PATHS } from '../../../config/paths';
 import { deleteDirectory, deleteFile, fileExists, readFile, writeFile } from '../../../core/files';
 import type { ProjectPrompts } from '../../../prompts/create-app.prompt';
-import { cleanupHttpTypes, removeBundleSentinelMount } from '../../setup/http-client/injectors';
+import {
+  cleanupHttpTypes,
+  removeBundleSentinelMount,
+  rewriteSentinelImports,
+  rewriteServerEntryImports,
+} from '../../setup/http-client/injectors';
 
 export const cleanupHttpClient = async (
   projectPath: string,
@@ -19,8 +24,18 @@ export const cleanupHttpClient = async (
     await cleanupNoHttpClient(projectPath, httpUtilsPath, keepSecureStorage);
   } else if (answers.httpClient === 'axios') {
     await cleanupFetchClient(projectPath, httpUtilsPath);
+    // The sentinel and server entry both ship hardcoded to import BOTH
+    // axios and fetch symbols. Align them to the surviving client so the
+    // build doesn't fail on a missing module / missing export.
+    await rewriteSentinelImports(projectPath, ['axios']);
+    await rewriteServerEntryImports(projectPath, ['axios']);
   } else if (answers.httpClient === 'fetch') {
     await cleanupAxiosClient(projectPath, httpUtilsPath);
+    await rewriteSentinelImports(projectPath, ['fetch']);
+    await rewriteServerEntryImports(projectPath, ['fetch']);
+  } else if (answers.httpClient === 'both') {
+    // Both kept — the template's default. Sentinel + server entry don't
+    // need rewriting.
   }
 };
 

@@ -7,6 +7,8 @@ import {
   installBundleSentinelMount,
   removeBundleSentinelMount,
   resolveBundleSentinelLayoutPath,
+  rewriteSentinelImports,
+  rewriteServerEntryImports,
   stripBundleSentinel,
 } from '../../../../src/services/setup/http-client/injectors';
 
@@ -239,5 +241,208 @@ describe('installBundleSentinelMount / removeBundleSentinelMount (filesystem)', 
     const result = await readFile(target, 'utf-8');
     expect(result).not.toContain('HttpClientBundleSentinel');
     expect(result).toBe(LOCALE_LAYOUT);
+  });
+});
+
+const SENTINEL_SOURCE = `'use client';
+
+import {
+  axiosClient,
+  createAxiosClient,
+  createFetchClient,
+  fetchClient,
+  toSearchParams,
+} from '@/lib/utils/http';
+
+const __sentinel__ = {
+  axiosClient,
+  createAxiosClient,
+  createFetchClient,
+  fetchClient,
+  toSearchParams,
+};
+
+export function HttpClientBundleSentinel(): null {
+  if (typeof window !== 'undefined') {
+    (window as unknown as { __http_sentinel__: unknown }).__http_sentinel__ = __sentinel__;
+  }
+  return null;
+}
+`;
+
+describe('rewriteSentinelImports', () => {
+  let project: string;
+
+  beforeEach(async () => {
+    project = await mkdtemp(path.join(tmpdir(), 'next-maker-sentinel-rewrite-'));
+    await mkdir(path.join(project, 'src/lib/utils/http/__bundle-sentinel__'), { recursive: true });
+    await writeFile(
+      path.join(project, 'src/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel.tsx'),
+      SENTINEL_SOURCE,
+    );
+  });
+
+  afterEach(async () => {
+    await rm(project, { recursive: true, force: true });
+  });
+
+  it('reduces the sentinel to fetch-only symbols when fetch is the sole client', async () => {
+    await rewriteSentinelImports(project, ['fetch']);
+
+    const result = await readFile(
+      path.join(project, 'src/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel.tsx'),
+      'utf-8',
+    );
+    // Axios symbols are gone (would cause "export not found" build errors).
+    expect(result).not.toContain('axiosClient');
+    expect(result).not.toContain('createAxiosClient');
+    // Fetch symbols survive.
+    expect(result).toContain('fetchClient');
+    expect(result).toContain('createFetchClient');
+    // toSearchParams (in shared/) is universal — always referenced.
+    expect(result).toContain('toSearchParams');
+  });
+
+  it('reduces the sentinel to axios-only symbols when axios is the sole client', async () => {
+    await rewriteSentinelImports(project, ['axios']);
+
+    const result = await readFile(
+      path.join(project, 'src/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel.tsx'),
+      'utf-8',
+    );
+    expect(result).not.toContain('fetchClient');
+    expect(result).not.toContain('createFetchClient');
+    expect(result).toContain('axiosClient');
+    expect(result).toContain('createAxiosClient');
+    expect(result).toContain('toSearchParams');
+  });
+
+  it('preserves both clients when both are active', async () => {
+    await rewriteSentinelImports(project, ['fetch', 'axios']);
+
+    const result = await readFile(
+      path.join(project, 'src/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel.tsx'),
+      'utf-8',
+    );
+    expect(result).toContain('axiosClient');
+    expect(result).toContain('fetchClient');
+    expect(result).toContain('toSearchParams');
+  });
+
+  it('is idempotent — re-running with the same client set is a byte-for-byte no-op', async () => {
+    await rewriteSentinelImports(project, ['fetch']);
+    const once = await readFile(
+      path.join(project, 'src/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel.tsx'),
+      'utf-8',
+    );
+    await rewriteSentinelImports(project, ['fetch']);
+    const twice = await readFile(
+      path.join(project, 'src/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel.tsx'),
+      'utf-8',
+    );
+    expect(twice).toBe(once);
+  });
+
+  it('is a no-op when the sentinel file does not exist', async () => {
+    await rm(path.join(project, 'src/lib/utils/http/__bundle-sentinel__'), { recursive: true });
+    await expect(rewriteSentinelImports(project, ['fetch'])).resolves.toBeUndefined();
+  });
+});
+
+const SERVER_ENTRY_SOURCE = `import 'server-only';
+
+import { cookies } from 'next/headers';
+
+import { createAxiosClient } from './axios-client';
+import { handleUnauthorizedRedirect } from './client-utils';
+import { createFetchClient } from './fetch-client';
+import { secureStorageTokenStore } from './token-store';
+
+async function readServerCookieHeader(): Promise<string | undefined> {
+  const all = (await cookies()).getAll();
+  if (all.length === 0) return undefined;
+  return all.map((c) => \`\${c.name}=\${c.value}\`).join('; ');
+}
+
+export const fetchClient = createFetchClient({
+  tokenStore: secureStorageTokenStore,
+  onUnauthorized: handleUnauthorizedRedirect,
+  cache: 'no-store',
+  cookieResolver: readServerCookieHeader,
+});
+
+export const axiosClient = createAxiosClient({
+  tokenStore: secureStorageTokenStore,
+  onUnauthorized: handleUnauthorizedRedirect,
+  cookieResolver: readServerCookieHeader,
+});
+
+export { createAxiosClient, createFetchClient };
+`;
+
+describe('rewriteServerEntryImports', () => {
+  let project: string;
+
+  beforeEach(async () => {
+    project = await mkdtemp(path.join(tmpdir(), 'next-maker-server-entry-'));
+    await mkdir(path.join(project, 'src/lib/utils/http'), { recursive: true });
+    await writeFile(path.join(project, 'src/lib/utils/http/server.ts'), SERVER_ENTRY_SOURCE);
+  });
+
+  afterEach(async () => {
+    await rm(project, { recursive: true, force: true });
+  });
+
+  it('strips axios when fetch is the sole client', async () => {
+    await rewriteServerEntryImports(project, ['fetch']);
+
+    const result = await readFile(path.join(project, 'src/lib/utils/http/server.ts'), 'utf-8');
+    // axios-* gone — both the import and the createAxiosClient instantiation.
+    expect(result).not.toContain('./axios-client');
+    expect(result).not.toContain('createAxiosClient');
+    expect(result).not.toContain('axiosClient = createAxiosClient');
+    // fetch survives.
+    expect(result).toContain('createFetchClient');
+    expect(result).toContain('fetchClient = createFetchClient');
+    // The trailing `export { ... };` line has axios trimmed but fetch kept.
+    expect(result).toMatch(/export\s*\{\s*createFetchClient\s*\};/);
+  });
+
+  it('strips fetch when axios is the sole client', async () => {
+    await rewriteServerEntryImports(project, ['axios']);
+
+    const result = await readFile(path.join(project, 'src/lib/utils/http/server.ts'), 'utf-8');
+    expect(result).not.toContain('./fetch-client');
+    expect(result).not.toContain('createFetchClient');
+    expect(result).toContain('createAxiosClient');
+    expect(result).toMatch(/export\s*\{\s*createAxiosClient\s*\};/);
+  });
+
+  it('preserves both clients when both are active', async () => {
+    await rewriteServerEntryImports(project, ['fetch', 'axios']);
+
+    const result = await readFile(path.join(project, 'src/lib/utils/http/server.ts'), 'utf-8');
+    expect(result).toContain('createAxiosClient');
+    expect(result).toContain('createFetchClient');
+  });
+
+  it('is a no-op when clients is empty (caller should delete the file)', async () => {
+    await rewriteServerEntryImports(project, []);
+
+    const result = await readFile(path.join(project, 'src/lib/utils/http/server.ts'), 'utf-8');
+    expect(result).toBe(SERVER_ENTRY_SOURCE);
+  });
+
+  it('is idempotent — re-running with the same active set is a byte-for-byte no-op', async () => {
+    await rewriteServerEntryImports(project, ['fetch']);
+    const once = await readFile(path.join(project, 'src/lib/utils/http/server.ts'), 'utf-8');
+    await rewriteServerEntryImports(project, ['fetch']);
+    const twice = await readFile(path.join(project, 'src/lib/utils/http/server.ts'), 'utf-8');
+    expect(twice).toBe(once);
+  });
+
+  it('is a no-op when server.ts does not exist', async () => {
+    await rm(path.join(project, 'src/lib/utils/http/server.ts'));
+    await expect(rewriteServerEntryImports(project, ['fetch'])).resolves.toBeUndefined();
   });
 });

@@ -440,3 +440,122 @@ export const isStringUsed = async (
     return true;
   }
 };
+
+/**
+ * Rewrite the sentinel's import list to match the active client variants.
+ *
+ * The template ships the sentinel hardcoded to import BOTH axios and fetch
+ * symbols from `@/lib/utils/http`. When `setup --http-client` strips one
+ * variant (e.g. user picks fetch only), the universal entry no longer
+ * exports the axios symbols and the sentinel fails to build. This helper
+ * keeps the sentinel honest: only references symbols that actually exist
+ * at the universal entry.
+ *
+ * Idempotent — running on an already-correct sentinel is a no-op.
+ *
+ * `toSearchParams` is always present (lives in `shared/`, not in either
+ * client variant), so it's emitted regardless. When `clients` is empty,
+ * the sentinel is no longer meaningful, but this helper still produces
+ * a valid TSX file (the caller is responsible for removing the mount).
+ */
+export const rewriteSentinelImports = async (
+  projectPath: string,
+  clients: ('fetch' | 'axios')[],
+): Promise<void> => {
+  const sentinelPath = path.join(projectPath, PROJECT_PATHS.HTTP_BUNDLE_SENTINEL_FILE);
+  if (!fileExists(sentinelPath)) return;
+
+  let content = await readFile(sentinelPath);
+
+  // Build the list of symbols the sentinel should reference.
+  const symbols: string[] = ['toSearchParams'];
+  if (clients.includes('axios')) symbols.unshift('axiosClient', 'createAxiosClient');
+  if (clients.includes('fetch')) {
+    // Insert fetch symbols after axios ones (alphabetical-ish: axios* then create* then fetch*).
+    const insertAt = symbols.indexOf('toSearchParams');
+    symbols.splice(insertAt, 0, 'createFetchClient', 'fetchClient');
+  }
+  symbols.sort();
+
+  // 1. Rewrite the import statement.
+  const newImport = `import {\n  ${symbols.join(',\n  ')},\n} from '@/lib/utils/http';`;
+  content = content.replace(/import\s*\{[^}]*\}\s*from\s*['"]@\/lib\/utils\/http['"];/, newImport);
+
+  // 2. Rewrite the __sentinel__ object body to reference the same symbols.
+  const newSentinelBody = symbols.map((s) => `  ${s},`).join('\n');
+  content = content.replace(
+    /const __sentinel__ = \{[\s\S]*?\};/,
+    `const __sentinel__ = {\n${newSentinelBody}\n};`,
+  );
+
+  await writeFile(sentinelPath, content);
+};
+
+/**
+ * Rewrite `src/lib/utils/http/server.ts` so it only imports/instantiates the
+ * client variants the project actually has on disk.
+ *
+ * The template ships server.ts with both axios and fetch unconditionally
+ * imported, instantiated, and re-exported. When `setup --http-client`
+ * removes one variant, its `./axios-client` or `./fetch-client` directory
+ * is gone — the universal `index.ts` is already aware of this (via
+ * `updateHttpIndex`), but `server.ts` keeps the dangling import and the
+ * `yarn build` typecheck fails with "Cannot find module".
+ *
+ * Strategy: regex-strip the variant-specific blocks (import, instantiation,
+ * re-export) for the client(s) NOT in the active set. Idempotent — running
+ * on an already-correct server.ts is a no-op.
+ *
+ * When `clients` is empty the server entry should already be deleted by
+ * the caller; this helper is a no-op in that case.
+ */
+export const rewriteServerEntryImports = async (
+  projectPath: string,
+  clients: ('fetch' | 'axios')[],
+): Promise<void> => {
+  const serverPath = path.join(projectPath, PROJECT_PATHS.HTTP_SERVER_FILE);
+  if (!fileExists(serverPath)) return;
+  if (clients.length === 0) return;
+
+  let content = await readFile(serverPath);
+
+  const drop = (regex: RegExp): void => {
+    content = content.replace(regex, '');
+  };
+
+  if (!clients.includes('axios')) {
+    // Drop axios import + the `export const axiosClient = createAxiosClient({...})` block.
+    drop(/^import\s*\{\s*createAxiosClient\s*\}\s*from\s*['"]\.\/axios-client['"];\n?/m);
+    drop(/export const axiosClient = createAxiosClient\(\{[\s\S]*?\}\);\n?\n?/);
+    // Trim createAxiosClient from the trailing re-export.
+    content = trimFromExportList(content, 'createAxiosClient');
+  }
+
+  if (!clients.includes('fetch')) {
+    drop(/^import\s*\{\s*createFetchClient\s*\}\s*from\s*['"]\.\/fetch-client['"];\n?/m);
+    drop(/export const fetchClient = createFetchClient\(\{[\s\S]*?\}\);\n?\n?/);
+    content = trimFromExportList(content, 'createFetchClient');
+  }
+
+  // Collapse 3+ consecutive newlines down to 2 for tidy output.
+  content = content.replace(/\n{3,}/g, '\n\n');
+
+  await writeFile(serverPath, content);
+};
+
+/**
+ * Helper: remove `name` from a single-line `export { a, b, c };` list. If
+ * `name` is the only name, drops the whole line. No-op when `name` isn't
+ * in the list.
+ */
+const trimFromExportList = (content: string, name: string): string => {
+  const exportLineRe = /^export\s*\{([^}]*)\};\n?/m;
+  return content.replace(exportLineRe, (_match, inner: string) => {
+    const remaining = inner
+      .split(',')
+      .map((n) => n.trim())
+      .filter((n) => n.length > 0 && n !== name);
+    if (remaining.length === 0) return '';
+    return `export { ${remaining.join(', ')} };\n`;
+  });
+};

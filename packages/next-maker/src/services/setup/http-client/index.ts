@@ -18,6 +18,8 @@ import {
   migrateClientUsages,
   removeBundleSentinelMount,
   removeHttpExports,
+  rewriteSentinelImports,
+  rewriteServerEntryImports,
   updateConfigIndex,
   updateHttpIndex,
   updateTypesIndex,
@@ -106,6 +108,15 @@ export const setupHttpClient = async (projectPath: string): Promise<void> => {
       // any future regression of the universal/server entry split. No-op
       // when the layout shape isn't recognised.
       await installBundleSentinelMount(projectPath);
+      // Align the sentinel's import list to the active client variants.
+      // The template ships it hardcoded to import BOTH axios and fetch
+      // symbols; when only one client is active, the other's symbols are
+      // no longer exported from @/lib/utils/http and the build fails.
+      await rewriteSentinelImports(projectPath, activeClients);
+      // Same problem for the server entry — it imports both client
+      // factories from `./axios-client` and `./fetch-client`. Strip the
+      // inactive variant so the typecheck doesn't fail on a missing module.
+      await rewriteServerEntryImports(projectPath, activeClients);
     } else {
       // Removing all clients — pull the sentinel out of the layout so the
       // app doesn't reference a deleted module.
