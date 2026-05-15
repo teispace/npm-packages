@@ -27,6 +27,7 @@ const makeAnswers = (i18n: boolean): ProjectPrompts =>
     keepTemplates: false,
     darkMode: false,
     redux: false,
+    ws: false,
     i18n,
     communityFiles: [],
     readme: false,
