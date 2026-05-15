@@ -25,9 +25,10 @@ export const registerApiEndpoints = async (options: RegisterApiOptions): Promise
       throw new Error('Could not find AppApis object in app-apis.ts');
     }
 
+    // Bare paths — `getApiBaseUrl()` already prepends `/api/v{n}`.
     const newEndpoint = `  ${camelName}: {
-    base: \`\${API_PREFIX}/${serviceName}\`,
-    getAll: \`\${API_PREFIX}/${serviceName}\`,
+    base: '/${serviceName}',
+    getAll: '/${serviceName}',
   },`;
 
     content = addToAppApis(content, newEndpoint);

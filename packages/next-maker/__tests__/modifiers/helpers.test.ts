@@ -92,14 +92,14 @@ describe('addToAppApis', () => {
   it('should insert endpoint before closing brace', () => {
     const content = `export const AppApis = {
   auth: {
-    base: \`\${API_PREFIX}/auth\`,
-    login: \`\${API_PREFIX}/auth/login\`,
+    login: '/auth/login',
+    refresh: '/auth/refresh',
   },
 } as const;
 `;
     const endpoint = `  users: {
-    base: \`\${API_PREFIX}/users\`,
-    getAll: \`\${API_PREFIX}/users\`,
+    base: '/users',
+    getAll: '/users',
   },`;
 
     const result = addToAppApis(content, endpoint);
