@@ -3,7 +3,7 @@ import { PROJECT_PATHS } from '../../../config/paths';
 import { deleteDirectory, deleteFile, fileExists, readFile, writeFile } from '../../../core/files';
 import { uninstallPackage } from '../../../core/package-manager';
 import type { ProjectPrompts } from '../../../prompts/create-app.prompt';
-import { stripBridgeMount } from '../../setup/ws/injectors';
+import { stripBridgeMount, stripWsReducerRegistration } from '../../setup/ws/injectors';
 
 /**
  * Cleanup applied when the user opts OUT of WebSocket support at `init`.
@@ -39,38 +39,16 @@ export const cleanupWs = async (projectPath: string, answers: ProjectPrompts): P
 };
 
 /**
- * Strip the `import { wsReducer } from '@/store/slices/ws.slice';` line and
- * the `ws: wsReducer,` entry from `combineReducers({...})`. Regex-based:
- * the entry is a single line in the template; the import is a single line
- * via the existing modifier conventions. Idempotent.
+ * Read rootReducer.ts, apply the pure `stripWsReducerRegistration` helper,
+ * write back. The helper is shared with the WS manifest's `removePattern`
+ * so `init`-opt-out and `remove ws` converge on the same byte output.
  */
 const removeWsReducerFromRootReducer = async (projectPath: string): Promise<void> => {
   const rootReducerPath = path.join(projectPath, PROJECT_PATHS.ROOT_REDUCER);
   if (!fileExists(rootReducerPath)) return;
-
-  let content = await readFile(rootReducerPath);
-
-  // 1. Drop the import line.
-  content = content.replace(
-    /import\s*\{\s*wsReducer\s*\}\s*from\s*['"]@\/store\/slices\/ws\.slice['"];\n?/,
-    '',
-  );
-
-  // 2. Drop the `ws: wsReducer,` line (with leading whitespace, optional trailing comma).
-  content = content.replace(/^\s*ws:\s*wsReducer,?\n/m, '');
-
-  // 3. The template ships with a JSDoc block above combineReducers explaining
-  //    why `ws` is unwrapped. Once `ws` is gone the comment is misleading.
-  //    Anchor on **any JSDoc that mentions `ws` and persistReducer** — that's
-  //    a stable shape ("ws is/isn't wrapped in persistReducer" is the topic;
-  //    wording variations like "not wrapped"/"intentionally unwrapped" all
-  //    pass). Falls back to a no-op if the comment shape changes too much.
-  content = content.replace(
-    /\/\*\*[^*]*(?:\*(?!\/)[^*]*)*\bws\b[^*]*(?:\*(?!\/)[^*]*)*\bpersistReducer\b[\s\S]*?\*\/\n?/,
-    '',
-  );
-
-  await writeFile(rootReducerPath, content);
+  const before = await readFile(rootReducerPath);
+  const after = stripWsReducerRegistration(before);
+  if (after !== before) await writeFile(rootReducerPath, after);
 };
 
 const removeBridgeMountFromStoreProvider = async (projectPath: string): Promise<void> => {
