@@ -6,6 +6,13 @@ export interface ProjectDetection {
   httpClient: 'axios' | 'fetch' | 'both' | 'none';
   hasI18n: boolean;
   hasTests: boolean;
+  /**
+   * `'present'` when both the `socket.io-client` dependency and the
+   * `src/lib/utils/ws/` directory exist. The dual signal mirrors httpClient
+   * — a stray dep without the directory (or vice-versa) is reported as
+   * `'none'` so doctor's "is this feature installed?" check stays honest.
+   */
+  ws: 'none' | 'present';
 }
 
 export const detectProjectSetup = async (projectPath: string): Promise<ProjectDetection> => {
@@ -62,7 +69,22 @@ export const detectProjectSetup = async (projectPath: string): Promise<ProjectDe
       }
     }
 
-    return { hasRedux, httpClient, hasI18n, hasTests };
+    // WS: both dep + directory must be present. A lone dep without the
+    // ws/ subtree means it was installed by something else (or a half-rolled
+    // install); a lone directory means the user is mid-migration. Either
+    // half-state is reported as 'none' so setup/doctor/remove behave
+    // predictably.
+    let ws: ProjectDetection['ws'] = 'none';
+    if (dependencies['socket.io-client']) {
+      try {
+        await access(path.join(projectPath, 'src', 'lib', 'utils', 'ws'));
+        ws = 'present';
+      } catch {
+        /* dep present but no ws/ — treat as not installed */
+      }
+    }
+
+    return { hasRedux, httpClient, hasI18n, hasTests, ws };
   } catch (error) {
     throw new Error(`Failed to detect project setup: ${error}`, { cause: error });
   }

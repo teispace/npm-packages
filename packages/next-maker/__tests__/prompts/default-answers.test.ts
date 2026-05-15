@@ -31,9 +31,25 @@ describe('defaultProjectAnswers', () => {
     expect(answers.docker).toBe(false);
     expect(answers.ci).toBe(false);
     expect(answers.bundleAnalyzer).toBe(false);
+    expect(answers.ws).toBe(false);
     expect(answers.communityFiles).toEqual([]);
     expect(answers.gitRemote).toBe('');
     expect(answers.pushToRemote).toBe(false);
+  });
+
+  it('forces ws=false when redux is off, even if ws was explicitly requested', () => {
+    // The bridge dispatches into a Redux slice — opting in to ws without
+    // redux is an impossible state. Surface it cleanly here rather than
+    // failing later in setup.
+    const answers = defaultProjectAnswers('app', { redux: false, ws: true });
+    expect(answers.redux).toBe(false);
+    expect(answers.ws).toBe(false);
+  });
+
+  it('honours ws=true when redux is also on', () => {
+    const answers = defaultProjectAnswers('app', { ws: true });
+    expect(answers.redux).toBe(true);
+    expect(answers.ws).toBe(true);
   });
 
   it('mirrors author into company', () => {

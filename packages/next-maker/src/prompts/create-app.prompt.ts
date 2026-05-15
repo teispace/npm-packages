@@ -50,6 +50,9 @@ export const defaultProjectAnswers = (
     keepTemplates: overrides.keepTemplates ?? false,
     darkMode: overrides.darkMode ?? true,
     redux: overrides.redux ?? true,
+    // WS requires Redux. If redux is off (whether by default or override), ws
+    // can't be on — force it to false regardless of how it was supplied.
+    ws: (overrides.redux ?? true) && (overrides.ws ?? false),
     i18n: overrides.i18n ?? true,
     communityFiles: overrides.communityFiles ?? [],
     readme: overrides.readme ?? true,
@@ -91,6 +94,12 @@ export interface ProjectPrompts {
   keepTemplates: boolean;
   darkMode: boolean;
   redux: boolean;
+  /**
+   * Include the WebSocket transport layer (`src/lib/utils/ws/` + `wsReducer`).
+   * Requires Redux — if `redux: false`, this is forced to `false` regardless
+   * of how it's set, because the WS bridge dispatches into the WS slice.
+   */
+  ws: boolean;
   i18n: boolean;
   communityFiles: string[];
   readme: boolean;
@@ -255,6 +264,19 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
     },
     {
       type: 'confirm',
+      name: 'ws',
+      message: 'Do you want to include WebSocket support (socket.io-client + Redux bridge)?',
+      initial: false,
+      skip: function (this: PromptContext) {
+        // WS depends on Redux (bridge dispatches into a Redux slice). Hide
+        // the question when Redux is off; defaultProjectAnswers forces
+        // ws=false in that case so the project state stays consistent.
+        const answers = this.state?.answers ?? this.enquirer?.answers ?? {};
+        return !answers.redux;
+      },
+    },
+    {
+      type: 'confirm',
       name: 'i18n',
       message: 'Do you want to include Internationalization (next-intl)?',
       initial: true,
@@ -376,6 +398,11 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
 
   // Set company to be the same as author
   response.company = response.author;
+
+  // The `ws` question is hidden when redux=false; Enquirer leaves the field
+  // undefined in that case. Normalise to a strict boolean so callers can rely
+  // on it.
+  response.ws = !!response.redux && !!response.ws;
 
   // Generate git URLs from gitRemote if provided
   if (response.gitRemote && !response.gitHomepage) {
