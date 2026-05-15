@@ -124,6 +124,21 @@ export const setupHttpClient = async (projectPath: string): Promise<void> => {
       }
     }
 
+    // server-only — guards the next/headers reader in shared/server-cookies.ts.
+    // Required by both clients (via shared/cookie-injection's dynamic import),
+    // so it tracks "any client active" rather than a specific variant.
+    if (activeClients.length > 0) {
+      if (!dependencies['server-only']) {
+        spinner.text = 'Installing server-only...';
+        await installPackage(projectPath, 'server-only');
+      }
+    } else {
+      if (dependencies['server-only']) {
+        spinner.text = 'Uninstalling server-only...';
+        await uninstallPackage(projectPath, 'server-only');
+      }
+    }
+
     // React Secure Storage Management
     // Needed if ANY client exists (for token store), OR if used elsewhere (checked by file existence)
     const storageServicePath = path.join(projectPath, 'src/services/storage'); // Hardcoded path to match assets.ts usage
