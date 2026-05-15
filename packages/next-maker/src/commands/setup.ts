@@ -12,6 +12,7 @@ import { setupRedux } from '../services/setup/redux';
 import { setupSecurityHeaders } from '../services/setup/security-headers';
 import { setupTests } from '../services/setup/tests';
 import { setupValidationScripts } from '../services/setup/validate-scripts';
+import { setupWs } from '../services/setup/ws';
 
 const { prompt } = Enquirer;
 
@@ -19,6 +20,7 @@ interface SetupOptions {
   httpClient?: string;
   darkTheme?: boolean;
   redux?: boolean;
+  ws?: boolean;
   i18n?: boolean;
   tests?: boolean;
   reactCompiler?: boolean;
@@ -35,6 +37,7 @@ export const registerSetupCommand = (program: Command) => {
     .option('--http-client', 'Setup HTTP client (axios|fetch)')
     .option('--dark-theme', 'Setup Dark Theme (Tailwind + @teispace/next-themes)')
     .option('--redux', 'Setup Redux Toolkit')
+    .option('--ws', 'Setup WebSocket client (socket.io-client + Redux bridge; requires --redux)')
     .option('--i18n', 'Setup next-intl for internationalization')
     .option('--tests', 'Setup testing (Vitest + React Testing Library)')
     .option('--react-compiler', 'Enable the React Compiler')
@@ -53,6 +56,7 @@ export const registerSetupCommand = (program: Command) => {
           options.httpClient ||
           options.darkTheme ||
           options.redux ||
+          options.ws ||
           options.i18n ||
           options.tests ||
           options.reactCompiler ||
@@ -65,6 +69,10 @@ export const registerSetupCommand = (program: Command) => {
           if (options.httpClient) await setupHttpClient(process.cwd());
           if (options.darkTheme) await setupDarkTheme(process.cwd());
           if (options.redux) await setupRedux(process.cwd());
+          // ws must run after redux (the bridge dispatches into a Redux slice).
+          // When both flags are passed together, the redux setup happens first
+          // because of declaration order; ws then finds the store ready.
+          if (options.ws) await setupWs(process.cwd());
           if (options.i18n) await setupI18n(process.cwd());
           if (options.tests) await setupTests(process.cwd());
           if (options.reactCompiler) await setupReactCompiler(process.cwd());
@@ -83,6 +91,7 @@ export const registerSetupCommand = (program: Command) => {
             choices: [
               { name: 'Dark Theme', value: 'dark-theme' },
               { name: 'Redux Toolkit', value: 'redux' },
+              { name: 'WebSocket Client (requires Redux)', value: 'ws' },
               { name: 'HTTP Client (Axios/Fetch)', value: 'http-client' },
               { name: 'Internationalization (next-intl)', value: 'i18n' },
               { name: 'Testing (Vitest + RTL)', value: 'tests' },
@@ -105,6 +114,7 @@ export const registerSetupCommand = (program: Command) => {
         const handlers: Record<string, (cwd: string) => Promise<void>> = {
           'dark-theme': setupDarkTheme,
           redux: setupRedux,
+          ws: setupWs,
           'http-client': setupHttpClient,
           i18n: setupI18n,
           tests: setupTests,
