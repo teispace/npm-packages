@@ -51,12 +51,13 @@ const baseAnswers = (overrides: Partial<ProjectPrompts> = {}): ProjectPrompts =>
     ...overrides,
   }) as ProjectPrompts;
 
+// Uses the actual template's relative import path (`./slices/ws.slice`).
 const TEMPLATE_ROOT_REDUCER = `import { combineReducers } from '@reduxjs/toolkit';
 import { persistReducer } from 'redux-persist';
 
 import { countPersistConfig, counterReducer as countReducer } from '@/features/counter/store';
 
-import { wsReducer } from '@/store/slices/ws.slice';
+import { wsReducer } from './slices/ws.slice';
 
 /**
  * \`ws\` is intentionally NOT wrapped in \`persistReducer\` — connection state
@@ -186,7 +187,7 @@ describe('cleanupWs', () => {
 
     const rootReducer = await readFile(path.join(project, 'src/store/rootReducer.ts'), 'utf-8');
     expect(rootReducer).not.toContain('wsReducer');
-    expect(rootReducer).not.toContain('@/store/slices/ws.slice');
+    expect(rootReducer).not.toContain('ws.slice');
     // The unwrapped-on-purpose comment block must go too — it's misleading
     // without the ws entry it explained.
     expect(rootReducer).not.toContain('intentionally NOT wrapped');
