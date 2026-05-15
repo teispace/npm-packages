@@ -5,6 +5,10 @@ import {
 } from '../../../src/generators/templates/barrel.template';
 import { componentTemplate } from '../../../src/generators/templates/component.template';
 import {
+  crudApiConfigTemplate,
+  crudServiceTemplate,
+} from '../../../src/generators/templates/crud-service.template';
+import {
   hookWithoutStoreTemplate,
   hookWithStoreTemplate,
 } from '../../../src/generators/templates/hook.template';
@@ -183,5 +187,79 @@ describe('barrelTemplates', () => {
 
     expect(result).not.toContain('store');
     expect(result).not.toContain('services');
+  });
+});
+
+describe('crudApiConfigTemplate', () => {
+  it('emits bare-path endpoints — no API_PREFIX interpolation', () => {
+    const result = crudApiConfigTemplate({ camelName: 'users', kebabName: 'users' });
+
+    // The /api/v{n} prefix is owned by getApiBaseUrl(), so endpoints are
+    // relative to the API base. Interpolating API_PREFIX would double-prefix.
+    expect(result).not.toContain('API_PREFIX');
+    expect(result).toContain("base: '/users',");
+    expect(result).toContain("getAll: '/users',");
+    expect(result).toContain("create: '/users',");
+  });
+
+  it('emits template literals for id-parameterised endpoints', () => {
+    const result = crudApiConfigTemplate({ camelName: 'orders', kebabName: 'orders' });
+
+    // Use `${'$'}` so the test source itself isn't a template-string
+    // placeholder — Biome's `noTemplateCurlyInString` otherwise warns.
+    const idInterp = `${'$'}{id}`;
+    expect(result).toContain(`getById: (id: string) => \`/orders/${idInterp}\`,`);
+    expect(result).toContain(`update: (id: string) => \`/orders/${idInterp}\`,`);
+    expect(result).toContain(`delete: (id: string) => \`/orders/${idInterp}\`,`);
+  });
+
+  it('honours different camelName and kebabName', () => {
+    const result = crudApiConfigTemplate({
+      camelName: 'orderItems',
+      kebabName: 'order-items',
+    });
+
+    const idInterp = `${'$'}{id}`;
+    // The object key uses camelName; the URL path uses kebabName.
+    expect(result).toContain('orderItems: {');
+    expect(result).toContain("base: '/order-items',");
+    expect(result).toContain(`getById: (id: string) => \`/order-items/${idInterp}\`,`);
+  });
+});
+
+describe('crudServiceTemplate', () => {
+  it('wires the axios client variant', () => {
+    const result = crudServiceTemplate({
+      camelName: 'users',
+      pascalName: 'User',
+      httpClient: 'axios',
+    });
+
+    expect(result).toContain("import { axiosClient } from '@/lib/utils/http';");
+    expect(result).toContain('axiosClient.get<UserSummary[]>(AppApis.users.getAll)');
+  });
+
+  it('wires the fetch client variant', () => {
+    const result = crudServiceTemplate({
+      camelName: 'users',
+      pascalName: 'User',
+      httpClient: 'fetch',
+    });
+
+    expect(result).toContain("import { fetchClient } from '@/lib/utils/http';");
+    expect(result).toContain('fetchClient.get<UserSummary[]>(AppApis.users.getAll)');
+  });
+
+  it('generates Summary, Detail, Create, and Update types', () => {
+    const result = crudServiceTemplate({
+      camelName: 'orders',
+      pascalName: 'Order',
+      httpClient: 'fetch',
+    });
+
+    expect(result).toContain('export interface OrderSummary');
+    expect(result).toContain('export interface OrderDetail extends OrderSummary');
+    expect(result).toContain('export interface CreateOrderDto');
+    expect(result).toContain('export interface UpdateOrderDto');
   });
 });
