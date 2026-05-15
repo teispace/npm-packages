@@ -9,7 +9,6 @@ import {
   registerWsReducer,
   removeBridgeMount,
   stripBridgeMount,
-  stripWsReducerRegistration,
 } from '../../../../src/services/setup/ws/injectors';
 
 // Redux-only StoreProvider (what the template ships when ws is opted out).
@@ -88,72 +87,6 @@ describe('stripBridgeMount (pure)', () => {
   it('is idempotent on clean input', () => {
     const stripped = stripBridgeMount(REDUX_ONLY_STORE_PROVIDER);
     expect(stripped).toBe(REDUX_ONLY_STORE_PROVIDER);
-  });
-
-  it('drops `useEffect` from the React import when no other effects remain', () => {
-    // Real-world case: the template ships StoreProvider with `import { useEffect, useRef }`
-    // and a single `useEffect(...)` block calling attachWsBridge. After strip,
-    // `useEffect` is unused — leaving it triggers a lint warning. We prune it.
-    const withBridge = `'use client';
-import { useEffect, useRef } from 'react';
-
-import { attachWsBridge, wsClient } from '@/lib/utils/ws';
-
-export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
-  const storeRef = useRef(null);
-
-  if (!storeRef.current) {
-    storeRef.current = {};
-  }
-
-  useEffect(() => {
-    const store = storeRef.current;
-    if (!store) return;
-    return attachWsBridge(wsClient, store.dispatch);
-  }, []);
-
-  return <div>{children}</div>;
-};
-`;
-    const stripped = stripBridgeMount(withBridge);
-    expect(stripped).toContain("import { useRef } from 'react'");
-    expect(stripped).not.toContain('useEffect');
-  });
-
-  it('keeps `useEffect` in the React import when other effects survive', () => {
-    // Edge case: a user added an unrelated useEffect. We must not break it
-    // by pruning useEffect from the import.
-    const withTwoEffects = `'use client';
-import { useEffect, useRef } from 'react';
-
-import { attachWsBridge, wsClient } from '@/lib/utils/ws';
-
-export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
-  const storeRef = useRef(null);
-
-  if (!storeRef.current) {
-    storeRef.current = {};
-  }
-
-  useEffect(() => {
-    const store = storeRef.current;
-    if (!store) return;
-    return attachWsBridge(wsClient, store.dispatch);
-  }, []);
-
-  useEffect(() => {
-    console.log('user effect');
-  }, []);
-
-  return <div>{children}</div>;
-};
-`;
-    const stripped = stripBridgeMount(withTwoEffects);
-    // The bridge effect goes; the user effect survives.
-    expect(stripped).not.toContain('attachWsBridge');
-    expect(stripped).toContain("console.log('user effect')");
-    // useEffect import must stay.
-    expect(stripped).toMatch(/import\s*\{[^}]*\buseEffect\b[^}]*\}\s*from\s*['"]react['"]/);
   });
 });
 
@@ -262,68 +195,5 @@ describe('ensureTestSetupMocks', () => {
   it('is a no-op when test/setup.ts does not exist', async () => {
     // No vitest in the project — nothing to do.
     await expect(ensureTestSetupMocks(project)).resolves.toBeUndefined();
-  });
-});
-
-// Mirrors the actual template's import path (`./slices/ws.slice`, relative).
-// The setup-flow registerInRootReducer writes the alias form
-// (`@/store/slices/ws.slice`); both must strip.
-const TEMPLATE_ROOT_REDUCER = `import { combineReducers } from '@reduxjs/toolkit';
-import { persistReducer } from 'redux-persist';
-
-import { countPersistConfig, counterReducer as countReducer } from '@/features/counter/store';
-
-import { wsReducer } from './slices/ws.slice';
-
-/**
- * \`ws\` is intentionally NOT wrapped in \`persistReducer\` — connection state
- * is ephemeral, and rehydrating "connected: true" on first paint would lie
- * about the actual transport.
- */
-export const rootReducer = combineReducers({
-  count: persistReducer(countPersistConfig, countReducer),
-  ws: wsReducer,
-});
-
-export type RootState = ReturnType<typeof rootReducer>;
-`;
-
-describe('stripWsReducerRegistration (pure)', () => {
-  it('removes the import, the ws entry, and the JSDoc comment block', () => {
-    const result = stripWsReducerRegistration(TEMPLATE_ROOT_REDUCER);
-    expect(result).not.toContain('wsReducer');
-    expect(result).not.toContain('ws.slice');
-    expect(result).not.toContain('intentionally NOT wrapped');
-    // The rest survives untouched.
-    expect(result).toContain('combineReducers({');
-    expect(result).toContain('count: persistReducer(countPersistConfig, countReducer)');
-  });
-
-  it('also strips the alias-form import (`@/store/slices/ws.slice`)', () => {
-    // The setup --redux flow writes the alias form via the existing
-    // root-reducer modifier — the strip must handle that variant too.
-    const withAliasPath = TEMPLATE_ROOT_REDUCER.replace(
-      "from './slices/ws.slice'",
-      "from '@/store/slices/ws.slice'",
-    );
-    const result = stripWsReducerRegistration(withAliasPath);
-    expect(result).not.toContain('wsReducer');
-    expect(result).not.toContain('@/store/slices/ws.slice');
-  });
-
-  it('is idempotent on clean input (no ws entries already present)', () => {
-    const stripped = stripWsReducerRegistration(TEMPLATE_ROOT_REDUCER);
-    const twice = stripWsReducerRegistration(stripped);
-    expect(twice).toBe(stripped);
-  });
-
-  it('tolerates wording drift in the JSDoc as long as `ws` and `persistReducer` co-appear', () => {
-    const reworded = TEMPLATE_ROOT_REDUCER.replace(
-      /\/\*\*[\s\S]*?\*\//,
-      `/**\n * \`ws\` here is unwrapped on purpose — no persistReducer call.\n */`,
-    );
-    const result = stripWsReducerRegistration(reworded);
-    expect(result).not.toContain('unwrapped on purpose');
-    expect(result).not.toContain('wsReducer');
   });
 });

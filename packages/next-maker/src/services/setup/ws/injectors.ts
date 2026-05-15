@@ -74,61 +74,23 @@ export const injectBridgeMount = (content: string): string => {
 };
 
 /**
- * Reverse of `injectBridgeMount`. Drops the import + effect block, and also
- * prunes `useEffect` from the React import when no other `useEffect(` call
- * survives (so we don't leave an unused-import lint error).
- *
- * Anchored on **stable code tokens** — the import path `@/lib/utils/ws` and
- * the function name `attachWsBridge` — not the comment wording. Upstream
- * comment drift won't silently break strip.
+ * Reverse of `injectBridgeMount`. Drops the import + effect block. Leaves
+ * `useEffect` in the React import alone — the user may have other effects.
  */
 export const stripBridgeMount = (content: string): string => {
   let next = content;
 
-  // 1. Drop the @/lib/utils/ws import line (with or without trailing newline).
+  // Drop the import line (with or without trailing newline).
   next = next.replace(new RegExp(`${escapeRe(BRIDGE_IMPORT_LINE)}\\n?`), '');
 
-  // 2. Drop the useEffect block that calls attachWsBridge, along with any
-  //    line comment(s) immediately preceding it. The pattern walks back from
-  //    `useEffect(` through any contiguous `// …` comment lines, then forward
-  //    to the matching `}, []);`. Tolerant to wording changes in the comment.
+  // Drop the comment + effect block. The block is anchored on the comment
+  // (which is distinctive) plus the matching closing of the effect.
   next = next.replace(
-    /\n(?:[ \t]*\/\/[^\n]*\n)*[ \t]*useEffect\(\(\)\s*=>\s*\{[\s\S]*?attachWsBridge\(wsClient,\s*store\.dispatch\)[\s\S]*?\},\s*\[\]\);\n?/,
+    /\n\s*\/\/ Bridge the WS client's lifecycle[\s\S]*?attachWsBridge\(wsClient, store\.dispatch\);\s*\n\s*\},\s*\[\]\);\n?/,
     '\n',
   );
 
-  // 3. If no `useEffect(` call survives in the file, drop `useEffect` from the
-  //    React import — leaving it would be an unused-import lint warning.
-  if (!/\buseEffect\s*\(/.test(next)) {
-    next = pruneUseEffectFromReactImport(next);
-  }
-
   return next;
-};
-
-/**
- * Remove `useEffect` from `import { ..., useEffect, ... } from 'react'` while
- * preserving any other named imports. If `useEffect` is the only named
- * import, drops the whole line (an empty `import {} from 'react'` would
- * also be a lint warning). Idempotent — no-op if `useEffect` isn't in the
- * import.
- */
-const pruneUseEffectFromReactImport = (content: string): string => {
-  const reactImportRe = /import\s*\{([^}]*)\}\s*from\s*['"]react['"];\n?/;
-  const match = content.match(reactImportRe);
-  if (!match) return content;
-
-  const names = match[1]
-    .split(',')
-    .map((n) => n.trim())
-    .filter((n) => n.length > 0 && n !== 'useEffect');
-
-  if (names.length === 0) {
-    // Drop the whole import line.
-    return content.replace(reactImportRe, '');
-  }
-  const rebuilt = `import { ${names.join(', ')} } from 'react';\n`;
-  return content.replace(reactImportRe, rebuilt);
 };
 
 /**
@@ -235,42 +197,3 @@ const ensureUseEffectImport = (content: string): string => {
 };
 
 const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-/**
- * Pure helper: strip the `wsReducer` import + `ws: wsReducer,` entry from a
- * rootReducer.ts source string. Also removes the JSDoc block above
- * `combineReducers` that explains why `ws` is unwrapped (misleading once the
- * entry is gone). Idempotent — re-applying is a no-op on clean input.
- *
- * Used by both `cleanupWs` (init-time opt-out) and the WS manifest's
- * `removePattern` (so `remove ws` auto-strips instead of surfacing as
- * manual cleanup).
- *
- * Anchored on stable code tokens (`wsReducer`, the import path, and the
- * `ws` + `persistReducer` keywords inside the JSDoc) rather than literal
- * comment text — upstream comment rewording doesn't break it.
- */
-export const stripWsReducerRegistration = (content: string): string => {
-  let next = content;
-
-  // 1. Drop the wsReducer import line. The template uses a relative path
-  //    (`./slices/ws.slice`), while the `setup --redux` flow's
-  //    registerInRootReducer writes the alias form (`@/store/slices/ws.slice`).
-  //    Accept either, plus any future variant — anchor on the file basename.
-  next = next.replace(/^import\s*\{\s*wsReducer\s*\}\s*from\s*['"][^'"]*ws\.slice['"];\n?/m, '');
-
-  // 2. Drop the `ws: wsReducer,` entry inside combineReducers (with leading
-  //    whitespace, optional trailing comma).
-  next = next.replace(/^\s*ws:\s*wsReducer,?\n/m, '');
-
-  // 3. Drop the JSDoc that mentions `ws` AND persistReducer in the same
-  //    block. Tolerant to wording drift — "intentionally NOT wrapped",
-  //    "unwrapped on purpose", any phrasing works as long as both tokens
-  //    appear.
-  next = next.replace(
-    /\/\*\*[^*]*(?:\*(?!\/)[^*]*)*\bws\b[^*]*(?:\*(?!\/)[^*]*)*\bpersistReducer\b[\s\S]*?\*\/\n?/,
-    '',
-  );
-
-  return next;
-};
