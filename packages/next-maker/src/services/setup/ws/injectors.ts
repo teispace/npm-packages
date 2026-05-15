@@ -76,17 +76,23 @@ export const injectBridgeMount = (content: string): string => {
 /**
  * Reverse of `injectBridgeMount`. Drops the import + effect block. Leaves
  * `useEffect` in the React import alone — the user may have other effects.
+ *
+ * Anchored on **stable code tokens** — the import path `@/lib/utils/ws` and
+ * the function name `attachWsBridge` — not the comment wording. Upstream
+ * comment drift won't silently break strip.
  */
 export const stripBridgeMount = (content: string): string => {
   let next = content;
 
-  // Drop the import line (with or without trailing newline).
+  // 1. Drop the import line (with or without trailing newline).
   next = next.replace(new RegExp(`${escapeRe(BRIDGE_IMPORT_LINE)}\\n?`), '');
 
-  // Drop the comment + effect block. The block is anchored on the comment
-  // (which is distinctive) plus the matching closing of the effect.
+  // 2. Drop the useEffect block that calls attachWsBridge, along with any
+  //    line comment(s) immediately preceding it. The pattern walks back from
+  //    `useEffect(` through any contiguous `// …` comment lines, then forward
+  //    to the matching `}, []);`. Tolerant to wording changes in the comment.
   next = next.replace(
-    /\n\s*\/\/ Bridge the WS client's lifecycle[\s\S]*?attachWsBridge\(wsClient, store\.dispatch\);\s*\n\s*\},\s*\[\]\);\n?/,
+    /\n(?:[ \t]*\/\/[^\n]*\n)*[ \t]*useEffect\(\(\)\s*=>\s*\{[\s\S]*?attachWsBridge\(wsClient,\s*store\.dispatch\)[\s\S]*?\},\s*\[\]\);\n?/,
     '\n',
   );
 
@@ -197,3 +203,42 @@ const ensureUseEffectImport = (content: string): string => {
 };
 
 const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Pure helper: strip the `wsReducer` import + `ws: wsReducer,` entry from a
+ * rootReducer.ts source string. Also removes the JSDoc block above
+ * `combineReducers` that explains why `ws` is unwrapped (misleading once the
+ * entry is gone). Idempotent — re-applying is a no-op on clean input.
+ *
+ * Used by both `cleanupWs` (init-time opt-out) and the WS manifest's
+ * `removePattern` (so `remove ws` auto-strips instead of surfacing as
+ * manual cleanup).
+ *
+ * Anchored on stable code tokens (`wsReducer`, the import path, and the
+ * `ws` + `persistReducer` keywords inside the JSDoc) rather than literal
+ * comment text — upstream comment rewording doesn't break it.
+ */
+export const stripWsReducerRegistration = (content: string): string => {
+  let next = content;
+
+  // 1. Drop the wsReducer import line.
+  next = next.replace(
+    /import\s*\{\s*wsReducer\s*\}\s*from\s*['"]@\/store\/slices\/ws\.slice['"];\n?/,
+    '',
+  );
+
+  // 2. Drop the `ws: wsReducer,` entry inside combineReducers (with leading
+  //    whitespace, optional trailing comma).
+  next = next.replace(/^\s*ws:\s*wsReducer,?\n/m, '');
+
+  // 3. Drop the JSDoc that mentions `ws` AND persistReducer in the same
+  //    block. Tolerant to wording drift — "intentionally NOT wrapped",
+  //    "unwrapped on purpose", any phrasing works as long as both tokens
+  //    appear.
+  next = next.replace(
+    /\/\*\*[^*]*(?:\*(?!\/)[^*]*)*\bws\b[^*]*(?:\*(?!\/)[^*]*)*\bpersistReducer\b[\s\S]*?\*\/\n?/,
+    '',
+  );
+
+  return next;
+};

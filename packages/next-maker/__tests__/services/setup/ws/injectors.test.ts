@@ -9,6 +9,7 @@ import {
   registerWsReducer,
   removeBridgeMount,
   stripBridgeMount,
+  stripWsReducerRegistration,
 } from '../../../../src/services/setup/ws/injectors';
 
 // Redux-only StoreProvider (what the template ships when ws is opted out).
@@ -195,5 +196,53 @@ describe('ensureTestSetupMocks', () => {
   it('is a no-op when test/setup.ts does not exist', async () => {
     // No vitest in the project — nothing to do.
     await expect(ensureTestSetupMocks(project)).resolves.toBeUndefined();
+  });
+});
+
+const TEMPLATE_ROOT_REDUCER = `import { combineReducers } from '@reduxjs/toolkit';
+import { persistReducer } from 'redux-persist';
+
+import { countPersistConfig, counterReducer as countReducer } from '@/features/counter/store';
+
+import { wsReducer } from '@/store/slices/ws.slice';
+
+/**
+ * \`ws\` is intentionally NOT wrapped in \`persistReducer\` — connection state
+ * is ephemeral, and rehydrating "connected: true" on first paint would lie
+ * about the actual transport.
+ */
+export const rootReducer = combineReducers({
+  count: persistReducer(countPersistConfig, countReducer),
+  ws: wsReducer,
+});
+
+export type RootState = ReturnType<typeof rootReducer>;
+`;
+
+describe('stripWsReducerRegistration (pure)', () => {
+  it('removes the import, the ws entry, and the JSDoc comment block', () => {
+    const result = stripWsReducerRegistration(TEMPLATE_ROOT_REDUCER);
+    expect(result).not.toContain('wsReducer');
+    expect(result).not.toContain('@/store/slices/ws.slice');
+    expect(result).not.toContain('intentionally NOT wrapped');
+    // The rest survives untouched.
+    expect(result).toContain('combineReducers({');
+    expect(result).toContain('count: persistReducer(countPersistConfig, countReducer)');
+  });
+
+  it('is idempotent on clean input (no ws entries already present)', () => {
+    const stripped = stripWsReducerRegistration(TEMPLATE_ROOT_REDUCER);
+    const twice = stripWsReducerRegistration(stripped);
+    expect(twice).toBe(stripped);
+  });
+
+  it('tolerates wording drift in the JSDoc as long as `ws` and `persistReducer` co-appear', () => {
+    const reworded = TEMPLATE_ROOT_REDUCER.replace(
+      /\/\*\*[\s\S]*?\*\//,
+      `/**\n * \`ws\` here is unwrapped on purpose — no persistReducer call.\n */`,
+    );
+    const result = stripWsReducerRegistration(reworded);
+    expect(result).not.toContain('unwrapped on purpose');
+    expect(result).not.toContain('wsReducer');
   });
 });

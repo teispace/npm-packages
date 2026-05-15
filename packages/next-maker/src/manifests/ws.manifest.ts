@@ -1,6 +1,7 @@
 import { access, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setupWs } from '../services/setup/ws';
+import { stripBridgeMount, stripWsReducerRegistration } from '../services/setup/ws/injectors';
 import type { FeatureManifest } from './types';
 
 /**
@@ -54,16 +55,18 @@ export const wsManifest: FeatureManifest = {
       // Match the reducer entry in combineReducers — `ws: wsReducer` (not
       // wrapped in persistReducer; connection state is ephemeral by design).
       presence: /ws:\s*wsReducer\b/,
-      // No removePattern: stripping a reducer from combineReducers cleanly
-      // requires AST work the manifest reverser doesn't have. Surfaces as
-      // manual cleanup so the user can confirm.
+      // Removes the wsReducer import + entry + the "ws is unwrapped" JSDoc.
+      // `remove ws` auto-strips cleanly; no manual cleanup needed.
+      removePattern: stripWsReducerRegistration,
     },
     {
       file: 'src/providers/StoreProvider.tsx',
       description: 'attachWsBridge mount in StoreProvider',
       presence: /attachWsBridge\(wsClient,\s*store\.dispatch\)/,
-      // Same rationale — stripBridgeMount handles this in the setup-service
-      // path; manifest reverser surfaces it for manual review when invoked.
+      // Removes the import + useEffect block. The init-time cleanup uses
+      // the same helper, so init-opt-out and post-install `remove ws` both
+      // converge on identical output.
+      removePattern: stripBridgeMount,
     },
   ],
   apply: setupWs,
