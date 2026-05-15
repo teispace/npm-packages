@@ -63,12 +63,15 @@ export const ${camelName}Service = {
 
 export const crudApiConfigTemplate = (params: { camelName: string; kebabName: string }): string => {
   const { camelName, kebabName } = params;
+  // Bare paths — `getApiBaseUrl()` already prepends `/api/v{n}`, so the
+  // endpoints here are relative to the API base. Mirrors `AppApis.auth` in
+  // the starter template.
   return `  ${camelName}: {
-    base: \`\${API_PREFIX}/${kebabName}\`,
-    getAll: \`\${API_PREFIX}/${kebabName}\`,
-    getById: (id: string) => \`\${API_PREFIX}/${kebabName}/\${id}\`,
-    create: \`\${API_PREFIX}/${kebabName}\`,
-    update: (id: string) => \`\${API_PREFIX}/${kebabName}/\${id}\`,
-    delete: (id: string) => \`\${API_PREFIX}/${kebabName}/\${id}\`,
+    base: '/${kebabName}',
+    getAll: '/${kebabName}',
+    getById: (id: string) => \`/${kebabName}/\${id}\`,
+    create: '/${kebabName}',
+    update: (id: string) => \`/${kebabName}/\${id}\`,
+    delete: (id: string) => \`/${kebabName}/\${id}\`,
   },`;
 };
