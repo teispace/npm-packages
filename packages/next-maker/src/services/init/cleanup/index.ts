@@ -16,6 +16,7 @@ import { cleanupReactCompiler } from './react-compiler.cleanup';
 import { cleanupRedux } from './redux.cleanup';
 import { cleanupSEO } from './seo.cleanup';
 import { cleanupTests } from './tests.cleanup';
+import { cleanupWs } from './ws.cleanup';
 
 export const cleanupFeatures = async (
   projectPath: string,
@@ -25,6 +26,10 @@ export const cleanupFeatures = async (
   try {
     await cleanupHttpClient(projectPath, answers);
     await cleanupSecureStorage(projectPath, answers);
+    // WS depends on Redux — must clean before cleanupRedux, which may
+    // wipe src/store/ wholesale when redux is also off. The WS cleanup
+    // short-circuits its in-store edits when !answers.redux for that case.
+    await cleanupWs(projectPath, answers);
     await cleanupRedux(projectPath, answers);
     await cleanupDarkMode(projectPath, answers);
     // next.config.ts modifiers: run bundle-analyzer first (unwraps the outer
