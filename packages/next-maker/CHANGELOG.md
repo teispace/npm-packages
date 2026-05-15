@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.1.0](https://github.com/teispace/npm-packages/compare/next-maker-v2.0.0...next-maker-v2.1.0) (2026-05-15)
+
+
+### Features
+
+* **next-maker:** add WebSocket setup service + manifest ([#79](https://github.com/teispace/npm-packages/issues/79)) ([7e2dc3f](https://github.com/teispace/npm-packages/commit/7e2dc3f72616309da18b6d815a60a7e727d571f8))
+* **next-maker:** add ws prompt + detection (data flow only) ([#78](https://github.com/teispace/npm-packages/issues/78)) ([f79c4d1](https://github.com/teispace/npm-packages/commit/f79c4d1002995ac0b3f55c1d1f4e96ee3788a6c2))
+* **next-maker:** cleanup WebSocket layer when opted out at init ([#80](https://github.com/teispace/npm-packages/issues/80)) ([4d3d421](https://github.com/teispace/npm-packages/commit/4d3d421a5056097f7fdefa88f2340f3523faa850))
+
+
+### Bug Fixes
+
+* **next-maker:** strip intl from seo.ts and sitemap.ts when i18n is off ([#75](https://github.com/teispace/npm-packages/issues/75)) ([a99d566](https://github.com/teispace/npm-packages/commit/a99d566ee634f551679525fff129bf62fcf0f578))
+* **next-maker:** sync http-client with universal/server entry split + bundle sentinel ([#77](https://github.com/teispace/npm-packages/issues/77)) ([cebc885](https://github.com/teispace/npm-packages/commit/cebc88569bbe3b65ccba9e40ea64fe8d262af908))
+
+
+### Documentation
+
+* **next-maker:** document ws feature + http universal/server entry split ([#81](https://github.com/teispace/npm-packages/issues/81)) ([e804700](https://github.com/teispace/npm-packages/commit/e80470001ec8ca03df2182e306340de4de0d6fbd))
+
 ## [2.0.0](https://github.com/teispace/npm-packages/compare/next-maker-v1.20.1...next-maker-v2.0.0) (2026-05-15)
 
 
