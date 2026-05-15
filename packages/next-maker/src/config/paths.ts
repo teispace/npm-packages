@@ -43,6 +43,8 @@ export const PROJECT_PATHS = {
   CONFIG_INDEX: 'src/lib/config/index.ts',
   CONSTANTS: 'src/lib/config/constants.ts',
   APP_LOCALES: 'src/lib/config/app-locales.ts',
+  SEO_FILE: 'src/lib/config/seo.ts',
+  SITEMAP_FILE: 'src/app/sitemap.ts',
   MIDDLEWARE: 'src/middleware.ts',
   PROXY: 'src/proxy.ts',
   I18N_TYPES: 'src/types/i18n.ts',

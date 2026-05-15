@@ -14,6 +14,7 @@ import {
 } from './misc.cleanup';
 import { cleanupReactCompiler } from './react-compiler.cleanup';
 import { cleanupRedux } from './redux.cleanup';
+import { cleanupSEO } from './seo.cleanup';
 import { cleanupTests } from './tests.cleanup';
 
 export const cleanupFeatures = async (
@@ -30,6 +31,10 @@ export const cleanupFeatures = async (
     // call), then i18n (unwraps withNextIntl), then react-compiler.
     await cleanupBundleAnalyzer(projectPath, answers);
     await cleanupI18n(projectPath, answers);
+    // Must run after cleanupI18n: i18n strips `src/i18n/`, this rewrites the
+    // two files (seo.ts, sitemap.ts) outside the i18n manifest's footprint
+    // that still imported `@/i18n/routing`.
+    await cleanupSEO(projectPath, answers);
     await cleanupReactCompiler(projectPath, answers);
     await cleanupTests(projectPath, answers);
     await cleanupLicense(projectPath);
