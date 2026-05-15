@@ -18,6 +18,18 @@ export const httpClientManifest: FeatureManifest = {
       removeHint:
         'holds the http client + any service modules you wired through it — review before deleting',
     },
+    {
+      // Tracked separately so `doctor` reports it by name when missing —
+      // shared/ is the foundation both clients import from, and silent
+      // drift here breaks every request. Re-running setup restores it.
+      path: 'src/lib/utils/http/shared',
+      generated: true,
+      isDir: true,
+    },
+    {
+      path: 'src/lib/config/api-url.ts',
+      generated: true,
+    },
   ],
   // No deps listed: axios is conditionally installed; the manifest can't
   // know which client variant is active without re-running detection.
