@@ -76,7 +76,7 @@ npx @teispace/next-maker init my-app -y --package-manager pnpm
 | HTTP client | `fetch` |
 | dark mode, redux, i18n, tests, react-compiler | ✅ on |
 | pre-commit hooks, commitizen, copy `.env` | ✅ on |
-| docker, GitHub Actions, bundle-analyzer, community files (CODE_OF_CONDUCT etc.) | ⏭ off |
+| WebSocket (requires Redux), docker, GitHub Actions, bundle-analyzer, community files (CODE_OF_CONDUCT etc.) | ⏭ off |
 
 Anything you don't want? `next-maker remove <feature>` after init.
 
@@ -87,7 +87,7 @@ The starter at [`teispace/nextjs-starter`](https://github.com/teispace/nextjs-st
 | Section | Prompts |
 | --- | --- |
 | Identity | project name, description, author, version, support email, package manager, GitHub repo / issues / homepage |
-| Architecture | HTTP client (axios / fetch / both / none), dark mode, Redux Toolkit, i18n, testing, React Compiler, Bundle Analyzer |
+| Architecture | HTTP client (axios / fetch / both / none), dark mode, Redux Toolkit, WebSocket (requires Redux), i18n, testing, React Compiler, Bundle Analyzer |
 | Tooling | community files (CODE_OF_CONDUCT, CONTRIBUTING, SECURITY), README, Docker, CI/CD, pre-commit hooks (Husky/Commitlint/Lint-staged), Commitizen, copy `.env.example` → `.env` |
 | Templates | keep GitHub issue/PR templates? include `react-secure-storage`? |
 
@@ -100,7 +100,8 @@ The starter at [`teispace/nextjs-starter`](https://github.com/teispace/nextjs-st
 - Pino structured logger with redaction
 - Zod-validated env schema in `src/lib/env/`
 - Feature-based DDD architecture
-- Dual HTTP clients (`fetchClient` + `axiosClient`) on a shared foundation: runtime-aware cookie forwarding (browser jar in CSR, `next/headers` injection in RSC), automatic `X-Request-Id` correlation, single `parseApiError` pipeline, cookie-mode auth by default, typed query params via `{ params }`
+- Dual HTTP clients (`fetchClient` + `axiosClient`) on a shared foundation: two entry points (`@/lib/utils/http` universal, `@/lib/utils/http/server` for Server Components), automatic `X-Request-Id` correlation, single `parseApiError` pipeline, cookie-mode auth by default, typed query params via `{ params }`. A build-time `__bundle-sentinel__` rejects future regressions of the universal/server split.
+- WebSocket transport — **opt-in via the `ws` prompt** (requires Redux): typed `socket.io-client` wrapper, lazy singleton, `useWsEvent` / `useWsEmit` / `useWsStatus` hooks, Redux bridge into a dedicated (non-persisted) `wsReducer`. Cookie-mode auth by default; browser-only (SSR throws).
 - Hardened security headers in `next.config.ts`
 - `scripts/sync-env.ts` and `scripts/check-deprecated.ts` (used by the `validate` chain)
 
@@ -119,6 +120,7 @@ npx @teispace/next-maker setup [options]
 | `--http-client` | Adds the axios and/or fetch Result-based clients under `src/lib/utils/http/` |
 | `--dark-theme` | Installs `@teispace/next-themes` and adds `CustomThemeProvider` |
 | `--redux` | Redux Toolkit + `react-redux` + `redux-persist`, `StoreProvider`, `src/store` |
+| `--ws` | WebSocket transport — `socket.io-client@^4.8.3`, `src/lib/utils/ws/` subtree, non-persisted `wsReducer`, `attachWsBridge` mount in `StoreProvider`. Requires `--redux` to be installed first. |
 | `--i18n` | `next-intl` + `[locale]` routing + `proxy.ts` + `RootProvider` wiring |
 | `--tests` | Vitest + React Testing Library + jsdom + `test/test-utils.tsx` |
 | `--react-compiler` | `reactCompiler: true` in `next.config.ts` + `babel-plugin-react-compiler` |
@@ -135,6 +137,7 @@ npx @teispace/next-maker setup
 
 # Specific feature
 npx @teispace/next-maker setup --redux
+npx @teispace/next-maker setup --ws            # adds WebSocket layer (run after --redux)
 npx @teispace/next-maker setup --security-headers
 npx @teispace/next-maker setup --validate-scripts
 ```
@@ -747,6 +750,7 @@ my-project/
 │   │   ├── CustomThemeProvider.tsx    # (opt, dark-mode) @teispace/next-themes
 │   │   └── index.ts                   # Barrel — `next-maker provider <name>` keeps it sorted
 │   ├── store/                         # (opt, redux) makeStore, rootReducer, typed hooks
+│   │   └── slices/ws.slice.ts         # (opt, ws) non-persisted connection state slice
 │   ├── services/
 │   │   ├── api/                       # API service barrel
 │   │   └── storage/                   # react-secure-storage wrapper
@@ -758,11 +762,22 @@ my-project/
 │   │   ├── enums/
 │   │   └── utils/
 │   │       ├── http/                  # (opt, http-client)
-│   │       │   ├── shared/            # runtime detection, cookie injection, request-id, parseApiError, toSearchParams
+│   │       │   ├── shared/            # runtime guards, request-id, parseApiError, toSearchParams
 │   │       │   ├── axios-client/      # interceptors, token refresh, Result-based
 │   │       │   ├── fetch-client/      # same Result pattern on native fetch, typed `params`
+│   │       │   ├── __bundle-sentinel__/  # build-time regression gate ('use client' check)
 │   │       │   ├── client-utils.ts
-│   │       │   └── token-store.ts    # inert in cookie-mode (the default)
+│   │       │   ├── token-store.ts    # inert in cookie-mode (the default)
+│   │       │   ├── index.ts          # universal entry — safe in client/server/edge
+│   │       │   └── server.ts         # server-only entry — forwards next/headers cookies
+│   │       ├── ws/                    # (opt, ws) socket.io-client wrapper, hooks, Redux bridge
+│   │       │   ├── client/            # WsClient + lazy `wsClient` singleton (Proxy)
+│   │       │   ├── hooks/             # useWsStatus, useWsEvent, useWsEmit
+│   │       │   ├── redux/             # bridge (the only WS dispatcher) + selectors
+│   │       │   ├── shared/            # SSR guard, auth carrier, URL composer
+│   │       │   ├── types/             # ClientToServerEvents/ServerToClientEvents, payloads
+│   │       │   ├── constants.ts       # namespace, heartbeat, reconnection bounds
+│   │       │   └── index.ts           # public barrel
 │   │       └── validations/
 │   ├── i18n/                          # (opt, i18n) routing, request, navigation, translations/
 │   ├── styles/globals.css             # Tailwind v4 directives
@@ -791,7 +806,7 @@ my-project/
 └── package.json
 ```
 
-Features that have first-class opt-out prompts during `init`: `httpClient`, `darkMode`, `redux`, `i18n`, `tests`, `reactCompiler`, `bundleAnalyzer`, `docker`, `ci`, `preCommitHooks`, `commitizen`, `communityFiles`, `readme`, `copyEnv`. Each opt-out has a matching `setup --<feature>` to re-add later. `doctor` and `remove` cover the whole installed footprint via manifests.
+Features that have first-class opt-in/opt-out prompts during `init`: `httpClient`, `darkMode`, `redux`, `ws` (opt-in, requires `redux`), `i18n`, `tests`, `reactCompiler`, `bundleAnalyzer`, `docker`, `ci`, `preCommitHooks`, `commitizen`, `communityFiles`, `readme`, `copyEnv`. Each opt-out has a matching `setup --<feature>` to re-add later. `doctor` and `remove` cover the whole installed footprint via manifests.
 
 ---
 
@@ -799,7 +814,7 @@ Features that have first-class opt-out prompts during `init`: `httpClient`, `dar
 
 **CLI:** TypeScript, esbuild, Commander.js, Enquirer, Vitest, degit.
 
-**Generated apps:** Next.js 16+, TypeScript, Tailwind CSS v4, Biome, Pino, Zod, Redux Toolkit, `@teispace/next-themes`, next-intl, Fetch / Axios HTTP clients (shared foundation), Vitest + RTL, React Compiler.
+**Generated apps:** Next.js 16+, TypeScript, Tailwind CSS v4, Biome, Pino, Zod, Redux Toolkit, `@teispace/next-themes`, next-intl, Fetch / Axios HTTP clients (shared foundation), `socket.io-client` (opt-in via `ws` prompt), Vitest + RTL, React Compiler.
 
 ---
 
@@ -849,6 +864,7 @@ node ../dist/index.js test src/hooks/useDebounce.ts --force
 
 # Maintenance
 node ../dist/index.js doctor
+node ../dist/index.js setup --ws            # add WebSocket layer (project must already have --redux)
 node ../dist/index.js remove redux --dry-run
 ```
 
