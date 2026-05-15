@@ -818,6 +818,25 @@ Features that have first-class opt-in/opt-out prompts during `init`: `httpClient
 
 ---
 
+## Recent changes
+
+Behaviour added in **v2.1.0** beyond the headline features. None of these change the user-facing CLI surface — they harden parts of the generated app that previously needed manual cleanup.
+
+- **HTTP sentinel + server entry auto-align.** The template ships `src/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel.tsx` and `src/lib/utils/http/server.ts` with imports of **both** axios and fetch client modules. When you pick a single client (at `init` or via `setup --http-client`), the inactive variant's directory is removed — and the two files would normally still reference it, breaking `yarn build`. Both are now rewritten in place to mention only the active client(s). Idempotent: re-running `setup --http-client` against the same configuration is a no-op.
+- **`remove ws` strips cleanly without manual intervention.** The WS manifest's reducer-registration and bridge-mount injections now carry `removePattern` functions, so `next-maker remove ws` deletes the `wsReducer` import, the `ws: wsReducer` entry, the unwrapped-on-purpose JSDoc, and the `attachWsBridge` `useEffect` block — without any "manual cleanup" messages. The init-time `cleanupWs` and the `remove ws` flow share the same pure helpers, so the byte-level output is identical.
+- **`useEffect` import auto-pruned.** When the WS bridge effect is stripped (init opt-out or `remove ws`), the `useEffect` import is dropped from `StoreProvider.tsx`'s React import line if no other `useEffect(` calls remain — avoiding the unused-import lint warning.
+- **Wording-tolerant strip helpers.** The `stripBundleSentinel`, `stripBridgeMount`, and `stripWsReducerRegistration` helpers now anchor on stable code tokens (import paths, function names, the `ws` + `persistReducer` keywords inside JSDoc) rather than literal comment text. Upstream template comment rewording can't silently break cleanup.
+- **`doctor` reports sentinel mount drift.** The HTTP manifest tracks the `<HttpClientBundleSentinel />` mount as a code injection in either `[locale]/layout.tsx` or `src/app/layout.tsx`. If you delete the mount manually, `doctor` reports it; `remove http-client` strips it.
+
+---
+
+## Known issues
+
+- **`setup --redux` post-init when `ws` was opted out.** The template's `StoreProvider.tsx` ships with the WS bridge mount inline. `next-maker setup --redux` copies the template's `StoreProvider.tsx` wholesale into the project — so running it on a project where `ws` is **not** wanted leaves `import { attachWsBridge, wsClient } from '@/lib/utils/ws'` in place, and `yarn build` fails because that module doesn't exist. Workaround until a fix lands: also run `next-maker setup --ws` to install the WS layer, then `next-maker remove ws` if you don't actually want it (clean removal handles both layers). Tracked separately; out of scope for v2.1.0.
+- **`doctor --fix` is interactive.** Some setup services (notably `setup --http-client`) prompt for an action when the feature is partially installed. `doctor --fix` invokes `apply()` directly, so the prompt fires during what's meant to be a non-interactive repair. Workaround: run the specific `setup --<feature>` manually and pick the appropriate action. A non-interactive repair path is on the roadmap.
+
+---
+
 ## Development
 
 ### Setup
