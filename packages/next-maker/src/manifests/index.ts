@@ -14,6 +14,7 @@ import { securityHeadersManifest } from './security-headers.manifest';
 import { testsManifest } from './tests.manifest';
 import type { FeatureManifest } from './types';
 import { validateScriptsManifest } from './validate-scripts.manifest';
+import { wsManifest } from './ws.manifest';
 
 export type { RemoveSummary } from './runner';
 export { checkManifest, reverseManifest } from './runner';
@@ -39,6 +40,10 @@ export const MANIFESTS: ReadonlyArray<FeatureManifest> = [
   darkThemeManifest,
   httpClientManifest,
   reduxManifest,
+  // WS sits below Redux because it depends on it (bridge dispatches into
+  // wsReducer). Doctor renders manifests in this order; surfacing Redux
+  // first makes drift causes obvious when both are missing.
+  wsManifest,
   i18nManifest,
 ];
 
@@ -56,4 +61,5 @@ export {
   securityHeadersManifest,
   testsManifest,
   validateScriptsManifest,
+  wsManifest,
 };
