@@ -52,6 +52,9 @@ export const PROJECT_PATHS = {
   // Directories to Cleanup
   HTTP_UTILS: 'src/lib/utils/http',
   HTTP_SHARED: 'src/lib/utils/http/shared',
+  HTTP_SERVER_FILE: 'src/lib/utils/http/server.ts',
+  HTTP_BUNDLE_SENTINEL_DIR: 'src/lib/utils/http/__bundle-sentinel__',
+  HTTP_BUNDLE_SENTINEL_FILE: 'src/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel.tsx',
   AXIOS_CLIENT: 'src/lib/utils/http/axios-client',
   FETCH_CLIENT: 'src/lib/utils/http/fetch-client',
   AXIOS_CLIENT_FILE: 'src/lib/utils/http/axios-client/index.ts',
@@ -73,6 +76,7 @@ export const PROJECT_PATHS = {
   THEME_PROVIDER: 'src/providers/CustomThemeProvider.tsx',
   COUNTER_COMPONENT: 'src/features/counter/components/Counter.tsx',
   LOCALE_PAGE: 'src/app/[locale]/page.tsx',
+  LOCALE_LAYOUT: 'src/app/[locale]/layout.tsx',
 
   // Config files
   COMMITLINT_CONFIG: 'commitlint.config.mjs',

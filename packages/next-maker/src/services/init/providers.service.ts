@@ -98,10 +98,20 @@ export const generateLayout = async (
   const htmlClasses = `\`\${livvic.variable} ${answers.darkMode ? 'bg-light antialiased dark:bg-dark' : 'antialiased'}\``;
   const providerPropsLine = answers.redux ? '' : '';
 
+  // Mount the HTTP bundle sentinel in the non-i18n root layout when HTTP is
+  // kept. The i18n variant of the layout receives this from the template
+  // directly; this branch rebuilds the layout from scratch so we have to
+  // stamp it in ourselves. See injectors.ts:injectBundleSentinel.
+  const hasHttp = answers.httpClient !== 'none';
+  const sentinelImport = hasHttp
+    ? `// Regression sentinel — see file comment for what this guards.\nimport { HttpClientBundleSentinel } from '@/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel';\n`
+    : '';
+  const sentinelMount = hasHttp ? '\n          <HttpClientBundleSentinel />' : '';
+
   const basicLayout = `import type { Metadata } from 'next';
 import '@/styles/globals.css';
 import { Livvic } from 'next/font/google';
-import { RootProvider } from '@/providers';
+${sentinelImport}import { RootProvider } from '@/providers';
 
 const livvic = Livvic({
   subsets: ['latin'],
@@ -123,7 +133,7 @@ export default function RootLayout({
   return (
     <html lang="en"${answers.darkMode ? ' suppressHydrationWarning={true}' : ''}>
       <body className={${htmlClasses}}>
-        <RootProvider${providerPropsLine}>
+        <RootProvider${providerPropsLine}>${sentinelMount}
           {children}
         </RootProvider>
       </body>

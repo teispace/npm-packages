@@ -174,6 +174,116 @@ export const migrateClientUsages = async (
   }
 };
 
+/**
+ * Find the layout file that should host the bundle sentinel — `[locale]/layout.tsx`
+ * when i18n is installed, falling back to the non-i18n root `src/app/layout.tsx`.
+ * Returns `null` if neither exists (the project structure is unexpected;
+ * callers warn rather than fail).
+ */
+export const resolveBundleSentinelLayoutPath = (projectPath: string): string | null => {
+  const localeLayout = path.join(projectPath, PROJECT_PATHS.LOCALE_LAYOUT);
+  if (fileExists(localeLayout)) return localeLayout;
+  const rootLayout = path.join(projectPath, PROJECT_PATHS.ROOT_LAYOUT);
+  if (fileExists(rootLayout)) return rootLayout;
+  return null;
+};
+
+const SENTINEL_IMPORT_COMMENT = '// Regression sentinel — see file comment for what this guards.';
+const SENTINEL_IMPORT_LINE =
+  "import { HttpClientBundleSentinel } from '@/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel';";
+const SENTINEL_TAG = '<HttpClientBundleSentinel />';
+
+/**
+ * Mount `<HttpClientBundleSentinel />` as the first child of `<RootProvider>`
+ * in the relevant layout file, plus add the import at the bottom of the
+ * import block. Idempotent — re-running is a no-op.
+ *
+ * The sentinel itself is a `'use client'` component that imports every
+ * public symbol from `@/lib/utils/http`. If anyone later regresses the
+ * server/universal split, the build fails immediately. See
+ * `src/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel.tsx`.
+ */
+export const injectBundleSentinel = (content: string): string => {
+  // Idempotency: bail if the JSX is already present. The import check alone
+  // isn't sufficient — a half-applied previous run could leave one without
+  // the other; the JSX is what actually exercises the sentinel.
+  if (content.includes(SENTINEL_TAG)) return content;
+
+  let next = content;
+
+  // 1. Import block — append after the last `import` line, with the comment.
+  if (!next.includes(SENTINEL_IMPORT_LINE)) {
+    const importBlockRe = /(^import\s[^\n]*\n)+/m;
+    const importBlock = next.match(importBlockRe);
+    if (!importBlock) {
+      throw new Error(
+        'injectBundleSentinel: no `import` lines found — expected a layout file with at least one import.',
+      );
+    }
+    const head = next.slice(0, (importBlock.index ?? 0) + importBlock[0].length);
+    const tail = next.slice((importBlock.index ?? 0) + importBlock[0].length);
+    next = `${head}${SENTINEL_IMPORT_COMMENT}\n${SENTINEL_IMPORT_LINE}\n${tail}`;
+  }
+
+  // 2. JSX mount — insert as the first child of `<RootProvider …>`. Match
+  //    the opening tag (with or without props) and stamp the sentinel on
+  //    its own line, preserving the indentation of whatever followed.
+  const rootProviderOpenRe = /(<RootProvider\b[^>]*>)\n([ \t]*)/;
+  const match = next.match(rootProviderOpenRe);
+  if (!match) {
+    throw new Error(
+      'injectBundleSentinel: could not locate `<RootProvider …>` opening tag — layout shape unexpected.',
+    );
+  }
+  const indent = match[2];
+  next = next.replace(rootProviderOpenRe, `$1\n${indent}${SENTINEL_TAG}\n${indent}`);
+
+  return next;
+};
+
+/**
+ * Reverse of `injectBundleSentinel`. Strips the import + comment + JSX line.
+ * Idempotent.
+ */
+export const stripBundleSentinel = (content: string): string => {
+  let next = content;
+  // Drop the comment line (only when it precedes our exact import).
+  next = next.replace(
+    new RegExp(
+      `${SENTINEL_IMPORT_COMMENT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n${SENTINEL_IMPORT_LINE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n`,
+    ),
+    '',
+  );
+  // If the import survived without the comment (manual edit), drop it too.
+  next = next.replace(
+    new RegExp(`${SENTINEL_IMPORT_LINE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n`),
+    '',
+  );
+  // Drop the JSX line with its surrounding whitespace.
+  next = next.replace(/[ \t]*<HttpClientBundleSentinel\s*\/>\s*\n/, '');
+  return next;
+};
+
+/**
+ * Filesystem-bound wrappers for the two pure helpers. Reads the resolved
+ * layout file, applies the transform, writes back only when something changed.
+ */
+export const installBundleSentinelMount = async (projectPath: string): Promise<void> => {
+  const target = resolveBundleSentinelLayoutPath(projectPath);
+  if (!target) return;
+  const before = await readFile(target);
+  const after = injectBundleSentinel(before);
+  if (after !== before) await writeFile(target, after);
+};
+
+export const removeBundleSentinelMount = async (projectPath: string): Promise<void> => {
+  const target = resolveBundleSentinelLayoutPath(projectPath);
+  if (!target) return;
+  const before = await readFile(target);
+  const after = stripBundleSentinel(before);
+  if (after !== before) await writeFile(target, after);
+};
+
 export const removeHttpExports = async (projectPath: string): Promise<void> => {
   // 1. Remove from utils/index.ts
   const utilsIndexPath = path.join(projectPath, PROJECT_PATHS.UTILS_INDEX);

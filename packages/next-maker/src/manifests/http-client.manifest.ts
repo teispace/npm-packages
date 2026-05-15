@@ -27,6 +27,21 @@ export const httpClientManifest: FeatureManifest = {
       isDir: true,
     },
     {
+      // Server-only HTTP entry. Pairs with universal index.ts but is a
+      // separate barrel so next/headers stays out of the client bundle.
+      path: 'src/lib/utils/http/server.ts',
+      generated: true,
+    },
+    {
+      // Build-time regression gate. The 'use client' sentinel proves the
+      // universal entry doesn't drag next/headers into the client bundle.
+      // Doctor names this explicitly: silent deletion is a real risk
+      // because the name suggests it's safe to drop.
+      path: 'src/lib/utils/http/__bundle-sentinel__',
+      generated: true,
+      isDir: true,
+    },
+    {
       path: 'src/lib/config/api-url.ts',
       generated: true,
     },

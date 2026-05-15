@@ -14,7 +14,9 @@ import { copyHttpClientFiles, fetchAssets, performFullCleanup } from './assets';
 import { checkIsAlreadySetup, type HttpClientType, validateProjectStructure } from './checks';
 import {
   cleanupHttpTypes,
+  installBundleSentinelMount,
   migrateClientUsages,
+  removeBundleSentinelMount,
   removeHttpExports,
   updateConfigIndex,
   updateHttpIndex,
@@ -100,6 +102,14 @@ export const setupHttpClient = async (projectPath: string): Promise<void> => {
       await updateUtilsIndex(projectPath);
       await updateTypesIndex(projectPath);
       await updateConfigIndex(projectPath);
+      // Mount the bundle sentinel in the layout so production builds catch
+      // any future regression of the universal/server entry split. No-op
+      // when the layout shape isn't recognised.
+      await installBundleSentinelMount(projectPath);
+    } else {
+      // Removing all clients — pull the sentinel out of the layout so the
+      // app doesn't reference a deleted module.
+      await removeBundleSentinelMount(projectPath);
     }
 
     // Always cleanup types (even if removing both, we need to strip client-specific types from the preserved http.types.ts)
@@ -124,9 +134,9 @@ export const setupHttpClient = async (projectPath: string): Promise<void> => {
       }
     }
 
-    // server-only — guards the next/headers reader in shared/server-cookies.ts.
-    // Required by both clients (via shared/cookie-injection's dynamic import),
-    // so it tracks "any client active" rather than a specific variant.
+    // server-only — guards the next/headers reader in src/lib/utils/http/server.ts.
+    // Required whenever any client is active because server.ts ships as part
+    // of the HTTP layer, even when feature code only uses the universal entry.
     if (activeClients.length > 0) {
       if (!dependencies['server-only']) {
         spinner.text = 'Installing server-only...';

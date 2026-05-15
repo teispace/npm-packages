@@ -2,7 +2,7 @@ import path from 'node:path';
 import { PROJECT_PATHS } from '../../../config/paths';
 import { deleteDirectory, deleteFile, fileExists, readFile, writeFile } from '../../../core/files';
 import type { ProjectPrompts } from '../../../prompts/create-app.prompt';
-import { cleanupHttpTypes } from '../../setup/http-client/injectors';
+import { cleanupHttpTypes, removeBundleSentinelMount } from '../../setup/http-client/injectors';
 
 export const cleanupHttpClient = async (
   projectPath: string,
@@ -12,6 +12,10 @@ export const cleanupHttpClient = async (
   const keepSecureStorage = answers.httpClient !== 'none' || !!answers.reactSecureStorage;
 
   if (answers.httpClient === 'none') {
+    // The template ships the bundle sentinel pre-mounted in the layout;
+    // strip it before deleting the http utils so the layout doesn't import
+    // a non-existent module.
+    await removeBundleSentinelMount(projectPath);
     await cleanupNoHttpClient(projectPath, httpUtilsPath, keepSecureStorage);
   } else if (answers.httpClient === 'axios') {
     await cleanupFetchClient(projectPath, httpUtilsPath);
