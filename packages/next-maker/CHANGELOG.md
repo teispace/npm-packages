@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/teispace/npm-packages/compare/next-maker-v2.1.0...next-maker-v2.1.1) (2026-05-15)
+
+
+### Documentation
+
+* **next-maker:** add Recent changes + Known issues sections ([#82](https://github.com/teispace/npm-packages/issues/82)) ([069006a](https://github.com/teispace/npm-packages/commit/069006a858e13c3ffaf821ea9d10e8d32f0ecddd))
+
 ## [2.1.0](https://github.com/teispace/npm-packages/compare/next-maker-v2.0.0...next-maker-v2.1.0) (2026-05-15)
 
 
