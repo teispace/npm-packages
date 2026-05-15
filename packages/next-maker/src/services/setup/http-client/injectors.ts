@@ -174,6 +174,125 @@ export const migrateClientUsages = async (
   }
 };
 
+/**
+ * Find the layout file that should host the bundle sentinel — `[locale]/layout.tsx`
+ * when i18n is installed, falling back to the non-i18n root `src/app/layout.tsx`.
+ * Returns `null` if neither exists (the project structure is unexpected;
+ * callers warn rather than fail).
+ */
+export const resolveBundleSentinelLayoutPath = (projectPath: string): string | null => {
+  const localeLayout = path.join(projectPath, PROJECT_PATHS.LOCALE_LAYOUT);
+  if (fileExists(localeLayout)) return localeLayout;
+  const rootLayout = path.join(projectPath, PROJECT_PATHS.ROOT_LAYOUT);
+  if (fileExists(rootLayout)) return rootLayout;
+  return null;
+};
+
+const SENTINEL_IMPORT_COMMENT = '// Regression sentinel — see file comment for what this guards.';
+const SENTINEL_IMPORT_LINE =
+  "import { HttpClientBundleSentinel } from '@/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel';";
+const SENTINEL_TAG = '<HttpClientBundleSentinel />';
+
+/**
+ * Mount `<HttpClientBundleSentinel />` as the first child of `<RootProvider>`
+ * in the relevant layout file, plus add the import at the bottom of the
+ * import block. Idempotent — re-running is a no-op.
+ *
+ * The sentinel itself is a `'use client'` component that imports every
+ * public symbol from `@/lib/utils/http`. If anyone later regresses the
+ * server/universal split, the build fails immediately. See
+ * `src/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel.tsx`.
+ */
+export const injectBundleSentinel = (content: string): string => {
+  // Idempotency: bail if the JSX is already present. The import check alone
+  // isn't sufficient — a half-applied previous run could leave one without
+  // the other; the JSX is what actually exercises the sentinel.
+  if (content.includes(SENTINEL_TAG)) return content;
+
+  let next = content;
+
+  // 1. Import block — append after the last `import` line, with the comment.
+  if (!next.includes(SENTINEL_IMPORT_LINE)) {
+    const importBlockRe = /(^import\s[^\n]*\n)+/m;
+    const importBlock = next.match(importBlockRe);
+    if (!importBlock) {
+      throw new Error(
+        'injectBundleSentinel: no `import` lines found — expected a layout file with at least one import.',
+      );
+    }
+    const head = next.slice(0, (importBlock.index ?? 0) + importBlock[0].length);
+    const tail = next.slice((importBlock.index ?? 0) + importBlock[0].length);
+    next = `${head}${SENTINEL_IMPORT_COMMENT}\n${SENTINEL_IMPORT_LINE}\n${tail}`;
+  }
+
+  // 2. JSX mount — insert as the first child of `<RootProvider …>`. Match
+  //    the opening tag (with or without props) and stamp the sentinel on
+  //    its own line, preserving the indentation of whatever followed.
+  const rootProviderOpenRe = /(<RootProvider\b[^>]*>)\n([ \t]*)/;
+  const match = next.match(rootProviderOpenRe);
+  if (!match) {
+    throw new Error(
+      'injectBundleSentinel: could not locate `<RootProvider …>` opening tag — layout shape unexpected.',
+    );
+  }
+  const indent = match[2];
+  next = next.replace(rootProviderOpenRe, `$1\n${indent}${SENTINEL_TAG}\n${indent}`);
+
+  return next;
+};
+
+/**
+ * Reverse of `injectBundleSentinel`. Strips the import + (optional preceding
+ * comment) + JSX line. Idempotent.
+ *
+ * Anchored on **stable code tokens** — the import path and the JSX tag name —
+ * not on the comment wording. If the template's comment text drifts upstream,
+ * strip still removes the line. The comment is also dropped *only when it
+ * immediately precedes the matching import*, so we don't accidentally remove
+ * an unrelated user comment that mentions "Regression sentinel".
+ */
+export const stripBundleSentinel = (content: string): string => {
+  let next = content;
+
+  // 1. Drop the import line, including any single comment line immediately
+  //    above it (the comment is optional — wording-tolerant). We anchor on
+  //    the import path, which is the stable contract.
+  const importPathPattern = /@\/lib\/utils\/http\/__bundle-sentinel__\/client-bundle-sentinel/;
+  // Match: optional `// …\n` line, then the actual import line ending in newline.
+  const importBlockRe = new RegExp(
+    `(?:^[ \\t]*//[^\\n]*\\n)?^[ \\t]*import[^\\n]*${importPathPattern.source}[^\\n]*\\n`,
+    'm',
+  );
+  next = next.replace(importBlockRe, '');
+
+  // 2. Drop the JSX line with its surrounding whitespace. The tag name is the
+  //    other stable token — feature code that references the sentinel uses
+  //    this exact symbol.
+  next = next.replace(/[ \t]*<HttpClientBundleSentinel\s*\/>\s*\n/, '');
+
+  return next;
+};
+
+/**
+ * Filesystem-bound wrappers for the two pure helpers. Reads the resolved
+ * layout file, applies the transform, writes back only when something changed.
+ */
+export const installBundleSentinelMount = async (projectPath: string): Promise<void> => {
+  const target = resolveBundleSentinelLayoutPath(projectPath);
+  if (!target) return;
+  const before = await readFile(target);
+  const after = injectBundleSentinel(before);
+  if (after !== before) await writeFile(target, after);
+};
+
+export const removeBundleSentinelMount = async (projectPath: string): Promise<void> => {
+  const target = resolveBundleSentinelLayoutPath(projectPath);
+  if (!target) return;
+  const before = await readFile(target);
+  const after = stripBundleSentinel(before);
+  if (after !== before) await writeFile(target, after);
+};
+
 export const removeHttpExports = async (projectPath: string): Promise<void> => {
   // 1. Remove from utils/index.ts
   const utilsIndexPath = path.join(projectPath, PROJECT_PATHS.UTILS_INDEX);
@@ -320,4 +439,123 @@ export const isStringUsed = async (
     console.warn(`Warning: Failed to check usage for string ${searchString}:`, error);
     return true;
   }
+};
+
+/**
+ * Rewrite the sentinel's import list to match the active client variants.
+ *
+ * The template ships the sentinel hardcoded to import BOTH axios and fetch
+ * symbols from `@/lib/utils/http`. When `setup --http-client` strips one
+ * variant (e.g. user picks fetch only), the universal entry no longer
+ * exports the axios symbols and the sentinel fails to build. This helper
+ * keeps the sentinel honest: only references symbols that actually exist
+ * at the universal entry.
+ *
+ * Idempotent — running on an already-correct sentinel is a no-op.
+ *
+ * `toSearchParams` is always present (lives in `shared/`, not in either
+ * client variant), so it's emitted regardless. When `clients` is empty,
+ * the sentinel is no longer meaningful, but this helper still produces
+ * a valid TSX file (the caller is responsible for removing the mount).
+ */
+export const rewriteSentinelImports = async (
+  projectPath: string,
+  clients: ('fetch' | 'axios')[],
+): Promise<void> => {
+  const sentinelPath = path.join(projectPath, PROJECT_PATHS.HTTP_BUNDLE_SENTINEL_FILE);
+  if (!fileExists(sentinelPath)) return;
+
+  let content = await readFile(sentinelPath);
+
+  // Build the list of symbols the sentinel should reference.
+  const symbols: string[] = ['toSearchParams'];
+  if (clients.includes('axios')) symbols.unshift('axiosClient', 'createAxiosClient');
+  if (clients.includes('fetch')) {
+    // Insert fetch symbols after axios ones (alphabetical-ish: axios* then create* then fetch*).
+    const insertAt = symbols.indexOf('toSearchParams');
+    symbols.splice(insertAt, 0, 'createFetchClient', 'fetchClient');
+  }
+  symbols.sort();
+
+  // 1. Rewrite the import statement.
+  const newImport = `import {\n  ${symbols.join(',\n  ')},\n} from '@/lib/utils/http';`;
+  content = content.replace(/import\s*\{[^}]*\}\s*from\s*['"]@\/lib\/utils\/http['"];/, newImport);
+
+  // 2. Rewrite the __sentinel__ object body to reference the same symbols.
+  const newSentinelBody = symbols.map((s) => `  ${s},`).join('\n');
+  content = content.replace(
+    /const __sentinel__ = \{[\s\S]*?\};/,
+    `const __sentinel__ = {\n${newSentinelBody}\n};`,
+  );
+
+  await writeFile(sentinelPath, content);
+};
+
+/**
+ * Rewrite `src/lib/utils/http/server.ts` so it only imports/instantiates the
+ * client variants the project actually has on disk.
+ *
+ * The template ships server.ts with both axios and fetch unconditionally
+ * imported, instantiated, and re-exported. When `setup --http-client`
+ * removes one variant, its `./axios-client` or `./fetch-client` directory
+ * is gone — the universal `index.ts` is already aware of this (via
+ * `updateHttpIndex`), but `server.ts` keeps the dangling import and the
+ * `yarn build` typecheck fails with "Cannot find module".
+ *
+ * Strategy: regex-strip the variant-specific blocks (import, instantiation,
+ * re-export) for the client(s) NOT in the active set. Idempotent — running
+ * on an already-correct server.ts is a no-op.
+ *
+ * When `clients` is empty the server entry should already be deleted by
+ * the caller; this helper is a no-op in that case.
+ */
+export const rewriteServerEntryImports = async (
+  projectPath: string,
+  clients: ('fetch' | 'axios')[],
+): Promise<void> => {
+  const serverPath = path.join(projectPath, PROJECT_PATHS.HTTP_SERVER_FILE);
+  if (!fileExists(serverPath)) return;
+  if (clients.length === 0) return;
+
+  let content = await readFile(serverPath);
+
+  const drop = (regex: RegExp): void => {
+    content = content.replace(regex, '');
+  };
+
+  if (!clients.includes('axios')) {
+    // Drop axios import + the `export const axiosClient = createAxiosClient({...})` block.
+    drop(/^import\s*\{\s*createAxiosClient\s*\}\s*from\s*['"]\.\/axios-client['"];\n?/m);
+    drop(/export const axiosClient = createAxiosClient\(\{[\s\S]*?\}\);\n?\n?/);
+    // Trim createAxiosClient from the trailing re-export.
+    content = trimFromExportList(content, 'createAxiosClient');
+  }
+
+  if (!clients.includes('fetch')) {
+    drop(/^import\s*\{\s*createFetchClient\s*\}\s*from\s*['"]\.\/fetch-client['"];\n?/m);
+    drop(/export const fetchClient = createFetchClient\(\{[\s\S]*?\}\);\n?\n?/);
+    content = trimFromExportList(content, 'createFetchClient');
+  }
+
+  // Collapse 3+ consecutive newlines down to 2 for tidy output.
+  content = content.replace(/\n{3,}/g, '\n\n');
+
+  await writeFile(serverPath, content);
+};
+
+/**
+ * Helper: remove `name` from a single-line `export { a, b, c };` list. If
+ * `name` is the only name, drops the whole line. No-op when `name` isn't
+ * in the list.
+ */
+const trimFromExportList = (content: string, name: string): string => {
+  const exportLineRe = /^export\s*\{([^}]*)\};\n?/m;
+  return content.replace(exportLineRe, (_match, inner: string) => {
+    const remaining = inner
+      .split(',')
+      .map((n) => n.trim())
+      .filter((n) => n.length > 0 && n !== name);
+    if (remaining.length === 0) return '';
+    return `export { ${remaining.join(', ')} };\n`;
+  });
 };

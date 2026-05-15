@@ -104,13 +104,29 @@ export const copyHttpClientFiles = async (
     path.join(httpUtilsPath, 'client-utils.ts'),
   );
 
-  // shared/ — runtime detection, cookie injection, request-id, error parsing,
-  // params serialiser. Required by BOTH clients, so it's copied unconditionally
-  // regardless of which client(s) the user selected. Always overwritten —
-  // package-managed code, not a user-edit surface.
+  // shared/ — request-id, error parsing, params serialiser, runtime guards.
+  // Required by BOTH clients, so it's copied unconditionally regardless of
+  // which client(s) the user selected. Always overwritten — package-managed
+  // code, not a user-edit surface.
   await fs.cp(
     path.join(tempDir, PROJECT_PATHS.HTTP_SHARED),
     path.join(projectPath, PROJECT_PATHS.HTTP_SHARED),
+    { recursive: true, force: true },
+  );
+
+  // server.ts — server-only HTTP entry that reads next/headers and forwards
+  // cookies on every request. Lives next to index.ts (the universal entry)
+  // as a separate barrel; the split is architectural and required by Next's
+  // module resolution. Always overwritten.
+  await copyFile(path.join(tempHttpUtilsPath, 'server.ts'), path.join(httpUtilsPath, 'server.ts'));
+
+  // __bundle-sentinel__/ — build-time regression gate. A 'use client' file
+  // that imports the universal entry; if anyone drags next/headers into
+  // that import graph, `yarn build` fails immediately. Mounted from the
+  // app layout (see injectors.ts:injectBundleSentinel). Always overwritten.
+  await fs.cp(
+    path.join(tempDir, PROJECT_PATHS.HTTP_BUNDLE_SENTINEL_DIR),
+    path.join(projectPath, PROJECT_PATHS.HTTP_BUNDLE_SENTINEL_DIR),
     { recursive: true, force: true },
   );
 

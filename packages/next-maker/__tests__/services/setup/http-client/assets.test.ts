@@ -40,17 +40,22 @@ async function writeFakeTemplate(root: string): Promise<void> {
 
   // src/lib/utils/http — top-level files
   await write('src/lib/utils/http/index.ts', '// stub http barrel\n');
+  await write('src/lib/utils/http/server.ts', "import 'server-only';\n// stub server entry\n");
   await write('src/lib/utils/http/token-store.ts', '// stub token-store\n');
   await write('src/lib/utils/http/client-utils.ts', '// stub client-utils\n');
 
-  // src/lib/utils/http/shared — the new foundation
+  // src/lib/utils/http/shared — request-id, error parsing, params, runtime
   await write('src/lib/utils/http/shared/index.ts', '// stub shared barrel\n');
   await write('src/lib/utils/http/shared/runtime.ts', '// stub runtime\n');
-  await write('src/lib/utils/http/shared/cookie-injection.ts', '// stub cookie-injection\n');
-  await write('src/lib/utils/http/shared/server-cookies.ts', "import 'server-only';\n");
   await write('src/lib/utils/http/shared/request-id.ts', '// stub request-id\n');
   await write('src/lib/utils/http/shared/response-parser.ts', '// stub response-parser\n');
   await write('src/lib/utils/http/shared/search-params.ts', '// stub search-params\n');
+
+  // src/lib/utils/http/__bundle-sentinel__ — build-time regression gate
+  await write(
+    'src/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel.tsx',
+    "'use client';\nexport function HttpClientBundleSentinel(): null { return null; }\n",
+  );
 
   // src/lib/utils/http/fetch-client
   await write('src/lib/utils/http/fetch-client/index.ts', '// stub fetch barrel\n');
@@ -82,8 +87,6 @@ describe('copyHttpClientFiles', () => {
     const sharedFiles = [
       'src/lib/utils/http/shared/index.ts',
       'src/lib/utils/http/shared/runtime.ts',
-      'src/lib/utils/http/shared/cookie-injection.ts',
-      'src/lib/utils/http/shared/server-cookies.ts',
       'src/lib/utils/http/shared/request-id.ts',
       'src/lib/utils/http/shared/response-parser.ts',
       'src/lib/utils/http/shared/search-params.ts',
@@ -92,6 +95,24 @@ describe('copyHttpClientFiles', () => {
     for (const rel of sharedFiles) {
       expect(existsSync(path.join(project, rel)), `missing ${rel}`).toBe(true);
     }
+  });
+
+  it('copies the server-only HTTP entry (server.ts)', async () => {
+    await copyHttpClientFiles(project, template, ['fetch']);
+
+    const server = await readFile(path.join(project, 'src/lib/utils/http/server.ts'), 'utf-8');
+    expect(server).toContain("import 'server-only'");
+  });
+
+  it('copies the __bundle-sentinel__ directory', async () => {
+    await copyHttpClientFiles(project, template, ['fetch']);
+
+    const sentinel = await readFile(
+      path.join(project, 'src/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel.tsx'),
+      'utf-8',
+    );
+    expect(sentinel).toContain("'use client'");
+    expect(sentinel).toContain('HttpClientBundleSentinel');
   });
 
   it('copies api-url.ts on first install', async () => {
