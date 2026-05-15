@@ -59,12 +59,14 @@ const removeWsReducerFromRootReducer = async (projectPath: string): Promise<void
   // 2. Drop the `ws: wsReducer,` line (with leading whitespace, optional trailing comma).
   content = content.replace(/^\s*ws:\s*wsReducer,?\n/m, '');
 
-  // 3. The template ships with a 3-line comment above the combineReducers
-  //    explaining why `ws` is unwrapped. Once `ws` is gone the comment is
-  //    misleading — strip it too. The comment block ends at the line that
-  //    contains "soon as the WS client mounts." (last line of the block).
+  // 3. The template ships with a JSDoc block above combineReducers explaining
+  //    why `ws` is unwrapped. Once `ws` is gone the comment is misleading.
+  //    Anchor on **any JSDoc that mentions `ws` and persistReducer** — that's
+  //    a stable shape ("ws is/isn't wrapped in persistReducer" is the topic;
+  //    wording variations like "not wrapped"/"intentionally unwrapped" all
+  //    pass). Falls back to a no-op if the comment shape changes too much.
   content = content.replace(
-    /\/\*\*\n \* `ws` is intentionally NOT wrapped[\s\S]*?as the WS client mounts\.\n \*\/\n/,
+    /\/\*\*[^*]*(?:\*(?!\/)[^*]*)*\bws\b[^*]*(?:\*(?!\/)[^*]*)*\bpersistReducer\b[\s\S]*?\*\/\n?/,
     '',
   );
 

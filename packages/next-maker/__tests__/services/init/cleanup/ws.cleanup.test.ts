@@ -195,6 +195,28 @@ describe('cleanupWs', () => {
     expect(rootReducer).toContain('count: persistReducer(countPersistConfig, countReducer)');
   });
 
+  it('strips the JSDoc comment even if its wording drifts upstream', async () => {
+    // Simulate an upstream rewording: the comment still talks about `ws` and
+    // persistReducer (the stable concepts), but every other word is different.
+    // The strip regex anchors on those two tokens, not the literal sentence.
+    const REWORDED_ROOT_REDUCER = TEMPLATE_ROOT_REDUCER.replace(
+      /\/\*\*[\s\S]*?\*\//,
+      `/**
+ * Note: \`ws\` here is unwrapped (no persistReducer call). Connection state
+ * resets on reload — by design.
+ */`,
+    );
+    await writeFile(path.join(project, 'src/store/rootReducer.ts'), REWORDED_ROOT_REDUCER);
+
+    await cleanupWs(project, baseAnswers({ ws: false, redux: true }));
+
+    const rootReducer = await readFile(path.join(project, 'src/store/rootReducer.ts'), 'utf-8');
+    // Both the entry and the reworded comment block are gone.
+    expect(rootReducer).not.toContain('wsReducer');
+    expect(rootReducer).not.toContain('unwrapped');
+    expect(rootReducer).not.toContain('Connection state');
+  });
+
   it('strips the attachWsBridge mount from StoreProvider', async () => {
     await cleanupWs(project, baseAnswers({ ws: false, redux: true }));
 
