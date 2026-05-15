@@ -1,5 +1,8 @@
 import { setupHttpClient } from '../services/setup/http-client';
+import { stripBundleSentinel } from '../services/setup/http-client/injectors';
 import type { FeatureManifest } from './types';
+
+const BUNDLE_SENTINEL_PRESENCE = /<HttpClientBundleSentinel\s*\/>/;
 
 export const httpClientManifest: FeatureManifest = {
   id: 'http-client',
@@ -50,6 +53,24 @@ export const httpClientManifest: FeatureManifest = {
   // know which client variant is active without re-running detection.
   packages: [],
   scripts: [],
-  injections: [],
+  injections: [
+    // The bundle sentinel must be mounted in the layout file the project
+    // actually uses — `[locale]/layout.tsx` when i18n is installed,
+    // `src/app/layout.tsx` otherwise. Doctor silently skips an injection
+    // whose `file` doesn't exist, so listing both works: only the active
+    // layout reports drift when the mount is missing.
+    {
+      file: 'src/app/[locale]/layout.tsx',
+      description: '<HttpClientBundleSentinel /> mount in locale layout',
+      presence: BUNDLE_SENTINEL_PRESENCE,
+      removePattern: stripBundleSentinel,
+    },
+    {
+      file: 'src/app/layout.tsx',
+      description: '<HttpClientBundleSentinel /> mount in root layout',
+      presence: BUNDLE_SENTINEL_PRESENCE,
+      removePattern: stripBundleSentinel,
+    },
+  ],
   apply: setupHttpClient,
 };

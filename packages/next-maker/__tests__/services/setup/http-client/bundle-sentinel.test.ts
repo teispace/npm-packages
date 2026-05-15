@@ -120,6 +120,38 @@ describe('stripBundleSentinel (pure)', () => {
     const round = stripBundleSentinel(injectBundleSentinel(LOCALE_LAYOUT));
     expect(round).toBe(LOCALE_LAYOUT);
   });
+
+  it('strips the import even if the leading comment has been reworded', () => {
+    // Simulates upstream comment drift — strip must still find the import via
+    // the path anchor. The reworded comment dies along with the import line.
+    const withRewordedComment = LOCALE_LAYOUT.replace(
+      'import { RootProvider }',
+      "// A totally different comment about the sentinel\nimport { HttpClientBundleSentinel } from '@/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel';\nimport { RootProvider }",
+    ).replace(
+      '<RootProvider locale={locale}>',
+      '<RootProvider locale={locale}>\n          <HttpClientBundleSentinel />',
+    );
+
+    const stripped = stripBundleSentinel(withRewordedComment);
+    expect(stripped).not.toContain('HttpClientBundleSentinel');
+    expect(stripped).not.toContain('totally different comment');
+    expect(stripped).not.toContain('__bundle-sentinel__');
+  });
+
+  it('does not remove an unrelated user comment near the import line', () => {
+    // Belt-and-braces: the leading-comment match is anchored to the import on
+    // the immediately following line, so a far-away comment that mentions
+    // "Regression sentinel" stays put.
+    const withDistantComment = `import type { Metadata } from 'next';
+
+// Regression sentinel — note for ourselves about something else entirely.
+
+import '@/styles/globals.css';
+${LOCALE_LAYOUT.split('\n').slice(1).join('\n')}`;
+
+    const stripped = stripBundleSentinel(withDistantComment);
+    expect(stripped).toContain('note for ourselves about something else entirely');
+  });
 });
 
 describe('resolveBundleSentinelLayoutPath', () => {

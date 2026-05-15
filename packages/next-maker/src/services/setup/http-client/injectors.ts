@@ -242,25 +242,34 @@ export const injectBundleSentinel = (content: string): string => {
 };
 
 /**
- * Reverse of `injectBundleSentinel`. Strips the import + comment + JSX line.
- * Idempotent.
+ * Reverse of `injectBundleSentinel`. Strips the import + (optional preceding
+ * comment) + JSX line. Idempotent.
+ *
+ * Anchored on **stable code tokens** — the import path and the JSX tag name —
+ * not on the comment wording. If the template's comment text drifts upstream,
+ * strip still removes the line. The comment is also dropped *only when it
+ * immediately precedes the matching import*, so we don't accidentally remove
+ * an unrelated user comment that mentions "Regression sentinel".
  */
 export const stripBundleSentinel = (content: string): string => {
   let next = content;
-  // Drop the comment line (only when it precedes our exact import).
-  next = next.replace(
-    new RegExp(
-      `${SENTINEL_IMPORT_COMMENT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n${SENTINEL_IMPORT_LINE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n`,
-    ),
-    '',
+
+  // 1. Drop the import line, including any single comment line immediately
+  //    above it (the comment is optional — wording-tolerant). We anchor on
+  //    the import path, which is the stable contract.
+  const importPathPattern = /@\/lib\/utils\/http\/__bundle-sentinel__\/client-bundle-sentinel/;
+  // Match: optional `// …\n` line, then the actual import line ending in newline.
+  const importBlockRe = new RegExp(
+    `(?:^[ \\t]*//[^\\n]*\\n)?^[ \\t]*import[^\\n]*${importPathPattern.source}[^\\n]*\\n`,
+    'm',
   );
-  // If the import survived without the comment (manual edit), drop it too.
-  next = next.replace(
-    new RegExp(`${SENTINEL_IMPORT_LINE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n`),
-    '',
-  );
-  // Drop the JSX line with its surrounding whitespace.
+  next = next.replace(importBlockRe, '');
+
+  // 2. Drop the JSX line with its surrounding whitespace. The tag name is the
+  //    other stable token — feature code that references the sentinel uses
+  //    this exact symbol.
   next = next.replace(/[ \t]*<HttpClientBundleSentinel\s*\/>\s*\n/, '');
+
   return next;
 };
 
