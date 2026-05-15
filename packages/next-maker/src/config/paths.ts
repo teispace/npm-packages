@@ -49,12 +49,14 @@ export const PROJECT_PATHS = {
 
   // Directories to Cleanup
   HTTP_UTILS: 'src/lib/utils/http',
+  HTTP_SHARED: 'src/lib/utils/http/shared',
   AXIOS_CLIENT: 'src/lib/utils/http/axios-client',
   FETCH_CLIENT: 'src/lib/utils/http/fetch-client',
   AXIOS_CLIENT_FILE: 'src/lib/utils/http/axios-client/index.ts',
   FETCH_CLIENT_FILE: 'src/lib/utils/http/fetch-client/index.ts',
   CLIENT_UTILS: 'src/lib/utils/http/client-utils.ts',
   APP_APIS: 'src/lib/config/app-apis.ts',
+  API_URL_FILE: 'src/lib/config/api-url.ts',
   STORAGE_SERVICE: 'src/services/storage',
   COUNTER_FEATURE: 'src/features/counter',
   I18N_DIR: 'src/i18n',

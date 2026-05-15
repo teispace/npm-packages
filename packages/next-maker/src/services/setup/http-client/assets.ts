@@ -38,6 +38,15 @@ export const copyHttpClientFiles = async (
     await copyFile(path.join(tempDir, PROJECT_PATHS.APP_APIS), appApisPath);
   }
 
+  // src/lib/config/api-url.ts (getApiBaseUrl — composes bare origin + /api/v{n})
+  // Skip-if-exists: never overwrite user edits. The file is small and
+  // self-contained, so a stale copy from a pre-shared-layout install is
+  // tolerable; users can regenerate by deleting it before re-running setup.
+  const apiUrlPath = path.join(projectPath, PROJECT_PATHS.API_URL_FILE);
+  if (!fileExists(apiUrlPath)) {
+    await copyFile(path.join(tempDir, PROJECT_PATHS.API_URL_FILE), apiUrlPath);
+  }
+
   // src/lib/config/constants.ts (contains API_RESPONSE_DATA_KEY)
   const constantsPath = path.join(projectPath, PROJECT_PATHS.CONSTANTS);
   if (!fileExists(constantsPath)) {
@@ -93,6 +102,16 @@ export const copyHttpClientFiles = async (
   await copyFile(
     path.join(tempHttpUtilsPath, 'client-utils.ts'),
     path.join(httpUtilsPath, 'client-utils.ts'),
+  );
+
+  // shared/ — runtime detection, cookie injection, request-id, error parsing,
+  // params serialiser. Required by BOTH clients, so it's copied unconditionally
+  // regardless of which client(s) the user selected. Always overwritten —
+  // package-managed code, not a user-edit surface.
+  await fs.cp(
+    path.join(tempDir, PROJECT_PATHS.HTTP_SHARED),
+    path.join(projectPath, PROJECT_PATHS.HTTP_SHARED),
+    { recursive: true, force: true },
   );
 
   // 3. Remove specified clients if requested
@@ -156,6 +175,17 @@ export const performFullCleanup = async (projectPath: string): Promise<void> => 
   // const appApisPath = path.join(projectPath, PROJECT_PATHS.APP_APIS);
   // const configIndexPath = path.join(projectPath, PROJECT_PATHS.CONFIG_INDEX);
   // await deleteIfUnused(...)
+
+  // api-url.ts is owned by the http stack. Drop it only if nothing references
+  // `getApiBaseUrl` outside the file itself — protects users who exported the
+  // helper to compose other URLs.
+  const apiUrlPath = path.join(projectPath, PROJECT_PATHS.API_URL_FILE);
+  if (fileExists(apiUrlPath)) {
+    const isUsed = await isStringUsed(projectPath, 'getApiBaseUrl', [apiUrlPath]);
+    if (!isUsed) {
+      await fs.unlink(apiUrlPath);
+    }
+  }
 
   // Check constants.ts - Check for 'API_RESPONSE_DATA_KEY' symbol usage
   const constantsPath = path.join(projectPath, PROJECT_PATHS.CONSTANTS);
