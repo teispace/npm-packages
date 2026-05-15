@@ -74,8 +74,9 @@ export const injectBridgeMount = (content: string): string => {
 };
 
 /**
- * Reverse of `injectBridgeMount`. Drops the import + effect block. Leaves
- * `useEffect` in the React import alone — the user may have other effects.
+ * Reverse of `injectBridgeMount`. Drops the import + effect block, and also
+ * prunes `useEffect` from the React import when no other `useEffect(` call
+ * survives (so we don't leave an unused-import lint error).
  *
  * Anchored on **stable code tokens** — the import path `@/lib/utils/ws` and
  * the function name `attachWsBridge` — not the comment wording. Upstream
@@ -84,7 +85,7 @@ export const injectBridgeMount = (content: string): string => {
 export const stripBridgeMount = (content: string): string => {
   let next = content;
 
-  // 1. Drop the import line (with or without trailing newline).
+  // 1. Drop the @/lib/utils/ws import line (with or without trailing newline).
   next = next.replace(new RegExp(`${escapeRe(BRIDGE_IMPORT_LINE)}\\n?`), '');
 
   // 2. Drop the useEffect block that calls attachWsBridge, along with any
@@ -96,7 +97,38 @@ export const stripBridgeMount = (content: string): string => {
     '\n',
   );
 
+  // 3. If no `useEffect(` call survives in the file, drop `useEffect` from the
+  //    React import — leaving it would be an unused-import lint warning.
+  if (!/\buseEffect\s*\(/.test(next)) {
+    next = pruneUseEffectFromReactImport(next);
+  }
+
   return next;
+};
+
+/**
+ * Remove `useEffect` from `import { ..., useEffect, ... } from 'react'` while
+ * preserving any other named imports. If `useEffect` is the only named
+ * import, drops the whole line (an empty `import {} from 'react'` would
+ * also be a lint warning). Idempotent — no-op if `useEffect` isn't in the
+ * import.
+ */
+const pruneUseEffectFromReactImport = (content: string): string => {
+  const reactImportRe = /import\s*\{([^}]*)\}\s*from\s*['"]react['"];\n?/;
+  const match = content.match(reactImportRe);
+  if (!match) return content;
+
+  const names = match[1]
+    .split(',')
+    .map((n) => n.trim())
+    .filter((n) => n.length > 0 && n !== 'useEffect');
+
+  if (names.length === 0) {
+    // Drop the whole import line.
+    return content.replace(reactImportRe, '');
+  }
+  const rebuilt = `import { ${names.join(', ')} } from 'react';\n`;
+  return content.replace(reactImportRe, rebuilt);
 };
 
 /**
@@ -221,11 +253,11 @@ const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 export const stripWsReducerRegistration = (content: string): string => {
   let next = content;
 
-  // 1. Drop the wsReducer import line.
-  next = next.replace(
-    /import\s*\{\s*wsReducer\s*\}\s*from\s*['"]@\/store\/slices\/ws\.slice['"];\n?/,
-    '',
-  );
+  // 1. Drop the wsReducer import line. The template uses a relative path
+  //    (`./slices/ws.slice`), while the `setup --redux` flow's
+  //    registerInRootReducer writes the alias form (`@/store/slices/ws.slice`).
+  //    Accept either, plus any future variant — anchor on the file basename.
+  next = next.replace(/^import\s*\{\s*wsReducer\s*\}\s*from\s*['"][^'"]*ws\.slice['"];\n?/m, '');
 
   // 2. Drop the `ws: wsReducer,` entry inside combineReducers (with leading
   //    whitespace, optional trailing comma).
