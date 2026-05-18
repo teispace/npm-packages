@@ -34,6 +34,9 @@ jobs:
     needs: release-please
     if: ${{ needs.release-please.outputs.releases_created == 'true' }}
     timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Checkout code
@@ -104,7 +107,7 @@ jobs:
               echo "📦 Publishing $PACKAGE_NAME@$PACKAGE_VERSION from $package_path"
 
               cd "$package_path"
-              npm publish --access public
+              npm publish --provenance --access public
               cd - > /dev/null
 
               PUBLISHED+=("{\"name\":\"$PACKAGE_NAME\",\"version\":\"$PACKAGE_VERSION\",\"path\":\"$package_path\"}")
