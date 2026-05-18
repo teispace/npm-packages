@@ -31,25 +31,78 @@ export interface GetThemeOptions {
 /**
  * Read the persisted theme for a Next.js request (App Router).
  *
- * @example Server component
+ * Two call shapes:
+ *
+ * 1. `getTheme()` / `getTheme(options)` — async. Reads from Next.js's
+ *    `cookies()` / `headers()` (or from `options.cookieHeader` if provided).
+ *    Use in Server Components and Route Handlers.
+ *
+ * 2. `getTheme(request)` / `getTheme(request, options)` — sync. Reads
+ *    directly from the `Request` object's cookie + headers without touching
+ *    `next/headers`. Use in middleware, edge functions, and any place where
+ *    you have a `Request` but no Next.js async context.
+ *
+ * @example Server component (async)
  *   const theme = await getTheme();
  *
- * @example Middleware / custom server
+ * @example Middleware (sync, from Request)
+ *   export function middleware(request: NextRequest) {
+ *     const theme = getTheme(request, { defaultTheme: 'dark' });
+ *     // rewrite, set a header, redirect based on theme, etc.
+ *   }
+ *
+ * @example Custom server / explicit options (async)
  *   const theme = await getTheme({
  *     cookieHeader: request.headers.get('cookie') ?? '',
  *     headers: request.headers,
  *   });
  */
-export async function getTheme(options: GetThemeOptions = {}): Promise<string | null> {
+export function getTheme(request: Request, options?: GetThemeOptions): string | null;
+export function getTheme(options?: GetThemeOptions): Promise<string | null>;
+export function getTheme(
+  requestOrOptions?: Request | GetThemeOptions,
+  maybeOptions?: GetThemeOptions,
+): string | null | Promise<string | null> {
+  // Distinguish `Request` from `GetThemeOptions` structurally. `instanceof
+  // Request` would fail for polyfilled/framework-subclass Request types,
+  // and a Headers-instance check alone would false-positive for options
+  // objects that happen to pass `headers: new Headers(...)`. Require both
+  // a `Headers` instance AND a string `url` — together unique to Request.
+  const isRequest =
+    !!requestOrOptions &&
+    typeof requestOrOptions === 'object' &&
+    'headers' in requestOrOptions &&
+    requestOrOptions.headers instanceof Headers &&
+    'url' in requestOrOptions &&
+    typeof (requestOrOptions as { url: unknown }).url === 'string';
+
+  if (isRequest) {
+    const req = requestOrOptions as Request;
+    const options = maybeOptions ?? {};
+    const name = options.cookieName ?? 'theme';
+    const cookieHeader = req.headers.get('cookie') ?? '';
+    const cookieValue = readCookieFromString(cookieHeader, name);
+    const validated = acceptTheme(cookieValue, options.themes);
+    if (validated) return validated;
+    const hint = readColorSchemeHint(req.headers);
+    if (hint && (!options.themes || options.themes.includes(hint))) return hint;
+    return null;
+  }
+
+  return resolveTheme((requestOrOptions as GetThemeOptions | undefined) ?? {});
+}
+
+function acceptTheme(value: string | null, allow: string[] | undefined): string | null {
+  if (!value) return null;
+  if (!allow) return value;
+  // 'system' is always an acceptable cookie value; the provider resolves it.
+  if (value === 'system') return value;
+  return allow.includes(value) ? value : null;
+}
+
+async function resolveTheme(options: GetThemeOptions): Promise<string | null> {
   const name = options.cookieName ?? 'theme';
   const allow = options.themes;
-  // 'system' is always an acceptable cookie value; the provider resolves it.
-  const accept = (v: string | null): string | null => {
-    if (!v) return null;
-    if (!allow) return v;
-    if (v === 'system') return v;
-    return allow.includes(v) ? v : null;
-  };
 
   // Single dynamic import — `next/headers` is the same module for both
   // `cookies()` and `headers()`. Doing it twice is wasted module-resolution work.
@@ -82,7 +135,7 @@ export async function getTheme(options: GetThemeOptions = {}): Promise<string | 
       }
     }
   }
-  const validatedCookie = accept(cookieValue);
+  const validatedCookie = acceptTheme(cookieValue, allow);
   if (validatedCookie) return validatedCookie;
 
   let headers = options.headers;
