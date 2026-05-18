@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.2](https://github.com/teispace/npm-packages/compare/next-maker-v2.1.1...next-maker-v2.1.2) (2026-05-18)
+
+
+### Miscellaneous Chores
+
+* upgrade deps to latest + publish with npm provenance ([#84](https://github.com/teispace/npm-packages/issues/84)) ([431fb27](https://github.com/teispace/npm-packages/commit/431fb27ed8e5e03024293da636fbd1277b34eaae))
+
 ## [2.1.1](https://github.com/teispace/npm-packages/compare/next-maker-v2.1.0...next-maker-v2.1.1) (2026-05-15)
 
 
