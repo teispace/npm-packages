@@ -23,6 +23,7 @@ yarn add @teispace/next-themes
   - [The inline anti-FOUC script](#the-inline-anti-fouc-script)
 - [Server-side rendering](#server-side-rendering)
   - [Reading the theme server-side](#reading-the-theme-server-side)
+  - [Reading the theme in middleware (sync, from `Request`)](#reading-the-theme-in-middleware-sync-from-request)
   - [Prefers-color-scheme client hint](#prefers-color-scheme-client-hint)
   - [Writing the cookie from server actions](#writing-the-cookie-from-server-actions)
 - [Typed factory — `createThemes`](#typed-factory--createthemes)
@@ -56,19 +57,23 @@ yarn add @teispace/next-themes
 
 ## Why another theme library?
 
-`next-themes` by paco is battle-tested, but in 2026 it has unresolved React 19 bugs, no first-class server-side theme reading, and broken multi-class cleanup. `@wrksz/themes` rewrote the core, but ships cookie-only SSR (no cross-tab sync) and lacks a typed factory.
+`next-themes` by paco is battle-tested, but in 2026 it has unresolved React 19 bugs, no first-class server-side theme reading, and broken multi-class cleanup. Newer rewrites like `@wrksz/themes` closed some of those gaps but still ship a god-component provider, an inline script that re-inserts a transition-disable `<style>` on every apply (a real flicker source), and a fixed-storage model with no plugin path.
 
-**`@teispace/next-themes` aims to be the complete rewrite:**
+**`@teispace/next-themes` is engineered for production from the inside out:**
 
-- **Hybrid storage** — cookie is authoritative for SSR (zero flash) while `localStorage` mirrors for cross-tab sync. No other library ships this combination.
-- **`useSyncExternalStore`** — theme state lives outside React's render tree, so it survives React 19 `Activity` / `cacheComponents` / suspension without going stale.
+- **Hybrid storage** — cookie is authoritative for SSR (zero flash) while `localStorage` mirrors for cross-tab sync. Five modes: `hybrid`, `cookie`, `local`, `session`, `none`.
+- **`useSyncExternalStore` + external store** — state, DOM apply, transitions, and subscriptions all live *outside* React. State survives React 19 `Activity` / `cacheComponents` / suspension without going stale.
 - **`useServerInsertedHTML` script injection** — avoids the React 19 inline-script client warning and places the blocker where it actually blocks.
+- **No-op short-circuit** — `setTheme(currentTheme)` is a true no-op: no DOM write, no `<style>` injection, no flicker. (Common bug elsewhere — re-applying the same theme retriggers transition suppression.)
+- **XSS-hardened inline script** — escapes `</script>`, U+2028, U+2029 in every user-input path (`themeColor`, `value`, `forcedTheme`) so a hand-crafted prop value can't break out of the inline `<script>` tag.
+- **Bundler-proof script body** — the inline script is a raw string template, never serialized via `Function.toString()`, so esbuild/swc `__name(...)` wrappers and identifier renames can never crash it at runtime.
 - **Per-instance stores** — nested `<ThemeProvider>`s are genuinely independent. No hidden global state.
-- **View Transitions** — opt into cursor-origin circular reveals or fade animations with one prop.
-- **`createThemes<T>()`** — full literal-type inference for your theme list across provider, hooks, and components.
-- **Five storage modes** — `hybrid`, `cookie`, `local`, `session`, `none`.
+- **Pluggable storage adapters** — public `StorageAdapter` interface (`get` / `set` / optional `subscribe`). Bring your own backend.
+- **Sync `getTheme(Request)` for middleware** — read the theme from a `Request` synchronously in middleware and edge functions, no `await` required.
 - **`Sec-CH-Prefers-Color-Scheme` client hint** — zero-flash SSR even for first-time visitors without a cookie.
-- **Five subpath entries** — `.`, `/client`, `/server`, `/adapters`, `/script`, `/tailwind`, `/tailwind.css`, `/codemod/from-next-themes`. You pay only for what you import.
+- **View Transitions** — opt into cursor-origin circular reveals or fade animations with one prop. Respects `prefers-reduced-motion`.
+- **`createThemes<T>()`** — full literal-type inference for your theme list across provider, hooks, and components.
+- **Eight subpath entries** — `.`, `/client`, `/server`, `/adapters`, `/script`, `/tailwind`, `/tailwind.css`, `/codemod/from-next-themes`. You pay only for what you import.
 - **Codemod** from `next-themes` — one `npx jscodeshift` command rewrites your imports.
 
 ---
@@ -296,6 +301,34 @@ export default async function RootLayout({ children }) {
   );
 }
 ```
+
+### Reading the theme in middleware (sync, from `Request`)
+
+`getTheme()` has a sync overload that reads directly from a `Request` object — no `await`, no `next/headers`. Use this in middleware, edge functions, route rewriters, or anywhere you have a `Request` but no Next.js async context.
+
+```ts
+// middleware.ts
+import { NextResponse, type NextRequest } from 'next/server';
+import { getTheme } from '@teispace/next-themes/server';
+
+export function middleware(request: NextRequest) {
+  const theme = getTheme(request, { defaultTheme: 'system' });
+  // Branch on the theme: rewrite, set a header, redirect, etc.
+  const res = NextResponse.next();
+  res.headers.set('x-theme', theme ?? 'system');
+  return res;
+}
+```
+
+The sync overload reads the cookie *and* the `Sec-CH-Prefers-Color-Scheme` hint from `request.headers`, with the same precedence as the async path. Pass a `themes` whitelist if you want unknown cookie values treated as missing:
+
+```ts
+const theme = getTheme(request, { themes: ['light', 'dark'], defaultTheme: 'light' });
+```
+
+> **When to use which overload**
+> - `await getTheme()` — Server Components, Route Handlers (uses `cookies()` / `headers()` from `next/headers`).
+> - `getTheme(request)` — middleware, edge functions, custom servers (works on the raw `Request`, no Next.js binding).
 
 ### Prefers-color-scheme client hint
 

@@ -92,3 +92,44 @@ describe('store + view transition', () => {
     store.unmount();
   });
 });
+
+describe('store + disableTransitionOnChange — no-op short circuit', () => {
+  it('does not inject a disable-transition <style> when setTheme is a no-op', () => {
+    // Repeated setTheme('dark') after the DOM is already 'dark' must NOT
+    // re-insert the transition-disable style tag — that tag is itself a
+    // flicker source (forces a layout flush + paint reset). The competitor
+    // `@wrksz/themes` re-inserts on every apply; ours short-circuits via
+    // `previousApplied` + DOM equality.
+    const store = createStore({
+      ...defaults(),
+      disableTransitionOnChange: true,
+    });
+    store.mount();
+    store.setTheme('dark');
+    const beforeCount = document.head.querySelectorAll('style').length;
+    store.setTheme('dark'); // identical theme
+    store.setTheme('dark'); // and again
+    expect(document.head.querySelectorAll('style').length).toBe(beforeCount);
+    store.unmount();
+  });
+
+  it('still injects the disable-transition <style> when the theme actually changes', () => {
+    // Sanity check: the short-circuit must not over-fire. A real change
+    // should still flush the transitions for the duration of the swap.
+    const store = createStore({
+      ...defaults(),
+      disableTransitionOnChange: true,
+    });
+    store.mount();
+    store.setTheme('dark');
+    store.setTheme('light');
+    // The style is removed via requestAnimationFrame, but during the same
+    // synchronous tick it should have been observed in the DOM at least
+    // once between setTheme calls. We assert behaviorally via a spy:
+    const spy = vi.spyOn(document.head, 'appendChild');
+    store.setTheme('dark');
+    expect(spy.mock.calls.some(([node]) => (node as HTMLElement).tagName === 'STYLE')).toBe(true);
+    spy.mockRestore();
+    store.unmount();
+  });
+});

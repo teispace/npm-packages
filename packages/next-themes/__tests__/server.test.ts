@@ -120,6 +120,56 @@ describe('getTheme', () => {
   });
 });
 
+describe('getTheme(Request) — sync middleware overload', () => {
+  it('reads synchronously from a Request cookie', () => {
+    const req = new Request('https://example.com/', {
+      headers: { cookie: 'theme=dark' },
+    });
+    const t = getTheme(req);
+    expect(t).toBe('dark');
+  });
+
+  it('returns null when the Request has no theme cookie or hint', () => {
+    const req = new Request('https://example.com/');
+    expect(getTheme(req)).toBeNull();
+  });
+
+  it('falls back to the Sec-CH-Prefers-Color-Scheme header on the Request', () => {
+    const req = new Request('https://example.com/', {
+      headers: { 'sec-ch-prefers-color-scheme': 'dark' },
+    });
+    expect(getTheme(req)).toBe('dark');
+  });
+
+  it('prefers the cookie over the client hint on the Request', () => {
+    const req = new Request('https://example.com/', {
+      headers: { cookie: 'theme=light', 'sec-ch-prefers-color-scheme': 'dark' },
+    });
+    expect(getTheme(req)).toBe('light');
+  });
+
+  it('honors a custom cookieName', () => {
+    const req = new Request('https://example.com/', {
+      headers: { cookie: 'app-theme=sepia' },
+    });
+    expect(getTheme(req, { cookieName: 'app-theme' })).toBe('sepia');
+  });
+
+  it('rejects a cookie value not in the themes whitelist', () => {
+    const req = new Request('https://example.com/', {
+      headers: { cookie: 'theme=garbage' },
+    });
+    expect(getTheme(req, { themes: ['light', 'dark'] })).toBeNull();
+  });
+
+  it('accepts "system" regardless of whitelist', () => {
+    const req = new Request('https://example.com/', {
+      headers: { cookie: 'theme=system' },
+    });
+    expect(getTheme(req, { themes: ['light', 'dark'] })).toBe('system');
+  });
+});
+
 describe('getThemeScript', () => {
   it('returns an IIFE-wrapped inline script', () => {
     const s = getThemeScript({});
