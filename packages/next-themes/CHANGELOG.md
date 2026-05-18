@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/teispace/npm-packages/compare/next-themes-v0.4.3...next-themes-v0.5.0) (2026-05-18)
+
+
+### Features
+
+* **next-themes:** sync getTheme(Request) overload for middleware ([#87](https://github.com/teispace/npm-packages/issues/87)) ([da2134a](https://github.com/teispace/npm-packages/commit/da2134a544a50305c9a80476ad95b6c7f6ee2b6b))
+
 ## [0.4.3](https://github.com/teispace/npm-packages/compare/next-themes-v0.4.2...next-themes-v0.4.3) (2026-05-18)
 
 
