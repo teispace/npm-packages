@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/teispace/npm-packages/compare/next-themes-v0.4.2...next-themes-v0.4.3) (2026-05-18)
+
+
+### Miscellaneous Chores
+
+* upgrade deps to latest + publish with npm provenance ([#84](https://github.com/teispace/npm-packages/issues/84)) ([431fb27](https://github.com/teispace/npm-packages/commit/431fb27ed8e5e03024293da636fbd1277b34eaae))
+
 ## [0.4.2](https://github.com/teispace/npm-packages/compare/next-themes-v0.4.1...next-themes-v0.4.2) (2026-05-06)
 
 
