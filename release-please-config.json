@@ -14,6 +14,10 @@
     "packages/next-themes": {
       "component": "next-themes",
       "release-type": "node"
+    },
+    "packages/env": {
+      "component": "env",
+      "release-type": "node"
     }
   },
   "changelog-sections": [
