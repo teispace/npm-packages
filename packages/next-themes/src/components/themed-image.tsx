@@ -14,14 +14,19 @@ export interface ThemedImageProps<T extends string = string>
 /**
  * An `<img>` that swaps `src` based on the active theme.
  *
- * Reads from the external theme store directly, so when the provider is
- * seeded with `initialTheme` from the server cookie, the very first render
- * (server and client) picks the right `src` — no post-mount swap, no flash.
- * Add `suppressHydrationWarning` if your `initialTheme` is `system` and
- * the resolved value differs between server and client.
+ * Reads the theme store's server snapshot, so when the provider is **seeded
+ * with `initialTheme`** (e.g. from the server cookie via `getTheme()`), the
+ * server render and the client hydration render both pick the seeded `src` —
+ * no post-mount swap, no flash, no hydration warning.
  *
- * For zero-flash SSR with system-resolution use CSS (`html[data-theme]`
- * scoped `background-image`) instead.
+ * ⚠️ If you do NOT pass `initialTheme` (or pass a `system`/unresolved value),
+ * the server render cannot know the user's theme: it renders the resolved
+ * `defaultTheme` (`system` resolves to `light` on the server), while the client
+ * resolves the real stored/OS value. When those differ, React logs a hydration
+ * mismatch and you should add `suppressHydrationWarning` to this element.
+ *
+ * For guaranteed zero-flash SSR with `system` resolution, prefer CSS
+ * (`html[data-theme]`-scoped `background-image`) over a JS `src` swap.
  */
 export function ThemedImage<T extends string = string>({
   sources,

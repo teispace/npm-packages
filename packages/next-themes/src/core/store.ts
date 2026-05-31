@@ -62,6 +62,12 @@ export interface UpdatableStoreOptions {
 
 export interface ThemeStore {
   getState: () => ThemeState;
+  /**
+   * Stable seeded state for SSR / the hydration render. Pass to
+   * `useSyncExternalStore`'s third argument so the server render reflects the
+   * cookie-seeded theme rather than an empty placeholder.
+   */
+  getServerSnapshot: () => ThemeState;
   subscribe: (l: Listener) => () => void;
   setTheme: (theme: SetThemeAction, options?: SetThemeOptions) => void;
   /** Start side-effect subscriptions (system/storage). Idempotent. */
@@ -74,6 +80,28 @@ export interface ThemeStore {
 
 const DISABLE_CSS =
   '*,*::before,*::after{-webkit-transition:none!important;transition:none!important;-moz-transition:none!important;-o-transition:none!important;}';
+
+/** Shallow value-equality for `Record<string,string> | null` maps. */
+function recordEqual(a: Record<string, string> | null, b: Record<string, string> | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const ak = Object.keys(a);
+  if (ak.length !== Object.keys(b).length) return false;
+  for (const k of ak) {
+    if (a[k] !== b[k]) return false;
+  }
+  return true;
+}
+
+/** Value-equality for the `themeColor` prop (string, record, or null). */
+function themeColorEqual(
+  a: string | Record<string, string> | null,
+  b: string | Record<string, string> | null,
+): boolean {
+  if (a === b) return true;
+  if (typeof a === 'string' || typeof b === 'string') return false;
+  return recordEqual(a, b);
+}
 
 export function createStore(opts: StoreOptions): ThemeStore {
   // Frozen-at-construction options. Changing any of these would require
@@ -133,6 +161,16 @@ export function createStore(opts: StoreOptions): ThemeStore {
   }
 
   let state: ThemeState = initial();
+  // Frozen snapshot of the seeded state for `useSyncExternalStore`'s
+  // server-snapshot slot. Must be referentially stable across calls (React
+  // calls it repeatedly during render), so it is computed once here. On the
+  // server `setState` never runs, so this equals the live state; on the client
+  // it is only ever read during the hydration render. When the provider is
+  // seeded (initialTheme / forcedTheme from the server cookie) this lets SSR
+  // render the correct resolved theme instead of an empty placeholder, so
+  // theme-dependent components (ThemedImage/ThemedIcon) avoid a post-hydration
+  // swap.
+  const serverState: ThemeState = state;
   let previousApplied: string | null = null;
   const listeners = new Set<Listener>();
   let mounted = false;
@@ -183,15 +221,18 @@ export function createStore(opts: StoreOptions): ThemeStore {
   }
 
   function setState(next: ThemeState, skipTransitionDisable = false): void {
-    const same =
-      state.theme === next.theme &&
-      state.resolvedTheme === next.resolvedTheme &&
-      state.systemTheme === next.systemTheme;
+    const prev = state;
+    // What actually paints is driven by `theme`/`resolvedTheme`. `systemTheme`
+    // is user-visible (consumers may surface "OS prefers dark") but does not
+    // by itself change the DOM, so a bare systemTheme change should emit
+    // without re-applying or firing onChange.
+    const domChanged = prev.theme !== next.theme || prev.resolvedTheme !== next.resolvedTheme;
+    const emitChanged = domChanged || prev.systemTheme !== next.systemTheme;
+    const forcedChanged = prev.forcedTheme !== next.forcedTheme;
     state = next;
-    if (same) return;
-    apply(next, skipTransitionDisable);
-    emit();
-    onChange?.(next.theme, next.resolvedTheme);
+    if (domChanged) apply(next, skipTransitionDisable);
+    if (emitChanged || forcedChanged) emit();
+    if (domChanged) onChange?.(next.theme, next.resolvedTheme);
   }
 
   function setTheme(action: SetThemeAction, options?: SetThemeOptions): void {
@@ -204,28 +245,39 @@ export function createStore(opts: StoreOptions): ThemeStore {
     if (!isSys && !themes.includes(raw)) return;
     const theme = normalizeSelection(raw, themes, defaultTheme, enableSystem);
 
-    const doApply = (): void => {
+    const doApply = (insideViewTransition: boolean): void => {
       storage.set(theme);
       const systemTheme = getSystemTheme();
       const resolved = theme === 'system' ? systemTheme : theme;
-      setState({
-        ...state,
-        theme,
-        resolvedTheme: resolved,
-        systemTheme: enableSystem ? systemTheme : null,
-      });
+      // When a View Transition is animating this change, suppress the
+      // `disableTransitionOnChange` <style>: that style sets
+      // `transition:none!important` on every element and would cancel the very
+      // animation the View Transition is performing. VT supersedes it.
+      setState(
+        {
+          ...state,
+          theme,
+          resolvedTheme: resolved,
+          systemTheme: enableSystem ? systemTheme : null,
+        },
+        insideViewTransition,
+      );
     };
 
     const effective = options?.transition !== undefined ? options.transition : transition;
     const resolvedVt = resolveTransition(effective, respectReducedMotion);
     if (resolvedVt) {
-      startViewTransition(doApply, resolvedVt);
+      startViewTransition(() => doApply(true), resolvedVt);
     } else {
-      doApply();
+      doApply(false);
     }
   }
 
   function onSystemChange(systemTheme: 'light' | 'dark'): void {
+    // An OS light/dark flip only repaints when the *selected* theme is
+    // `system`. setState() applies to the DOM only when resolvedTheme
+    // changes, so for a concrete 'light'/'dark' selection this updates the
+    // user-visible systemTheme (one emit) without rewriting the DOM.
     setState({
       ...state,
       systemTheme,
@@ -307,16 +359,33 @@ export function createStore(opts: StoreOptions): ThemeStore {
     return state;
   }
 
+  function getServerSnapshot(): ThemeState {
+    return serverState;
+  }
+
   function update(next: UpdatableStoreOptions): void {
+    // `touched` means a DOM-affecting prop (value/themeColor mapping) actually
+    // changed — NOT merely that the key was present. Providers pass every
+    // updatable prop on every render, and consumers routinely pass inline
+    // literals (`value={{…}}`, `themeColor={{…}}`, `onChange={() => …}`) whose
+    // identity changes each render. Without a real-change check, `update()`
+    // would re-apply to the DOM on every parent re-render. We compare by value
+    // (structural) so a fresh-but-equal object is correctly treated as no-op.
     let touched = false;
 
     if ('value' in next) {
-      value = next.value ?? null;
-      touched = true;
+      const nextValue = next.value ?? null;
+      if (!recordEqual(value, nextValue)) {
+        value = nextValue;
+        touched = true;
+      }
     }
     if ('themeColor' in next) {
-      themeColor = next.themeColor ?? null;
-      touched = true;
+      const nextThemeColor = next.themeColor ?? null;
+      if (!themeColorEqual(themeColor, nextThemeColor)) {
+        themeColor = nextThemeColor;
+        touched = true;
+      }
     }
     if ('disableTransitionOnChange' in next && next.disableTransitionOnChange !== undefined) {
       disableTransitionOnChange = next.disableTransitionOnChange;
@@ -358,5 +427,5 @@ export function createStore(opts: StoreOptions): ThemeStore {
     if (touched && mounted) apply(state, true);
   }
 
-  return { getState, subscribe, setTheme, mount, unmount, update };
+  return { getState, getServerSnapshot, subscribe, setTheme, mount, unmount, update };
 }

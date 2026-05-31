@@ -193,9 +193,22 @@ export function disableTransition(value: string | true, respectReducedMotion: bo
   document.head.appendChild(style);
   if (document.body) void window.getComputedStyle(document.body).opacity;
   return () => {
+    let done = false;
+    const remove = (): void => {
+      if (done) return;
+      done = true;
+      style.remove();
+    };
+    // The two RAFs guarantee the no-transition style survives the frame where
+    // the theme attribute is applied. But RAF is throttled (or never fires) in
+    // a backgrounded/inactive tab — without a fallback the style would linger,
+    // disabling *all* CSS transitions site-wide until the tab is refocused.
+    // Race a timeout so removal is guaranteed regardless of frame scheduling.
+    const timer = setTimeout(remove, 120);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        style.remove();
+        clearTimeout(timer);
+        remove();
       });
     });
   };

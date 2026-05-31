@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { resolveAdapter } from '../src/adapters/index';
 import { createStore } from '../src/core/store';
 
@@ -213,5 +213,146 @@ describe('createStore', () => {
     const meta = document.querySelector('meta[name="theme-color"]');
     expect(meta?.getAttribute('content')).toBe('#000');
     s.unmount();
+  });
+});
+
+describe('createStore — system-change emission (perf)', () => {
+  function withSystem(theme: 'light' | 'dark'): () => void {
+    let current = theme;
+    let handler: ((e: { matches: boolean }) => void) | null = null;
+    const mql = {
+      get matches() {
+        return current === 'dark';
+      },
+      media: '(prefers-color-scheme: dark)',
+      addEventListener: (_: string, h: (e: { matches: boolean }) => void) => {
+        handler = h;
+      },
+      removeEventListener: () => {
+        handler = null;
+      },
+      addListener: (h: (e: { matches: boolean }) => void) => {
+        handler = h;
+      },
+      removeListener: () => {
+        handler = null;
+      },
+    };
+    vi.stubGlobal('matchMedia', (q: string) => {
+      if (q.includes('prefers-color-scheme')) return mql as unknown as MediaQueryList;
+      return {
+        matches: false,
+        media: q,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+      } as unknown as MediaQueryList;
+    });
+    // Returns a fn that simulates an OS theme flip.
+    return () => {
+      current = current === 'dark' ? 'light' : 'dark';
+      handler?.({ matches: current === 'dark' });
+    };
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.localStorage.clear();
+  });
+
+  it('does NOT emit or rewrite the DOM on an OS flip when a concrete theme is selected', () => {
+    const flip = withSystem('light');
+    window.localStorage.setItem('theme', 'light');
+    const onChange = vi.fn();
+    const s = createStore({ ...defaults(), defaultTheme: 'light', onChange });
+    s.mount();
+    const sub = vi.fn();
+    s.subscribe(sub);
+    document.documentElement.className = '';
+    s.setTheme('dark'); // concrete selection
+    sub.mockClear();
+    onChange.mockClear();
+
+    flip(); // OS goes light→dark; selection is still concrete 'dark'
+
+    // resolvedTheme didn't change (concrete 'dark' selection) → no apply, no onChange.
+    expect(onChange).not.toHaveBeenCalled();
+    expect(s.getState().resolvedTheme).toBe('dark');
+    // systemTheme IS tracked (and emitted so consumers showing OS pref update),
+    // but the DOM class is untouched.
+    expect(s.getState().systemTheme).toBe('dark');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    s.unmount();
+  });
+
+  it('does re-resolve and apply on an OS flip when theme is "system"', () => {
+    const flip = withSystem('light');
+    const onChange = vi.fn();
+    const s = createStore({ ...defaults(), defaultTheme: 'system', onChange });
+    s.mount();
+    s.setTheme('system');
+    onChange.mockClear();
+
+    flip(); // OS light→dark
+
+    expect(s.getState().resolvedTheme).toBe('dark');
+    expect(onChange).toHaveBeenLastCalledWith('system', 'dark');
+    s.unmount();
+  });
+});
+
+describe('createStore — update() change detection (perf)', () => {
+  afterEach(() => window.localStorage.clear());
+
+  it('treats a fresh-but-equal value map as a no-op (no DOM re-apply)', () => {
+    window.localStorage.setItem('theme', 'dark');
+    const s = createStore({
+      ...defaults(),
+      enableSystem: false,
+      defaultTheme: 'dark',
+      value: { light: 'l', dark: 'd' },
+    });
+    s.mount();
+    // Apply once so previousApplied is settled.
+    s.update({ value: { light: 'l', dark: 'd' } });
+    document.documentElement.className = '';
+    // A new object literal with identical contents must NOT rewrite the DOM.
+    s.update({ value: { light: 'l', dark: 'd' } });
+    expect(document.documentElement.className).toBe('');
+    // A genuinely different map DOES re-apply.
+    s.update({ value: { light: 'l', dark: 'dark2' } });
+    expect(document.documentElement.classList.contains('dark2')).toBe(true);
+    s.unmount();
+  });
+});
+
+describe('createStore — getServerSnapshot (SSR seeding)', () => {
+  afterEach(() => window.localStorage.clear());
+
+  it('returns the seeded initial state, stable across calls', () => {
+    const s = createStore({
+      ...defaults(),
+      enableSystem: false,
+      defaultTheme: 'light',
+      initialTheme: 'dark',
+      storage: resolveAdapter({ mode: 'none', key: 'theme' }),
+    });
+    const snap1 = s.getServerSnapshot();
+    const snap2 = s.getServerSnapshot();
+    expect(snap1).toBe(snap2); // referential stability (required by useSyncExternalStore)
+    expect(snap1.theme).toBe('dark');
+    expect(snap1.resolvedTheme).toBe('dark');
+  });
+
+  it('reflects forcedTheme in the server snapshot', () => {
+    const s = createStore({
+      ...defaults(),
+      enableSystem: false,
+      defaultTheme: 'light',
+      forcedTheme: 'dark',
+    });
+    expect(s.getServerSnapshot().resolvedTheme).toBe('dark');
+    expect(s.getServerSnapshot().forcedTheme).toBe('dark');
   });
 });

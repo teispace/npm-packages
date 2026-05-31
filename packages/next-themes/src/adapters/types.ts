@@ -1,4 +1,4 @@
-import type { CookieOptions, StorageMode } from '../core/types';
+import type { CookieOptions } from '../core/types';
 
 export interface StorageAdapter {
   /** Runtime read (post-hydration). */
@@ -15,14 +15,3 @@ export interface AdapterOptions {
 }
 
 export type AdapterFactory = (opts: AdapterOptions) => StorageAdapter;
-
-export function resolveAdapter(
-  mode: StorageMode,
-  opts: AdapterOptions,
-  factories: Record<Exclude<StorageMode, 'none'>, AdapterFactory>,
-): StorageAdapter {
-  if (mode === 'none') {
-    return { get: () => null, set: () => {} };
-  }
-  return factories[mode](opts);
-}

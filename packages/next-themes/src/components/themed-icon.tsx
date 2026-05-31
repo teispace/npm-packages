@@ -14,11 +14,16 @@ export interface ThemedIconProps<T extends string = string> {
  * Render different content per theme. Useful for SVG icons, logos, or any
  * JSX that should switch on theme.
  *
- * Reads the external theme store directly so when `initialTheme` is seeded
- * from a server cookie the very first render picks the correct variant —
- * no mounted-flag delay. Add `suppressHydrationWarning` on the wrapper if
- * the resolved theme could legitimately differ between server and client
- * (`'system'` with no cookie / no `Sec-CH-Prefers-Color-Scheme` hint).
+ * Reads the theme store's server snapshot, so when the provider is **seeded
+ * with `initialTheme`** (e.g. from a server cookie) the server render and the
+ * client hydration render both pick the correct variant — no mounted-flag
+ * delay, no hydration warning.
+ *
+ * ⚠️ Without `initialTheme` (or with an unresolved `system` value) the server
+ * renders the resolved `defaultTheme` while the client resolves the real
+ * stored/OS value; when they differ React logs a hydration mismatch. This
+ * component renders a fragment, so add `suppressHydrationWarning` to a
+ * wrapping element you control in that case.
  */
 export function ThemedIcon<T extends string = string>({
   variants,

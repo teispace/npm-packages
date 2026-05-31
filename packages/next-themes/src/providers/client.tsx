@@ -1,12 +1,27 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { resolveAdapter } from '../adapters/index';
 import { ensureCursorTracker } from '../core/cursor-tracker';
 import { buildScript } from '../core/script';
 import { createStore, type ThemeStore } from '../core/store';
 import { ThemeStoreContext } from '../hooks/use-theme';
-import type { ThemeProviderProps } from './props';
+import { resolveStorageConfig, type ThemeProviderProps } from './props';
+
+const noopSubscribe = (): (() => void) => () => {};
+/**
+ * `true` during the server render, `false` once on the client. Implemented via
+ * `useSyncExternalStore` so the value is stable across the hydration boundary
+ * (server snapshot `true`, client snapshot `false`) without triggering a
+ * hydration mismatch.
+ */
+function useIsServerRender(): boolean {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => false,
+    () => true,
+  );
+}
 
 const DISABLE_CSS =
   '*,*::before,*::after{-webkit-transition:none!important;transition:none!important;-moz-transition:none!important;-o-transition:none!important;}';
@@ -30,8 +45,8 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     attribute = 'data-theme',
     value,
     target = 'html',
-    storage = 'hybrid',
-    storageKey = 'theme',
+    storage,
+    storageKey,
     cookieOptions,
     disableTransitionOnChange = false,
     respectReducedMotion = true,
@@ -44,6 +59,12 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     transition,
     onChange,
   } = props;
+
+  const {
+    mode: storageMode,
+    key: resolvedStorageKey,
+    cookieOptions: resolvedCookieOptions,
+  } = resolveStorageConfig(storage, storageKey, cookieOptions);
 
   const storeRef = useRef<ThemeStore | null>(null);
   if (!storeRef.current) {
@@ -61,11 +82,19 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
       disableTransitionOnChange,
       respectReducedMotion,
       target,
-      storage: resolveAdapter({ mode: storage, key: storageKey, cookieOptions }),
+      storage: resolveAdapter({
+        mode: storageMode,
+        key: resolvedStorageKey,
+        cookieOptions: resolvedCookieOptions,
+      }),
       transition,
       onChange,
     });
   }
+
+  // True only during SSR + the hydration render; flips to false immediately
+  // after on the client. Drives whether we emit the inline <script> (see below).
+  const isServerRender = useIsServerRender();
 
   useEffect(() => {
     const s = storeRef.current;
@@ -99,31 +128,38 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     onChange,
   ]);
 
-  const script = noScript
-    ? null
-    : buildScript({
-        storageMode: storage,
-        storageKey,
-        cookieName: cookieOptions?.name ?? storageKey,
-        attribute,
-        themes,
-        defaultTheme,
-        enableSystem,
-        followSystem,
-        forcedTheme: forcedTheme ?? null,
-        initialTheme: initialTheme ?? null,
-        value: value ?? null,
-        enableColorScheme,
-        themeColor: themeColor ?? null,
-        disableTransitionOnChange:
-          disableTransitionOnChange === true
-            ? DISABLE_CSS
-            : typeof disableTransitionOnChange === 'string'
-              ? disableTransitionOnChange
-              : null,
-        respectReducedMotion,
-        target,
-      });
+  // Only emit the blocking script during the server render (and the matching
+  // hydration render). On the client it is dead weight — React never executes
+  // inline scripts rendered on the client (it also warns in React 19), and the
+  // theme is applied imperatively by store.mount() in the effect above. Gating
+  // on `isServerRender` keeps SSR/hydration markup identical, then drops the
+  // tag on the first post-hydration commit with no mismatch.
+  const script =
+    !isServerRender || noScript
+      ? null
+      : buildScript({
+          storageMode,
+          storageKey: resolvedStorageKey,
+          cookieName: resolvedCookieOptions?.name ?? resolvedStorageKey,
+          attribute,
+          themes,
+          defaultTheme,
+          enableSystem,
+          followSystem,
+          forcedTheme: forcedTheme ?? null,
+          initialTheme: initialTheme ?? null,
+          value: value ?? null,
+          enableColorScheme,
+          themeColor: themeColor ?? null,
+          disableTransitionOnChange:
+            disableTransitionOnChange === true
+              ? DISABLE_CSS
+              : typeof disableTransitionOnChange === 'string'
+                ? disableTransitionOnChange
+                : null,
+          respectReducedMotion,
+          target,
+        });
 
   return (
     <ThemeStoreContext.Provider value={storeRef.current}>

@@ -53,7 +53,10 @@ export function useTheme<T extends string = string>(): ThemeContract & {
   const state = useSyncExternalStore(
     store ? store.subscribe : noopSubscribe,
     store ? store.getState : getEmpty,
-    getEmpty,
+    // Server snapshot: with a provider, reflect the cookie-seeded initial state
+    // so SSR renders the correct theme (no post-hydration flip for
+    // theme-dependent UI). Without a provider, stay inert.
+    store ? store.getServerSnapshot : getEmpty,
   );
   if (!store) {
     if (process.env.NODE_ENV !== 'production') warnNoProvider();

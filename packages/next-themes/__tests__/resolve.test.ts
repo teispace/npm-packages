@@ -1,11 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { normalizeSelection, resolveTheme } from '../src/core/resolve';
-
-const readers = {
-  readCookie: () => null,
-  readLocal: () => null,
-  readSession: () => null,
-};
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { resolveAdapter } from '../src/adapters/index';
+import { normalizeSelection } from '../src/core/resolve';
+import { createStore } from '../src/core/store';
 
 describe('normalizeSelection', () => {
   it('passes through a valid concrete theme', () => {
@@ -36,61 +32,97 @@ describe('normalizeSelection', () => {
   });
 });
 
-describe('resolveTheme invariant: resolvedTheme is always concrete', () => {
-  const base = {
-    themes: ['light', 'dark'],
-    systemTheme: 'light' as const,
-    storageMode: 'local' as const,
-    storageKey: 'theme',
-    cookieName: 'theme',
-    initialTheme: null,
-    forcedTheme: null,
-    ...readers,
-  };
+/**
+ * The "resolvedTheme is always concrete" invariant, tested against the REAL
+ * resolution path (the store's `initial()`), not a parallel pure helper — so
+ * the assertions track the code that actually runs in production.
+ */
+describe('store resolution invariant: resolvedTheme is always concrete', () => {
+  function mockSystem(theme: 'light' | 'dark'): void {
+    vi.stubGlobal(
+      'matchMedia',
+      (q: string) =>
+        ({
+          matches: q.includes('dark') ? theme === 'dark' : false,
+          media: q,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          addListener: () => {},
+          removeListener: () => {},
+        }) as unknown as MediaQueryList,
+    );
+  }
+
+  function base() {
+    return {
+      themes: ['light', 'dark'],
+      attribute: 'class' as const,
+      value: null,
+      enableColorScheme: true,
+      themeColor: null,
+      disableTransitionOnChange: false,
+      respectReducedMotion: true,
+      target: 'html',
+      forcedTheme: null,
+      initialTheme: null,
+      followSystem: false,
+    };
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.localStorage.clear();
+  });
 
   it("when enableSystem=false and defaultTheme='system', resolvedTheme stays concrete", () => {
-    const r = resolveTheme({
-      ...base,
+    const s = createStore({
+      ...base(),
       enableSystem: false,
       defaultTheme: 'system',
-      readLocal: () => null,
+      storage: resolveAdapter({ mode: 'local', key: 'theme' }),
     });
-    expect(r.theme).not.toBe('system');
-    expect(r.resolvedTheme).not.toBe('system');
-    expect(['light', 'dark']).toContain(r.resolvedTheme);
+    const st = s.getState();
+    expect(st.theme).not.toBe('system');
+    expect(st.resolvedTheme).not.toBe('system');
+    expect(['light', 'dark']).toContain(st.resolvedTheme);
   });
 
   it("when enableSystem=false and storage returns 'system', resolvedTheme stays concrete", () => {
-    const r = resolveTheme({
-      ...base,
+    window.localStorage.setItem('theme', 'system');
+    const s = createStore({
+      ...base(),
       enableSystem: false,
       defaultTheme: 'light',
-      readLocal: () => 'system',
+      storage: resolveAdapter({ mode: 'local', key: 'theme' }),
     });
-    expect(r.theme).not.toBe('system');
-    expect(r.resolvedTheme).not.toBe('system');
+    const st = s.getState();
+    expect(st.theme).not.toBe('system');
+    expect(st.resolvedTheme).not.toBe('system');
   });
 
   it("when enableSystem=true and theme='system', resolvedTheme is the systemTheme", () => {
-    const r = resolveTheme({
-      ...base,
+    mockSystem('dark');
+    const s = createStore({
+      ...base(),
       enableSystem: true,
       defaultTheme: 'system',
-      systemTheme: 'dark',
-      readLocal: () => null,
+      storage: resolveAdapter({ mode: 'none', key: 'theme' }),
     });
-    expect(r.theme).toBe('system');
-    expect(r.resolvedTheme).toBe('dark');
+    const st = s.getState();
+    expect(st.theme).toBe('system');
+    expect(st.resolvedTheme).toBe('dark');
   });
 
   it('forcedTheme short-circuits everything', () => {
-    const r = resolveTheme({
-      ...base,
+    const s = createStore({
+      ...base(),
       enableSystem: true,
       defaultTheme: 'light',
       forcedTheme: 'dark',
+      storage: resolveAdapter({ mode: 'local', key: 'theme' }),
     });
-    expect(r.theme).toBe('dark');
-    expect(r.resolvedTheme).toBe('dark');
+    const st = s.getState();
+    expect(st.theme).toBe('dark');
+    expect(st.resolvedTheme).toBe('dark');
   });
 });

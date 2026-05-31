@@ -6,10 +6,12 @@ export const localAdapter: AdapterFactory = ({ key }): StorageAdapter => ({
     // Probe the API rather than the global. Node 25 ships `window` as
     // `globalThis` with a partial `localStorage` shim, so `typeof window`
     // is "object" but `getItem` would throw. `hasLocalStorage()` checks
-    // the actual capability.
+    // the actual capability. Read from `globalThis` to match that probe —
+    // it covers worker-like environments where Web Storage exists but
+    // `window` does not.
     if (!hasLocalStorage()) return null;
     try {
-      return window.localStorage.getItem(key);
+      return globalThis.localStorage.getItem(key);
     } catch (_e) {
       return null;
     }
@@ -17,7 +19,7 @@ export const localAdapter: AdapterFactory = ({ key }): StorageAdapter => ({
   set(value) {
     if (!hasLocalStorage()) return;
     try {
-      window.localStorage.setItem(key, value);
+      globalThis.localStorage.setItem(key, value);
     } catch (_e) {
       /* ignore — quota, sandboxed iframe, etc. */
     }
