@@ -1,9 +1,14 @@
+'use client';
+
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   $createParagraphNode,
   COMMAND_PRIORITY_LOW,
+  COMMAND_PRIORITY_NORMAL,
   createCommand,
+  DROP_COMMAND,
   type LexicalCommand,
+  PASTE_COMMAND,
 } from 'lexical';
 import { useEffect } from 'react';
 import { $getOrCreateRangeSelection } from '../../core/insert.js';
@@ -57,64 +62,61 @@ export function ImagePlugin({
     );
   }, [editor]);
 
-  // Handle paste
+  // Handle pasted / dropped image files. Registered through Lexical's
+  // PASTE_COMMAND / DROP_COMMAND (not raw root listeners) so this is the single
+  // source of truth for image insertion — it returns `true` to stop
+  // propagation, which prevents the DragDropPaste extension from also inserting
+  // the same file (the previous raw-DOM-listener approach could not, causing a
+  // double image). Command handlers also migrate automatically if the
+  // contentEditable root is recreated, so there is nothing to leak.
   useEffect(() => {
-    const root = editor.getRootElement();
-    if (!root) return;
+    const accepted = (file: File): boolean =>
+      accept.some((type) => file.type.match(type.replace('*', '.*'))) && file.size <= maxSize;
 
-    const handlePaste = async (e: ClipboardEvent) => {
-      const files = e.clipboardData?.files;
-      if (!files || files.length === 0) return;
-
-      for (const file of Array.from(files)) {
-        if (!accept.some((type) => file.type.match(type.replace('*', '.*')))) continue;
-        if (file.size > maxSize) continue;
-
-        e.preventDefault();
-        const src = onUpload ? await onUpload(file) : await fileToDataUrl(file);
-        editor.dispatchCommand(INSERT_IMAGE_COMMAND, {
-          src,
-          altText: file.name,
-        });
-      }
+    const insertFiles = (files: FileList): boolean => {
+      const images = Array.from(files).filter(accepted);
+      if (images.length === 0) return false;
+      // Resolve uploads outside the (sync) command handler, then dispatch.
+      void Promise.all(
+        images.map(async (file) => {
+          const src = onUpload ? await onUpload(file) : await fileToDataUrl(file);
+          editor.dispatchCommand(INSERT_IMAGE_COMMAND, { src, altText: file.name });
+        }),
+      );
+      return true;
     };
 
-    root.addEventListener('paste', handlePaste);
-    return () => root.removeEventListener('paste', handlePaste);
-  }, [editor, onUpload, maxSize, accept]);
+    // NORMAL priority (above DragDropPaste's LOW) so when both extensions are
+    // present the image plugin — which has the accept/maxSize/onUpload config —
+    // handles the file and stops propagation; DragDropPaste still works on its
+    // own for setups that don't include the image plugin.
+    const removePaste = editor.registerCommand(
+      PASTE_COMMAND,
+      (event: ClipboardEvent) => {
+        const files = event.clipboardData?.files;
+        if (!files || files.length === 0) return false;
+        if (!Array.from(files).some(accepted)) return false;
+        event.preventDefault();
+        return insertFiles(files);
+      },
+      COMMAND_PRIORITY_NORMAL,
+    );
 
-  // Handle drop
-  useEffect(() => {
-    const root = editor.getRootElement();
-    if (!root) return;
+    const removeDrop = editor.registerCommand(
+      DROP_COMMAND,
+      (event: DragEvent) => {
+        const files = event.dataTransfer?.files;
+        if (!files || files.length === 0) return false;
+        if (!Array.from(files).some(accepted)) return false;
+        event.preventDefault();
+        return insertFiles(files);
+      },
+      COMMAND_PRIORITY_NORMAL,
+    );
 
-    const handleDrop = async (e: DragEvent) => {
-      const files = e.dataTransfer?.files;
-      if (!files || files.length === 0) return;
-
-      for (const file of Array.from(files)) {
-        if (!accept.some((type) => file.type.match(type.replace('*', '.*')))) continue;
-        if (file.size > maxSize) continue;
-
-        e.preventDefault();
-        const src = onUpload ? await onUpload(file) : await fileToDataUrl(file);
-        editor.dispatchCommand(INSERT_IMAGE_COMMAND, {
-          src,
-          altText: file.name,
-        });
-      }
-    };
-
-    const handleDragOver = (e: DragEvent) => {
-      const hasFiles = e.dataTransfer?.types.includes('Files');
-      if (hasFiles) e.preventDefault();
-    };
-
-    root.addEventListener('drop', handleDrop);
-    root.addEventListener('dragover', handleDragOver);
     return () => {
-      root.removeEventListener('drop', handleDrop);
-      root.removeEventListener('dragover', handleDragOver);
+      removePaste();
+      removeDrop();
     };
   }, [editor, onUpload, maxSize, accept]);
 

@@ -1,3 +1,5 @@
+'use client';
+
 import { useCallback, useEffect } from 'react';
 
 export type Placement = 'top' | 'bottom' | 'auto';

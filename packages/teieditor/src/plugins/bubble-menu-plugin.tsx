@@ -1,3 +1,5 @@
+'use client';
+
 import { $isLinkNode, $toggleLink } from '@lexical/link';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $isAtNodeEnd } from '@lexical/selection';

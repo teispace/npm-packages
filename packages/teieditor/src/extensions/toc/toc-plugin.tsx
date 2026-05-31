@@ -1,3 +1,5 @@
+'use client';
+
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $isHeadingNode, type HeadingTagType } from '@lexical/rich-text';
 import { $getRoot } from 'lexical';
