@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/teispace/npm-packages/compare/next-themes-v0.5.0...next-themes-v1.0.0) (2026-05-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* drops support for Node 20 and 21; requires Node >=22.12.0.
+
+### Miscellaneous Chores
+
+* upgrade all dependencies to latest ([#89](https://github.com/teispace/npm-packages/issues/89)) ([3e6e199](https://github.com/teispace/npm-packages/commit/3e6e1994cd82979c7acb07f6253ca1db9396e5ec))
+
 ## [0.5.0](https://github.com/teispace/npm-packages/compare/next-themes-v0.4.3...next-themes-v0.5.0) (2026-05-18)
 
 
