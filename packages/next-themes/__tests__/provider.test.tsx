@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { useTheme } from '../src/hooks/use-theme';
 import { ThemeProvider } from '../src/providers/client';
@@ -117,32 +118,46 @@ describe('ThemeProvider (client)', () => {
     expect(screen.getByTestId('inner').textContent).toBe('dark');
   });
 
-  it('renders the inline blocking script', () => {
+  it('renders the inline blocking script in the server-rendered HTML', () => {
+    // The blocking script must be present in the SSR output (that's the whole
+    // point — it runs before paint to suppress FOUC).
+    const html = renderToStaticMarkup(
+      <ThemeProvider storage="local">
+        <Consumer />
+      </ThemeProvider>,
+    );
+    expect(html).toContain('<script');
+    expect(html).toContain('!function');
+  });
+
+  it('does NOT render the inline script on a client-only mount', () => {
+    // On the client there is no pre-paint window to protect, store.mount()
+    // applies the theme imperatively, and React never executes an inline
+    // <script> rendered on the client (and warns in React 19). So the tag must
+    // be absent on a pure client render — this is the fix for that warning and
+    // the dead, never-executing tag in SPA (Vite/CRA) mounts.
     const { container } = render(
       <ThemeProvider storage="local">
         <Consumer />
       </ThemeProvider>,
     );
-    const scripts = container.querySelectorAll('script');
-    expect(scripts.length).toBeGreaterThan(0);
-    expect(scripts[0].innerHTML).toContain('!function');
+    expect(container.querySelectorAll('script').length).toBe(0);
   });
 
-  it('omits the inline script when noScript is set', () => {
-    const { container } = render(
+  it('omits the inline script when noScript is set (server render)', () => {
+    const html = renderToStaticMarkup(
       <ThemeProvider storage="local" noScript>
         <Consumer />
       </ThemeProvider>,
     );
-    const scripts = container.querySelectorAll('script');
-    expect(scripts.length).toBe(0);
+    expect(html).not.toContain('<script');
   });
 
-  it('forwards scriptProps onto the inline <script> (upstream parity)', () => {
+  it('forwards scriptProps + nonce onto the inline <script> (upstream parity)', () => {
     // Upstream `next-themes` exposes `scriptProps` for things like
     // `data-*` attributes or the `type: 'application/json'` workaround.
-    // We accept it for migration parity and forward onto our existing tag.
-    const { container } = render(
+    // We accept it for migration parity and forward onto the SSR tag.
+    const html = renderToStaticMarkup(
       <ThemeProvider
         storage="local"
         nonce="abc123"
@@ -151,12 +166,10 @@ describe('ThemeProvider (client)', () => {
         <Consumer />
       </ThemeProvider>,
     );
-    const script = container.querySelector('script');
-    expect(script).not.toBeNull();
-    expect(script?.id).toBe('theme-init');
-    expect(script?.getAttribute('data-test')).toBe('forwarded');
+    expect(html).toContain('id="theme-init"');
+    expect(html).toContain('data-test="forwarded"');
     // nonce is set by us LAST so user-supplied scriptProps cannot strip it.
-    expect(script?.getAttribute('nonce')).toBe('abc123');
+    expect(html).toContain('nonce="abc123"');
   });
 
   it('honors a runtime forcedTheme prop change (route-group pattern)', () => {
@@ -210,5 +223,28 @@ describe('ThemeProvider (client)', () => {
       fireEvent.click(screen.getByText('toggle'));
     });
     expect(screen.getByTestId('theme').textContent).toBe('light');
+  });
+
+  it('accepts the StorageConfig object form for the storage prop', () => {
+    // The object form bundles mode + key; the resolved adapter should read/write
+    // localStorage under the configured key.
+    window.localStorage.setItem('my-theme-key', 'dark');
+    render(
+      <ThemeProvider
+        storage={{ mode: 'local', key: 'my-theme-key' }}
+        defaultTheme="light"
+        enableSystem={false}
+      >
+        <Consumer />
+      </ThemeProvider>,
+    );
+    // Seeded from the configured key, not the default 'theme'.
+    expect(screen.getByTestId('theme').textContent).toBe('dark');
+    act(() => {
+      fireEvent.click(screen.getByText('light'));
+    });
+    expect(window.localStorage.getItem('my-theme-key')).toBe('light');
+    // The default key remains untouched.
+    expect(window.localStorage.getItem('theme')).toBeNull();
   });
 });

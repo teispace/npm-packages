@@ -7,7 +7,7 @@ import { ensureCursorTracker } from '../core/cursor-tracker';
 import { buildScript } from '../core/script';
 import { createStore, type ThemeStore } from '../core/store';
 import { ThemeStoreContext } from '../hooks/use-theme';
-import type { ThemeProviderProps } from './props';
+import { resolveStorageConfig, type ThemeProviderProps } from './props';
 
 const DISABLE_CSS =
   '*,*::before,*::after{-webkit-transition:none!important;transition:none!important;-moz-transition:none!important;-o-transition:none!important;}';
@@ -29,8 +29,8 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     attribute = 'data-theme',
     value,
     target = 'html',
-    storage = 'hybrid',
-    storageKey = 'theme',
+    storage,
+    storageKey,
     cookieOptions,
     disableTransitionOnChange = false,
     respectReducedMotion = true,
@@ -43,6 +43,12 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     transition,
     onChange,
   } = props;
+
+  const {
+    mode: storageMode,
+    key: resolvedStorageKey,
+    cookieOptions: resolvedCookieOptions,
+  } = resolveStorageConfig(storage, storageKey, cookieOptions);
 
   const storeRef = useRef<ThemeStore | null>(null);
   if (!storeRef.current) {
@@ -60,7 +66,11 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
       disableTransitionOnChange,
       respectReducedMotion,
       target,
-      storage: resolveAdapter({ mode: storage, key: storageKey, cookieOptions }),
+      storage: resolveAdapter({
+        mode: storageMode,
+        key: resolvedStorageKey,
+        cookieOptions: resolvedCookieOptions,
+      }),
       transition,
       onChange,
     });
@@ -105,9 +115,9 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     if (insertedRef.current || noScript) return null;
     insertedRef.current = true;
     const script = buildScript({
-      storageMode: storage,
-      storageKey,
-      cookieName: cookieOptions?.name ?? storageKey,
+      storageMode,
+      storageKey: resolvedStorageKey,
+      cookieName: resolvedCookieOptions?.name ?? resolvedStorageKey,
       attribute,
       themes,
       defaultTheme,

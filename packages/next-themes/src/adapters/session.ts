@@ -3,9 +3,10 @@ import type { AdapterFactory, StorageAdapter } from './types';
 
 export const sessionAdapter: AdapterFactory = ({ key }): StorageAdapter => ({
   get() {
+    // Read from `globalThis` to match the `hasSessionStorage()` probe.
     if (!hasSessionStorage()) return null;
     try {
-      return window.sessionStorage.getItem(key);
+      return globalThis.sessionStorage.getItem(key);
     } catch (_e) {
       return null;
     }
@@ -13,7 +14,7 @@ export const sessionAdapter: AdapterFactory = ({ key }): StorageAdapter => ({
   set(value) {
     if (!hasSessionStorage()) return;
     try {
-      window.sessionStorage.setItem(key, value);
+      globalThis.sessionStorage.setItem(key, value);
     } catch (_e) {
       /* ignore */
     }

@@ -1,5 +1,11 @@
 import type { ReactNode, ScriptHTMLAttributes } from 'react';
-import type { Attribute, CookieOptions, StorageMode, TransitionConfig } from '../core/types';
+import type {
+  Attribute,
+  CookieOptions,
+  StorageConfig,
+  StorageMode,
+  TransitionConfig,
+} from '../core/types';
 
 export interface ThemeProviderProps {
   children?: ReactNode;
@@ -22,8 +28,15 @@ export interface ThemeProviderProps {
   /** Selector for the element that receives the attribute. Default: `'html'`. */
   target?: string;
 
-  /** Storage backend. Default: `'hybrid'` (cookie + localStorage). */
-  storage?: StorageMode;
+  /**
+   * Storage backend. Either a mode string (`'hybrid'` | `'cookie'` | `'local'`
+   * | `'session'` | `'none'`, default `'hybrid'`) or an object that bundles the
+   * mode with its `key` and `cookieOptions`:
+   * `storage={{ mode: 'cookie', cookieOptions: { maxAge: 31536000 } }}`.
+   * When the object form supplies `key`/`cookieOptions`, the top-level
+   * `storageKey`/`cookieOptions` props take precedence if also provided.
+   */
+  storage?: StorageConfig;
   /** Key name for local/session storage and fallback cookie name. Default: `'theme'`. */
   storageKey?: string;
   /** Overrides for the cookie channel. */
@@ -82,4 +95,22 @@ export interface ThemeProviderProps {
 
   /** Fired when the theme changes, with both the selected value and the resolved value. */
   onChange?: (theme: string, resolvedTheme: string) => void;
+}
+
+/**
+ * Normalize the `storage` prop (string mode or `{ mode, key?, cookieOptions? }`)
+ * together with the top-level `storageKey`/`cookieOptions` props into the flat
+ * shape both providers feed to `resolveAdapter`/`buildScript`. Top-level props
+ * win over the object form's fields when both are supplied.
+ */
+export function resolveStorageConfig(
+  storage: StorageConfig | undefined,
+  storageKey: string | undefined,
+  cookieOptions: CookieOptions | undefined,
+): { mode: StorageMode; key: string; cookieOptions: CookieOptions | undefined } {
+  const isObject = typeof storage === 'object' && storage !== null;
+  const mode: StorageMode = isObject ? storage.mode : (storage ?? 'hybrid');
+  const key = storageKey ?? (isObject ? storage.key : undefined) ?? 'theme';
+  const cookies = cookieOptions ?? (isObject ? storage.cookieOptions : undefined);
+  return { mode, key, cookieOptions: cookies };
 }

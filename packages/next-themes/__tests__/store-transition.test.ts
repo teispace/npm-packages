@@ -91,6 +91,52 @@ describe('store + view transition', () => {
     expect(store.getState().theme).toBe('dark');
     store.unmount();
   });
+
+  it('suppresses disableTransitionOnChange while a View Transition animates', () => {
+    // With BOTH transition + disableTransitionOnChange enabled, the VT must win:
+    // the global `transition:none!important` <style> would cancel the very
+    // animation the View Transition is performing, so it must NOT be injected
+    // inside the VT callback.
+    const d = document as unknown as { startViewTransition: (cb: () => void) => unknown };
+    let appendedStyleDuringVt = false;
+    d.startViewTransition = (cb: () => void) => {
+      const spy = vi.spyOn(document.head, 'appendChild');
+      cb(); // runs doApply(true) → setState(..., skipTransitionDisable=true)
+      appendedStyleDuringVt = spy.mock.calls.some(
+        ([node]) => (node as HTMLElement).tagName === 'STYLE',
+      );
+      spy.mockRestore();
+      return { finished: Promise.resolve() };
+    };
+
+    const store = createStore({
+      ...defaults(),
+      transition: 'fade',
+      disableTransitionOnChange: true,
+    });
+    store.mount();
+    store.setTheme('dark'); // real change, VT active
+    expect(appendedStyleDuringVt).toBe(false);
+    expect(store.getState().resolvedTheme).toBe('dark');
+    store.unmount();
+  });
+
+  it('still injects the disable-transition <style> when NOT in a View Transition', () => {
+    // Control for the test above: without a VT, disableTransitionOnChange
+    // behaves normally and the style IS injected on a real change.
+    (document as unknown as { startViewTransition?: unknown }).startViewTransition = undefined;
+    const store = createStore({
+      ...defaults(),
+      disableTransitionOnChange: true,
+    });
+    store.mount();
+    store.setTheme('dark');
+    const spy = vi.spyOn(document.head, 'appendChild');
+    store.setTheme('light');
+    expect(spy.mock.calls.some(([node]) => (node as HTMLElement).tagName === 'STYLE')).toBe(true);
+    spy.mockRestore();
+    store.unmount();
+  });
 });
 
 describe('store + disableTransitionOnChange — no-op short circuit', () => {

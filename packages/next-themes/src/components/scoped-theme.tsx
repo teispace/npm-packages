@@ -71,6 +71,9 @@ function makeScopedStore(theme: string): ThemeStore {
   const listeners = new Set<Listener>();
   return {
     getState: () => state,
+    // Scoped trees are forced to a fixed theme, so the server snapshot is the
+    // same immutable state — lets ScopedTheme render correctly under SSR.
+    getServerSnapshot: () => state,
     subscribe: (l) => {
       listeners.add(l);
       return () => {

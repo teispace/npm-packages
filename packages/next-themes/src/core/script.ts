@@ -213,7 +213,9 @@ function rt(){
       st.appendChild(d.createTextNode(c.dt));
       d.head.appendChild(st);
       if(d.body)void getComputedStyle(d.body).opacity;
-      requestAnimationFrame(function(){requestAnimationFrame(function(){st.remove();});});
+      var dn=0;var rmv=function(){if(dn)return;dn=1;st.remove();};
+      var tm=setTimeout(rmv,120);
+      requestAnimationFrame(function(){requestAnimationFrame(function(){clearTimeout(tm);rmv();});});
     }
   }
 }
