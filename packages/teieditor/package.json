@@ -94,6 +94,9 @@
     "clean": "rm -rf dist",
     "prepublishOnly": "yarn build"
   },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "peerDependencies": {
     "@lexical/code": ">=0.43.0",
     "@lexical/history": ">=0.43.0",
@@ -131,33 +134,33 @@
     }
   },
   "dependencies": {
-    "commander": "^14.0.3",
+    "commander": "^15.0.0",
     "ora": "^9.4.0",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
-    "@lexical/code": "^0.44.0",
-    "@lexical/history": "^0.44.0",
-    "@lexical/html": "^0.44.0",
-    "@lexical/link": "^0.44.0",
-    "@lexical/list": "^0.44.0",
-    "@lexical/markdown": "^0.44.0",
-    "@lexical/react": "^0.44.0",
-    "@lexical/rich-text": "^0.44.0",
-    "@lexical/selection": "^0.44.0",
-    "@lexical/table": "^0.44.0",
-    "@lexical/utils": "^0.44.0",
+    "@lexical/code": "^0.45.0",
+    "@lexical/history": "^0.45.0",
+    "@lexical/html": "^0.45.0",
+    "@lexical/link": "^0.45.0",
+    "@lexical/list": "^0.45.0",
+    "@lexical/markdown": "^0.45.0",
+    "@lexical/react": "^0.45.0",
+    "@lexical/rich-text": "^0.45.0",
+    "@lexical/selection": "^0.45.0",
+    "@lexical/table": "^0.45.0",
+    "@lexical/utils": "^0.45.0",
     "@testing-library/react": "^16.3.2",
-    "@types/node": "^25.8.0",
-    "@types/react": "^19.2.14",
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "jsdom": "^29.1.1",
-    "lexical": "^0.44.0",
+    "lexical": "^0.45.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "tsup": "^8.5.1",
-    "tsx": "^4.22.1",
+    "tsx": "^4.22.3",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.7"
   }
 }
