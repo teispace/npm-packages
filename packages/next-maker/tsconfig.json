@@ -3,6 +3,9 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": ".",
+    // Published declarations stay fully readable, but ship no `.d.ts.map`
+    // sourcemaps (which would point back to / help reconstruct src).
+    "declarationMap": false,
     "paths": {
       "@teispace/next-maker": ["./src"]
     }
