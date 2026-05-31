@@ -115,6 +115,16 @@ jobs:
 
               echo "📦 Publishing $PACKAGE_NAME@$PACKAGE_VERSION from $package_path"
 
+              # Rebuild this package from a clean dist immediately before packing.
+              # The root `yarn build` runs all packages in parallel and tsup's
+              # own `clean` only tracks files it emitted in that run — a stale
+              # artifact from a previous shape (e.g. a removed entry) could
+              # otherwise linger in dist and ship in the tarball. A fresh
+              # per-package clean+build guarantees the published dist matches the
+              # current source exactly.
+              rm -rf "$package_path/dist"
+              yarn workspace "$PACKAGE_NAME" run build
+
               cd "$package_path"
               npm publish --provenance --access public
               cd - > /dev/null
