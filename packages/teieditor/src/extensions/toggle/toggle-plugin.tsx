@@ -1,3 +1,5 @@
+'use client';
+
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $createParagraphNode, $createTextNode } from 'lexical';
 import { useEffect } from 'react';

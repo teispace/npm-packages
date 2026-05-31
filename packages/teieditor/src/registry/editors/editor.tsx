@@ -26,6 +26,13 @@ import { SlashMenu } from '../components/slash-menu/slash-menu';
 import { TableMenu } from '../components/table-menu/table-menu';
 import { Toolbar } from '../components/toolbar/toolbar';
 
+// Stable identities for omitted props. Using inline `= []` / `= {}` defaults
+// would create a new object every render, changing the `editor` useMemo
+// identity and forcing the whole editor (extensions, plugins, command
+// registrations) to tear down and rebuild on every parent re-render.
+const EMPTY_EXTENSIONS: TeiExtension[] = [];
+const EMPTY_CONFIG: Partial<TeiEditorConfig> = {};
+
 export interface TeiEditorProps {
   extensions?: TeiExtension[];
   initialValue?: string;
@@ -50,7 +57,7 @@ export interface TeiEditorProps {
  * SSR-safe: renders a skeleton during server-side rendering.
  */
 export function TeiEditor({
-  extensions = [],
+  extensions = EMPTY_EXTENSIONS,
   initialValue,
   initialFormat = 'html',
   onChange,
@@ -62,7 +69,7 @@ export function TeiEditor({
   showBubbleMenu = true,
   readOnly = false,
   spellCheck = true,
-  config = {},
+  config = EMPTY_CONFIG,
 }: TeiEditorProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);

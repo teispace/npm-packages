@@ -1,3 +1,5 @@
+'use client';
+
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useEffect, useRef } from 'react';
 import { deserialize, type SerializationFormat } from '../utils/serialization.js';

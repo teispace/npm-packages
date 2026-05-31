@@ -25,6 +25,11 @@ import { LinkEditor } from '../components/link-editor/link-editor';
 import { SlashMenu } from '../components/slash-menu/slash-menu';
 import { TableMenu } from '../components/table-menu/table-menu';
 
+// Stable identities for omitted props — see the note in editor.tsx. Inline
+// `= []` / `= {}` defaults would rebuild the editor on every parent re-render.
+const EMPTY_EXTENSIONS: TeiExtension[] = [];
+const EMPTY_CONFIG: Partial<TeiEditorConfig> = {};
+
 export interface TeiEditorNotionProps {
   extensions?: TeiExtension[];
   initialValue?: string;
@@ -46,7 +51,7 @@ export interface TeiEditorNotionProps {
  * Like Lexical Playground but without the fixed toolbar.
  */
 export function TeiEditorNotion({
-  extensions = [],
+  extensions = EMPTY_EXTENSIONS,
   initialValue,
   initialFormat = 'html',
   onChange,
@@ -56,7 +61,7 @@ export function TeiEditorNotion({
   editorClassName = '',
   readOnly = false,
   spellCheck = true,
-  config = {},
+  config = EMPTY_CONFIG,
 }: TeiEditorNotionProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);

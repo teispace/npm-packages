@@ -1,3 +1,5 @@
+'use client';
+
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { DraggableBlockPlugin_EXPERIMENTAL } from '@lexical/react/LexicalDraggableBlockPlugin';
 import type { JSX } from 'react';

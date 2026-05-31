@@ -1,3 +1,5 @@
+'use client';
+
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $getRoot, $isTextNode, type TextNode } from 'lexical';
 import type { JSX } from 'react';

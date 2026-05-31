@@ -1,3 +1,5 @@
+'use client';
+
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { COMMAND_PRIORITY_LOW, DROP_COMMAND, PASTE_COMMAND } from 'lexical';
 import { useEffect } from 'react';
@@ -13,8 +15,13 @@ function fileToDataUrl(file: File): Promise<string> {
 }
 
 /**
- * Enhanced drag & drop / paste handler for files.
- * Automatically inserts images from dropped/pasted files.
+ * Drag & drop / paste handler that inserts images from dropped/pasted files.
+ *
+ * Registered at `COMMAND_PRIORITY_LOW`. When the Image extension is also active
+ * (e.g. in StarterKit) its handler runs first at `COMMAND_PRIORITY_NORMAL` and
+ * stops propagation, so this plugin only takes effect for setups that include
+ * DragDropPaste WITHOUT the Image extension — avoiding the double-insertion
+ * that occurred when both handled the same paste/drop.
  */
 export function DragDropPastePlugin({
   onUpload,

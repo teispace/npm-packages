@@ -1,14 +1,20 @@
+'use client';
+
 import { $getListDepth, $isListItemNode, $isListNode } from '@lexical/list';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { COMMAND_PRIORITY_CRITICAL, type ElementNode, INDENT_CONTENT_COMMAND } from 'lexical';
+import {
+  $getSelection,
+  $isRangeSelection,
+  type BaseSelection,
+  COMMAND_PRIORITY_CRITICAL,
+  type ElementNode,
+  INDENT_CONTENT_COMMAND,
+} from 'lexical';
 import { useEffect } from 'react';
 
-function getElementNodesInSelection(
-  selection: ReturnType<typeof import('lexical').$getSelection>,
-): Set<ElementNode> {
-  const nodesInSelection = (selection as any)?.getNodes?.() || [];
+function getElementNodesInSelection(selection: BaseSelection): Set<ElementNode> {
   const elementNodes = new Set<ElementNode>();
-  for (const node of nodesInSelection) {
+  for (const node of selection.getNodes()) {
     const parent = node.getParent();
     if (parent && $isListItemNode(parent)) {
       elementNodes.add(parent);
@@ -38,7 +44,6 @@ export function ListMaxIndentPlugin({ maxDepth }: { maxDepth: number }): null {
       () => {
         let block = false;
         editor.getEditorState().read(() => {
-          const { $getSelection, $isRangeSelection } = require('lexical');
           const selection = $getSelection();
           if (!$isRangeSelection(selection)) return;
           const elements = getElementNodesInSelection(selection);
