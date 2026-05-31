@@ -1,0 +1,107 @@
+{
+  "name": "@teispace/env",
+  "version": "0.1.0",
+  "description": "Type-safe, validated environment variables for every JavaScript runtime and framework. Load, validate, coerce, and type your env — Node, Bun, Deno, Workers, Next, Nest, Vite, Nuxt, and more.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Teispace",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teispace/npm-packages.git",
+    "directory": "packages/env"
+  },
+  "homepage": "https://github.com/teispace/npm-packages/tree/main/packages/env#readme",
+  "bugs": {
+    "url": "https://github.com/teispace/npm-packages/issues"
+  },
+  "keywords": [
+    "env",
+    "dotenv",
+    "environment-variables",
+    "config",
+    "validation",
+    "type-safe",
+    "typescript",
+    "zod",
+    "valibot",
+    "standard-schema",
+    "nextjs",
+    "nestjs",
+    "vite",
+    "nuxt",
+    "deno",
+    "bun",
+    "cloudflare-workers"
+  ],
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./load": {
+      "types": "./dist/load.d.ts",
+      "import": "./dist/load.js"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js"
+    },
+    "./next": {
+      "types": "./dist/presets/next.d.ts",
+      "import": "./dist/presets/next.js"
+    },
+    "./vite": {
+      "types": "./dist/presets/vite.d.ts",
+      "import": "./dist/presets/vite.js"
+    },
+    "./nuxt": {
+      "types": "./dist/presets/nuxt.d.ts",
+      "import": "./dist/presets/nuxt.js"
+    },
+    "./astro": {
+      "types": "./dist/presets/astro.d.ts",
+      "import": "./dist/presets/astro.js"
+    },
+    "./sveltekit": {
+      "types": "./dist/presets/sveltekit.d.ts",
+      "import": "./dist/presets/sveltekit.js"
+    },
+    "./node": {
+      "types": "./dist/presets/node.d.ts",
+      "import": "./dist/presets/node.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "yarn build"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

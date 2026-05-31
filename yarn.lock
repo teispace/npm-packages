@@ -2542,6 +2542,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@teispace/env@workspace:packages/env":
+  version: 0.0.0-use.local
+  resolution: "@teispace/env@workspace:packages/env"
+  dependencies:
+    "@types/node": "npm:^25.9.1"
+    tsup: "npm:^8.5.1"
+    typescript: "npm:^6.0.3"
+    vitest: "npm:^4.1.7"
+  languageName: unknown
+  linkType: soft
+
 "@teispace/next-maker@workspace:packages/next-maker":
   version: 0.0.0-use.local
   resolution: "@teispace/next-maker@workspace:packages/next-maker"
