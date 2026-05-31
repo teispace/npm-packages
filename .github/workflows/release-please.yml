@@ -104,6 +104,15 @@ jobs:
                 continue
               fi
 
+              # Skip versions already on the registry so re-runs are idempotent.
+              # `npm publish` of an existing version hard-fails with EPUBLISHCONFLICT
+              # and, under `set -e`, would abort the whole loop — leaving later
+              # packages unpublished on any partial-failure re-run.
+              if npm view "$PACKAGE_NAME@$PACKAGE_VERSION" version > /dev/null 2>&1; then
+                echo "⏭️ $PACKAGE_NAME@$PACKAGE_VERSION is already published, skipping"
+                continue
+              fi
+
               echo "📦 Publishing $PACKAGE_NAME@$PACKAGE_VERSION from $package_path"
 
               cd "$package_path"
