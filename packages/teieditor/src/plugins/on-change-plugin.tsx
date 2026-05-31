@@ -25,7 +25,11 @@ export function OnChangePlugin({
   if (!onChange) return null;
 
   const handleChange = (editorState: EditorState, _editor: LexicalEditor) => {
-    editorState.read(() => {
+    // Read with the editor context bound (`editor.read` rather than
+    // `editorState.read`) so DOM-export serializers like
+    // `$generateHtmlFromNodes` can resolve the active editor. Required since
+    // Lexical 0.45, where `TextNode.createDOM` calls `$getEditor()`.
+    _editor.read(() => {
       const value = $serialize(format, _editor);
       onChange(value, editorState);
     });

@@ -48,11 +48,14 @@ const MD_TRANSFORMERS = [
 
 /**
  * Export editor content to the specified format.
- * Must be called inside `editor.getEditorState().read()` or `editor.update()`.
+ * Must be called inside `editor.read()` or `editor.update()` — the active
+ * editor has to be bound for the `'html'` format, since Lexical 0.45 resolves
+ * the editor from context during DOM export. (`editorState.read()` alone does
+ * not bind the editor; pass `{ editor }` if you use that form.)
  *
  * @example
  * ```ts
- * editor.getEditorState().read(() => {
+ * editor.read(() => {
  *   const html = $serialize('html', editor);
  *   const md = $serialize('markdown', editor);
  * });
@@ -86,7 +89,10 @@ export function $serialize(format: SerializationFormat, editor: LexicalEditor): 
  */
 export function serialize(editor: LexicalEditor, format: SerializationFormat): string {
   let result = '';
-  editor.getEditorState().read(() => {
+  // `editor.read` (not `editorState.read`) binds the active editor so
+  // DOM-export serializers like `$generateHtmlFromNodes` can resolve it.
+  // Required since Lexical 0.45.
+  editor.read(() => {
     result = $serialize(format, editor);
   });
   return result;
