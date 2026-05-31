@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/teispace/npm-packages/compare/next-maker-v2.1.2...next-maker-v3.0.0) (2026-05-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* drops support for Node 20 and 21; requires Node >=22.12.0.
+
+### Miscellaneous Chores
+
+* upgrade all dependencies to latest ([#89](https://github.com/teispace/npm-packages/issues/89)) ([3e6e199](https://github.com/teispace/npm-packages/commit/3e6e1994cd82979c7acb07f6253ca1db9396e5ec))
+
 ## [2.1.2](https://github.com/teispace/npm-packages/compare/next-maker-v2.1.1...next-maker-v2.1.2) (2026-05-18)
 
 

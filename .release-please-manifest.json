@@ -1,5 +1,5 @@
 {
-  "packages/next-maker": "2.1.2",
-  "packages/teieditor": "1.5.6",
-  "packages/next-themes": "0.5.0"
+  "packages/next-maker": "3.0.0",
+  "packages/teieditor": "2.0.0",
+  "packages/next-themes": "1.0.0"
 }
