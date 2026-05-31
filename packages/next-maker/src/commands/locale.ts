@@ -1,7 +1,7 @@
-import path from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
+import { assertSafeSegment, resolveInside } from '../config/path-safety';
 import { fileExists } from '../core/files';
 import { detectProjectSetup } from '../detection';
 import { generateLocale } from '../generators';
@@ -39,8 +39,11 @@ export const registerLocaleCommand = (program: Command) => {
           copyTranslations: options.copyTranslations,
         });
 
+        // Validate the locale code (arg or prompt) before it becomes a filename.
+        assertSafeSegment(localeOptions.code, 'locale code');
+
         // Check if locale already exists
-        const translationFile = path.join(
+        const translationFile = resolveInside(
           projectPath,
           'src',
           'i18n',

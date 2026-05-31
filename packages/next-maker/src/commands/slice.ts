@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
+import { assertSafeRelativePath, assertSafeSegment } from '../config/path-safety';
 import { kebabToCamel } from '../config/utils';
 import { detectProjectSetup, directoryExists } from '../detection';
 import { generateTest } from '../generators';
@@ -12,10 +13,10 @@ import { promptForSliceDetails } from '../prompts/slice.prompt';
 
 interface SliceCommandOptions {
   path?: string;
+  /** Tri-state from the `--persist` / `--no-persist` pair (Commander). */
   persist?: boolean;
-  noPersist?: boolean;
+  /** Tri-state from the `--test` / `--no-test` pair (Commander). */
   test?: boolean;
-  noTest?: boolean;
 }
 
 export const registerSliceCommand = (program: Command) => {
@@ -30,11 +31,6 @@ export const registerSliceCommand = (program: Command) => {
     .action(async (name: string | undefined, options: SliceCommandOptions) => {
       try {
         const projectPath = process.cwd();
-
-        if (options.persist && options.noPersist === true) {
-          logError('Cannot use --persist and --no-persist together');
-          process.exit(1);
-        }
 
         log(pc.cyan('\n🔧 Slice Generator\n'));
 
@@ -52,12 +48,12 @@ export const registerSliceCommand = (program: Command) => {
 
         log(pc.dim(`  Redux: ✓\n`));
 
-        // Prompt and resolve paths
-        const sliceOptions = await promptForSliceDetails(
-          name,
-          options.persist,
-          options.noPersist === true ? false : undefined,
-        );
+        // Prompt and resolve paths. `options.persist` is the tri-state from
+        // the --persist/--no-persist pair (true/false/undefined).
+        const sliceOptions = await promptForSliceDetails(name, options.persist);
+
+        assertSafeSegment(sliceOptions.sliceName, 'slice name');
+        if (options.path) assertSafeRelativePath(options.path, 'path');
 
         const { basePath, slicePath } = resolveSlicePaths(
           projectPath,
@@ -135,12 +131,11 @@ const resolveSlicePaths = (
   };
 };
 
-const resolveShouldTest = (
-  options: { test?: boolean; noTest?: boolean },
-  hasTests: boolean,
-): boolean => {
-  if (options.noTest) return false;
-  if (options.test) return true;
+const resolveShouldTest = (options: { test?: boolean }, hasTests: boolean): boolean => {
+  // Tri-state `test`: false for --no-test, true for --test, undefined for
+  // neither. (The old `options.noTest` was always undefined.)
+  if (options.test === false) return false;
+  if (options.test === true) return true;
   return hasTests;
 };
 

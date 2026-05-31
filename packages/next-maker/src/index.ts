@@ -1,4 +1,7 @@
 import { Command } from 'commander';
+// Inlined by esbuild at build time so `--version` always matches package.json
+// (it previously hardcoded '1.0.0' while the package was on 3.0.0).
+import pkg from '../package.json' with { type: 'json' };
 import { registerCommands } from './commands/index';
 import { error, setupCancellationHandlers } from './config';
 
@@ -23,7 +26,7 @@ async function main() {
 
   const program = new Command();
 
-  program.name('next-maker').description('Teispace Next.js Project Generator').version('1.0.0');
+  program.name('next-maker').description('Teispace Next.js Project Generator').version(pkg.version);
 
   registerCommands(program);
 

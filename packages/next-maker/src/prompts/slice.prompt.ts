@@ -9,8 +9,9 @@ export interface SliceOptions {
 
 export const promptForSliceDetails = async (
   sliceName?: string,
+  // Tri-state from the `--persist` / `--no-persist` pair: true (force on),
+  // false (force off), undefined (ask).
   persist?: boolean,
-  noPersist?: boolean,
 ): Promise<SliceOptions> => {
   const questions: any[] = [];
 
@@ -31,7 +32,7 @@ export const promptForSliceDetails = async (
   }
 
   // Persistence question
-  if (persist === undefined && noPersist === undefined) {
+  if (persist === undefined) {
     questions.push({
       type: 'confirm',
       name: 'persistSlice',
@@ -44,11 +45,6 @@ export const promptForSliceDetails = async (
 
   return {
     sliceName: sliceName || (answers.sliceName as string),
-    persistSlice:
-      persist === true
-        ? true
-        : noPersist === false
-          ? false
-          : (answers.persistSlice as boolean) || false,
+    persistSlice: persist === undefined ? (answers.persistSlice as boolean) || false : persist,
   };
 };

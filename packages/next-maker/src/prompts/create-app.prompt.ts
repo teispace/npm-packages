@@ -117,6 +117,17 @@ export interface ProjectPrompts {
 }
 
 export const promptForProjectDetails = async (initialName?: string): Promise<ProjectPrompts> => {
+  // When a name is passed as a CLI arg the projectName prompt is skipped
+  // (`skip: !!initialName`), which also skips its `validate`. Validate it here
+  // so an arg like `../evil` can't flow through unchecked into the scaffold
+  // path (the name is later joined onto cwd and used for degit/rm).
+  if (initialName !== undefined && !isValidProjectName(initialName)) {
+    throw new Error(
+      `Invalid project name "${initialName}". Use lowercase letters, digits, hyphens, ` +
+        'and underscores only — no slashes, "..", or absolute paths.',
+    );
+  }
+
   const response = await prompt<ProjectPrompts>([
     {
       type: 'input',

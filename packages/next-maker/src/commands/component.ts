@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
+import { assertSafeRelativePath, assertSafeSegment } from '../config/path-safety';
 import { kebabToPascal } from '../config/utils';
 import { detectProjectSetup } from '../detection';
 import { generateComponent, generateTest } from '../generators';
@@ -11,8 +12,8 @@ interface ComponentCommandOptions {
   client?: boolean;
   i18n?: boolean;
   feature?: string;
+  /** Tri-state from the `--test` / `--no-test` pair (Commander). */
   test?: boolean;
-  noTest?: boolean;
 }
 
 export const registerComponentCommand = (program: Command) => {
@@ -39,6 +40,10 @@ export const registerComponentCommand = (program: Command) => {
         const componentOptions = await promptForComponentDetails(name, {
           client: options.client,
         });
+        // Validate the resolved name (from arg OR prompt) before it is joined
+        // onto the project path — guards against path traversal.
+        assertSafeSegment(componentOptions.componentName, 'component name');
+        if (options.feature) assertSafeRelativePath(options.feature, 'feature path');
         const componentName = kebabToPascal(componentOptions.componentName);
         const isClient = componentOptions.isClient;
         const hasI18n = options.i18n ?? false;
@@ -114,12 +119,12 @@ export const registerComponentCommand = (program: Command) => {
     });
 };
 
-const resolveShouldTest = (
-  options: { test?: boolean; noTest?: boolean },
-  hasTests: boolean,
-): boolean => {
-  if (options.noTest) return false;
-  if (options.test) return true;
+const resolveShouldTest = (options: { test?: boolean }, hasTests: boolean): boolean => {
+  // Commander populates a single tri-state `test` for the `--test`/`--no-test`
+  // pair: `false` for --no-test, `true` for --test, `undefined` for neither.
+  // (The old `options.noTest` was always undefined, so --no-test never worked.)
+  if (options.test === false) return false;
+  if (options.test === true) return true;
   // Default: co-generate when tests are already installed.
   return hasTests;
 };
