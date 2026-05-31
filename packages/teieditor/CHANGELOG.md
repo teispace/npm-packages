@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/teispace/npm-packages/compare/teieditor-v2.0.0...teieditor-v2.0.1) (2026-05-31)
+
+
+### Bug Fixes
+
+* **teieditor:** wire extension lifecycle, fix SSR import, dedupe image paste ([6b4ff78](https://github.com/teispace/npm-packages/commit/6b4ff78a20c7bb94f75e7b6664e29948bfdf01c3))
+
 ## [2.0.0](https://github.com/teispace/npm-packages/compare/teieditor-v1.5.6...teieditor-v2.0.0) (2026-05-31)
 
 

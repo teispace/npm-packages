@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/teispace/npm-packages/compare/next-themes-v1.0.0...next-themes-v2.0.0) (2026-05-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* **next-themes:** removes resolveTheme/ResolveInput/ResolveOutput and the 3-arg resolveAdapter from the internal API surface; getServerSnapshot is now required on the ThemeStore contract; seeded SSR can surface a hydration mismatch for unresolved system themes (add suppressHydrationWarning or seed initialTheme).
+
+### Features
+
+* **next-themes:** optimize SSR, perf, and robustness; harvest upstream bug fixes ([06ff671](https://github.com/teispace/npm-packages/commit/06ff671ce7de767578fadbb8a82fda01e5ec02e2))
+
 ## [1.0.0](https://github.com/teispace/npm-packages/compare/next-themes-v0.5.0...next-themes-v1.0.0) (2026-05-31)
 
 

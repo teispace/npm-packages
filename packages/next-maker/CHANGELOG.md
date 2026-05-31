@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.1](https://github.com/teispace/npm-packages/compare/next-maker-v3.0.0...next-maker-v3.0.1) (2026-05-31)
+
+
+### Bug Fixes
+
+* **next-maker:** guard path traversal & command injection, fix --no-* flags ([f192a7b](https://github.com/teispace/npm-packages/commit/f192a7b63144fe682ac02f11daf82d8d49a5f5dc))
+
 ## [3.0.0](https://github.com/teispace/npm-packages/compare/next-maker-v2.1.2...next-maker-v3.0.0) (2026-05-31)
 
 
