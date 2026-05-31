@@ -1,7 +1,14 @@
 import * as esbuild from 'esbuild';
-import { chmodSync } from 'fs';
+import { chmodSync, rmSync } from 'fs';
 
 try {
+  // Clean stale artifacts first. esbuild does not clear its outdir, so a
+  // prior build's `index.js.map` (from when sourcemaps were enabled) would
+  // otherwise linger and get published. The subsequent `tsc
+  // --emitDeclarationOnly` step (in the npm `build` script) repopulates the
+  // declarations after this.
+  rmSync('dist', { recursive: true, force: true });
+
   await esbuild.build({
     entryPoints: ['src/index.ts'],
     bundle: true,
@@ -15,7 +22,7 @@ try {
     minify: true, // Minify the output
     treeShaking: true, // Remove unused code
     target: 'node20', // Target Node.js 20+
-    sourcemap: true, // Generate source maps for debugging
+    sourcemap: false, // No source maps in the published bundle
   });
 
   // Make the output file executable

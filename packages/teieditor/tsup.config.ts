@@ -177,7 +177,8 @@ export default defineConfig({
   clean: true,
   splitting: true,
   treeshake: true,
-  sourcemap: true,
+  minify: true,
+  sourcemap: false,
   external: [
     'react',
     'react-dom',
