@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
+import { assertSafeSegment } from '../config/path-safety';
 import { kebabToPascal } from '../config/utils';
 import { detectProjectSetup, directoryExists } from '../detection';
 import { generatePage } from '../generators';
@@ -40,6 +41,9 @@ export const registerPageCommand = (program: Command) => {
           error: options.error,
         });
         const pageName = pageOptions.pageName;
+        // Validate the resolved name (arg or prompt) before joining to a path.
+        assertSafeSegment(pageName, 'page name');
+        if (options.dynamic) assertSafeSegment(options.dynamic, 'dynamic param');
         const componentName = kebabToPascal(pageName);
 
         // Check existence

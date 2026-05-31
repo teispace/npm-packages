@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
+import { assertSafeRelativePath, assertSafeSegment, resolveInside } from '../config/path-safety';
 import { directoryExists } from '../detection';
 import { createFeaturePipelineSteps, executePipeline } from '../pipelines';
 import { promptForFeatureDetails } from '../prompts/feature.prompt';
@@ -52,8 +53,11 @@ export const registerFeatureCommand = (program: Command) => {
           options.service,
         );
 
+        assertSafeSegment(featureOptions.featureName, 'feature name');
+        if (options.path) assertSafeRelativePath(options.path, 'path');
+
         const basePath = options.path || path.join('src', 'features');
-        const featurePath = path.join(projectPath, basePath, featureOptions.featureName);
+        const featurePath = resolveInside(projectPath, basePath, featureOptions.featureName);
 
         const exists = await directoryExists(projectPath, featureOptions.featureName, basePath);
         if (exists) {

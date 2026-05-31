@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
+import { assertSafeRelativePath, assertSafeSegment } from '../config/path-safety';
 import { detectProjectSetup, fileExistsAt } from '../detection';
 import { generateCrudService } from '../generators';
 import { registerCrudApiEndpoints } from '../modifiers/crud-api-registration.modifier';
@@ -64,6 +65,9 @@ export const registerServiceCommand = (program: Command) => {
           options.fetch,
           detection.httpClient,
         );
+
+        assertSafeSegment(serviceOptions.serviceName, 'service name');
+        if (options.path) assertSafeRelativePath(options.path, 'path');
 
         const { basePath, servicePath } = resolveServicePaths(
           projectPath,
