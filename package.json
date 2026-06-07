@@ -50,11 +50,11 @@
     "commitizen": "^4.3.1",
     "cz-conventional-changelog": "^3.3.0",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.6",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
+    "lint-staged": "^17.0.7",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.8"
   },
   "resolutions": {
     "lexical": "0.45.0",

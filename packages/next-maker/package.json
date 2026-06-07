@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "commander": "^15.0.0",
-    "degit": "^3.3.2",
+    "degit": "^3.4.2",
     "enquirer": "^2.4.1",
     "ora": "^9.4.0",
     "picocolors": "^1.1.1",
@@ -50,11 +50,11 @@
   },
   "devDependencies": {
     "@types/degit": "^2.8.6",
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.2",
     "esbuild": "^0.28.0",
-    "tsx": "^4.22.3",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.8"
   },
   "engines": {
     "node": ">=22.12.0"
