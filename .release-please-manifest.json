@@ -1,6 +1,6 @@
 {
-  "packages/next-maker": "3.0.3",
-  "packages/teieditor": "2.0.3",
-  "packages/next-themes": "2.0.2",
-  "packages/env": "0.2.1"
+  "packages/next-maker": "3.0.4",
+  "packages/teieditor": "3.0.0",
+  "packages/next-themes": "2.0.3",
+  "packages/env": "0.2.2"
 }
