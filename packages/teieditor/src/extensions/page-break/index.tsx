@@ -5,7 +5,6 @@ import type {
   Klass,
   LexicalEditor,
   LexicalNode,
-  NodeKey,
   SerializedLexicalNode,
 } from 'lexical';
 import {
@@ -29,9 +28,6 @@ export class PageBreakNode extends DecoratorNode<JSX.Element> {
   }
   static clone(node: PageBreakNode): PageBreakNode {
     return new PageBreakNode(node.__key);
-  }
-  constructor(key?: NodeKey) {
-    super(key);
   }
 
   createDOM(): HTMLElement {

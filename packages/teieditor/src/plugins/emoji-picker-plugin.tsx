@@ -100,7 +100,7 @@ export function EmojiPickerPlugin() {
       editor.update(() => {
         const selection = $getSelection();
         if ($isRangeSelection(selection)) {
-          selection.insertText(option.emoji + ' ');
+          selection.insertText(`${option.emoji} `);
         }
       });
     },

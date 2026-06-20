@@ -62,7 +62,7 @@ const DEFAULT_FONT_SIZE = 15;
 
 function parseFontSize(raw: string): number {
   const n = parseInt(raw, 10);
-  return isNaN(n) ? DEFAULT_FONT_SIZE : n;
+  return Number.isNaN(n) ? DEFAULT_FONT_SIZE : n;
 }
 
 function calculateNextFontSize(current: number, direction: 'up' | 'down'): number {
@@ -145,7 +145,7 @@ export function Toolbar({ className = '', fontFamilies }: ToolbarProps) {
     (val: string) => {
       setFontSizeInput(val);
       const n = parseInt(val, 10);
-      if (!isNaN(n) && n >= MIN_FONT_SIZE && n <= MAX_FONT_SIZE) {
+      if (!Number.isNaN(n) && n >= MIN_FONT_SIZE && n <= MAX_FONT_SIZE) {
         toolbar.applyFontSize(`${n}px`);
       }
     },
