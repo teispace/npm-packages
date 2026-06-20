@@ -5,10 +5,13 @@ export {
   addEnvVar,
   appendEnvEntry,
   appendEnvExampleEntry,
+  buildRuntimeEnvEntry,
   buildSchemaEntry,
+  type EnvVarGroup,
   type EnvVarSpec,
   type EnvVarType,
   ensurePublicPrefix,
+  groupFor,
   injectSchemaEntry,
   validateName as validateEnvVarName,
 } from './env-var.modifier';

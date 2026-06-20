@@ -45,11 +45,16 @@ const parseEnum = (raw: string | undefined): string[] | undefined => {
 export const registerEnvCommand = (program: Command) => {
   program
     .command('env <NAME>')
-    .description('Declare a new environment variable across schema, .env.example, and .env')
-    .option('--type <type>', 'Zod type (string|url|number|boolean|enum)', 'string')
+    .description(
+      'Declare a new environment variable across src/lib/env/index.ts, .env.example, and .env',
+    )
+    .option('--type <type>', 'Coercer type (string|url|number|boolean|enum)', 'string')
     .option('--required', 'Make the variable required (no .optional() / .default())')
     .option('--default <value>', 'Set a default value (mutually exclusive with --required)')
-    .option('--public', 'Mark as public (auto-prefix NEXT_PUBLIC_ and tag .env.example)')
+    .option(
+      '--public',
+      'Mark as public: place in the client group, auto-prefix NEXT_PUBLIC_, tag .env.example',
+    )
     .option('--describe <text>', 'Description (rendered as .describe() and .env.example comment)')
     .option('--enum <list>', 'Comma-separated values when --type=enum (e.g. "dev,prod")')
     .action(async (name: string, options: EnvCommandOptions) => {
@@ -78,14 +83,14 @@ export const registerEnvCommand = (program: Command) => {
           public: !!options.public,
         };
 
-        spinner.start('Updating schema, .env.example, and .env...');
+        spinner.start('Updating src/lib/env/index.ts, .env.example, and .env...');
         const result = await addEnvVar(projectPath, spec);
         spinner.succeed('Env var written');
 
         const fullName = ensurePublicPrefix(spec.name, spec.public);
-        log(pc.green(`\n✨ ${fullName} declared.\n`));
+        log(pc.green(`\n✨ ${fullName} declared in the ${result.group} group.\n`));
         log(pc.dim('Touched:'));
-        log(pc.dim(`  ${result.schemaUpdated ? '✏️ ' : '⏭ '} src/lib/env/schema.ts`));
+        log(pc.dim(`  ${result.schemaUpdated ? '✏️ ' : '⏭ '} src/lib/env/index.ts`));
         log(pc.dim(`  ${result.envExampleUpdated ? '✏️ ' : '⏭ '} .env.example`));
         log(pc.dim(`  ${result.envUpdated ? '✏️ ' : '⏭ '} .env`));
         log('');
