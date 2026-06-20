@@ -99,9 +99,15 @@ export const registerRemoveCommand = (program: Command) => {
         }
 
         spinner.start(`Removing ${manifest.name}...`);
-        const applied = manifest.remove
-          ? (await manifest.remove(projectPath), planned)
-          : await reverseManifest(manifest, projectPath);
+        let applied: typeof planned;
+        if (manifest.remove) {
+          // A manifest with a bespoke `remove` runs it and reports the planned
+          // set; otherwise we reverse the manifest generically.
+          await manifest.remove(projectPath);
+          applied = planned;
+        } else {
+          applied = await reverseManifest(manifest, projectPath);
+        }
         spinner.succeed(`${manifest.name} removed`);
 
         log(pc.green(`\n✓ ${manifest.name} removed.`));

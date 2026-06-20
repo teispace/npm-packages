@@ -69,7 +69,6 @@ const baseSchemaTypeFor = (spec: EnvVarSpec): string => {
       const formatted = values.map((v) => `'${v.replace(/'/g, "\\'")}'`).join(', ');
       return `z.enum([${formatted}])`;
     }
-    case 'string':
     default:
       return 'z.string()';
   }
