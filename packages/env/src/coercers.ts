@@ -125,8 +125,10 @@ export class Coercer<TOut, TBase = TOut> implements Validator<TOut> {
 
     if (absent) {
       if (this.config.hasDefault) {
-        // Default bypasses parse/refine entirely: it is already a TOut value,
-        // and it must apply even under skipValidation (the core calls us).
+        // Default bypasses parse/refine entirely: it is already a TOut value
+        // (see `.transform()` — a default set *before* a transform is
+        // re-mapped at build time so the stored value is always TOut), and it
+        // must apply even under skipValidation (the core calls us).
         return ok(this.config.defaultValue as TOut);
       }
       if (this.config.optional) {
@@ -210,10 +212,22 @@ export class Coercer<TOut, TBase = TOut> implements Validator<TOut> {
    * Map the coerced value to a new output type `U`. Applied last, after parse
    * and refinements. Changing `TOut` here does not change `TBase`, so chained
    * refinements still see the pre-transform value (matching Zod/Valibot order).
+   *
+   * A `.default()` set *before* this transform was stored as the old `TOut`
+   * (the transform's input). Since the absent path returns the stored default
+   * verbatim, we re-map it through `fn` now so the stored default is always the
+   * new `TOut` — closing the hole where `.default(x).transform(fn)` returned an
+   * un-transformed default on the absent path while the inferred type was the
+   * transformed one. (Composed transforms apply in order, as expected.)
    */
   transform<U>(fn: (value: TOut) => U): Coercer<U, TBase> {
+    const prior = this.config.transform;
+    const composed = (value: unknown): unknown => fn((prior ? prior(value) : value) as TOut);
     return this.with<U, TBase>({
-      transform: fn as (value: unknown) => unknown,
+      transform: composed,
+      // Re-map a pre-existing default through this transform so the stored
+      // default is always the new TOut (see the absent path in validate()).
+      ...(this.config.hasDefault ? { defaultValue: fn(this.config.defaultValue as TOut) } : {}),
     });
   }
 }
@@ -277,8 +291,21 @@ export interface NumberOptions {
 }
 
 /**
- * Coerce a numeric string to a `number` (`"3.14"` → `3.14`). Rejects `NaN`,
- * blank/whitespace, and `Infinity`, none of which are meaningful config.
+ * Plain decimal numbers only: optional sign, digits, optional fractional part,
+ * optional decimal exponent (`1e3`). Anchored so the *entire* string must
+ * match. This deliberately rejects the alternate radices `Number()` accepts —
+ * `0x10`, `0b101`, `0o17` — and the non-numeric literals `Infinity`/`NaN`,
+ * none of which an operator means to type into an env var. (`Number('0x10')`
+ * is `16`, which previously slipped through as a "valid number".) The exponent
+ * form is kept because `1e6` is a legitimate way to write a large config value.
+ */
+const DECIMAL_NUMBER_RE = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/;
+
+/**
+ * Coerce a numeric string to a `number` (`"3.14"` → `3.14`). Accepts only plain
+ * decimal notation; rejects `NaN`, blank/whitespace, `Infinity`, and the
+ * non-decimal radices (`0x`/`0b`/`0o`) that `Number()` would otherwise silently
+ * accept — none of which are meaningful config.
  */
 export function number(opts: NumberOptions = {}): Coercer<number> {
   return make<number>((raw) => {
@@ -286,6 +313,11 @@ export function number(opts: NumberOptions = {}): Coercer<number> {
     // input is a clear error rather than a silent zero.
     if (raw.trim() === '') {
       return err(`Expected a number, received ${quote(raw)}`);
+    }
+    // Reject hex/binary/octal/Infinity/NaN before trusting Number(): config
+    // almost never means "0x10" → 16.
+    if (!DECIMAL_NUMBER_RE.test(raw.trim())) {
+      return err(`Expected a decimal number, received ${quote(raw)}`);
     }
     const value = Number(raw);
     if (!Number.isFinite(value)) {
@@ -309,10 +341,19 @@ export function int(opts: Omit<NumberOptions, 'int'> = {}): Coercer<number> {
   return number({ ...opts, int: true });
 }
 
-/** A TCP port: an integer in `1..65535`. */
+/** A run of decimal digits with no sign, radix prefix, or decimal point. */
+const DECIMAL_INT_RE = /^\d+$/;
+
+/** A TCP port: a plain-decimal integer in `1..65535`. */
 export function port(): Coercer<number> {
   return make<number>((raw) => {
-    const value = Number(raw);
+    const trimmed = raw.trim();
+    // Require plain decimal digits so "0x50" (which Number() reads as 80) and
+    // other radices are rejected outright rather than landing inside 1-65535.
+    if (!DECIMAL_INT_RE.test(trimmed)) {
+      return err(`Expected a valid port (1-65535), received ${quote(raw)}`);
+    }
+    const value = Number(trimmed);
     if (!Number.isInteger(value) || value < 1 || value > 65535) {
       return err(`Expected a valid port (1-65535), received ${quote(raw)}`);
     }
@@ -405,7 +446,7 @@ function parseUrl(raw: string, opts: UrlOptions): ValidatorResult<URL> {
 /**
  * A valid URL string, validated via the WHATWG `URL` parser. Returns the
  * original string by default (most config wants the string). Use
- * {@link urlObject} / `.asUrl()` for a `URL` instance.
+ * {@link urlObject} (`e.urlObject()`) for a parsed `URL` instance.
  */
 export function url(opts: UrlOptions = {}): Coercer<string> {
   return make<string>((raw) => {
@@ -514,9 +555,13 @@ function looksLikeValidator(x: unknown): x is Validator<unknown> {
  * the output type defaults to `unknown` (caller may pass a `T`), since JSON is
  * structurally opaque to the parser.
  *
- * @example e.json<{ port: number }>()
- * @example e.json(e.array())                 // inner Validator
- * @example e.json(z.object({ a: z.string() })) // inner Standard Schema
+ * For structured JSON (objects/arrays), validate the shape with a Standard
+ * Schema — the built-in string coercers only validate string/undefined parsed
+ * values and will error on an object/array rather than pass it unchecked.
+ *
+ * @example e.json<{ port: number }>()                 // typed, unvalidated
+ * @example e.json(z.object({ a: z.string() }))        // validated via Standard Schema
+ * @example e.json(e.string())                         // inner string coercer (string JSON only)
  */
 export function json<T = unknown>(): Coercer<T>;
 export function json<TInner>(inner: Validator<TInner>): Coercer<TInner>;
@@ -549,11 +594,16 @@ export function json(inner?: Validator<unknown> | StandardSchemaV1): Coercer<unk
 }
 
 /**
- * Validate an already-parsed value against an inner `Validator`. Our own
- * coercers expect a raw *string*, so a structured (non-string) parsed value
- * cannot be re-coerced by them; in that case we accept it as-is (the inner
- * `Validator` was likely a Standard Schema wrapper, handled separately). When
- * the parsed value is a string we can defer to the validator directly.
+ * Validate an already-parsed value against an inner `Validator`.
+ *
+ * Built-in `e.*` coercers parse from a raw *string* (e.g. `e.array()` splits a
+ * delimited string), so they cannot meaningfully validate a structured JSON
+ * value such as an object or array. Rather than **silently accepting**
+ * structured JSON unvalidated — which made `e.json(e.array())` look like it was
+ * checking the shape when it was not — we now reject it with a clear, actionable
+ * error pointing at the supported path (a Standard Schema). String/undefined
+ * parsed values are still deferred to the inner validator directly, which is the
+ * case the built-in coercers can actually handle.
  */
 function validateParsedValue(
   value: unknown,
@@ -563,9 +613,13 @@ function validateParsedValue(
   if (typeof value === 'string' || value === undefined) {
     return inner.validate(value as string | undefined, key);
   }
-  // Non-string structured JSON: a string-coercer can't validate it. Accept the
-  // parsed value; callers wanting deep validation should pass a Standard Schema.
-  return ok(value);
+  // Non-string structured JSON: a string-based coercer can't validate it.
+  // Surface this instead of pretending it passed.
+  const type = Array.isArray(value) ? 'array' : typeof value;
+  return err(
+    `Cannot validate parsed JSON ${type} for "${key}" with a string coercer. ` +
+      'Pass a Standard Schema (e.g. a Zod/Valibot schema) to e.json() to validate structured JSON shapes.',
+  );
 }
 
 /** Validate an already-parsed value against a Standard Schema (sync only). */

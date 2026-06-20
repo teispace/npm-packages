@@ -179,6 +179,8 @@ export interface EnvIssue {
   readonly key: string;
   readonly received: string | undefined;
   readonly messages: ReadonlyArray<string>;
+  /** The validator's `meta.description`, if any — shown as a hint in the report. */
+  readonly description?: string;
 }
 
 /** Thrown when validation fails; aggregates ALL issues (never first-only). */

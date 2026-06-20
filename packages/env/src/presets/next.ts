@@ -11,7 +11,7 @@
  * import { defineEnv, e } from '@teispace/env/next';
  *
  * export const env = defineEnv({
- *   server: { DATABASE_URL: e.url(), STRIPE_SECRET: e.string().min(1) },
+ *   server: { DATABASE_URL: e.url(), STRIPE_SECRET: e.string({ min: 1 }).secret() },
  *   client: { NEXT_PUBLIC_API_URL: e.url() },
  *   // Required so Next's static inlining keeps the client vars:
  *   runtimeEnv: {

@@ -16,7 +16,7 @@
  */
 
 import { Coercer } from './coercers.js';
-import type { StandardSchemaV1, Validator, ValidatorResult } from './types.js';
+import type { StandardSchemaV1, Validator, ValidatorMeta, ValidatorResult } from './types.js';
 
 /** The output type a Standard Schema produces, for adapter return typing. */
 type InferOutput<S extends StandardSchemaV1> = StandardSchemaV1.InferOutput<S>;
@@ -76,14 +76,47 @@ function runStandard<S extends StandardSchemaV1>(
  */
 export function fromStandardSchema<S extends StandardSchemaV1>(
   schema: S,
+  meta?: ValidatorMeta,
 ): Validator<InferOutput<S>> {
   // The `_output` brand is a type-only optional phantom on `Validator`; the
   // explicit return annotation carries the inferred output type, so we do NOT
-  // emit a runtime `_output` key here (nothing reads it at runtime).
+  // emit a runtime `_output` key here (nothing reads it at runtime). `meta` lets
+  // a Standard Schema entry declare `secret`/`description`, which a raw Zod/
+  // Valibot schema can't carry — without it a secret validated by Zod relied
+  // solely on the variable-name heuristic for redaction.
   return {
     validate(raw: string | undefined): ValidatorResult<InferOutput<S>> {
       return runStandard(schema, raw);
     },
+    ...(meta ? { meta } : {}),
+  };
+}
+
+/**
+ * Attach `meta` (`secret` / `description`) to any schema entry — a built-in
+ * coercer or a Standard Schema (Zod/Valibot/ArkType). Returns a `Validator`
+ * carrying the meta so the error reporter can redact secrets and show
+ * descriptions even for schemas that have no native notion of either.
+ *
+ * @example withMeta(z.string(), { secret: true })       // redacted in errors
+ * @example withMeta(e.string(), { description: 'API base URL' })
+ */
+export function withMeta<S extends StandardSchemaV1>(
+  entry: S,
+  meta: ValidatorMeta,
+): Validator<InferOutput<S>>;
+export function withMeta<T>(entry: Validator<T>, meta: ValidatorMeta): Validator<T>;
+export function withMeta(
+  entry: Validator<unknown> | StandardSchemaV1,
+  meta: ValidatorMeta,
+): Validator<unknown> {
+  if (isStandardSchema(entry)) return fromStandardSchema(entry, meta);
+  const base = entry as Validator<unknown>;
+  // Merge over any existing meta the validator already carries.
+  const merged: ValidatorMeta = { ...base.meta, ...meta };
+  return {
+    validate: (raw, key) => base.validate(raw, key),
+    meta: merged,
   };
 }
 

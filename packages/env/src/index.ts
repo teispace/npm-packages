@@ -29,5 +29,6 @@ export {
   isStandardSchema,
   isValidator,
   toValidator,
+  withMeta,
 } from './standard-schema.js';
 export * from './types.js';

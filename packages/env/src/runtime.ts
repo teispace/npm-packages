@@ -118,12 +118,12 @@ function isWorkersLike(): boolean {
 export function detectRawEnv(): RawEnv {
   try {
     const proc = getProcess();
-    if (proc && proc.env && typeof proc.env === 'object') {
+    if (proc?.env && typeof proc.env === 'object') {
       return proc.env as RawEnv;
     }
 
     const deno = getDeno();
-    if (deno && deno.env && typeof deno.env.toObject === 'function') {
+    if (deno?.env && typeof deno.env.toObject === 'function') {
       return deno.env.toObject() as RawEnv;
     }
 
@@ -146,9 +146,9 @@ export function isServerRuntime(): boolean {
   try {
     if (isBrowserLike()) return false;
     const proc = getProcess();
-    if (proc && proc.env && typeof proc.env === 'object') return true;
+    if (proc?.env && typeof proc.env === 'object') return true;
     const deno = getDeno();
-    if (deno && deno.env) return true;
+    if (deno?.env) return true;
     if (hasBun()) return true;
     return false;
   } catch (_e) {
