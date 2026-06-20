@@ -3,14 +3,33 @@ import { PROJECT_PATHS } from '../config/paths';
 import { fileExists, readFile, writeFile } from '../core/files';
 
 /**
- * Adds a new environment variable across the four files that the starter
- * keeps in sync: `.env.example`, `.env` (when present), the Zod
- * `envSchema`, and the typed config. Each transformation is pure and
- * idempotent so the orchestrator can call them in any order without
- * worrying about duplicate writes.
+ * Adds a new environment variable to a project scaffolded with `@teispace/env`.
+ *
+ * The starter declares its env in `src/lib/env/index.ts` via the split model:
+ *
+ * ```ts
+ * export const env = defineEnv({
+ *   server: { ... },     // leak-guarded; reading on the client throws
+ *   client: { ... },     // must be NEXT_PUBLIC_*; inlined into the bundle
+ *   shared: { ... },     // available everywhere
+ *   runtimeEnv: { ... }, // explicit process.env.X mapping (required by Next)
+ * });
+ * ```
+ *
+ * A new variable lands in two places that must stay in lockstep: the relevant
+ * group object AND the `runtimeEnv` map (Next only statically replaces
+ * `process.env.X` at literal access sites, so every declared key must be spelled
+ * out there). Public vars go in `client` (with the `NEXT_PUBLIC_` prefix);
+ * everything else defaults to the leak-guarded `server` group.
+ *
+ * Every transformation is pure and idempotent so the orchestrator can call them
+ * in any order without risking duplicate writes.
  */
 
 export type EnvVarType = 'string' | 'url' | 'number' | 'boolean' | 'enum';
+
+/** Which `defineEnv` group a variable belongs to. */
+export type EnvVarGroup = 'server' | 'client' | 'shared';
 
 export interface EnvVarSpec {
   /** UPPER_SNAKE_CASE identifier as it will appear in the schema and `.env`. */
@@ -41,6 +60,14 @@ export const ensurePublicPrefix = (name: string, isPublic: boolean): string => {
   return name.startsWith('NEXT_PUBLIC_') ? name : `NEXT_PUBLIC_${name}`;
 };
 
+/**
+ * The `defineEnv` group a variable belongs to. Public vars must live in
+ * `client` (the only group the `NEXT_PUBLIC_` prefix rule allows); everything
+ * else defaults to the leak-guarded `server` group so secrets never reach the
+ * browser bundle by accident.
+ */
+export const groupFor = (spec: EnvVarSpec): EnvVarGroup => (spec.public ? 'client' : 'server');
+
 const formatDefault = (spec: EnvVarSpec): string => {
   if (spec.default === undefined) return '';
   switch (spec.type) {
@@ -53,84 +80,117 @@ const formatDefault = (spec: EnvVarSpec): string => {
   }
 };
 
-const baseSchemaTypeFor = (spec: EnvVarSpec): string => {
+/** The base `e.*` coercer call for a given type. */
+const baseCoercerFor = (spec: EnvVarSpec): string => {
   switch (spec.type) {
     case 'url':
-      return 'z.url()';
+      return 'e.url()';
     case 'number':
-      return 'z.coerce.number()';
+      return 'e.number()';
     case 'boolean':
-      return 'z.coerce.boolean()';
+      return 'e.boolean()';
     case 'enum': {
       const values = spec.enumValues ?? [];
       if (values.length === 0) {
         throw new Error(`Enum env var "${spec.name}" requires --enum values.`);
       }
       const formatted = values.map((v) => `'${v.replace(/'/g, "\\'")}'`).join(', ');
-      return `z.enum([${formatted}])`;
+      return `e.enum([${formatted}])`;
     }
     default:
-      return 'z.string()';
+      return 'e.string()';
   }
 };
 
 /**
- * Build the line that goes inside `envSchema = z.object({ ... })`.
+ * Build the `KEY: e.<type>()...` line that goes inside a `defineEnv` group.
  *
- * Mirrors the starter's house style: numeric/string types get the
- * `preprocess(emptyStringToUndefined, …)` wrapper so empty values in `.env`
- * don't pre-empt zod defaults; enums skip it because they reject empty
- * strings outright anyway.
+ * `@teispace/env` treats an empty string as absent (its `emptyStringAsUndefined`
+ * default), so unlike the old Zod schema there is no `preprocess` wrapper to
+ * emit — a `.default()` simply applies when the value is empty/missing.
  */
 export const buildSchemaEntry = (spec: EnvVarSpec): string => {
   const fullName = ensurePublicPrefix(spec.name, spec.public);
-  const base = baseSchemaTypeFor(spec);
 
-  let inner = base;
+  let expression = baseCoercerFor(spec);
   const hasDefault = spec.default !== undefined;
   const optional = !spec.required && !hasDefault;
-  if (hasDefault) inner += formatDefault(spec);
-  if (optional && spec.type !== 'enum') inner += '.optional()';
-
-  let expression: string;
-  if (spec.type === 'enum') {
-    expression = inner;
-  } else {
-    expression = `z.preprocess(emptyStringToUndefined, ${inner})`;
-  }
-
+  if (hasDefault) expression += formatDefault(spec);
+  if (optional) expression += '.optional()';
   if (spec.description) {
     const escaped = spec.description.replace(/'/g, "\\'");
-    expression += `\n    .describe('${escaped}')`;
+    expression += `\n      .describe('${escaped}')`;
   }
 
-  return `  ${fullName}: ${expression},`;
+  return `    ${fullName}: ${expression},`;
 };
 
-const ENV_SCHEMA_RE = /(export const envSchema\s*=\s*z\.object\(\{)([\s\S]*?)(\}\);?)/;
+/** The `KEY: process.env.KEY,` line that goes inside the `runtimeEnv` map. */
+export const buildRuntimeEnvEntry = (spec: EnvVarSpec): string => {
+  const fullName = ensurePublicPrefix(spec.name, spec.public);
+  return `    ${fullName}: process.env.${fullName},`;
+};
 
 /**
- * Insert a new entry into `envSchema = z.object({ ... })`. Preserves the
- * existing trailing newline shape and is idempotent.
+ * Match a named `key: {` block inside `defineEnv({ ... })` and capture its body.
+ * Group 1 = `<group>: {`, group 2 = body, group 3 = closing `}`. Non-greedy so
+ * we stop at the first `}` that closes the group (group bodies hold only
+ * `KEY: e.x(),` entries, never nested braces of their own besides the entry, so
+ * the first balanced close is correct for the starter's shape).
+ */
+const groupBlockRe = (group: string): RegExp =>
+  new RegExp(`(${group}:\\s*\\{)([\\s\\S]*?)(\\n\\s*\\})`);
+
+/** The `runtimeEnv: { ... }` block. */
+const RUNTIME_ENV_RE = /(runtimeEnv:\s*\{)([\s\S]*?)(\n\s*\})/;
+
+/** Append `entry` to a captured block body, normalising the trailing comma. */
+const appendToBlock = (head: string, body: string, tail: string, entry: string): string => {
+  const trimmed = body.replace(/\s+$/, '');
+  const normalised = trimmed.length === 0 || /,\s*$/.test(trimmed) ? trimmed : `${trimmed},`;
+  return `${head}${normalised}\n${entry}\n${tail.replace(/^\n/, '')}`;
+};
+
+/**
+ * Insert a new entry into the correct `defineEnv` group and into `runtimeEnv`.
+ * Idempotent: a variable already present (by its prefixed name) is left alone.
  */
 export const injectSchemaEntry = (content: string, spec: EnvVarSpec): string => {
   const fullName = ensurePublicPrefix(spec.name, spec.public);
+  const group = groupFor(spec);
+
+  // Already declared anywhere in the file? No-op.
   const presentRe = new RegExp(`\\b${fullName}\\s*:`);
   if (presentRe.test(content)) return content;
 
-  const match = content.match(ENV_SCHEMA_RE);
-  if (!match) {
-    throw new Error('Could not locate `export const envSchema = z.object({ … })` in schema.ts.');
+  if (!/defineEnv\(\{/.test(content)) {
+    throw new Error(
+      'Could not locate `defineEnv({ … })` in src/lib/env/index.ts. Is this a @teispace/env project?',
+    );
   }
 
-  const [, head, body, tail] = match;
-  const trimmedBody = body.replace(/\s+$/, '');
-  // Ensure prior entry ends with a comma so we don't end up with `foo: zX\n  NEW`
-  const normalisedBody =
-    trimmedBody.length === 0 || /,\s*$/.test(trimmedBody) ? trimmedBody : `${trimmedBody},`;
+  // 1. Inject into the group block.
+  const blockRe = groupBlockRe(group);
+  const blockMatch = content.match(blockRe);
+  if (!blockMatch) {
+    throw new Error(`Could not locate the \`${group}: { … }\` group in src/lib/env/index.ts.`);
+  }
+  const [, head, body, tail] = blockMatch;
   const entry = buildSchemaEntry(spec);
-  const newBody = `${normalisedBody}\n${entry}\n`;
-  return content.replace(ENV_SCHEMA_RE, `${head}${newBody}${tail}`);
+  let next = content.replace(blockRe, appendToBlock(head, body, tail, entry));
+
+  // 2. Inject into runtimeEnv.
+  const rtMatch = next.match(RUNTIME_ENV_RE);
+  if (!rtMatch) {
+    throw new Error('Could not locate the `runtimeEnv: { … }` map in src/lib/env/index.ts.');
+  }
+  const [, rtHead, rtBody, rtTail] = rtMatch;
+  next = next.replace(
+    RUNTIME_ENV_RE,
+    appendToBlock(rtHead, rtBody, rtTail, buildRuntimeEnvEntry(spec)),
+  );
+
+  return next;
 };
 
 const PUBLIC_MARKER_SUFFIX = '# -public';
@@ -176,12 +236,14 @@ export interface AddEnvVarResult {
   schemaUpdated: boolean;
   envExampleUpdated: boolean;
   envUpdated: boolean;
+  /** The group the variable was placed in. */
+  group: EnvVarGroup;
 }
 
 /**
- * Orchestrates the four-file update. Each step is independently idempotent
- * so partial failures are easy to recover from — re-running picks up where
- * the previous run left off.
+ * Orchestrates the file updates. Each step is independently idempotent so
+ * partial failures are easy to recover from — re-running picks up where the
+ * previous run left off.
  */
 export const addEnvVar = async (
   projectPath: string,
@@ -189,9 +251,9 @@ export const addEnvVar = async (
 ): Promise<AddEnvVarResult> => {
   validateName(spec.name);
 
-  const schemaPath = path.join(projectPath, 'src/lib/env/schema.ts');
+  const schemaPath = path.join(projectPath, 'src/lib/env/index.ts');
   if (!fileExists(schemaPath)) {
-    throw new Error(`src/lib/env/schema.ts not found — run \`next-maker init\` first.`);
+    throw new Error(`src/lib/env/index.ts not found — run \`next-maker init\` first.`);
   }
 
   const schemaBefore = await readFile(schemaPath);
@@ -217,5 +279,5 @@ export const addEnvVar = async (
     if (envUpdated) await writeFile(envPath, after);
   }
 
-  return { schemaUpdated, envExampleUpdated, envUpdated };
+  return { schemaUpdated, envExampleUpdated, envUpdated, group: groupFor(spec) };
 };
