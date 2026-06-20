@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.5](https://github.com/teispace/npm-packages/compare/next-maker-v3.0.4...next-maker-v3.0.5) (2026-06-20)
+
+
+### Bug Fixes
+
+* **env:** ship dual ESM + CJS so config loaders can require it ([21714c5](https://github.com/teispace/npm-packages/commit/21714c5f6afe68415c6f9f12a4429dae30dfdada))
+* **next-maker:** adapt env command to the @teispace/env model ([e76ea2a](https://github.com/teispace/npm-packages/commit/e76ea2a4a44af6df8df0bb44af75c7f1741c79ee))
+
 ## [3.0.4](https://github.com/teispace/npm-packages/compare/next-maker-v3.0.3...next-maker-v3.0.4) (2026-06-20)
 
 

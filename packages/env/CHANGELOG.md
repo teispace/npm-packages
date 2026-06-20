@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/teispace/npm-packages/compare/env-v0.2.2...env-v0.2.3) (2026-06-20)
+
+
+### Bug Fixes
+
+* **env:** ship dual ESM + CJS so config loaders can require it ([21714c5](https://github.com/teispace/npm-packages/commit/21714c5f6afe68415c6f9f12a4429dae30dfdada))
+
 ## [0.2.2](https://github.com/teispace/npm-packages/compare/env-v0.2.1...env-v0.2.2) (2026-06-20)
 
 
