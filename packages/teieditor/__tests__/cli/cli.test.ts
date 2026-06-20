@@ -92,7 +92,7 @@ describe('CLI', () => {
       const outDir = join(TEMP_DIR, 'src/components/teieditor');
       runCli('init');
       const target = join(outDir, 'ui/button.tsx');
-      writeFileSync(target, '// my edits\n' + readFileSync(target, 'utf-8'));
+      writeFileSync(target, `// my edits\n${readFileSync(target, 'utf-8')}`);
 
       const output = runCli('init');
       expect(output).toContain('skipped');

@@ -92,10 +92,10 @@
     "test:cov": "vitest run --coverage",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "yarn clean && yarn build"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=24.0.0"
   },
   "peerDependencies": {
     "@lexical/code": ">=0.43.0",
@@ -117,16 +117,10 @@
     "@lexical/code": {
       "optional": true
     },
-    "@lexical/html": {
-      "optional": true
-    },
     "@lexical/link": {
       "optional": true
     },
     "@lexical/list": {
-      "optional": true
-    },
-    "@lexical/markdown": {
       "optional": true
     },
     "@lexical/table": {
@@ -151,7 +145,7 @@
     "@lexical/table": "^0.45.0",
     "@lexical/utils": "^0.45.0",
     "@testing-library/react": "^16.3.2",
-    "@types/node": "^25.9.2",
+    "@types/node": "^26.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "jsdom": "^29.1.1",
@@ -161,6 +155,6 @@
     "tsup": "^8.5.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   }
 }

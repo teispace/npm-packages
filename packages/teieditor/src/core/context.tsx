@@ -4,6 +4,7 @@ import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { createContext, type ReactNode, useContext, useEffect, useMemo } from 'react';
 import { ToolbarProvider } from '../plugins/toolbar-context.js';
+import { registerExtensionKeyBindings } from './keybindings.js';
 import type { TeiEditorInstance } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -72,11 +73,14 @@ export function TeiEditorProvider({ editor, children }: TeiEditorProviderProps) 
 }
 
 /**
- * Drives each extension's `onRegister`/`onDestroy` lifecycle. Rendered inside
- * `<LexicalComposer>` so it can resolve the live Lexical editor. Without this,
- * extensions whose commands live only in `onRegister` (callout, math, datetime,
- * file, layout, figma, twitter, youtube, page-break, …) never register them and
- * their insert commands silently no-op.
+ * Drives each extension's `onRegister`/`onDestroy` lifecycle AND registers their
+ * keyboard shortcuts. Rendered inside `<LexicalComposer>` so it can resolve the
+ * live Lexical editor. Without this, extensions whose commands live only in
+ * `onRegister` (callout, math, datetime, file, layout, figma, twitter, youtube,
+ * page-break, …) never register them and their insert commands silently no-op —
+ * and extension key bindings (Mod+B/I/U/K, …) would be dead on this headless
+ * core path, since `KeyboardShortcutsPlugin` is only hand-mounted in the
+ * scaffolded registry editors, not added to any extension's `getPlugins()`.
  */
 function ExtensionLifecycle({ editor }: { editor: TeiEditorInstance }): null {
   const [lexicalEditor] = useLexicalComposerContext();
@@ -88,7 +92,10 @@ function ExtensionLifecycle({ editor }: { editor: TeiEditorInstance }): null {
       const cleanup = ext.onRegister?.(lexicalEditor);
       if (typeof cleanup === 'function') teardowns.push(cleanup);
     }
+    // Wire extension keyboard shortcuts on the core path.
+    const unregisterKeys = registerExtensionKeyBindings(lexicalEditor, extensions);
     return () => {
+      unregisterKeys();
       for (const teardown of teardowns) teardown();
       for (const ext of extensions) ext.onDestroy?.(lexicalEditor);
     };

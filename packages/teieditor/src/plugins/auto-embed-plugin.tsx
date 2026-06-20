@@ -89,14 +89,18 @@ export function AutoEmbedPlugin() {
   const handleEmbed = useCallback(() => {
     if (!suggestion) return;
 
-    // Try to find and dispatch the right command
-    // We use the generic INSERT_EMBED_COMMAND as fallback
-    editor.update(() => {
-      // Import and dispatch embed command
-      import('@teispace/teieditor/extensions/embed').then(({ INSERT_EMBED_COMMAND }) => {
+    // Lazy-load the embed command, then dispatch it. The command's own handler
+    // wraps the node insertion in `editor.update()`, so we must NOT wrap the
+    // dispatch ourselves: the dynamic import resolves on a later microtask, so
+    // the previous `editor.update(() => import(...))` committed an empty update
+    // and dispatched outside any update scope. Dispatch directly instead.
+    import('@teispace/teieditor/extensions/embed')
+      .then(({ INSERT_EMBED_COMMAND }) => {
         editor.dispatchCommand(INSERT_EMBED_COMMAND, suggestion.url);
+      })
+      .catch((error) => {
+        console.error('[TeiEditor] Failed to load embed extension', error);
       });
-    });
 
     setSuggestion(null);
   }, [editor, suggestion]);

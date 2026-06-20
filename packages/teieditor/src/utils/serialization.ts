@@ -15,7 +15,13 @@ import {
   STRIKETHROUGH,
   UNORDERED_LIST,
 } from '@lexical/markdown';
-import { $getRoot, $insertNodes, type LexicalEditor } from 'lexical';
+import {
+  $createParagraphNode,
+  $createTextNode,
+  $getRoot,
+  $insertNodes,
+  type LexicalEditor,
+} from 'lexical';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -139,15 +145,20 @@ export function $deserialize(
       break;
     }
     case 'text': {
-      // For plain text, insert as paragraphs split by newlines
-      const parser = new DOMParser();
-      const html = value
-        .split('\n')
-        .map((line) => `<p>${line || '<br>'}</p>`)
-        .join('');
-      const dom = parser.parseFromString(html, 'text/html');
-      const nodes = $generateNodesFromDOM(editor, dom);
-      $insertNodes(nodes);
+      // Plain text must stay plain: HTML-escape each line before building the
+      // paragraph markup, otherwise embedded tags (e.g. `<img onerror=...>` or
+      // a `<script>`) round-trip through DOMParser into real editor nodes —
+      // structural/content injection from supposedly inert text. We build
+      // ParagraphNode/TextNode directly so there is no HTML parse step at all.
+      const lines = value.split('\n');
+      const paragraphs = lines.map((line) => {
+        const paragraph = $createParagraphNode();
+        if (line.length > 0) {
+          paragraph.append($createTextNode(line));
+        }
+        return paragraph;
+      });
+      $insertNodes(paragraphs);
       break;
     }
   }

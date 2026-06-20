@@ -18,6 +18,35 @@ const __dirname = dirname(__filename);
 const DEFAULT_OUT_DIR = 'src/components/teieditor';
 const COPYABLE_EXTENSIONS = new Set(['.tsx', '.ts', '.css', '.md']);
 
+/**
+ * Read the package's own version from package.json at runtime, walking up from
+ * the bundled CLI file (`dist/cli/index.js`) until we find it. Hardcoding the
+ * version drifted (the CLI reported 2.0.0 while the package shipped 2.0.2)
+ * because release-please bumps package.json but not source literals.
+ */
+function readPackageVersion(): string {
+  let dir = __dirname;
+  for (let i = 0; i < 5; i++) {
+    const candidate = join(dir, 'package.json');
+    if (existsSync(candidate)) {
+      try {
+        const pkg = JSON.parse(readFileSync(candidate, 'utf8')) as {
+          name?: string;
+          version?: string;
+        };
+        // Guard against accidentally picking up a nested dependency's manifest.
+        if (pkg.name === '@teispace/teieditor' && pkg.version) return pkg.version;
+      } catch {
+        /* keep walking */
+      }
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return '0.0.0';
+}
+
 // "Groups" are top-level folders under registry/ that a user can scaffold
 // independently. Everything except `index.ts` is a copyable group.
 interface Group {
@@ -257,7 +286,7 @@ program
   .description(
     `${pc.bold('@teispace/teieditor')} — A feature-rich, customizable text editor built on Lexical`,
   )
-  .version('2.0.0');
+  .version(readPackageVersion());
 
 // -- init -------------------------------------------------------------------
 

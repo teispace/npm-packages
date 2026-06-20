@@ -202,7 +202,7 @@ function ImageComponent({
     return editor.registerCommand(
       CLICK_COMMAND,
       (event: MouseEvent) => {
-        if (imgRef.current && imgRef.current.contains(event.target as Node)) {
+        if (imgRef.current?.contains(event.target as Node)) {
           if (!event.shiftKey) clearSelection();
           setSelected(true);
           return true;
