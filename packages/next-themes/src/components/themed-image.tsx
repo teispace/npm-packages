@@ -2,6 +2,7 @@
 
 import type { ImgHTMLAttributes } from 'react';
 import { useTheme } from '../hooks/use-theme';
+import { resolveThemedValue } from './resolve-themed';
 
 export interface ThemedImageProps<T extends string = string>
   extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
@@ -35,11 +36,7 @@ export function ThemedImage<T extends string = string>({
   ...rest
 }: ThemedImageProps<T>): React.JSX.Element | null {
   const { resolvedTheme, theme } = useTheme<T>();
-  const src =
-    sources[resolvedTheme as T] ??
-    sources[theme as T | 'system'] ??
-    fallbackSrc ??
-    Object.values(sources)[0];
+  const src = resolveThemedValue(sources, resolvedTheme, theme, fallbackSrc);
   if (!src) return null;
   // biome-ignore lint/performance/noImgElement: provider-agnostic primitive; users can wrap with next/image if desired
   return <img src={src} alt={alt ?? ''} {...rest} />;

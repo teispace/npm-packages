@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { coverageConfig } from '../../vitest.coverage';
 
 export default defineConfig({
   test: {
@@ -6,5 +7,6 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['__tests__/setup.ts'],
+    coverage: coverageConfig,
   },
 });
