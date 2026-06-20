@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useTheme } from '../hooks/use-theme';
+import { resolveThemedValue } from './resolve-themed';
 
 export interface ThemedIconProps<T extends string = string> {
   /** Map of theme → React node. Keys may include any theme plus `'system'`. */
@@ -30,6 +31,6 @@ export function ThemedIcon<T extends string = string>({
   fallback = null,
 }: ThemedIconProps<T>): React.JSX.Element {
   const { resolvedTheme, theme } = useTheme<T>();
-  const node = variants[resolvedTheme as T] ?? variants[theme as T | 'system'] ?? fallback;
+  const node = resolveThemedValue(variants, resolvedTheme, theme, fallback);
   return <>{node ?? null}</>;
 }
