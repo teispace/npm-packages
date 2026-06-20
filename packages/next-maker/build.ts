@@ -21,7 +21,7 @@ try {
     external: ['enquirer', 'commander', 'picocolors', 'ora', 'degit', 'sharp', 'png-to-ico'],
     minify: true, // Minify the output
     treeShaking: true, // Remove unused code
-    target: 'node20', // Target Node.js 20+
+    target: 'node24', // Target Node.js 24+ (matches engines.node)
     sourcemap: false, // No source maps in the published bundle
   });
 

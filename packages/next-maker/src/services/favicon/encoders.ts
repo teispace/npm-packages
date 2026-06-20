@@ -1,5 +1,5 @@
 import pngToIco from 'png-to-ico';
-import sharp from 'sharp';
+import sharp, { type Color } from 'sharp';
 import { buildBackground, buildShapeMask } from './shapes';
 import type { FaviconFit, FaviconShape } from './types';
 
@@ -75,7 +75,7 @@ export const renderPng = async (opts: RenderOptions): Promise<Buffer> => {
   return composed;
 };
 
-export const flatColor = async (color: string): Promise<sharp.Color> => {
+export const flatColor = async (color: string): Promise<Color> => {
   // Use sharp to parse arbitrary CSS color via a tiny SVG → first pixel.
   const probe = await sharp(Buffer.from(buildBackground(1, color)))
     .raw()

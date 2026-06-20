@@ -1,14 +1,22 @@
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun';
 
+/**
+ * Run a package-manager command with argv passed as an array (no shell). Like
+ * `git.ts`, this is the security-critical detail: package names flow in from
+ * generators/manifests, and a name containing shell metacharacters would, under
+ * a string `exec`, be interpreted by the shell. `execFile` never spawns a shell,
+ * so every argument is inert data.
+ */
+const run = (bin: string, args: string[], cwd: string) => execFileAsync(bin, args, { cwd });
+
 export const installDependencies = async (cwd: string, manager: PackageManager): Promise<void> => {
-  const command = `${manager} install`;
   try {
-    await execAsync(command, { cwd });
+    await run(manager, ['install'], cwd);
   } catch (error) {
     throw new Error(`Failed to install dependencies with ${manager}: ${error}`, { cause: error });
   }
@@ -19,12 +27,12 @@ export const runScript = async (
   manager: PackageManager,
   script: string,
 ): Promise<void> => {
-  // npm requires 'run' keyword, but yarn/pnpm/bun don't
-  const command = manager === 'npm' ? `${manager} run ${script}` : `${manager} ${script}`;
+  // npm requires the 'run' keyword, but yarn/pnpm/bun don't.
+  const args = manager === 'npm' ? ['run', script] : [script];
   try {
-    await execAsync(command, { cwd });
+    await run(manager, args, cwd);
   } catch (error) {
-    // We don't want to fail the whole setup if linting fails, just warn
+    // We don't want to fail the whole setup if linting fails, just warn.
     console.warn(`Warning: Failed to run script '${script}': ${error}`);
   }
 };
@@ -60,28 +68,26 @@ export const installPackages = async (
 ): Promise<void> => {
   if (packages.length === 0) return;
 
-  const installCommand = getInstallCommand(manager);
-  const command = `${installCommand} ${packages.join(' ')}`;
-
   try {
-    await execAsync(command, { cwd });
+    await run(manager, [...getInstallArgs(manager), ...packages], cwd);
   } catch (error) {
     throw new Error(`Failed to install packages with ${manager}: ${error}`, { cause: error });
   }
 };
 
-const getInstallCommand = (manager: PackageManager): string => {
+/** The subcommand argv that adds a dependency, per manager. */
+const getInstallArgs = (manager: PackageManager): string[] => {
   switch (manager) {
     case 'npm':
-      return 'npm install';
+      return ['install'];
     case 'yarn':
-      return 'yarn add';
+      return ['add'];
     case 'pnpm':
-      return 'pnpm add';
+      return ['add'];
     case 'bun':
-      return 'bun add';
+      return ['add'];
     default:
-      return 'npm install';
+      return ['install'];
   }
 };
 
@@ -109,11 +115,8 @@ export const installDevPackages = async (
   packages: string[],
 ): Promise<void> => {
   if (packages.length === 0) return;
-  const installCommand = getInstallCommand(manager);
-  const flag = getDevFlag(manager);
-  const command = `${installCommand} ${flag} ${packages.join(' ')}`;
   try {
-    await execAsync(command, { cwd });
+    await run(manager, [...getInstallArgs(manager), getDevFlag(manager), ...packages], cwd);
   } catch (error) {
     throw new Error(`Failed to install dev packages with ${manager}: ${error}`, { cause: error });
   }
@@ -131,28 +134,26 @@ export const uninstallPackages = async (
 ): Promise<void> => {
   if (packages.length === 0) return;
 
-  const uninstallCommand = getUninstallCommand(manager);
-  const command = `${uninstallCommand} ${packages.join(' ')}`;
-
   try {
-    await execAsync(command, { cwd });
+    await run(manager, [...getUninstallArgs(manager), ...packages], cwd);
   } catch (error) {
     throw new Error(`Failed to uninstall packages with ${manager}: ${error}`, { cause: error });
   }
 };
 
-const getUninstallCommand = (manager: PackageManager): string => {
+/** The subcommand argv that removes a dependency, per manager. */
+const getUninstallArgs = (manager: PackageManager): string[] => {
   switch (manager) {
     case 'npm':
-      return 'npm uninstall';
+      return ['uninstall'];
     case 'yarn':
-      return 'yarn remove';
+      return ['remove'];
     case 'pnpm':
-      return 'pnpm remove';
+      return ['remove'];
     case 'bun':
-      return 'bun remove';
+      return ['remove'];
     default:
-      return 'npm uninstall';
+      return ['uninstall'];
   }
 };
 

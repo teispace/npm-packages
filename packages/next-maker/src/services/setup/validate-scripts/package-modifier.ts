@@ -52,7 +52,7 @@ export const addValidationScripts = (
     scripts.validate = buildValidateChain(manager);
   }
 
-  if (!devDeps.tsx && !pkg.dependencies?.hasOwnProperty('tsx')) {
+  if (!devDeps.tsx && !Object.hasOwn(pkg.dependencies ?? {}, 'tsx')) {
     devDeps.tsx = '*';
   }
 

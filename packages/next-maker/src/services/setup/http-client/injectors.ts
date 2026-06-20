@@ -1,10 +1,42 @@
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { PROJECT_PATHS } from '../../../config/paths';
 import { fileExists, readFile, writeFile } from '../../../core/files';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+/**
+ * Run `grep` over a directory via `execFile` (argv array, NO shell). Passing the
+ * pattern and path as separate arguments means a project path containing shell
+ * metacharacters — e.g. a checkout at `/tmp/$(rm -rf ~)/app` — can never be
+ * interpreted by a shell, closing the command-injection hole the previous
+ * string-interpolated `exec("grep ... \"${srcPath}\"")` left open. grep exits 1
+ * when there are no matches (not an error here), so we treat a code-1 failure
+ * with empty stderr as "no matches" and return an empty string.
+ *
+ * @param pattern    grep BRE pattern (already regex-escaped by the caller)
+ * @param dir        directory to search recursively
+ * @param extraFlags grep flags before the pattern (e.g. ['-r', '-l'])
+ */
+async function grepFiles(pattern: string, dir: string, extraFlags: string[]): Promise<string> {
+  try {
+    const { stdout } = await execFileAsync('grep', [
+      ...extraFlags,
+      '--include=*.ts',
+      '--include=*.tsx',
+      pattern,
+      dir,
+    ]);
+    return stdout;
+  } catch (error) {
+    // grep returns exit code 1 for "no matches" — surfaced by execFile as an
+    // error with code === 1. That is a normal empty result, not a failure.
+    const code = (error as { code?: number }).code;
+    if (code === 1) return '';
+    throw error;
+  }
+}
 
 export const updateHttpIndex = async (
   projectPath: string,
@@ -109,9 +141,8 @@ export const migrateClientUsages = async (
   const srcPath = path.join(projectPath, 'src');
 
   try {
-    // Use grep to find files with HTTP client imports
-    const grepCommand = `grep -rl "${fromName}" "${srcPath}" --include="*.ts" --include="*.tsx" || true`;
-    const { stdout } = await execAsync(grepCommand);
+    // Use grep to find files with HTTP client imports (argv, no shell).
+    const stdout = await grepFiles(fromName, srcPath, ['-r', '-l']);
 
     if (!stdout.trim()) {
       // No files found with the client name
@@ -348,17 +379,16 @@ export const isFileUsed = async (
 ): Promise<boolean> => {
   const srcPath = path.join(projectPath, 'src');
 
-  // Escape special characters in import path for grep
+  // Escape ERE metacharacters in the import path so it is matched literally.
   const escapedImportPath = importPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-  // Search for the import string
-  // We look for:
-  // 1. from '...importPath...'
-  // 2. from "...importPath..."
-  const grepCommand = `grep -r "from ['\\"].*${escapedImportPath}.*['\\"]" "${srcPath}" --include="*.ts" --include="*.tsx" || true`;
+  // Match `from '...importPath...'` or `from "...importPath..."`. Passed as a
+  // single argv arg to grep -E (no shell), so the pattern can't be split or
+  // injected. The quote class is `['"]` directly — no shell escaping needed.
+  const pattern = `from ['"].*${escapedImportPath}.*['"]`;
 
   try {
-    const { stdout } = await execAsync(grepCommand);
+    const stdout = await grepFiles(pattern, srcPath, ['-r', '-E']);
 
     if (!stdout.trim()) {
       return false;
@@ -405,16 +435,11 @@ export const isStringUsed = async (
 ): Promise<boolean> => {
   const srcPath = path.join(projectPath, 'src');
 
-  // Escape special characters
-  const escapedString = searchString.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-  // Search for the string anywhere in the files
-  // We use -w to match whole words if possible, but for imports it might be part of braces
-  // Let's just search for the string.
-  const grepCommand = `grep -r "${escapedString}" "${srcPath}" --include="*.ts" --include="*.tsx" || true`;
-
+  // Search for the literal string. `-F` (fixed-string) means no regex escaping
+  // is needed and the search string is matched verbatim; passed as a single
+  // argv arg to grep (no shell), so it can't be interpreted as a command.
   try {
-    const { stdout } = await execAsync(grepCommand);
+    const stdout = await grepFiles(searchString, srcPath, ['-r', '-F']);
 
     if (!stdout.trim()) {
       return false;

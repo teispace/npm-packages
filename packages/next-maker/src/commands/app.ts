@@ -3,6 +3,7 @@ import type { Command } from 'commander';
 import type { Ora } from 'ora';
 import pc from 'picocolors';
 import { log, logError, printBanner } from '../config';
+import { onCancellation } from '../config/errorHandlers';
 import { startSpinner } from '../config/spinner';
 import { deleteDirectory, fileExists } from '../core/files';
 import { initializeGit } from '../core/git';
@@ -146,14 +147,15 @@ const createApp = async (initialName: string | undefined, flags: CreateAppFlags)
     }
   };
 
-  const handleSignal = async () => {
+  // Register cleanup with the global cancellation handler instead of adding a
+  // second SIGINT listener. The global handler awaits this before exiting, so
+  // Ctrl-C now reliably removes the half-created project (the old second
+  // listener raced the global handler's synchronous process.exit(0) and
+  // usually lost, orphaning the directory and exiting 0).
+  const deregisterCleanup = onCancellation(async () => {
     console.log(pc.red('\nProcess interrupted. Cleaning up...'));
     await performCleanup();
-    process.exit(1);
-  };
-
-  process.on('SIGINT', handleSignal);
-  process.on('SIGTERM', handleSignal);
+  });
 
   try {
     // 1–3. Each of these owns its own spinner; do not wrap them.
@@ -214,8 +216,7 @@ const createApp = async (initialName: string | undefined, flags: CreateAppFlags)
       }
     }
 
-    process.off('SIGINT', handleSignal);
-    process.off('SIGTERM', handleSignal);
+    deregisterCleanup();
 
     log('');
     log(pc.green(`✨ Project ${answers.projectName} created successfully!`));
@@ -229,6 +230,9 @@ const createApp = async (initialName: string | undefined, flags: CreateAppFlags)
     );
     log('');
   } catch (err) {
+    // Normal failure path (not a signal). Deregister the signal cleanup first
+    // so it can't double-run, then clean up and exit non-zero ourselves.
+    deregisterCleanup();
     active.current?.fail('Failed to create project.');
     active.current = null;
     console.error(err);
