@@ -1,0 +1,6 @@
+# Code owners for @teispace/npm-packages
+# These owners are requested for review on every PR that touches matching paths.
+# See: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo.
+*       @TheKAdhikari

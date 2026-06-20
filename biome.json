@@ -83,6 +83,9 @@
         "rules": {
           "correctness": {
             "noUnusedVariables": "off"
+          },
+          "suspicious": {
+            "noTemplateCurlyInString": "off"
           }
         }
       }

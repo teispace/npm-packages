@@ -1,6 +1,6 @@
 echo '🚀 Running comprehensive checks before push...'
 
-# Run full validation (lint, type-check, build)
+# Run full validation (lint, type-check, test, build)
 echo '🔍 Running full validation suite...'
 yarn validate
 
