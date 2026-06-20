@@ -1,128 +1,108 @@
 # @teispace/npm-packages
 
-A professional monorepo for publishing npm packages with automated CI/CD, versioning, and multi-channel releases.
+A professional Yarn 4 monorepo for Teispace's published npm packages, with automated releases via [release-please](https://github.com/googleapis/release-please), npm provenance, and a shared Biome + Vitest + TypeScript toolchain.
 
 ## 📦 Packages
 
-- **[@teispace/next-maker](./packages/next-maker)** - CLI tool for creating Next.js applications
-
-## 🔄 Release Channels
-
-This monorepo supports three release channels:
-
-- **stable** (main branch) - Production releases with semantic versioning
-- **beta** (beta branch) - Pre-release testing versions
-- **alpha** (alpha branch) - Cutting-edge development versions
+| Package | Description |
+| ------- | ----------- |
+| **[@teispace/env](./packages/env)** | Type-safe, validated environment variables for every JS runtime & framework — load, validate, coerce, and type your env. Zero runtime deps. |
+| **[@teispace/next-themes](./packages/next-themes)** | Feature-rich, lightweight theme management for Next.js & React. Zero-flash SSR, hybrid storage, view transitions, typed themes. Zero runtime deps. |
+| **[@teispace/teieditor](./packages/teieditor)** | A feature-rich, fully customizable rich-text editor built on Lexical. shadcn-style — install, use, customize. |
+| **[@teispace/next-maker](./packages/next-maker)** | CLI to scaffold and extend Teispace Next.js applications with interactive setup. |
 
 ## 🚀 Quick Start
-
-### Installation
 
 ```bash
 # Clone repository
 git clone https://github.com/teispace/npm-packages.git
 cd npm-packages
 
-# Install dependencies
+# Install dependencies (Corepack pins Yarn 4)
 yarn install
 
-# Build all packages
+# Build all publishable packages
 yarn build
 
-# Run validation
+# Run the full validation suite (lint + type-check + test + build)
 yarn validate
 ```
 
-### Development
+## 🧑‍💻 Development
 
 ```bash
-# Lint code
-yarn lint
-
-# Format code
-yarn format
-
-# Type check
-yarn type-check
-
-# Run tests
-yarn test
-
-# Watch mode
-yarn test:watch
+yarn lint            # Lint + format check (Biome)
+yarn lint:fix        # Auto-fix lint/format issues
+yarn format          # Format code (Biome)
+yarn type-check      # Type-check all packages (tsc --noEmit)
+yarn test            # Run tests (Vitest)
+yarn test:watch      # Watch mode
+yarn test:cov        # Tests with coverage
+yarn build           # Build publishable packages (excludes examples)
+yarn build:examples  # Build the example apps
+yarn validate        # lint + type-check + test + build
+yarn clean           # Remove build artifacts & caches
 ```
+
+## 📦 Releases
+
+Releases are fully automated with **release-please** on the `main` branch — this repo is trunk-based, not Git-Flow.
+
+1. Land Conventional-Commits PRs on `main`.
+2. release-please opens/updates a **release PR** that bumps versions and updates each package's `CHANGELOG.md` from the commit history.
+3. Merging that release PR tags the releases and the publish job pushes the changed packages to npm with **provenance** under the `@latest` tag.
+
+There is a single stable channel (`@latest`). Install any package the usual way:
+
+```bash
+npm install @teispace/env
+npm install @teispace/next-themes
+npm install @teispace/teieditor
+npm install -g @teispace/next-maker   # or: npx @teispace/next-maker
+```
+
+See **[RELEASING.md](./RELEASING.md)** for the full release process.
 
 ## 📖 Documentation
 
-- **[SETUP.md](./SETUP.md)** - Initial setup and quick reference
-- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - How to contribute
-- **[RELEASING.md](./RELEASING.md)** - Release process and versioning
-
-## 🔄 Release Channels
-
-| Channel | npm Tag   | Use Case                  |
-| ------- | --------- | ------------------------- |
-| Stable  | `@latest` | Production-ready releases |
-| Beta    | `@beta`   | Pre-release testing       |
-| Alpha   | `@alpha`  | Experimental features     |
-
-### Installing Packages
-
-```bash
-# Stable (default)
-npm install @teispace/next-maker
-
-# Beta
-npm install @teispace/next-maker@beta
-
-# Alpha
-npm install @teispace/next-maker@alpha
-```
+- **[SETUP.md](./SETUP.md)** — Initial setup and quick reference
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** — How to contribute
+- **[RELEASING.md](./RELEASING.md)** — Release process and versioning
+- **[CI-CD-SETUP.md](./CI-CD-SETUP.md)** — CI/CD configuration
+- Each package's own `README.md` documents its public API in depth.
 
 ## 🤝 Contributing
 
-We welcome contributions! Please read our [Contributing Guide](./CONTRIBUTING.md) to get started.
-
-### Quick Contribution Steps
+We welcome contributions! Please read the [Contributing Guide](./CONTRIBUTING.md) to get started.
 
 1. Fork the repository
-2. Create a feature branch (`feat/my-feature`)
-3. Commit changes using [Conventional Commits](https://www.conventionalcommits.org/)
-4. Push and create a Pull Request
-5. Wait for CI checks and review
-
-## 📋 Scripts
-
-```bash
-yarn build              # Build all packages
-yarn lint               # Lint code
-yarn format             # Format code
-yarn format:check       # Check formatting
-yarn type-check         # Type check
-yarn test               # Run tests
-yarn test:cov           # Run tests with coverage
-yarn validate           # Run all checks
-yarn clean              # Clean build artifacts
-```
+2. Create a feature branch off `main` (`feat/my-feature`)
+3. Commit using [Conventional Commits](https://www.conventionalcommits.org/) (`yarn commit` runs Commitizen)
+4. Push and open a Pull Request against `main`
+5. Wait for CI (lint, type-check, test, build) and review
 
 ## 🏗️ Monorepo Structure
 
 ```
 npm-packages/
-├── .github/
-│   └── workflows/          # CI/CD workflows
+├── .github/workflows/      # ci.yml (PR + push checks), release-please.yml (release + publish)
 ├── packages/
-│   └── next-maker/    # Individual packages
-├── CONTRIBUTING.md         # Contribution guidelines
-├── RELEASING.md            # Release documentation
-├── SETUP.md               # Setup guide
-└── package.json           # Root package config
+│   ├── env/                # @teispace/env
+│   ├── next-themes/        # @teispace/next-themes
+│   ├── teieditor/          # @teispace/teieditor
+│   └── next-maker/         # @teispace/next-maker
+├── examples/               # Private example apps (next-themes demo, teieditor playground)
+├── biome.json              # Lint + format config
+├── vitest.coverage.ts      # Shared coverage config
+├── tsconfig.base.json      # Shared TS config
+├── release-please-config.json
+└── package.json            # Root workspace config
 ```
 
 ## 🔐 Requirements
 
-- Node.js >= 20.0.0
-- Yarn >= 4.0.0 (Corepack)
+- Node.js >= 24.0.0 (see `.nvmrc`)
+- Yarn >= 4.0.0 (via Corepack)
 - Git
 
 ## 📄 License
