@@ -34,45 +34,99 @@
     "cloudflare-workers"
   ],
   "sideEffects": false,
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./load": {
-      "types": "./dist/load.d.ts",
-      "import": "./dist/load.js"
+      "import": {
+        "types": "./dist/load.d.ts",
+        "default": "./dist/load.js"
+      },
+      "require": {
+        "types": "./dist/load.d.cts",
+        "default": "./dist/load.cjs"
+      }
     },
     "./config": {
-      "types": "./dist/config.d.ts",
-      "import": "./dist/config.js"
+      "import": {
+        "types": "./dist/config.d.ts",
+        "default": "./dist/config.js"
+      },
+      "require": {
+        "types": "./dist/config.d.cts",
+        "default": "./dist/config.cjs"
+      }
     },
     "./next": {
-      "types": "./dist/presets/next.d.ts",
-      "import": "./dist/presets/next.js"
+      "import": {
+        "types": "./dist/presets/next.d.ts",
+        "default": "./dist/presets/next.js"
+      },
+      "require": {
+        "types": "./dist/presets/next.d.cts",
+        "default": "./dist/presets/next.cjs"
+      }
     },
     "./vite": {
-      "types": "./dist/presets/vite.d.ts",
-      "import": "./dist/presets/vite.js"
+      "import": {
+        "types": "./dist/presets/vite.d.ts",
+        "default": "./dist/presets/vite.js"
+      },
+      "require": {
+        "types": "./dist/presets/vite.d.cts",
+        "default": "./dist/presets/vite.cjs"
+      }
     },
     "./nuxt": {
-      "types": "./dist/presets/nuxt.d.ts",
-      "import": "./dist/presets/nuxt.js"
+      "import": {
+        "types": "./dist/presets/nuxt.d.ts",
+        "default": "./dist/presets/nuxt.js"
+      },
+      "require": {
+        "types": "./dist/presets/nuxt.d.cts",
+        "default": "./dist/presets/nuxt.cjs"
+      }
     },
     "./astro": {
-      "types": "./dist/presets/astro.d.ts",
-      "import": "./dist/presets/astro.js"
+      "import": {
+        "types": "./dist/presets/astro.d.ts",
+        "default": "./dist/presets/astro.js"
+      },
+      "require": {
+        "types": "./dist/presets/astro.d.cts",
+        "default": "./dist/presets/astro.cjs"
+      }
     },
     "./sveltekit": {
-      "types": "./dist/presets/sveltekit.d.ts",
-      "import": "./dist/presets/sveltekit.js"
+      "import": {
+        "types": "./dist/presets/sveltekit.d.ts",
+        "default": "./dist/presets/sveltekit.js"
+      },
+      "require": {
+        "types": "./dist/presets/sveltekit.d.cts",
+        "default": "./dist/presets/sveltekit.cjs"
+      }
     },
     "./node": {
-      "types": "./dist/presets/node.d.ts",
-      "import": "./dist/presets/node.js"
+      "import": {
+        "types": "./dist/presets/node.d.ts",
+        "default": "./dist/presets/node.js"
+      },
+      "require": {
+        "types": "./dist/presets/node.d.cts",
+        "default": "./dist/presets/node.cjs"
+      }
     },
     "./package.json": "./package.json"
   },
