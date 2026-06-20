@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.4](https://github.com/teispace/npm-packages/compare/next-maker-v3.0.3...next-maker-v3.0.4) (2026-06-20)
+
+
+### Bug Fixes
+
+* **next-maker:** repair setup wizard, Ctrl-C cleanup, shell-injection, dist leak ([19d0f87](https://github.com/teispace/npm-packages/commit/19d0f876273a943569466a0c25090c96dbf6267b))
+
 ## [3.0.3](https://github.com/teispace/npm-packages/compare/next-maker-v3.0.2...next-maker-v3.0.3) (2026-06-07)
 
 

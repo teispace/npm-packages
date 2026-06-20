@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/teispace/npm-packages/compare/env-v0.2.1...env-v0.2.2) (2026-06-20)
+
+
+### Bug Fixes
+
+* **env:** harden coercers, validate structured JSON, surface descriptions ([06915d8](https://github.com/teispace/npm-packages/commit/06915d86313f41e7c2a4a0069e3b39601254c755))
+
 ## [0.2.1](https://github.com/teispace/npm-packages/compare/env-v0.2.0...env-v0.2.1) (2026-06-07)
 
 

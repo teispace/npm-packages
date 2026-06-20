@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/teispace/npm-packages/compare/teieditor-v2.0.3...teieditor-v3.0.0) (2026-06-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* **teieditor:** @lexical/html and @lexical/markdown are now required peer dependencies (previously marked optional), because the default editor's serialization/on-change/initial-value plugins import them eagerly. Installs that relied on them being optional must add them.
+
+### Bug Fixes
+
+* **teieditor:** secure plain-text import, wire shortcuts on core path, fix CLI version ([53912a8](https://github.com/teispace/npm-packages/commit/53912a81a6274fd5bb50c06a4cd761d29040cf70))
+
 ## [2.0.3](https://github.com/teispace/npm-packages/compare/teieditor-v2.0.2...teieditor-v2.0.3) (2026-06-07)
 
 

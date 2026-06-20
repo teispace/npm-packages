@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.3](https://github.com/teispace/npm-packages/compare/next-themes-v2.0.2...next-themes-v2.0.3) (2026-06-20)
+
+
+### Code Refactoring
+
+* **next-themes:** centralize themed value resolution + wire coverage ([db6a97b](https://github.com/teispace/npm-packages/commit/db6a97b3d24bcb1184c3c6dd6884553ffe14b098))
+
 ## [2.0.2](https://github.com/teispace/npm-packages/compare/next-themes-v2.0.1...next-themes-v2.0.2) (2026-06-07)
 
 
