@@ -9,7 +9,7 @@
     "examples/*"
   ],
   "engines": {
-    "node": ">=22.12.0",
+    "node": ">=24.0.0",
     "yarn": ">=4.0.0"
   },
   "author": "Teispace",
@@ -24,8 +24,10 @@
   },
   "scripts": {
     "bootstrap": "yarn install",
-    "build": "yarn workspaces foreach -A -pt run build",
-    "build:packages": "yarn workspaces foreach -A -pt --topological run build",
+    "build": "yarn workspaces foreach -Apt --no-private --topological run build",
+    "build:packages": "yarn workspaces foreach -Apt --no-private --topological run build",
+    "build:examples": "yarn workspaces foreach -Apt --include 'examples/*' run build",
+    "build:all": "yarn workspaces foreach -Apt --topological run build",
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
     "format": "biome format --write .",
@@ -36,7 +38,7 @@
     "postinstall": "husky",
     "commit": "cz",
     "type-check": "tsc --noEmit -p tsconfig.build.json",
-    "validate": "yarn lint && yarn type-check && yarn build",
+    "validate": "yarn lint && yarn type-check && yarn test && yarn build",
     "test": "yarn workspaces foreach -Apt --no-private run test",
     "test:watch": "vitest",
     "test:cov": "yarn workspaces foreach -Apt --no-private run test:cov",
@@ -44,17 +46,18 @@
     "test:workspaces": "yarn workspaces foreach -Apt --no-private run test"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.16",
+    "@biomejs/biome": "^2.5.0",
     "@commitlint/cli": "^21.0.2",
     "@commitlint/config-conventional": "^21.0.2",
-    "commitizen": "^4.3.1",
+    "@vitest/coverage-v8": "^4.1.9",
+    "commitizen": "^4.3.2",
     "cz-conventional-changelog": "^3.3.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   },
   "resolutions": {
     "lexical": "0.45.0",

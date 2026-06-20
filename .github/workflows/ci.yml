@@ -4,9 +4,13 @@ on:
   pull_request:
     branches:
       - main
-      - develop
-      - alpha
-      - beta
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
@@ -24,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
           cache: 'yarn'
 
       - name: Install dependencies
@@ -51,20 +55,25 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
           cache: 'yarn'
 
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Run tests
-        run: yarn test
+      - name: Run tests with coverage
+        run: yarn test:cov
 
       - name: Upload coverage
         if: always()
         uses: codecov/codecov-action@v6
         with:
-          files: ./coverage/lcov.info
+          # Each package emits its own lcov under packages/<pkg>/coverage.
+          files: >-
+            ./packages/env/coverage/lcov.info,
+            ./packages/next-maker/coverage/lcov.info,
+            ./packages/next-themes/coverage/lcov.info,
+            ./packages/teieditor/coverage/lcov.info
           fail_ci_if_error: false
 
   build:
@@ -83,7 +92,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
           cache: 'yarn'
 
       - name: Install dependencies
