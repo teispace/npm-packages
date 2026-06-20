@@ -12,7 +12,12 @@ export default defineConfig({
     'presets/sveltekit': 'src/presets/sveltekit.ts',
     'presets/node': 'src/presets/node.ts',
   },
-  format: ['esm'],
+  // Dual ESM + CJS. The ESM build is the primary target, but a CJS build is
+  // required for consumers that resolve via `require`/the default condition —
+  // notably Next.js's `next.config.ts` loader, which pulls in the typed env
+  // (via `./src/lib/config/constants`) through a require-like path and fails
+  // with ERR_PACKAGE_PATH_NOT_EXPORTED against an import-only exports map.
+  format: ['esm', 'cjs'],
   dts: true,
   clean: true,
   splitting: true,
