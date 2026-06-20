@@ -1,159 +1,95 @@
-# CI/CD & Release Setup - Quick Reference
+# CI/CD & Release Setup — Quick Reference
 
-## 🚀 What's Been Set Up
+## 🚀 What's Set Up
 
 ### GitHub Workflows
 
-- ✅ **CI Pipeline** - Runs on all PRs and pushes
-- ✅ **Release Please** - Automated releases on main
-- ✅ **Alpha Publishing** - Auto-publish to npm@alpha
-- ✅ **Beta Publishing** - Auto-publish to npm@beta
+- ✅ **CI** (`ci.yml`) — lint, type-check, test (with coverage), and build on every PR and on push to `main`.
+- ✅ **Release Please** (`release-please.yml`) — maintains a release PR on `main`; merging it tags releases and publishes the changed packages to npm (with provenance) under `@latest`.
 
 ### Release Configuration
 
-- ✅ Release Please config for monorepo
-- ✅ npm authentication setup
-- ✅ Version management automation
-- ✅ Changelog generation
-
-### Documentation
-
-- ✅ CONTRIBUTING.md - Full contribution guide
-- ✅ RELEASING.md - Complete release guide
+- ✅ release-please config for the monorepo (`release-please-config.json` + `.release-please-manifest.json`)
+- ✅ npm authentication + provenance
+- ✅ Automated version management and changelog generation
 
 ## 📋 Required GitHub Setup
 
-### 1. Add NPM_TOKEN Secret
+### 1. Add the `NPM_TOKEN` secret
 
 ```bash
-# Generate npm automation token
+# Generate an npm automation token
 npm login
 npm token create --type=automation
 ```
 
-Then add to GitHub:
+Then add it to GitHub:
 
-1. Go to: `Settings` → `Secrets and variables` → `Actions`
-2. Click: `New repository secret`
-3. Name: `NPM_TOKEN`
-4. Value: Paste your token
+1. `Settings` → `Secrets and variables` → `Actions`
+2. `New repository secret`
+3. Name: `NPM_TOKEN`, Value: your token
 
-### 2. Protect Branches
+The publish job also needs `id-token: write` (already set in the workflow) for npm provenance.
 
-Configure branch protection for:
+### 2. Protect `main`
 
-- `main`: Require PR reviews, passing CI
-- `develop`: Require passing CI
-- `alpha`: Optional protection
-- `beta`: Optional protection
+- Require PR reviews and passing CI before merge.
+- Allow the release-please bot to open its release PR.
 
-### 3. Create Branches
+This repo is trunk-based — there are no `develop`/`alpha`/`beta` branches to create.
 
-```bash
-# Create alpha and beta branches
-git checkout -b alpha
-git push origin alpha
+## 🎯 Quick Start
 
-git checkout -b beta
-git push origin beta
-
-# Create develop if not exists
-git checkout -b develop
-git push origin develop
-```
-
-## 🎯 Quick Start Guide
-
-### For New Features
+### Make a change
 
 ```bash
-# 1. Create feature branch from develop
-git checkout develop
-git pull
+# 1. Branch off main
+git checkout main && git pull
 git checkout -b feat/my-feature
 
-# 2. Make changes and commit
+# 2. Commit using Conventional Commits (or `yarn commit` for a guided prompt)
 git add .
-git commit -m "feat: add my feature"
+git commit -m "feat(env): add my feature"
 
-# 3. Push and create PR to develop
-git push origin feat/my-feature
+# 3. Push and open a PR into main
+git push -u origin feat/my-feature
 ```
 
-### For Alpha Release
+### Cut a release
+
+1. Merge your PR(s) into `main`.
+2. release-please opens/updates a **release PR** with the version bumps + changelogs.
+3. Review and merge the release PR → the changed packages publish to npm under `@latest`.
+
+## 📦 Install
 
 ```bash
-# Push to alpha branch
-git checkout alpha
-git merge develop
-git push origin alpha
-
-# ✨ Auto-publishes to npm with @alpha tag
+npm i @teispace/env
+npm i @teispace/next-themes
+npm i @teispace/teieditor
+npm i -g @teispace/next-maker   # or npx @teispace/next-maker
 ```
 
-### For Beta Release
+## 🔍 CI Checks
 
-```bash
-# Push to beta branch
-git checkout beta
-git merge develop  # or merge alpha if promoting
-git push origin beta
+Every PR (and push to `main`) runs:
 
-# ✨ Auto-publishes to npm with @beta tag
-```
-
-### For Stable Release
-
-```bash
-# 1. Create PR: develop → main
-# 2. Release Please will create/update Release PR
-# 3. Review and merge Release PR
-# ✨ Auto-publishes to npm with @latest tag
-```
-
-## 📦 Version Tags
-
-| Channel | npm Command                        | Version Example        |
-| ------- | ---------------------------------- | ---------------------- |
-| Stable  | `npm i @teispace/next-maker`       | `1.0.0`                |
-| Beta    | `npm i @teispace/next-maker@beta`  | `1.0.0-beta.20241127`  |
-| Alpha   | `npm i @teispace/next-maker@alpha` | `1.0.0-alpha.20241127` |
-
-## 🔍 CI/CD Checks
-
-Every PR runs:
-
-- ✅ Linting (ESLint + Prettier)
-- ✅ Type checking (TypeScript)
-- ✅ Tests (Jest)
+- ✅ Lint + format check (**Biome**)
+- ✅ Type checking (**TypeScript**)
+- ✅ Tests with coverage (**Vitest** → Codecov)
 - ✅ Build verification
-- ✅ Commit message validation
+- ✅ Commit message validation (commitlint)
 
 ## 📚 Full Documentation
 
-- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Complete contribution guide
-- **[RELEASING.md](./RELEASING.md)** - Detailed release instructions
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** — contribution guide
+- **[RELEASING.md](./RELEASING.md)** — release process
+- **[CI-CD-SETUP.md](./CI-CD-SETUP.md)** — CI/CD configuration details
 
 ## 🆘 Common Issues
 
-**Release Please PR not created?**
+**Release PR not created?** Ensure commits use the Conventional Commits format and that `.release-please-manifest.json` exists.
 
-- Ensure commits use conventional format
-- Check `.release-please-manifest.json` exists
-- Verify branch protection allows Release Please bot
+**npm publish fails?** Check `NPM_TOKEN` is valid and the version doesn't already exist (the publish job skips versions already on the registry, so re-runs are safe).
 
-**npm publish fails?**
-
-- Check NPM_TOKEN is valid
-- Verify package name is available
-- Ensure version doesn't already exist
-
-**CI fails?**
-
-- Run `yarn validate` locally first
-- Fix linting/type errors
-- Ensure all tests pass
-
-## 🎉 You're All Set!
-
-The setup is complete. Read the full documentation and start contributing!
+**CI fails?** Run `yarn validate` locally first to reproduce.

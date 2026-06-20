@@ -2,8 +2,6 @@
 
 Thank you for your interest in contributing! This document provides guidelines and instructions for contributing to this monorepo.
 
-> **Note**: This is a test change to verify selective package publishing works correctly.
-
 ## Table of Contents
 
 - [Getting Started](#getting-started)
@@ -19,7 +17,7 @@ Thank you for your interest in contributing! This document provides guidelines a
 
 ### Prerequisites
 
-- **Node.js**: >= 20.0.0
+- **Node.js**: >= 24.0.0 (see `.nvmrc`)
 - **Yarn**: >= 4.0.0 (Corepack enabled)
 - **Git**: Latest version
 
@@ -112,56 +110,27 @@ git push origin feat/your-feature-name
 
 ## Branch Strategy
 
-We use a **Git Flow** inspired strategy with multiple release channels:
+This repo is **trunk-based**: `main` is the single long-lived branch, and releases
+are automated from it by [release-please](https://github.com/googleapis/release-please).
+There is no `develop`, `alpha`, or `beta` branch.
 
-### Main Branches
+### `main`
 
-- **`main`**: Production-ready code. Protected branch.
-  - Only accepts PRs from `develop` or hotfix branches
-  - Triggers stable releases via Release Please
-  - All commits must pass CI/CD
+- Production-ready code. Protected branch.
+- Every change lands via a reviewed PR that passes CI (lint, type-check, test, build).
+- Each push updates a release-please **release PR**; merging that PR tags the
+  release and publishes the changed packages to npm under `@latest`.
 
-- **`develop`**: Integration branch for features
-  - Default branch for feature PRs
-  - Contains next release features
-  - Must always be stable
+### Short-lived topic branches
 
-- **`alpha`**: Alpha release channel
-  - For testing experimental features
-  - Publishes with `@alpha` tag
-  - Frequent, unstable releases
+Branch off `main`, open a PR back into `main`, and delete the branch after merge.
+Use a Conventional-Commits-style prefix so the intent is clear:
 
-- **`beta`**: Beta release channel
-  - For pre-release testing
-  - Publishes with `@beta` tag
-  - More stable than alpha
-
-### Supporting Branches
-
-- **`feat/*`**: Feature branches
-  - Created from: `develop`
-  - Merged into: `develop`
-  - Naming: `feat/descriptive-name`
-
-- **`fix/*`**: Bug fix branches
-  - Created from: `develop` or `main` (hotfix)
-  - Merged into: `develop` or `main`
-  - Naming: `fix/descriptive-name`
-
-- **`docs/*`**: Documentation branches
-  - Created from: `develop`
-  - Merged into: `develop`
-  - Naming: `docs/what-changed`
-
-- **`refactor/*`**: Code refactoring
-  - Created from: `develop`
-  - Merged into: `develop`
-  - Naming: `refactor/what-changed`
-
-- **`hotfix/*`**: Emergency fixes
-  - Created from: `main`
-  - Merged into: `main` and `develop`
-  - Naming: `hotfix/critical-issue`
+- **`feat/<name>`** — a new feature
+- **`fix/<name>`** — a bug fix
+- **`docs/<name>`** — documentation only
+- **`refactor/<name>`** — internal refactor, no behavior change
+- **`chore/<name>`** — tooling, deps, CI
 
 ## Commit Guidelines
 
@@ -287,9 +256,10 @@ See [RELEASING.md](./RELEASING.md) for detailed release instructions.
 
 ### Quick Overview
 
-- **Alpha releases**: Push to `alpha` branch
-- **Beta releases**: Push to `beta` branch
-- **Stable releases**: Merge to `main` (via Release Please PR)
+- Land Conventional-Commits PRs on `main`.
+- release-please maintains a **release PR** that bumps versions and changelogs.
+- Merging the release PR tags the releases and publishes the changed packages to
+  npm under `@latest` (with provenance). There is a single stable channel.
 
 ## Testing
 
@@ -311,19 +281,22 @@ yarn test:ci
 
 ### Writing Tests
 
-- Place tests next to source files: `component.spec.ts`
-- Use descriptive test names
-- Follow AAA pattern: Arrange, Act, Assert
-- Mock external dependencies
-- Aim for >80% coverage on new code
+- Tests live under each package's `__tests__/` directory, named `*.test.ts(x)`.
+- Use descriptive test names.
+- Follow the AAA pattern: Arrange, Act, Assert.
+- Mock external dependencies.
+- Aim for strong coverage on new code (`yarn test:cov` emits per-package lcov).
 
 ### Test Structure
 
+We use **[Vitest](https://vitest.dev)**. Globals are enabled, so you can import
+from `vitest` or rely on the global `describe`/`it`/`expect`:
+
 ```typescript
-import { describe, expect, test } from '@jest/globals';
+import { describe, expect, it } from 'vitest';
 
 describe('FeatureName', () => {
-  test('should handle specific case', () => {
+  it('handles a specific case', () => {
     // Arrange
     const input = 'test';
 
@@ -340,7 +313,8 @@ describe('FeatureName', () => {
 
 ### Automated Formatting
 
-We use **Prettier** and **ESLint** with automated enforcement:
+We use **[Biome](https://biomejs.dev)** for both linting and formatting, with
+automated enforcement via Husky pre-commit hooks:
 
 ```bash
 # Format all files
@@ -352,8 +326,8 @@ yarn format:check
 # Lint code
 yarn lint
 
-# Lint and fix
-yarn lint --fix
+# Lint and auto-fix
+yarn lint:fix
 ```
 
 ### TypeScript Guidelines
