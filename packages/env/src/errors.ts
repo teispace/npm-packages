@@ -205,7 +205,13 @@ export function formatEnvErrors(
       ? detail
       : `${detail}, ${renderReceived(issue.received, redact)}`;
     const name = paint.yellow(issue.key, on);
-    return `  ${paint.dim('•', on)} ${name}: ${body}`;
+    const line = `  ${paint.dim('•', on)} ${name}: ${body}`;
+    // Surface the validator's `.describe()` text as a dimmed hint so the report
+    // explains what the variable is *for*, not just what was wrong with it.
+    if (issue.description) {
+      return `${line}\n    ${paint.dim(`↳ ${issue.description}`, on)}`;
+    }
+    return line;
   });
 
   const footer = paint.dim('Fix these variables and restart.', on);

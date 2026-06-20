@@ -12,7 +12,7 @@
  * import { defineEnv, e } from '@teispace/env/sveltekit';
  *
  * export const env = defineEnv({
- *   server: { DATABASE_URL: e.url(), SECRET_KEY: e.string().min(1) },
+ *   server: { DATABASE_URL: e.url(), SECRET_KEY: e.string({ min: 1 }).secret() },
  *   client: { PUBLIC_BASE_URL: e.url() },
  *   runtimeEnv: process.env,
  * });

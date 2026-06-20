@@ -67,10 +67,13 @@ describe('e.number', () => {
     expect(value(number(), '-7')).toBe(-7);
   });
 
-  it('rejects NaN, blank, and Infinity', () => {
-    expect(issues(number(), 'abc')[0]).toMatch(/Expected a finite number/);
+  it('rejects NaN, blank, Infinity, and non-decimal radices', () => {
+    // Non-numeric and non-decimal forms are caught by the decimal pre-check.
+    expect(issues(number(), 'abc')[0]).toMatch(/decimal number/);
     expect(issues(number(), '   ')[0]).toMatch(/Expected a number/);
-    expect(issues(number(), 'Infinity')[0]).toMatch(/finite/);
+    expect(issues(number(), 'Infinity')[0]).toMatch(/decimal number/);
+    // 0x10 would be 16 via Number(); we reject it.
+    expect(issues(number(), '0x10')[0]).toMatch(/decimal number/);
   });
 
   it('enforces min/max/int', () => {

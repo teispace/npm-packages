@@ -80,16 +80,22 @@ e.host();
 e.hostname();
 ```
 
-Chainable on every coercer (each narrows the type precisely):
+Constraints like length/range are **constructor options** (`e.string({ min: 1 })`,
+`e.number({ min, max })`). The following modifiers are **chainable** on every
+coercer and each narrows the type precisely:
 
 ```ts
-e.string().optional(); //   string | undefined
-e.port().default(3000); //  number  (default survives `skipValidation`)
-e.string().min(1).secret(); // redacted in error output
+e.string().optional(); //          string | undefined
+e.port().default(3000); //         number  (default survives `skipValidation`)
+e.string({ min: 1 }).secret(); //  non-empty string, redacted in error output
 e.number().refine((n) => n % 2 === 0, 'must be even');
 e.string().transform((s) => s.toUpperCase());
 e.url().describe('Public API base URL');
+e.string().public(); //            opt a scary-named var out of secret redaction
 ```
+
+> Use `withMeta(schema, { secret: true })` to redact a value validated by a
+> Standard Schema (Zod/Valibot), which has no native `.secret()`.
 
 ### 2. Bring your own validator (Standard Schema)
 
@@ -122,7 +128,7 @@ server secret in client code** — so a secret can't leak into a browser bundle:
 ```ts
 export const env = defineEnv({
   clientPrefix: 'NEXT_PUBLIC_',
-  server: { DATABASE_URL: e.url(), STRIPE_SECRET: e.string().min(1) },
+  server: { DATABASE_URL: e.url(), STRIPE_SECRET: e.string({ min: 1 }).secret() },
   client: { NEXT_PUBLIC_API_URL: e.url() },
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
@@ -193,7 +199,7 @@ Workers pass bindings into the handler, so build a parser with `createEnv` and c
 ```ts
 import { createEnv, e } from '@teispace/env';
 
-const parseEnv = createEnv({ schema: { API_KEY: e.string().min(1) } });
+const parseEnv = createEnv({ schema: { API_KEY: e.string({ min: 1 }).secret() } });
 
 export default {
   fetch(req: Request, env: unknown) {

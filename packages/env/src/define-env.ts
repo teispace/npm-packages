@@ -104,7 +104,12 @@ function runSchema(schema: EnvSchema, raw: RawEnv): ValidationRun {
       // the type still permits `undefined`.
       if (result.value !== undefined) output[key] = result.value;
     } else {
-      issues.push({ key, received: raw[key], messages: result.issues });
+      issues.push({
+        key,
+        received: raw[key],
+        messages: result.issues,
+        description: validator.meta?.description,
+      });
     }
   }
 
