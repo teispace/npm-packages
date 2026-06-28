@@ -7,6 +7,7 @@ import {
   removeBundleSentinelMount,
   rewriteSentinelImports,
   rewriteServerEntryImports,
+  stripSaveAuthTokens,
 } from '../../setup/http-client/injectors';
 
 export const cleanupHttpClient = async (
@@ -125,7 +126,7 @@ const removeApiConstants = async (projectPath: string): Promise<void> => {
   if (fileExists(constantsPath)) {
     let content = await readFile(constantsPath);
     content = content.replace(/export const API_RESPONSE_DATA_KEY = 'data';\n/, '');
-    content = content.replace(/export const SAVE_AUTH_TOKENS = false;\n/, '');
+    content = stripSaveAuthTokens(content);
     await writeFile(constantsPath, content);
   }
 };
