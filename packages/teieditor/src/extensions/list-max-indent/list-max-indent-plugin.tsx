@@ -25,7 +25,11 @@ function getElementNodesInSelection(selection: BaseSelection): Set<ElementNode> 
 
 function isPermittedIndent(maxDepth: number, elementNodes: Set<ElementNode>): boolean {
   for (const node of elementNodes) {
-    if ($isListNode(node.getParent()) && $getListDepth(node.getParent()!) >= maxDepth) {
+    // Bind the parent once so the `$isListNode` type guard narrows it to
+    // `ListNode` — `$getListDepth` requires a `ListNode` as of @lexical/list
+    // 0.46. Calling `getParent()` twice would defeat the narrowing.
+    const parent = node.getParent();
+    if ($isListNode(parent) && $getListDepth(parent) >= maxDepth) {
       return false;
     }
   }
