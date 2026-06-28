@@ -1,6 +1,6 @@
 {
   "name": "@teispace/env",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Type-safe, validated environment variables for every JavaScript runtime and framework. Load, validate, coerce, and type your env — Node, Bun, Deno, Workers, Next, Nest, Vite, Nuxt, and more.",
   "type": "module",
   "license": "MIT",
