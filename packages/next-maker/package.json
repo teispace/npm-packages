@@ -45,15 +45,15 @@
     "commander": "^15.0.0",
     "degit": "^3.4.7",
     "enquirer": "^2.4.1",
-    "ora": "^9.4.0",
+    "ora": "^9.4.1",
     "picocolors": "^1.1.1",
     "png-to-ico": "^3.0.1",
     "sharp": "^0.35.2"
   },
   "devDependencies": {
     "@types/degit": "^2.8.6",
-    "@types/node": "^26.0.0",
-    "esbuild": "^0.28.0",
+    "@types/node": "^26.0.1",
+    "esbuild": "^0.28.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"
