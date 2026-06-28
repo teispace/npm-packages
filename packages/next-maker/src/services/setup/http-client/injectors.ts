@@ -122,6 +122,45 @@ export const cleanupHttpTypes = async (
 };
 
 /**
+ * Pure helper: strip the `SAVE_AUTH_TOKENS` declaration from a `constants.ts`
+ * source string, tolerant to the two shapes the template has shipped:
+ *
+ *   1) legacy plain literal — `export const SAVE_AUTH_TOKENS = false;`
+ *   2) current computed form — a JSDoc block, a `const BEARER_ALLOWED_ENVS =
+ *      new Set([...])` line, and `export const SAVE_AUTH_TOKENS =
+ *      BEARER_ALLOWED_ENVS.has(env.NODE_ENV);`
+ *
+ * The computed form derives auth mode from NODE_ENV (see the template's
+ * deep-audit hardening). When HTTP is removed we must drop the whole unit —
+ * the export, its `BEARER_ALLOWED_ENVS` backing const, and the explanatory
+ * JSDoc — or the orphaned `BEARER_ALLOWED_ENVS` triggers an unused-var lint
+ * error. Anchored on stable code tokens (`SAVE_AUTH_TOKENS`,
+ * `BEARER_ALLOWED_ENVS`), not comment wording, so upstream comment drift
+ * won't silently break it. Idempotent — a no-op when no declaration exists.
+ */
+export const stripSaveAuthTokens = (content: string): string => {
+  let next = content;
+
+  // 1. Drop the JSDoc block immediately preceding the `BEARER_ALLOWED_ENVS`
+  //    const (computed form only). Anchored structurally — "the doc-comment
+  //    that sits right above BEARER_ALLOWED_ENVS" — rather than on its
+  //    wording, so upstream rephrasing of the comment can't leave it orphaned.
+  next = next.replace(
+    /\/\*\*(?:[^*]|\*(?!\/))*?\*\/\n(?=(?:export\s+)?const\s+BEARER_ALLOWED_ENVS\b)/,
+    '',
+  );
+
+  // 2. Drop the `BEARER_ALLOWED_ENVS` backing const (computed form only).
+  next = next.replace(/^(?:export\s+)?const\s+BEARER_ALLOWED_ENVS\s*=[\s\S]*?;\n?/m, '');
+
+  // 3. Drop the export itself — matches both `= false;` and the computed
+  //    `= BEARER_ALLOWED_ENVS.has(env.NODE_ENV);` form.
+  next = next.replace(/^export const SAVE_AUTH_TOKENS\s*=.*;\n?/m, '');
+
+  return next;
+};
+
+/**
  * Migrate all HTTP client import and usage patterns when replacing one client with another
  * Example: fetch -> axios will replace all fetchClient imports/usages with axiosClient
  */

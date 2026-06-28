@@ -169,7 +169,7 @@ export const copyHttpClientFiles = async (
 };
 
 export const performFullCleanup = async (projectPath: string): Promise<void> => {
-  const { isFileUsed, isStringUsed } = await import('./injectors');
+  const { isFileUsed, isStringUsed, stripSaveAuthTokens } = await import('./injectors');
 
   // 1. Remove Directories (Unconditional for HTTP utils as they are client-specific)
   await deleteDirectory(path.join(projectPath, PROJECT_PATHS.HTTP_UTILS));
@@ -216,11 +216,16 @@ export const performFullCleanup = async (projectPath: string): Promise<void> => 
       modified = true;
     }
 
-    // Check SAVE_AUTH_TOKENS
+    // Check SAVE_AUTH_TOKENS — strips the export plus its `BEARER_ALLOWED_ENVS`
+    // backing const and JSDoc (the template's computed auth-mode form), so no
+    // orphaned const is left behind.
     const isAuthTokenUsed = await isStringUsed(projectPath, 'SAVE_AUTH_TOKENS', [constantsPath]);
     if (!isAuthTokenUsed) {
-      content = content.replace(/export const SAVE_AUTH_TOKENS = .*;\n?/g, '');
-      modified = true;
+      const stripped = stripSaveAuthTokens(content);
+      if (stripped !== content) {
+        content = stripped;
+        modified = true;
+      }
     }
 
     if (modified) {
