@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/teispace/npm-packages/compare/env-v0.2.3...env-v0.2.4) (2026-06-28)
+
+
+### Miscellaneous Chores
+
+* dependency upgrades + next-maker template sync ([#107](https://github.com/teispace/npm-packages/issues/107)) ([34c8aa4](https://github.com/teispace/npm-packages/commit/34c8aa4fb87f6e1d112035492bdeb62538a9b435))
+
 ## [0.2.3](https://github.com/teispace/npm-packages/compare/env-v0.2.2...env-v0.2.3) (2026-06-20)
 
 

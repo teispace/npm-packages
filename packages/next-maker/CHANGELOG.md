@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.6](https://github.com/teispace/npm-packages/compare/next-maker-v3.0.5...next-maker-v3.0.6) (2026-06-28)
+
+
+### Miscellaneous Chores
+
+* dependency upgrades + next-maker template sync ([#107](https://github.com/teispace/npm-packages/issues/107)) ([34c8aa4](https://github.com/teispace/npm-packages/commit/34c8aa4fb87f6e1d112035492bdeb62538a9b435))
+
 ## [3.0.5](https://github.com/teispace/npm-packages/compare/next-maker-v3.0.4...next-maker-v3.0.5) (2026-06-20)
 
 
