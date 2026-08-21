@@ -34,10 +34,10 @@ yarn validate
 yarn lint            # Lint + format check (Biome)
 yarn lint:fix        # Auto-fix lint/format issues
 yarn format          # Format code (Biome)
-yarn type-check      # Type-check all packages (tsc --noEmit)
+yarn type-check      # Aggregate pass + each package's own stricter tsconfig
 yarn test            # Run tests (Vitest)
 yarn test:watch      # Watch mode
-yarn test:cov        # Tests with coverage
+yarn test:cov        # Tests with coverage (enforces per-package floors)
 yarn build           # Build publishable packages (excludes examples)
 yarn build:examples  # Build the example apps
 yarn validate        # lint + type-check + test + build

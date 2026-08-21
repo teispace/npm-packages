@@ -286,6 +286,22 @@ yarn test:ci
 - Follow the AAA pattern: Arrange, Act, Assert.
 - Mock external dependencies.
 - Aim for strong coverage on new code (`yarn test:cov` emits per-package lcov).
+- **Coverage floors are enforced.** Each package's `vitest.config.ts` sets a
+  threshold via `withThresholds()` in `vitest.coverage.ts`, pinned a couple of
+  points below where that package currently sits. `yarn test:cov` exits non-zero
+  if you drop below it.
+
+  | Package | lines | branches |
+  | --- | --- | --- |
+  | `env` | 91% | 86% |
+  | `next-themes` | 85% | 76% |
+  | `next-maker` | 39% | 36% |
+  | `teieditor` | 33% | 23% |
+
+  They are a **ratchet**: raise them when you raise coverage, and never lower one
+  to make CI pass. The floors exist because without them coverage could only
+  drift downward silently — which is how teieditor's registry UI and
+  next-maker's feature manifests ended up untested in the first place.
 
 ### Test Structure
 

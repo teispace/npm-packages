@@ -20,3 +20,23 @@ export const coverageConfig: CoverageV8Options = {
     'src/**/index.ts',
   ],
 };
+
+/**
+ * Attach a coverage floor to the shared config.
+ *
+ * Deliberately a *ratchet*, not an aspiration: each package's numbers are set a
+ * couple of points below where it actually sits today, so ordinary fluctuation
+ * doesn't turn CI red while a real regression does. Without any floor — the
+ * previous state — coverage could only ever drift downward silently, which is
+ * how teieditor's registry UI and next-maker's manifests ended up untested.
+ *
+ * Raise these when you raise coverage; never lower them to make CI pass.
+ */
+export function withThresholds(thresholds: {
+  lines: number;
+  branches: number;
+  functions: number;
+  statements: number;
+}): CoverageV8Options {
+  return { ...coverageConfig, thresholds };
+}
