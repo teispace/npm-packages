@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import ora from 'ora';
 import pc from 'picocolors';
+import { findGroup, GROUPS, listCopyableFiles, type RegistryGroup } from '../registry/manifest.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -16,7 +17,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const DEFAULT_OUT_DIR = 'src/components/teieditor';
-const COPYABLE_EXTENSIONS = new Set(['.tsx', '.ts', '.css', '.md']);
 
 /**
  * Read the package's own version from package.json at runtime, walking up from
@@ -47,90 +47,6 @@ function readPackageVersion(): string {
   return '0.0.0';
 }
 
-// "Groups" are top-level folders under registry/ that a user can scaffold
-// independently. Everything except `index.ts` is a copyable group.
-interface Group {
-  name: string;
-  description: string;
-  /** Folder under registry/ (e.g. "ui", "components/toolbar") */
-  path: string;
-  /** Other groups this group needs to function. */
-  deps: string[];
-}
-
-const GROUPS: Group[] = [
-  {
-    name: 'ui',
-    description: 'Primitives (button, dropdown, modal, icons, ...)',
-    path: 'ui',
-    deps: [],
-  },
-  {
-    name: 'toolbar',
-    description: 'Top toolbar with formatting, blocks, fonts, colors',
-    path: 'components/toolbar',
-    deps: ['ui'],
-  },
-  {
-    name: 'bubble-menu',
-    description: 'Floating format menu shown on text selection',
-    path: 'components/bubble-menu',
-    deps: ['ui'],
-  },
-  {
-    name: 'slash-menu',
-    description: '/ slash-command palette',
-    path: 'components/slash-menu',
-    deps: ['ui'],
-  },
-  {
-    name: 'link-editor',
-    description: 'Floating link view/edit popover',
-    path: 'components/link-editor',
-    deps: ['ui'],
-  },
-  {
-    name: 'mention-list',
-    description: '@-mention typeahead list',
-    path: 'components/mention-list',
-    deps: ['ui'],
-  },
-  {
-    name: 'table-menu',
-    description: 'Table operations (insert row/col, delete, ...)',
-    path: 'components/table-menu',
-    deps: ['ui'],
-  },
-  {
-    name: 'context-menu',
-    description: 'Right-click block menu',
-    path: 'components/context-menu',
-    deps: ['ui'],
-  },
-  {
-    name: 'code-bar',
-    description: 'Code-block language selector + copy',
-    path: 'components/code-bar',
-    deps: ['ui'],
-  },
-  {
-    name: 'editor',
-    description: 'Full WYSIWYG preset (TeiEditor) — depends on everything above',
-    path: 'editors',
-    deps: [
-      'ui',
-      'toolbar',
-      'bubble-menu',
-      'slash-menu',
-      'link-editor',
-      'mention-list',
-      'table-menu',
-      'context-menu',
-      'code-bar',
-    ],
-  },
-];
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -156,32 +72,10 @@ function hashFile(path: string): string {
   return createHash('sha256').update(readFileSync(path)).digest('hex');
 }
 
-function listCopyableFiles(root: string, sub: string): string[] {
-  const base = join(root, sub);
-  if (!existsSync(base)) return [];
-  const out: string[] = [];
-  const walk = (dir: string) => {
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      const st = statSync(full);
-      if (st.isDirectory()) {
-        walk(full);
-      } else {
-        const dot = entry.lastIndexOf('.');
-        if (dot > -1 && COPYABLE_EXTENSIONS.has(entry.slice(dot))) {
-          out.push(relative(root, full));
-        }
-      }
-    }
-  };
-  walk(base);
-  return out;
-}
-
 type Action = 'added' | 'skip' | 'updated' | 'modified' | 'unchanged' | 'miss';
 
 function copyGroup(
-  group: Group,
+  group: RegistryGroup,
   registryDir: string,
   outDir: string,
   mode: 'init' | 'update',
@@ -194,7 +88,7 @@ function copyGroup(
   // Resolve deps first so the output is importable.
   const results: { action: Action; path: string }[] = [];
   for (const depName of group.deps) {
-    const dep = GROUPS.find((g) => g.name === depName);
+    const dep = findGroup(depName);
     if (dep) results.push(...copyGroup(dep, registryDir, outDir, mode, force, added));
   }
 
@@ -375,7 +269,7 @@ program
   .option('-p, --path <dir>', 'Output directory', DEFAULT_OUT_DIR)
   .option('-f, --force', 'Overwrite existing files', false)
   .action((name: string, opts: { path: string; force: boolean }) => {
-    const entry = GROUPS.find((g) => g.name === name);
+    const entry = findGroup(name);
     if (!entry) {
       console.log('');
       console.error(pc.red(`  Unknown group "${name}".`));

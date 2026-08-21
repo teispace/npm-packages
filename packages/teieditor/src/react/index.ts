@@ -20,7 +20,10 @@
 // to type their extensions and onChange handlers.
 export type { TeiEditorConfig, TeiExtension } from '../core/index.js';
 export type { OutputFormat } from '../plugins/index.js';
-export type { TeiEditorProps } from '../registry/editors/editor.js';
+export type {
+  TeiEditorConfigOverrides,
+  TeiEditorProps,
+} from '../registry/editors/editor.js';
 export { TeiEditor } from '../registry/editors/editor.js';
 export type { TeiEditorNotionProps } from '../registry/editors/editor-notion.js';
 export { TeiEditorNotion } from '../registry/editors/editor-notion.js';

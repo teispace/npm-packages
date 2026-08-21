@@ -4,15 +4,7 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { COMMAND_PRIORITY_LOW, DROP_COMMAND, PASTE_COMMAND } from 'lexical';
 import { useEffect } from 'react';
 import { INSERT_IMAGE_COMMAND } from '../image/image-plugin.js';
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+import { fileToDataUrl, getDroppedFiles, getPastedFiles } from '../shared/files.js';
 
 /**
  * Drag & drop / paste handler that inserts images from dropped/pasted files.
@@ -42,34 +34,26 @@ export function DragDropPastePlugin({
 
     const removePaste = editor.registerCommand(
       PASTE_COMMAND,
-      (event: ClipboardEvent) => {
-        const files = event.clipboardData?.files;
-        if (files && files.length > 0) {
-          const hasImages = Array.from(files).some((f) => f.type.startsWith('image/'));
-          if (hasImages) {
-            event.preventDefault();
-            handleFiles(files);
-            return true;
-          }
-        }
-        return false;
+      (event) => {
+        const files = getPastedFiles(event);
+        if (!files) return false;
+        if (!Array.from(files).some((f) => f.type.startsWith('image/'))) return false;
+        event.preventDefault();
+        handleFiles(files);
+        return true;
       },
       COMMAND_PRIORITY_LOW,
     );
 
     const removeDrop = editor.registerCommand(
       DROP_COMMAND,
-      (event: DragEvent) => {
-        const files = event.dataTransfer?.files;
-        if (files && files.length > 0) {
-          const hasImages = Array.from(files).some((f) => f.type.startsWith('image/'));
-          if (hasImages) {
-            event.preventDefault();
-            handleFiles(files);
-            return true;
-          }
-        }
-        return false;
+      (event) => {
+        const files = getDroppedFiles(event);
+        if (!files) return false;
+        if (!Array.from(files).some((f) => f.type.startsWith('image/'))) return false;
+        event.preventDefault();
+        handleFiles(files);
+        return true;
       },
       COMMAND_PRIORITY_LOW,
     );

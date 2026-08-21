@@ -157,9 +157,9 @@ export {
   Twitter,
 } from './twitter/index.js';
 export { Underline } from './underline/index.js';
-export type { WordCountConfig } from './word-count/index.js';
+export type { WordCountConfig, WordCountPluginProps } from './word-count/index.js';
 // Word Count
-export { WordCount } from './word-count/index.js';
+export { WordCount, WordCountPlugin } from './word-count/index.js';
 // YouTube
 export {
   $createYouTubeNode,

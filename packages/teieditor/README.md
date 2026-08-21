@@ -116,6 +116,7 @@ registry/ (copied to your project via CLI — you own these files)
 - [Quick Start](#quick-start)
 - [Editor Modes](#editor-modes)
 - [CLI](#cli)
+- [shadcn Registry](#shadcn-registry)
 - [Content Formats](#content-formats)
 - [Plugin System](#plugin-system)
 - [Extensions](#extensions)
@@ -123,10 +124,12 @@ registry/ (copied to your project via CLI — you own these files)
 - [Theming](#theming)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Props Reference](#props-reference)
+- [Collaboration & Advanced Lexical Config](#collaboration--advanced-lexical-config)
 - [Peer Dependencies](#peer-dependencies)
 - [Next.js & SSR](#nextjs--ssr)
 - [Mobile & touch](#mobile--touch)
 - [Troubleshooting](#troubleshooting)
+- [Upgrading from 3.0.x](#upgrading-from-30x)
 - [Contributing](#contributing)
 
 ---
@@ -240,6 +243,84 @@ npx teieditor list                      # List available groups
 **Groups** are independently-scaffoldable slices of the registry: `ui`, `toolbar`, `bubble-menu`, `slash-menu`, `link-editor`, `mention-list`, `table-menu`, `context-menu`, `code-bar`, `editor`. Use `add <group>` to pull just one slice.
 
 **Safe updates:** `teieditor update` compares each file's hash against the registry. Files you've edited are marked `modified locally` and left untouched — only unmodified defaults get updated. Opt in to clobber with `--force`.
+
+---
+
+## shadcn Registry
+
+The same components the CLI scaffolds are also published as a
+[shadcn-spec registry](https://ui.shadcn.com/docs/registry), so `npx shadcn add`
+and coding agents can consume them:
+
+```bash
+npx shadcn@latest add https://<your-host>/r/editor.json   # full editor + all deps
+npx shadcn@latest add https://<your-host>/r/toolbar.json  # one slice
+```
+
+### What gets generated
+
+`yarn registry:build` (also run as part of `yarn build`) reads the same `GROUPS`
+array the CLI uses — `src/registry/manifest.ts` — and writes:
+
+| Artifact | Contents |
+|----------|----------|
+| `registry.json` | Source manifest — one item per group, no file contents |
+| `r/registry.json` | The same manifest, served next to the items |
+| `r/<item>.json` | One built item per group, file contents inlined |
+
+Each item carries:
+
+- **`type`** — `registry:ui` for the primitives, `registry:component` for the
+  floating menus, `registry:block` for the editor presets.
+- **`dependencies`** — derived by scanning the real imports. Our registry files
+  are deliberately **not** self-contained: they import from
+  `@teispace/teieditor/{core,plugins,utils,extensions/*}`, the same way Plate's
+  registry does. That is expressed as an npm dependency, pinned to the version
+  that generated the registry.
+- **`registryDependencies`** — the `GROUPS` dependency graph, 1:1.
+- **`files[{path,type,target}]`** — targets are
+  `@components/teieditor/<path>`, which preserves the folder layout the files'
+  relative imports rely on.
+- **`cssVars`** — the `--tei-*` design tokens for light and dark, attached to
+  the root `ui` item, so `shadcn add` injects them and you don't have to
+  `import '@teispace/teieditor/styles.css'` just to get the tokens. (You still
+  want `tailwind.css` for the utility classes — see below.)
+
+### Serving it
+
+The generator does not deploy anything; it only produces static JSON. Point
+`shadcn add` at wherever you serve `r/` from — the files are shipped inside the
+npm package, so any of these works:
+
+```bash
+# 1. Straight off a CDN mirror of the npm package
+npx shadcn@latest add https://unpkg.com/@teispace/teieditor/r/editor.json
+
+# 2. Your own static host / docs site — copy `r/` into `public/r/`
+npx shadcn@latest add https://your-docs-site.com/r/editor.json
+
+# 3. Locally, from a checkout
+npx shadcn@latest add ./node_modules/@teispace/teieditor/r/editor.json
+```
+
+Cross-item references default to relative paths (`./ui.json`) so a directory of
+JSON files is self-consistent wherever it is served from. Building for a fixed
+host? Emit absolute URLs instead:
+
+```bash
+yarn workspace @teispace/teieditor registry:build --base-url https://your-docs-site.com/r
+```
+
+### Registry vs. CLI
+
+Both scaffold identical files. Pick whichever fits:
+
+| | `npx teieditor init/add` | `npx shadcn add <url>` |
+|--|--|--|
+| Drift detection | Yes — SHA-256 per file, your edits are never clobbered | No |
+| `update` command | Yes | No |
+| Design tokens | Manual `styles.css` import | Injected via `cssVars` |
+| Agent/tooling support | teieditor-specific | Standard shadcn tooling |
 
 ---
 
@@ -540,10 +621,11 @@ On macOS, `Ctrl` becomes `Cmd`.
 | `placeholder` | `string` | `'Start writing...'` | Placeholder text |
 | `showToolbar` | `boolean` | `true` | Show fixed toolbar |
 | `showBubbleMenu` | `boolean` | `true` | Show floating format bar on selection |
+| `showWordCount` | `boolean` | `true` | Show the word/character status bar below the content |
 | `readOnly` | `boolean` | `false` | Read-only mode |
 | `className` | `string` | — | Wrapper CSS class |
 | `editorClassName` | `string` | — | Editor content area CSS class |
-| `config` | `Partial<TeiEditorConfig>` | — | Advanced editor config overrides |
+| `config` | `TeiEditorConfigOverrides` | — | Advanced editor config overrides (everything except `extensions` / `editable`, which the `extensions` and `readOnly` props own) |
 
 ### `<TeiEditorNotion>` (Notion Mode)
 
@@ -555,10 +637,93 @@ On macOS, `Ctrl` becomes `Cmd`.
 | `onChange` | `(value: string) => void` | — | Content change callback |
 | `format` | `'html' \| 'markdown' \| 'json' \| 'text'` | `'html'` | Output format |
 | `placeholder` | `string` | `"Type '/' for commands..."` | Placeholder text |
+| `showWordCount` | `boolean` | `false` | Show the word/character status bar (off by default — Notion mode is chrome-free) |
 | `readOnly` | `boolean` | `false` | Read-only mode |
 | `className` | `string` | — | Wrapper CSS class |
 | `editorClassName` | `string` | — | Editor content area CSS class |
-| `config` | `Partial<TeiEditorConfig>` | — | Advanced editor config overrides |
+| `config` | `TeiEditorConfigOverrides` | — | Advanced editor config overrides (everything except `extensions` / `editable`, which the `extensions` and `readOnly` props own) |
+
+---
+
+## Collaboration & Advanced Lexical Config
+
+`createTeiEditor()` passes three optional keys straight through to
+`<LexicalComposer>`, so you are never boxed out of Lexical's own APIs.
+
+### `editorState` — required for Yjs collaboration
+
+Lexical's [collaboration setup](https://lexical.dev/docs/collaboration/react)
+requires `editorState: null` on the composer, so the collab plugin (not Lexical)
+owns the initial content. Without it Lexical seeds a default empty paragraph
+that collides with the Yjs document.
+
+```tsx
+import { CollaborationPlugin } from '@lexical/react/LexicalCollaborationPlugin';
+import { createTeiEditor, TeiEditorProvider } from '@teispace/teieditor/core';
+import { StarterKit } from '@teispace/teieditor/extensions/starter-kit';
+
+const editor = createTeiEditor({
+  extensions: StarterKit,
+  editorState: null, // ← the collab document owns initial state
+});
+
+<TeiEditorProvider editor={editor}>
+  <CollaborationPlugin id="my-doc" providerFactory={createProvider} shouldBootstrap />
+  <EditorContent />
+</TeiEditorProvider>
+```
+
+`editorState` also accepts a serialized JSON string, an `EditorState`, or an
+`(editor) => void` updater. Omit it for the default behaviour.
+
+> TeiEditor does not bundle a Yjs extension — you wire the provider yourself.
+
+### `nodes` — override a core node
+
+Extra nodes are appended after every extension-contributed node, and accept
+Lexical's [node-replacement](https://lexical.dev/docs/concepts/node-replacement)
+form:
+
+```tsx
+createTeiEditor({
+  extensions: StarterKit,
+  nodes: [
+    MyTextNode,
+    { replace: TextNode, with: (n) => new MyTextNode(n.__text), withKlass: MyTextNode },
+  ],
+});
+```
+
+### `html` — customise HTML import/export
+
+```tsx
+createTeiEditor({
+  extensions: StarterKit,
+  html: {
+    import: { span: () => ({ conversion: convertSpan, priority: 1 }) },
+    export: new Map([[TextNode, exportText]]),
+  },
+});
+```
+
+### Extension chrome slot
+
+Extension plugins mount **before** your children so their Lexical commands keep
+priority over the rich-text plugin. Extensions that render visible chrome (today
+just the WordCount status bar) therefore portal into a slot you place yourself:
+
+```tsx
+import { TeiEditorProvider, TeiEditorSlot } from '@teispace/teieditor/core';
+
+<TeiEditorProvider editor={editor}>
+  <Toolbar />
+  <EditorContent />
+  <TeiEditorSlot />   {/* ← WordCount's status bar renders here */}
+</TeiEditorProvider>
+```
+
+No slot mounted means no chrome — a provider never sprouts UI you didn't ask
+for. The drop-in `<TeiEditor>` places one for you (`showWordCount`).
 
 ---
 
@@ -683,6 +848,73 @@ They don't — `createTeiEditor` dedups by extension name with last-wins. You ca
 
 **Tests: `Storage is not defined` / `document is not defined`**
 Use the `jsdom` environment: `environment: 'jsdom'` in `vitest.config.ts`. On Node 22+ you may also need a polyfill for `localStorage` — see this package's own `__tests__/setup.ts` for a reference implementation.
+
+---
+
+## Upgrading from 3.0.x
+
+### Behaviour changes
+
+**1. Five keyboard shortcuts now actually fire.**
+`Mod+Shift+7` (bullet list), `Mod+Shift+8` (numbered list), `Mod+Shift+9`
+(check list), `Mod+Shift+=` and `Mod+Shift+-` (font size) were dead. The matcher
+compared `event.key`, which reports the **shifted** character — on a US layout
+Shift+7 is `&`, not `7` — so those chords could never match. Matching now falls
+back to `event.code` (the physical key) for digits and punctuation.
+
+If you bound your own handler to those chords expecting them to be free, they
+are now claimed by the built-in extensions.
+
+Two related fixes: `preventDefault()` now runs only *after* a handler claims the
+event (a handler returning `false` used to suppress the browser default anyway,
+so the key did nothing at all), and the Mac/Windows modifier is resolved per
+call instead of once at module load — a server-evaluated copy previously latched
+`Control` forever, breaking ⌘ shortcuts.
+
+**2. The word-count bar renders at the bottom.**
+`WordCount` is in `StarterKit` and returns visible chrome, but extension plugins
+mounted **before** `children`, so the drop-in `<TeiEditor>` rendered a "0 words"
+bar with a top border *above* the toolbar. Extensions that render chrome now
+portal into `<TeiEditorSlot />`, which the registry editors place last.
+
+```tsx
+<TeiEditor showWordCount={false} />   // opt out
+```
+
+Plugin mount order is deliberately unchanged — reordering it would have shifted
+Lexical command priority relative to `RichTextPlugin`.
+
+**3. `config` can no longer replace `extensions` or `editable`.**
+The prop is now `TeiEditorConfigOverrides = Omit<Partial<TeiEditorConfig>, 'extensions' | 'editable'>`,
+and the spread order was fixed so explicit props win even for JS callers.
+Previously `config={{ extensions: [X] }}` silently discarded the entire starter
+kit *and* `readOnly`. To customise extensions, use the headless
+`createTeiEditor()` path.
+
+**4. Initial content is no longer undoable.**
+`InitialValuePlugin` now writes seeded content under Lexical's
+`HISTORY_MERGE_TAG`, so Ctrl+Z can't empty the document. Because Lexical's
+`OnChangePlugin` ignores history-merge changes by default, `OnChangePlugin` now
+exposes `ignoreHistoryMergeTagChange`, defaulted to `false` to preserve the
+existing `onChange` contract.
+
+### Packaging
+
+- **`engines` lowered to `>=20.9.0`** (was `>=24`). The package targets es2020
+  and uses only `node:crypto`/`fs`/`path`/`url`, so `>=24` excluded Node 20/22
+  LTS for no reason.
+- **`sideEffects` is now `["*.css"]`** instead of `false`, which had permitted
+  bundlers to drop `import '@teispace/teieditor/styles.css'` — a bare CSS import
+  has no bindings, exactly what that flag licenses eliding.
+- **Lexical floor.** Built and tested against **0.49**. Note 0.49 made
+  `LexicalCommand<T>` invariant; if you register a handler against
+  `PASTE_COMMAND`, type it `PasteCommandType` (not `ClipboardEvent`) and narrow.
+
+### New
+
+The [shadcn registry](#shadcn-registry), `editorState`/node-replacement/`html`
+passthrough for [collaboration](#collaboration--advanced-lexical-config), and
+`<TeiEditorSlot />` for placing extension chrome.
 
 ---
 

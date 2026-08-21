@@ -21,6 +21,7 @@ import {
   $getRoot,
   $insertNodes,
   type LexicalEditor,
+  type UpdateTag,
 } from 'lexical';
 
 // ---------------------------------------------------------------------------
@@ -164,6 +165,18 @@ export function $deserialize(
   }
 }
 
+export interface DeserializeOptions {
+  /**
+   * Lexical update tag(s) to attach to the import.
+   *
+   * Pass `HISTORY_MERGE_TAG` (`'history-merge'`) for content the user should
+   * never be able to undo away — seeding the editor with its initial document,
+   * for instance. Without it the import lands on the undo stack as its own
+   * entry and a single Ctrl+Z empties the document.
+   */
+  tag?: UpdateTag | UpdateTag[];
+}
+
 /**
  * Convenience: import content into an editor instance (no need to wrap in update).
  *
@@ -172,20 +185,32 @@ export function $deserialize(
  * deserialize(editor, '# Hello\n\nWorld', 'markdown');
  * deserialize(editor, '<h1>Hello</h1>', 'html');
  * deserialize(editor, '{"root":...}', 'json');
+ *
+ * // Seed initial content without making it undoable:
+ * deserialize(editor, '<p>Draft</p>', 'html', { tag: HISTORY_MERGE_TAG });
  * ```
  */
 export function deserialize(
   editor: LexicalEditor,
   value: string,
   format: SerializationFormat,
+  options: DeserializeOptions = {},
 ): void {
+  const { tag } = options;
+
   if (format === 'json') {
-    // JSON deserialization uses setEditorState, not update()
+    // JSON deserialization uses setEditorState, not update(). Its options bag
+    // takes a single tag string rather than an array.
     const state = editor.parseEditorState(value);
-    editor.setEditorState(state);
+    const setTag = Array.isArray(tag) ? tag[0] : tag;
+    editor.setEditorState(state, setTag === undefined ? undefined : { tag: setTag });
     return;
   }
-  editor.update(() => {
-    $deserialize(value, format, editor);
-  });
+
+  editor.update(
+    () => {
+      $deserialize(value, format, editor);
+    },
+    tag === undefined ? undefined : { tag },
+  );
 }

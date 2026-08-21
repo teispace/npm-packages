@@ -2,13 +2,25 @@
 
 export type {
   ExtensionConfig,
+  TeiChromeSlot,
   TeiEditorConfig,
   TeiEditorInstance,
+  TeiEditorSlotProps,
   TeiExtension,
+  TeiHtmlConfig,
+  TeiInitialEditorState,
+  TeiNodeConfig,
   ToolbarGroup,
   ToolbarItem,
 } from './core/index.js';
-export { BaseExtension, createTeiEditor, TeiEditorProvider, useTeiEditor } from './core/index.js';
+export {
+  BaseExtension,
+  createTeiEditor,
+  TeiEditorProvider,
+  TeiEditorSlot,
+  useTeiChromeSlot,
+  useTeiEditor,
+} from './core/index.js';
 
 // Extensions (re-export everything from the extensions barrel)
 export * from './extensions/index.js';
@@ -48,6 +60,7 @@ export { defaultTheme } from './themes/index.js';
 export {
   $deserialize,
   $serialize,
+  type DeserializeOptions,
   deserialize,
   type SerializationFormat,
   serialize,

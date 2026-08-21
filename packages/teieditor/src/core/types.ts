@@ -1,5 +1,41 @@
-import type { EditorThemeClasses, Klass, LexicalEditor, LexicalNode } from 'lexical';
+import type {
+  EditorState,
+  EditorThemeClasses,
+  HTMLConfig,
+  Klass,
+  LexicalEditor,
+  LexicalNode,
+  LexicalNodeReplacement,
+} from 'lexical';
 import type { ComponentType } from 'react';
+
+// ---------------------------------------------------------------------------
+// Lexical interop types
+// ---------------------------------------------------------------------------
+
+/**
+ * A Lexical node class **or** a node-replacement descriptor
+ * (`{ replace, with, withKlass }`).
+ *
+ * Mirrors Lexical's own `LexicalNodeConfig`. Accepting the replacement form
+ * everywhere we accept nodes is what lets a consumer swap a core node — e.g.
+ * substitute a custom `TextNode`/`ParagraphNode` subclass — without forking an
+ * extension. See https://lexical.dev/docs/concepts/node-replacement
+ */
+export type TeiNodeConfig = Klass<LexicalNode> | LexicalNodeReplacement;
+
+/**
+ * Initial editor state accepted by `<LexicalComposer>`.
+ *
+ * `null` is the load-bearing value: it tells Lexical to skip seeding the root
+ * with a default empty paragraph so an external owner — the Yjs collaboration
+ * plugin — can populate it instead. Collaboration is unreachable without it.
+ * See https://lexical.dev/docs/collaboration/react
+ */
+export type TeiInitialEditorState = null | string | EditorState | ((editor: LexicalEditor) => void);
+
+/** Lexical's HTML import/export override map (`{ import?, export? }`). */
+export type TeiHtmlConfig = HTMLConfig;
 
 // ---------------------------------------------------------------------------
 // Extension
@@ -25,8 +61,11 @@ export interface TeiExtension<TConfig extends ExtensionConfig = ExtensionConfig>
 
   // -- Lexical integration --------------------------------------------------
 
-  /** Lexical node classes this extension registers. */
-  getNodes?(): Array<Klass<LexicalNode>>;
+  /**
+   * Lexical node classes this extension registers. May also return
+   * node-replacement descriptors (see {@link TeiNodeConfig}).
+   */
+  getNodes?(): Array<TeiNodeConfig>;
 
   /** React components mounted inside LexicalComposer (plugins). */
   getPlugins?(): Array<ComponentType>;
@@ -63,6 +102,36 @@ export interface TeiEditorConfig {
 
   /** Called when Lexical encounters an unrecoverable error. */
   onError?: (error: Error, editor: LexicalEditor) => void;
+
+  /**
+   * Extra Lexical nodes (or node replacements) appended after every
+   * extension-contributed node. Use this to override a core node such as
+   * `TextNode` or `ParagraphNode` without writing an extension:
+   *
+   * ```ts
+   * createTeiEditor({
+   *   extensions: StarterKit,
+   *   nodes: [MyTextNode, { replace: TextNode, with: (n) => new MyTextNode(n.__text), withKlass: MyTextNode }],
+   * });
+   * ```
+   */
+  nodes?: Array<TeiNodeConfig>;
+
+  /**
+   * Initial editor state, passed straight through to `<LexicalComposer>`.
+   *
+   * Pass `null` when pairing the editor with the Yjs collaboration plugin so
+   * that the collaborative document — not Lexical — owns the initial content.
+   * Omitting the field keeps Lexical's default (seed an empty paragraph).
+   */
+  editorState?: TeiInitialEditorState;
+
+  /**
+   * HTML import/export overrides, passed straight through to
+   * `<LexicalComposer>`. Lets you customise `$generateNodesFromDOM` /
+   * `$generateHtmlFromNodes` behaviour without subclassing nodes.
+   */
+  html?: TeiHtmlConfig;
 }
 
 /** The resolved editor instance returned by `createTeiEditor()`. */
@@ -73,19 +142,28 @@ export interface TeiEditorInstance {
   /** All registered extension instances. */
   extensions: TeiExtension[];
 
-  /** Merged Lexical nodes from all extensions. */
-  nodes: Array<Klass<LexicalNode>>;
+  /** Merged Lexical nodes from all extensions, plus `config.nodes`. */
+  nodes: Array<TeiNodeConfig>;
 
   /** Merged React plugins from all extensions. */
   plugins: Array<ComponentType>;
 
-  /** Lexical `InitialConfigType` ready for `<LexicalComposer>`. */
+  /**
+   * Lexical `InitialConfigType` ready for `<LexicalComposer>`.
+   *
+   * `editorState` and `html` are only present when the corresponding
+   * `TeiEditorConfig` field was supplied — passing them through as `undefined`
+   * would be indistinguishable from omitting them, but keeping the key absent
+   * makes the intent obvious when the object is inspected or snapshotted.
+   */
   composerConfig: {
     namespace: string;
     theme: EditorThemeClasses;
-    nodes: Array<Klass<LexicalNode>>;
+    nodes: Array<TeiNodeConfig>;
     editable: boolean;
     onError: (error: Error, editor: LexicalEditor) => void;
+    editorState?: TeiInitialEditorState;
+    html?: TeiHtmlConfig;
   };
 }
 

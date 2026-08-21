@@ -11,6 +11,16 @@ export interface OnChangePluginProps {
   format?: OutputFormat;
   /** Whether to ignore selection-only changes. Default: true. */
   ignoreSelectionChange?: boolean;
+  /**
+   * Whether to ignore updates tagged `history-merge`. Default: **false**.
+   *
+   * Lexical's own `OnChangePlugin` defaults this to `true`, but `InitialValuePlugin`
+   * tags its seeding import `history-merge` (so the initial document can't be
+   * undone away). Ignoring that tag here would mean `onChange` never reports
+   * the content the editor was seeded with. Set to `true` to opt into Lexical's
+   * default and only hear about user-driven edits.
+   */
+  ignoreHistoryMergeTagChange?: boolean;
 }
 
 /**
@@ -21,6 +31,7 @@ export function OnChangePlugin({
   onChange,
   format = 'html',
   ignoreSelectionChange = true,
+  ignoreHistoryMergeTagChange = false,
 }: OnChangePluginProps) {
   if (!onChange) return null;
 
@@ -36,6 +47,10 @@ export function OnChangePlugin({
   };
 
   return (
-    <LexicalOnChangePlugin onChange={handleChange} ignoreSelectionChange={ignoreSelectionChange} />
+    <LexicalOnChangePlugin
+      onChange={handleChange}
+      ignoreSelectionChange={ignoreSelectionChange}
+      ignoreHistoryMergeTagChange={ignoreHistoryMergeTagChange}
+    />
   );
 }

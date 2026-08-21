@@ -1,6 +1,6 @@
-import type { Klass, LexicalEditor, LexicalNode } from 'lexical';
+import type { LexicalEditor } from 'lexical';
 import type { ComponentType } from 'react';
-import type { ExtensionConfig, TeiExtension } from './types.js';
+import type { ExtensionConfig, TeiExtension, TeiNodeConfig } from './types.js';
 
 /**
  * Base class for creating extensions. Provides `configure()` out of the box.
@@ -38,7 +38,7 @@ export abstract class BaseExtension<TConfig extends ExtensionConfig = ExtensionC
 
   // Override in subclasses as needed ----------------------------------------
 
-  getNodes?(): Array<Klass<LexicalNode>>;
+  getNodes?(): Array<TeiNodeConfig>;
   getPlugins?(): Array<ComponentType>;
   getKeyBindings?(): Record<string, (editor: LexicalEditor) => boolean>;
   onRegister?(editor: LexicalEditor): (() => void) | void;

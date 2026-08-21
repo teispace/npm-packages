@@ -12,6 +12,7 @@ import {
 } from 'lexical';
 import { useEffect } from 'react';
 import { $getOrCreateRangeSelection } from '../../core/insert.js';
+import { fileToDataUrl, getDroppedFiles, getPastedFiles } from '../shared/files.js';
 import { $createImageNode, type ImagePayload } from './image-node.js';
 
 // ---------------------------------------------------------------------------
@@ -92,9 +93,9 @@ export function ImagePlugin({
     // own for setups that don't include the image plugin.
     const removePaste = editor.registerCommand(
       PASTE_COMMAND,
-      (event: ClipboardEvent) => {
-        const files = event.clipboardData?.files;
-        if (!files || files.length === 0) return false;
+      (event) => {
+        const files = getPastedFiles(event);
+        if (!files) return false;
         if (!Array.from(files).some(accepted)) return false;
         event.preventDefault();
         return insertFiles(files);
@@ -104,9 +105,9 @@ export function ImagePlugin({
 
     const removeDrop = editor.registerCommand(
       DROP_COMMAND,
-      (event: DragEvent) => {
-        const files = event.dataTransfer?.files;
-        if (!files || files.length === 0) return false;
+      (event) => {
+        const files = getDroppedFiles(event);
+        if (!files) return false;
         if (!Array.from(files).some(accepted)) return false;
         event.preventDefault();
         return insertFiles(files);
@@ -126,12 +127,3 @@ export function ImagePlugin({
 // ---------------------------------------------------------------------------
 // Util
 // ---------------------------------------------------------------------------
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}

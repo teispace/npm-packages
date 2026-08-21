@@ -10,6 +10,7 @@ export {
 export {
   $deserialize,
   $serialize,
+  type DeserializeOptions,
   deserialize,
   type SerializationFormat,
   serialize,

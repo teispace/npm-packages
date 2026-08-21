@@ -3,6 +3,8 @@ import { BaseExtension } from '../../core/extension.js';
 import type { ExtensionConfig } from '../../core/types.js';
 import { WordCountPlugin } from './word-count-plugin.js';
 
+export { WordCountPlugin, type WordCountPluginProps } from './word-count-plugin.js';
+
 export interface WordCountConfig extends ExtensionConfig {
   /** Show character count alongside word count. Default: true. */
   showCharacters: boolean;
