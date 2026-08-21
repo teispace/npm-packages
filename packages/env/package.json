@@ -33,7 +33,10 @@
     "bun",
     "cloudflare-workers"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/config.js",
+    "./dist/config.cjs"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -133,7 +136,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup",
@@ -146,13 +150,13 @@
     "prepublishOnly": "yarn clean && yarn build"
   },
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=20.9.0"
   },
   "devDependencies": {
-    "@types/node": "^26.0.1",
+    "@types/node": "^26.2.0",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.11"
   },
   "publishConfig": {
     "access": "public",

@@ -23,7 +23,7 @@
  */
 import { createPreset } from './preset.js';
 
-export const defineEnv = createPreset('NEXT_PUBLIC_');
+export const defineEnv = createPreset('NEXT_PUBLIC_', true);
 
 export { e } from '../coercers.js';
 export type { EnvValidationError, InferEnv, StandardSchemaV1, Validator } from '../types.js';

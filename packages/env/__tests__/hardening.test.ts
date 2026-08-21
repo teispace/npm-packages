@@ -4,6 +4,7 @@ import { defineEnv } from '../src/define-env.js';
 import { formatEnvErrors } from '../src/errors.js';
 import { withMeta } from '../src/standard-schema.js';
 import type { OutputOf, StandardSchemaV1, Validator } from '../src/types.js';
+import { EnvValidationError } from '../src/types.js';
 
 function value<T>(v: Validator<T>, raw: string | undefined, key = 'KEY'): T {
   const result = v.validate(raw, key);
@@ -155,5 +156,157 @@ describe('withMeta attaches secret/description to any entry', () => {
     const v = withMeta(e.string().describe('orig'), { secret: true });
     expect(v.meta?.secret).toBe(true);
     expect(v.meta?.description).toBe('orig');
+  });
+});
+
+// ===========================================================================
+// Regression tests for the Aug-2026 hardening pass. Each `it` below maps to a
+// bug that was reproducible against the shipped 0.2.4 build.
+// ===========================================================================
+
+describe('regression: split-group configuration guards', () => {
+  it('rejects a key declared in more than one group', () => {
+    // Previously accepted, then crashed the leak guard on the client: the key
+    // was written onto the frozen target by the shared group AND listed in
+    // serverKeys, so the `ownKeys` trap hid an own property of a
+    // non-extensible target -> TypeError from Object.keys/spread/JSON.stringify.
+    expect(() =>
+      defineEnv({
+        server: { NODE_ENV: e.string() },
+        shared: { NODE_ENV: e.string() },
+        clientPrefix: 'NEXT_PUBLIC_',
+        isServer: false,
+        runtimeEnv: { NODE_ENV: 'production' },
+      }),
+    ).toThrow(/only be declared in one group/);
+  });
+
+  it('rejects a server var carrying the client prefix', () => {
+    // Bundlers inline by NAME, so a `NEXT_PUBLIC_`-prefixed var reaches the
+    // browser no matter which group it is filed under. Declaring it `server`
+    // bought a false sense of safety, so the config is now refused outright.
+    expect(() =>
+      defineEnv({
+        server: { NEXT_PUBLIC_SECRET: e.string() },
+        client: { NEXT_PUBLIC_OK: e.string() },
+        clientPrefix: 'NEXT_PUBLIC_',
+        isServer: true,
+        runtimeEnv: { NEXT_PUBLIC_SECRET: 'sk_live', NEXT_PUBLIC_OK: 'fine' },
+      }),
+    ).toThrow(/must NOT start with "NEXT_PUBLIC_"/);
+  });
+
+  it('still allows a prefixed shared var (public by design)', () => {
+    const env = defineEnv({
+      shared: { NEXT_PUBLIC_APP_URL: e.url() },
+      clientPrefix: 'NEXT_PUBLIC_',
+      isServer: false,
+      runtimeEnv: { NEXT_PUBLIC_APP_URL: 'https://example.com' },
+    });
+    expect(env.NEXT_PUBLIC_APP_URL).toBe('https://example.com');
+  });
+
+  it('keeps ordinary object operations working on the client guard', () => {
+    const env = defineEnv({
+      server: { DB_URL: e.string() },
+      shared: { NODE_ENV: e.string() },
+      clientPrefix: 'NEXT_PUBLIC_',
+      isServer: false,
+      runtimeEnv: { DB_URL: 'postgres://x', NODE_ENV: 'production' },
+    });
+    expect(Object.keys(env)).toEqual(['NODE_ENV']);
+    expect({ ...env }).toEqual({ NODE_ENV: 'production' });
+    expect(() => JSON.stringify(env)).not.toThrow();
+    expect(() => (env as { DB_URL: string }).DB_URL).toThrow(/server-only/);
+  });
+});
+
+describe('regression: emptyStringAsUndefined is honoured by coercers', () => {
+  it('treats "" as a present value when the flag is false', () => {
+    // The flag used to be a no-op: Coercer.validate unconditionally treated
+    // '' as absent, so the default applied even though the caller opted out.
+    expect(() =>
+      defineEnv({
+        schema: { PORT: e.port().default(3000) },
+        runtimeEnv: { PORT: '' },
+        emptyStringAsUndefined: false,
+      }),
+    ).toThrow(EnvValidationError);
+  });
+
+  it('still applies the default under the (on) default behaviour', () => {
+    const env = defineEnv({
+      schema: { PORT: e.port().default(3000) },
+      runtimeEnv: { PORT: '' },
+    });
+    expect(env.PORT).toBe(3000);
+  });
+
+  it('e.string() enforces its documented non-empty contract', () => {
+    expect(() =>
+      defineEnv({
+        schema: { NAME: e.string() },
+        runtimeEnv: { NAME: '' },
+        emptyStringAsUndefined: false,
+      }),
+    ).toThrow(/non-empty string/);
+  });
+
+  it('an explicit min is the opt-out for allowing ""', () => {
+    const env = defineEnv({
+      schema: { NAME: e.string({ min: 0 }) },
+      runtimeEnv: { NAME: '' },
+      emptyStringAsUndefined: false,
+    });
+    expect(env.NAME).toBe('');
+  });
+});
+
+describe('regression: secret redaction does not corrupt the expectation', () => {
+  it('keeps a numeric bound intact while redacting the value', () => {
+    // `replaceAll('1', '***')` used to rewrite the bound `10` into `***0`,
+    // telling the reader the minimum was `***0`.
+    try {
+      defineEnv({ schema: { API_KEY: e.int({ min: 10 }) }, runtimeEnv: { API_KEY: '1' } });
+      throw new Error('expected a validation error');
+    } catch (err) {
+      const message = (err as Error).message;
+      expect(message).toContain('>= 10');
+      expect(message).not.toContain('***0');
+    }
+  });
+
+  it('still redacts a real secret value', () => {
+    try {
+      defineEnv({
+        schema: { API_SECRET: e.url() },
+        runtimeEnv: { API_SECRET: 'sk_live_9c8b7a6d' },
+      });
+      throw new Error('expected a validation error');
+    } catch (err) {
+      expect((err as Error).message).not.toContain('sk_live_9c8b7a6d');
+      expect((err as Error).message).toContain('***');
+    }
+  });
+});
+
+describe('regression: thenable detection', () => {
+  it('rejects a non-Promise thenable instead of silently dropping the var', () => {
+    // `instanceof Promise` missed cross-realm/polyfilled thenables. The value
+    // then had no `.issues`, read as a success with `value: undefined`, and the
+    // key vanished from the env object with no error at all.
+    const thenableSchema = {
+      '~standard': {
+        version: 1 as const,
+        vendor: 'test',
+        // A non-Promise thenable is exactly what this test exercises: it is the
+        // shape `instanceof Promise` missed, which used to vanish the variable.
+        // biome-ignore lint/suspicious/noThenProperty: deliberate test fixture
+        validate: () => ({ then: (r: unknown) => r }) as never,
+      },
+    };
+    expect(() =>
+      defineEnv({ schema: { X: thenableSchema as never }, runtimeEnv: { X: 'v' } }),
+    ).toThrow(/Async Standard Schema validation is not supported/);
   });
 });

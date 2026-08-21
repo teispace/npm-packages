@@ -93,12 +93,25 @@ function isBrowserLike(): boolean {
  */
 function isWorkersLike(): boolean {
   try {
+    // Probe Worker-specific globals FIRST, before anything involving `process`.
+    //
+    // This ordering is load-bearing as of 2026. Cloudflare enabled
+    // `nodejs_compat` by default for compatibility dates >= 2026-08-04, and
+    // `nodejs_compat_populate_process_env` has been on since 2025-04-01 — so a
+    // modern Worker now HAS a populated `process.env`. The previous
+    // implementation required `!getProcess()`, which meant every current Worker
+    // failed this check and was reported as `node`.
     const ua = (globalThis as { navigator?: { userAgent?: unknown } }).navigator?.userAgent;
     if (typeof ua === 'string' && ua.includes('Cloudflare')) return true;
+
     const hasWebSocketPair =
       typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair !== 'undefined';
+    if (hasWebSocketPair) return true;
+
+    // `caches` alone is weak — browsers have CacheStorage too — so it only
+    // counts in the absence of a DOM and of a real Node process.
     const hasCaches = typeof (globalThis as { caches?: unknown }).caches !== 'undefined';
-    return !getProcess() && !isBrowserLike() && (hasWebSocketPair || hasCaches);
+    return hasCaches && !isBrowserLike() && !getProcess();
   } catch (_e) {
     return false;
   }
@@ -159,8 +172,10 @@ export function isServerRuntime(): boolean {
 /**
  * Best-effort runtime name for diagnostics / error reports. Ordering matters:
  * Bun and Deno both expose a `process` shim, so we check their distinctive
- * globals first; Workers is inferred from Worker-only globals; a real DOM is
- * `browser`; anything else with a `process` is `node`.
+ * globals first; Workers is inferred from Worker-only globals (and, since
+ * `nodejs_compat` became the Cloudflare default in Aug 2026, must be checked
+ * BEFORE the `process` fallback — a modern Worker has `process.env`); a real
+ * DOM is `browser`; anything else with a `process` is `node`.
  */
 export function detectRuntimeName(): 'node' | 'bun' | 'deno' | 'workers' | 'browser' | 'unknown' {
   try {

@@ -23,6 +23,7 @@
  * treat `''` as absent here too, so a coercer is correct in isolation.
  */
 
+import { isStandardSchemaLike, isThenable, isValidatorLike } from './guards.js';
 import type { StandardSchemaV1, Validator, ValidatorMeta, ValidatorResult } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -71,6 +72,12 @@ interface CoercerConfig<TBase> {
   /** Absent/empty → `defaultValue` (mutually meaningful with `hasDefault`). */
   readonly hasDefault: boolean;
   readonly defaultValue?: unknown;
+  /** Absent/empty AND not production → `devDefaultValue`. */
+  readonly hasDevDefault: boolean;
+  readonly devDefaultValue?: unknown;
+  /** Absent/empty AND NODE_ENV === 'test' → `testDefaultValue`. Beats devDefault. */
+  readonly hasTestDefault: boolean;
+  readonly testDefaultValue?: unknown;
   /** Refinements run, in order, on the coerced base value. */
   readonly refinements: ReadonlyArray<{ fn: RefineFn<unknown>; message?: string }>;
   /** Optional output map applied last; changes the public `TOut`. */
@@ -120,10 +127,27 @@ export class Coercer<TOut, TBase = TOut> implements Validator<TOut> {
    * transform. Errors aggregate within a single coercer (e.g. min+regex) so the
    * report shows every problem at once, per RESEARCH §7.
    */
-  validate(raw: string | undefined, key: string): ValidatorResult<TOut> {
-    const absent = raw === undefined || raw === '';
+  validate(raw: string | undefined, key: string, treatEmptyAsAbsent = true): ValidatorResult<TOut> {
+    // `''` counts as absent only when the caller says so. The core normalizes
+    // empty strings to `undefined` up front when `emptyStringAsUndefined` is on,
+    // so in that configuration this branch is merely belt-and-braces. When the
+    // caller explicitly opts OUT, however, an unconditional `raw === ''` check
+    // here silently overrode them: `emptyStringAsUndefined: false` with
+    // `PORT=''` still returned the default instead of reporting an invalid port,
+    // making a documented option a no-op for every built-in coercer.
+    const absent = raw === undefined || (treatEmptyAsAbsent && raw === '');
 
     if (absent) {
+      // Precedence, most specific first: testDefault > devDefault > default.
+      // Mirrors envalid, and means a var can be required in production while
+      // still being frictionless locally and deterministic under test.
+      const mode = readNodeEnv();
+      if (this.config.hasTestDefault && mode === 'test') {
+        return ok(this.config.testDefaultValue as TOut);
+      }
+      if (this.config.hasDevDefault && mode !== 'production') {
+        return ok(this.config.devDefaultValue as TOut);
+      }
       if (this.config.hasDefault) {
         // Default bypasses parse/refine entirely: it is already a TOut value
         // (see `.transform()` — a default set *before* a transform is
@@ -182,6 +206,33 @@ export class Coercer<TOut, TBase = TOut> implements Validator<TOut> {
     return this.with<TOut>({ hasDefault: true, defaultValue: value });
   }
 
+  /**
+   * A default applied only OUTSIDE production — i.e. when `NODE_ENV` is
+   * anything other than `'production'`.
+   *
+   * The point is to keep production honest. A plain `.default()` on something
+   * like `DATABASE_URL` means a misconfigured production deploy silently boots
+   * against localhost instead of failing loudly. `.devDefault()` gives you the
+   * convenient local value while leaving the variable strictly required in
+   * production.
+   *
+   * @example e.url().devDefault('http://localhost:5432/dev')
+   */
+  devDefault(value: TOut): Coercer<TOut, TBase> {
+    return this.with<TOut>({ hasDevDefault: true, devDefaultValue: value });
+  }
+
+  /**
+   * A default applied only when `NODE_ENV === 'test'`. Takes precedence over
+   * {@link devDefault} and {@link default} so a test run gets a deterministic
+   * value without touching the dev or production paths.
+   *
+   * @example e.string().testDefault('test-api-key')
+   */
+  testDefault(value: TOut): Coercer<TOut, TBase> {
+    return this.with<TOut>({ hasTestDefault: true, testDefaultValue: value });
+  }
+
   /** Attach a human description, surfaced in error reports and future docs. */
   describe(description: string): Coercer<TOut, TBase> {
     return this.with<TOut>({ meta: { ...this.config.meta, description } });
@@ -233,11 +284,31 @@ export class Coercer<TOut, TBase = TOut> implements Validator<TOut> {
 }
 
 /** Build a base coercer from a `parse` function with empty modifier state. */
+/**
+ * Read `NODE_ENV` defensively for the dev/test default branches.
+ *
+ * Deliberately reads the ambient process rather than the schema's own
+ * `NODE_ENV` entry: the coercer runs per-variable and has no view of the
+ * sibling results, and `NODE_ENV` is set by the runtime long before our
+ * validation runs. Guarded because this module is bundled for browsers and
+ * Workers too, where `process` may be absent.
+ */
+function readNodeEnv(): string | undefined {
+  try {
+    return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+      ?.NODE_ENV;
+  } catch {
+    return undefined;
+  }
+}
+
 function make<T>(parse: ParseFn<T>): Coercer<T> {
   return new Coercer<T>({
     parse,
     optional: false,
     hasDefault: false,
+    hasDevDefault: false,
+    hasTestDefault: false,
     refinements: [],
   });
 }
@@ -262,6 +333,17 @@ export interface StringOptions {
 /** A non-empty string, with optional length / pattern / affix constraints. */
 export function string(opts: StringOptions = {}): Coercer<string> {
   return make<string>((raw) => {
+    // Enforce the documented "non-empty" contract. This only becomes reachable
+    // when the caller sets `emptyStringAsUndefined: false`, because otherwise
+    // the core has already turned `''` into `undefined` and the absent branch
+    // handles it. Before that flag was honoured, `''` could never reach here, so
+    // the promise in the docstring was never actually checked — and once the
+    // flag started working, `e.string()` silently accepted `''` as a valid
+    // value. An explicit `min` (including `min: 0`) is the opt-out for callers
+    // who genuinely want to allow the empty string.
+    if (opts.min === undefined && raw.length === 0) {
+      return err('Expected a non-empty string, received an empty string');
+    }
     if (opts.min !== undefined && raw.length < opts.min) {
       return err(`Expected a string of length >= ${opts.min}, received length ${raw.length}`);
     }
@@ -327,10 +409,10 @@ export function number(opts: NumberOptions = {}): Coercer<number> {
       return err(`Expected an integer, received ${quote(raw)}`);
     }
     if (opts.min !== undefined && value < opts.min) {
-      return err(`Expected a number >= ${opts.min}, received ${value}`);
+      return err(`Expected a number >= ${opts.min}, received ${quote(String(value))}`);
     }
     if (opts.max !== undefined && value > opts.max) {
-      return err(`Expected a number <= ${opts.max}, received ${value}`);
+      return err(`Expected a number <= ${opts.max}, received ${quote(String(value))}`);
     }
     return ok(value);
   });
@@ -526,30 +608,6 @@ export function enumOf<const T extends readonly [string, ...string[]]>(
 // ---------------------------------------------------------------------------
 
 /**
- * Minimal structural check for a Standard Schema, kept local to avoid a runtime
- * import cycle with `standard-schema.ts`. The adapter there is the canonical
- * detector; here we only need enough to branch.
- */
-function looksLikeStandardSchema(x: unknown): x is StandardSchemaV1 {
-  return (
-    typeof x === 'object' &&
-    x !== null &&
-    '~standard' in x &&
-    typeof (x as { '~standard'?: { version?: unknown } })['~standard'] === 'object' &&
-    (x as { '~standard': { version?: unknown } })['~standard'].version === 1
-  );
-}
-
-/** Minimal structural check for one of our (or any) `Validator`s. */
-function looksLikeValidator(x: unknown): x is Validator<unknown> {
-  return (
-    typeof x === 'object' &&
-    x !== null &&
-    typeof (x as { validate?: unknown }).validate === 'function'
-  );
-}
-
-/**
  * Parse a JSON string with `JSON.parse`, optionally validating the parsed shape
  * with an inner {@link Validator} or Standard Schema. Without an inner schema,
  * the output type defaults to `unknown` (caller may pass a `T`), since JSON is
@@ -579,13 +637,13 @@ export function json(inner?: Validator<unknown> | StandardSchemaV1): Coercer<unk
     if (inner === undefined) return ok(parsed);
 
     // Validate the parsed *value* (not the raw string) against the inner schema.
-    if (looksLikeValidator(inner)) {
+    if (isValidatorLike(inner)) {
       // Inner validators expect the raw env string; JSON has already produced a
       // structured value, so we adapt by feeding it through a value-validator.
       // We re-use `validateValue` to keep the Standard Schema path uniform.
       return validateParsedValue(parsed, inner, key);
     }
-    if (looksLikeStandardSchema(inner)) {
+    if (isStandardSchemaLike(inner)) {
       return validateStandardValue(parsed, inner);
     }
     // Unreachable for typed callers; defensive for JS consumers.
@@ -625,7 +683,7 @@ function validateParsedValue(
 /** Validate an already-parsed value against a Standard Schema (sync only). */
 function validateStandardValue(value: unknown, schema: StandardSchemaV1): ValidatorResult<unknown> {
   const result = schema['~standard'].validate(value);
-  if (result instanceof Promise) {
+  if (isThenable(result)) {
     throw new Error(
       'Async Standard Schema validation is not supported for env vars; use a synchronous schema',
     );

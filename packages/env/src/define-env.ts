@@ -86,7 +86,7 @@ function normalizeRaw(raw: RawEnv, emptyStringAsUndefined: boolean): RawEnv {
  * one place where coercion actually happens, so the flat, split, and Workers
  * paths all share identical semantics.
  */
-function runSchema(schema: EnvSchema, raw: RawEnv): ValidationRun {
+function runSchema(schema: EnvSchema, raw: RawEnv, emptyStringAsUndefined = true): ValidationRun {
   const output: Record<string, unknown> = {};
   const issues: EnvIssue[] = [];
   const secretFlags: Record<string, boolean | undefined> = {};
@@ -96,7 +96,7 @@ function runSchema(schema: EnvSchema, raw: RawEnv): ValidationRun {
     const validator = toValidator(entry);
     secretFlags[key] = validator.meta?.secret;
 
-    const result = validator.validate(raw[key], key);
+    const result = validator.validate(raw[key], key, emptyStringAsUndefined);
     if (result.ok) {
       // Only attach defined values. A coercer for an optional var returns
       // `{ ok: true, value: undefined }`; keeping the key absent (vs. set to
@@ -142,6 +142,68 @@ function reportIssues(
   throw error;
 }
 
+/**
+ * Assert every declared key has an OWN entry in the caller-supplied
+ * `runtimeEnv`. See `DefineEnvOptions.runtimeEnvStrict` for why this matters in
+ * bundler-inlined environments.
+ *
+ * Uses `Object.hasOwn` rather than a truthiness check: mapping a key to
+ * `undefined` (because the var genuinely isn't set) is a *correct* mapping and
+ * must pass. What we are catching is the key being absent from the object
+ * literal entirely, which is the forgotten-line mistake.
+ */
+function assertRuntimeEnvComplete(
+  schemas: ReadonlyArray<EnvSchema>,
+  runtimeEnv: RawEnv | undefined,
+): void {
+  if (!runtimeEnv) {
+    throw new Error(
+      '❌ Invalid env configuration: `runtimeEnvStrict` is enabled but no `runtimeEnv` was provided.\n' +
+        'Pass an explicit object mapping every declared variable to its literal ' +
+        '`process.env.X` / `import.meta.env.X` access so the bundler can inline it.',
+    );
+  }
+  const missing: string[] = [];
+  for (const schema of schemas) {
+    for (const key of Object.keys(schema)) {
+      if (!Object.hasOwn(runtimeEnv, key)) missing.push(key);
+    }
+  }
+  if (missing.length === 0) return;
+
+  throw new Error(
+    '❌ Invalid env configuration: `runtimeEnv` is missing entries for declared variables.\n' +
+      missing.map((key) => `  • ${key}`).join('\n') +
+      '\n\nBundlers inline env access statically, so a variable with no literal ' +
+      'mapping is simply absent at runtime — usually only discovered in production. ' +
+      'Add each one explicitly:\n' +
+      missing.map((key) => `  ${key}: process.env.${key},`).join('\n'),
+  );
+}
+
+/**
+ * Run the caller's whole-object `refine` and fold any failures into the same
+ * aggregated issue list the per-variable validators use, so one report shows
+ * everything.
+ *
+ * Skipped when there are already per-variable failures: the object handed to
+ * `refine` would be missing those keys, so a cross-field rule would report a
+ * confusing cascade ("SMTP_PASS required when SMTP_HOST is set") on top of the
+ * real root cause ("SMTP_HOST is not a valid hostname").
+ */
+function applyRefine(
+  refine: ((env: Record<string, unknown>) => true | string | string[]) | undefined,
+  output: Record<string, unknown>,
+  issues: EnvIssue[],
+): void {
+  if (!refine || issues.length > 0) return;
+  const result = refine(output);
+  if (result === true) return;
+  const messages = Array.isArray(result) ? result : [result];
+  if (messages.length === 0) return;
+  issues.push({ key: '(env)', received: undefined, messages });
+}
+
 // ---------------------------------------------------------------------------
 // Flat / server model
 // ---------------------------------------------------------------------------
@@ -152,10 +214,14 @@ function defineFlat<TSchema extends EnvSchema>(
   // Server can auto-source from the runtime; an explicit `runtimeEnv` always
   // wins (required on the client, where bundlers statically replace literal
   // `process.env.X` access and dynamic reads return `undefined` — RESEARCH §2).
-  const rawSource = opts.runtimeEnv ?? detectRawEnv();
-  const raw = normalizeRaw(rawSource, opts.emptyStringAsUndefined !== false);
+  if (opts.runtimeEnvStrict) assertRuntimeEnvComplete([opts.schema], opts.runtimeEnv);
 
-  const run = runSchema(opts.schema, raw);
+  const rawSource = opts.runtimeEnv ?? detectRawEnv();
+  const emptyAsUndefined = opts.emptyStringAsUndefined !== false;
+  const raw = normalizeRaw(rawSource, emptyAsUndefined);
+
+  const run = runSchema(opts.schema, raw, emptyAsUndefined);
+  applyRefine(opts.refine, run.output, run.issues);
   reportIssues(run, opts);
 
   return Object.freeze(run.output) as Readonly<InferEnv<TSchema>>;
@@ -191,6 +257,85 @@ function assertClientPrefix(client: EnvSchema, clientPrefix: string): void {
 }
 
 /**
+ * Refuse a **server** var whose name carries the client prefix.
+ *
+ * This is the mirror image of {@link assertClientPrefix} and it closes a real
+ * leak. Bundlers inline by NAME, not by which group we filed the var under:
+ * Next.js replaces every literal `process.env.NEXT_PUBLIC_*` and Vite every
+ * `import.meta.env.VITE_*` at build time. So a var called
+ * `NEXT_PUBLIC_STRIPE_SECRET` is emitted into the browser bundle even though we
+ * classified it as server-only — and our runtime leak guard reports nothing,
+ * because from the bundler's point of view it was never a server var at all.
+ *
+ * Declaring it under `server` therefore buys a false sense of safety. The only
+ * correct answer is to reject the configuration and make the author rename it.
+ *
+ * `shared` is deliberately NOT checked: a prefixed shared var (e.g.
+ * `NEXT_PUBLIC_APP_URL`) is public by design and available in both contexts,
+ * which is exactly what the prefix advertises.
+ */
+function assertNoPrefixedServerVars(server: EnvSchema, clientPrefix: string): void {
+  if (!clientPrefix) return;
+  const offenders = Object.keys(server).filter((key) => key.startsWith(clientPrefix));
+  if (offenders.length === 0) return;
+
+  throw new Error(
+    `❌ Invalid env configuration: server variables must NOT start with "${clientPrefix}".\n` +
+      offenders
+        .map((key) => `  • ${key} is in \`server\` but carries the public prefix`)
+        .join('\n') +
+      `\n\nBundlers inline every "${clientPrefix}" variable into the client bundle by name, ` +
+      `so this value ships to the browser regardless of the group it is declared in — ` +
+      `the server/client guard cannot protect it.\n` +
+      `Rename it without the prefix to keep it server-only, or move it to \`client\`/\`shared\` ` +
+      `if it is genuinely safe to expose.`,
+  );
+}
+
+/**
+ * Refuse the same key in more than one group.
+ *
+ * Beyond being ambiguous (which group's validator wins?), a key present in both
+ * `server` and `client`/`shared` used to crash the leak guard on the client: the
+ * value IS written onto the frozen target (the client/shared group is validated
+ * in every context) while the key is ALSO in `serverKeys`, so the `ownKeys` trap
+ * hid an own property of a non-extensible target. That violates a Proxy
+ * invariant, and the engine threw
+ * `TypeError: 'ownKeys' on proxy: trap result did not include 'X'` from
+ * `Object.keys(env)`, `{...env}`, and `JSON.stringify(env)`.
+ *
+ * `NODE_ENV` declared in both `server` and `shared` is the obvious way to hit
+ * this by accident, so we fail loudly at define time with a message that names
+ * the key and the groups.
+ */
+function assertNoDuplicateGroups(server: EnvSchema, client: EnvSchema, shared: EnvSchema): void {
+  const groups: ReadonlyArray<readonly [string, EnvSchema]> = [
+    ['server', server],
+    ['client', client],
+    ['shared', shared],
+  ];
+  const seen = new Map<string, string[]>();
+  for (const [groupName, schema] of groups) {
+    for (const key of Object.keys(schema)) {
+      const found = seen.get(key);
+      if (found) found.push(groupName);
+      else seen.set(key, [groupName]);
+    }
+  }
+  const offenders = [...seen.entries()].filter(([, names]) => names.length > 1);
+  if (offenders.length === 0) return;
+
+  throw new Error(
+    `❌ Invalid env configuration: a variable may only be declared in one group.\n` +
+      offenders
+        .map(([key, names]) => `  • ${key} appears in \`${names.join('` and `')}\``)
+        .join('\n') +
+      `\n\nPick the group with the widest correct visibility and delete the others ` +
+      `(\`shared\` if both server and client need it, \`server\` if only the server does).`,
+  );
+}
+
+/**
  * Wrap the merged env object in a Proxy that throws when a **server** var is
  * read in a **client** context. The underlying object actually holds every
  * value (so server code reads everything freely); the guard only fires on the
@@ -213,6 +358,17 @@ function createLeakGuard<T extends object>(
   // so we don't pay proxy overhead on every property read in backend code.
   if (isServer || serverKeys.size === 0) return target;
 
+  // Defense in depth for the Proxy invariants. `target` is frozen, so it is
+  // non-extensible, and the spec requires `ownKeys`/`getOwnPropertyDescriptor`
+  // to report every own key of a non-extensible target. Hiding a key that is
+  // actually present therefore throws a TypeError rather than concealing
+  // anything. `assertNoDuplicateGroups` already rejects the only way to reach
+  // that state, but we narrow to keys genuinely absent from the target so the
+  // guard is structurally incapable of throwing even if a future refactor
+  // reintroduces the overlap.
+  const hidden = new Set([...serverKeys].filter((key) => !Object.hasOwn(target, key)));
+  if (hidden.size === 0) return target;
+
   const handleInvalid = (key: string): undefined => {
     if (onInvalidAccess) {
       onInvalidAccess(key);
@@ -228,7 +384,7 @@ function createLeakGuard<T extends object>(
 
   return new Proxy(target, {
     get(obj, prop, receiver) {
-      if (typeof prop === 'string' && serverKeys.has(prop)) {
+      if (typeof prop === 'string' && hidden.has(prop)) {
         return handleInvalid(prop);
       }
       return Reflect.get(obj, prop, receiver);
@@ -236,15 +392,15 @@ function createLeakGuard<T extends object>(
     has(obj, prop) {
       // Server keys are invisible to `in` on the client so feature-detection
       // (`'DATABASE_URL' in env`) reports the honest client-side answer: no.
-      if (typeof prop === 'string' && serverKeys.has(prop)) return false;
+      if (typeof prop === 'string' && hidden.has(prop)) return false;
       return Reflect.has(obj, prop);
     },
     ownKeys(obj) {
       // Hide server keys from enumeration/spread on the client.
-      return Reflect.ownKeys(obj).filter((k) => !(typeof k === 'string' && serverKeys.has(k)));
+      return Reflect.ownKeys(obj).filter((k) => !(typeof k === 'string' && hidden.has(k)));
     },
     getOwnPropertyDescriptor(obj, prop) {
-      if (typeof prop === 'string' && serverKeys.has(prop)) return undefined;
+      if (typeof prop === 'string' && hidden.has(prop)) return undefined;
       return Reflect.getOwnPropertyDescriptor(obj, prop);
     },
   });
@@ -263,11 +419,49 @@ function defineSplit<
   const clientPrefix = opts.clientPrefix ?? NO_PREFIX;
   const isServer = opts.isServer ?? isServerRuntime();
 
-  // Footgun guard: refuse to build if a client var is missing the prefix.
+  // Footgun guards, all at define time so a misconfiguration is a loud startup
+  // error rather than a silent leak or a Proxy TypeError at first read.
   assertClientPrefix(client, clientPrefix);
+  assertNoPrefixedServerVars(server, clientPrefix);
+  assertNoDuplicateGroups(server, client, shared);
 
-  const rawSource = opts.runtimeEnv ?? detectRawEnv();
-  const raw = normalizeRaw(rawSource, opts.emptyStringAsUndefined !== false);
+  if (opts.runtimeEnvStrict) {
+    // Only `client` and `shared` — never `server`.
+    //
+    // The whole point of the check is bundler static inlining, and a bundler
+    // only ever inlines the prefixed vars destined for the browser. Server vars
+    // are read from a live `process.env` on the server and are deliberately
+    // absent from the client bundle, so demanding a literal mapping for them
+    // would be pure friction: it makes authors type out the very names we work
+    // to keep off the client, and protects nothing. `shared` IS included
+    // because it is read in both contexts, so it does get inlined.
+    assertRuntimeEnvComplete([client, shared], opts.runtimeEnv);
+  }
+
+  const emptyAsUndefined = opts.emptyStringAsUndefined !== false;
+
+  // Client and shared vars read STRICTLY from `runtimeEnv` when it is supplied.
+  // That is the bundler contract: only literal, statically-analysable access
+  // survives inlining, so a dynamic fallback would produce values in dev that
+  // silently vanish in a production build.
+  const raw = normalizeRaw(opts.runtimeEnv ?? detectRawEnv(), emptyAsUndefined);
+
+  // Server vars, on the server, fall back to the live runtime env for any key
+  // the caller did not map.
+  //
+  // Supplying `runtimeEnv` used to replace `process.env` wholesale, so declaring
+  // a `server` group and a `runtimeEnv` containing only the client keys made
+  // every server var undefined — the exact shape the Next.js docs steer you
+  // toward. Server vars need no inlining (they never enter the client bundle)
+  // and `process.env` is fully readable on the server, so listing them bought
+  // nothing but boilerplate. This mirrors what t3-env settled on with
+  // `experimental__runtimeEnv`: enumerate the client, let the server resolve
+  // itself. On the client this fallback is skipped entirely and `detectRawEnv()`
+  // is empty there anyway, so no server value can leak in through it.
+  const serverRaw =
+    isServer && opts.runtimeEnv
+      ? normalizeRaw({ ...detectRawEnv(), ...opts.runtimeEnv }, emptyAsUndefined)
+      : raw;
 
   const output: Record<string, unknown> = {};
   const issues: EnvIssue[] = [];
@@ -282,10 +476,12 @@ function defineSplit<
   // Server vars are validated/exposed only on the server. On the client they
   // are neither read nor reported — they simply do not exist there, and the
   // leak guard makes any attempt to read one throw.
-  if (isServer) merge(runSchema(server, raw));
+  if (isServer) merge(runSchema(server, serverRaw, emptyAsUndefined));
   // Client and shared vars are validated in every context.
-  merge(runSchema(client, raw));
-  merge(runSchema(shared, raw));
+  merge(runSchema(client, raw, emptyAsUndefined));
+  merge(runSchema(shared, raw, emptyAsUndefined));
+
+  applyRefine(opts.refine, output, issues);
 
   if (issues.length > 0 && !opts.skipValidation) {
     const message = formatEnvErrors(issues, { secretFlags });
@@ -392,8 +588,10 @@ export function createEnv<TSchema extends EnvSchema>(
       if (hit) return hit;
     }
 
-    const raw = normalizeRaw(source ?? {}, opts.emptyStringAsUndefined !== false);
-    const run = runSchema(opts.schema, raw);
+    const emptyAsUndefined = opts.emptyStringAsUndefined !== false;
+    const raw = normalizeRaw(source ?? {}, emptyAsUndefined);
+    const run = runSchema(opts.schema, raw, emptyAsUndefined);
+    applyRefine(opts.refine, run.output, run.issues);
     reportIssues(run, opts);
 
     const frozen = Object.freeze(run.output) as Readonly<InferEnv<TSchema>>;

@@ -16,6 +16,7 @@
  */
 
 import { Coercer } from './coercers.js';
+import { isStandardSchemaLike, isThenable, isValidatorLike } from './guards.js';
 import type { StandardSchemaV1, Validator, ValidatorMeta, ValidatorResult } from './types.js';
 
 /** The output type a Standard Schema produces, for adapter return typing. */
@@ -27,9 +28,7 @@ type InferOutput<S extends StandardSchemaV1> = StandardSchemaV1.InferOutput<S>;
  * it reliably tells Zod/Valibot/ArkType schemas apart from our coercers.
  */
 export function isStandardSchema(x: unknown): x is StandardSchemaV1 {
-  if (typeof x !== 'object' || x === null || !('~standard' in x)) return false;
-  const std = (x as { '~standard'?: unknown })['~standard'];
-  return typeof std === 'object' && std !== null && (std as { version?: unknown }).version === 1;
+  return isStandardSchemaLike(x);
 }
 
 /**
@@ -39,9 +38,8 @@ export function isStandardSchema(x: unknown): x is StandardSchemaV1 {
  * Schema, so the two guards are mutually exclusive for the normalizer.
  */
 export function isValidator(x: unknown): x is Validator<unknown> {
-  if (typeof x !== 'object' || x === null) return false;
-  if (isStandardSchema(x)) return false;
-  return typeof (x as { validate?: unknown }).validate === 'function';
+  if (isStandardSchemaLike(x)) return false;
+  return isValidatorLike(x);
 }
 
 /**
@@ -54,7 +52,7 @@ function runStandard<S extends StandardSchemaV1>(
   value: unknown,
 ): ValidatorResult<InferOutput<S>> {
   const result = schema['~standard'].validate(value);
-  if (result instanceof Promise) {
+  if (isThenable(result)) {
     throw new Error(
       'Async Standard Schema validation is not supported for env vars; use a synchronous schema',
     );

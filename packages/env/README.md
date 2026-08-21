@@ -55,7 +55,7 @@ Workers context-passing.</sub>
 npm i @teispace/env      # or: pnpm add / yarn add / bun add / deno add npm:@teispace/env
 ```
 
-Requires Node ≥ 22.12 (or Bun/Deno/Workers). ESM-only.
+Requires Node ≥ 20.9 (or Bun/Deno/Workers). Ships dual ESM + CJS, so `require()` and config loaders that resolve the `require` condition (notably `next.config.ts`) work too.
 
 ---
 
@@ -211,6 +211,245 @@ export default {
 
 ---
 
+## Ergonomics
+
+### `devDefault` / `testDefault` — keep production honest
+
+A plain `.default()` on something like `DATABASE_URL` means a misconfigured
+production deploy silently boots against localhost instead of failing loudly.
+`.devDefault()` gives you the convenient local value while leaving the variable
+**strictly required in production**.
+
+```ts
+export const env = defineEnv({
+  schema: {
+    // Required in production; localhost everywhere else.
+    DATABASE_URL: e.url().devDefault('postgres://localhost:5432/dev'),
+    // Deterministic under `NODE_ENV=test`, regardless of the dev value.
+    STRIPE_KEY: e.string().devDefault('sk_test_local').testDefault('sk_test_fixture'),
+  },
+});
+```
+
+Precedence, most specific first: `testDefault` → `devDefault` → `default`. An
+explicitly-set variable always wins over all three.
+
+### `refine` — constraints that span variables
+
+Per-variable `.refine()` cannot express "`SMTP_PASS` is required when
+`SMTP_HOST` is set". Object-level `refine` runs after every variable is coerced
+and folds failures into the same aggregated report:
+
+```ts
+export const env = defineEnv({
+  schema: {
+    SMTP_HOST: e.hostname().optional(),
+    SMTP_PASS: e.string().secret().optional(),
+  },
+  refine: (env) =>
+    env.SMTP_HOST && !env.SMTP_PASS ? 'SMTP_PASS is required when SMTP_HOST is set' : true,
+});
+```
+
+It is skipped when per-variable validation already failed, so a cross-field rule
+never buries the real root cause under a cascade.
+
+### `runtimeEnvStrict` — catch the forgotten mapping at build time
+
+Bundlers inline env access **statically**: Next replaces literal
+`process.env.NEXT_PUBLIC_X`, Vite replaces `import.meta.env.VITE_X`. Declare a
+client variable in the schema but forget its line in `runtimeEnv`, and it is
+simply absent in the browser — discovered in production, not at build.
+
+`runtimeEnvStrict` turns that into a startup error naming the exact keys. It is
+**on by default in the `next` and `vite` presets**, where the mapping is
+mandatory anyway.
+
+```ts
+export const env = defineEnv({
+  server: { DATABASE_URL: e.url() },     // never needs a mapping — server-only
+  client: { NEXT_PUBLIC_API_URL: e.url() },
+  runtimeEnv: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL, // required
+  },
+});
+```
+
+Only `client` and `shared` require mappings — and this is not just a relaxed
+check, it is how values resolve. When you supply `runtimeEnv`, client and shared
+variables read **strictly** from it (the bundler contract: a dynamic fallback
+would produce values in dev that vanish in a production build), while server
+variables fall back to the live `process.env` for any key you did not list.
+
+So you enumerate the client and let the server resolve itself. This mirrors what
+`@t3-oss/env-nextjs` settled on with `experimental__runtimeEnv`, and it means a
+server variable never has to be written out — which matters, because listing it
+hands the bundler the very name we work to keep off the client.
+
+An explicit `runtimeEnv` entry always wins over `process.env`, so you can still
+pin a server value when you want to.
+
+### `.env` cascade order
+
+Vite and Next resolve `.env` files in **different** orders — `.env.local` and
+`.env.[mode]` are swapped:
+
+| Order | Precedence (lowest → highest) |
+|---|---|
+| `vite` (default) | `.env` → `.env.local` → `.env.[mode]` → `.env.[mode].local` |
+| `next` | `.env` → `.env.[mode]` → `.env.local` → `.env.[mode].local` |
+| `bun` | same as `next` |
+
+```ts
+loadEnv({ order: 'next' });
+```
+
+If you have both a `.env.local` and a `.env.production`, this changes which
+value wins. `.env.local` is always skipped under `NODE_ENV=test` so CI and local
+runs agree.
+
+## Configuration guards
+
+These are **config-time** assertions: they fail at import, with a message naming
+the offending key, rather than letting a mistake become a runtime surprise.
+
+### Server variables may not carry the client prefix
+
+```ts
+defineEnv({
+  server: { NEXT_PUBLIC_STRIPE_SECRET: e.string() },  // ❌ throws
+  clientPrefix: 'NEXT_PUBLIC_',
+});
+```
+
+Bundlers inline by **name**, not by which group you filed a variable under.
+Next replaces every literal `process.env.NEXT_PUBLIC_*` and Vite every
+`import.meta.env.VITE_*`, so a prefixed variable is shipped to the browser no
+matter what — and the server/client leak guard cannot protect it, because from
+the bundler's point of view it was never a server variable. Declaring it under
+`server` bought a false sense of safety, so the configuration is refused.
+
+Rename it without the prefix to keep it server-only, or move it to
+`client`/`shared` if it is genuinely safe to expose. `shared` variables **may**
+carry the prefix — being public in both contexts is exactly what the prefix
+advertises.
+
+### A variable may only appear in one group
+
+```ts
+defineEnv({
+  server: { NODE_ENV: e.string() },
+  shared: { NODE_ENV: e.string() },   // ❌ throws
+});
+```
+
+Beyond being ambiguous (which group's validator wins?), this used to crash the
+client leak guard: the value was written onto the frozen result by the `shared`
+group while the key was also listed as server-only, so the Proxy's `ownKeys`
+trap hid an own property of a non-extensible object. That violates a JavaScript
+Proxy invariant, and `Object.keys(env)`, `{ ...env }` and `JSON.stringify(env)`
+all threw `TypeError` on the client.
+
+Pick the group with the widest correct visibility — `shared` when both sides
+need it, `server` when only the server does.
+
+### Empty strings
+
+By default an empty string is treated as **absent**, so `.default()` and
+`.optional()` apply. Shells, CI runners and Docker frequently surface an unset
+variable as `''`, and "set to empty" almost never means the operator chose the
+empty string.
+
+```ts
+defineEnv({
+  schema: { PORT: e.port().default(3000) },
+  runtimeEnv: { PORT: '' },
+});                                        // → PORT = 3000
+```
+
+Set `emptyStringAsUndefined: false` to treat `''` as a real, present value that
+must pass validation:
+
+```ts
+defineEnv({
+  schema: { PORT: e.port().default(3000) },
+  runtimeEnv: { PORT: '' },
+  emptyStringAsUndefined: false,
+});                                        // → throws: not a valid port
+```
+
+Note `e.string()` enforces a **non-empty** string, matching its documented
+contract. Pass an explicit `min` (including `min: 0`) to allow `''`.
+
+## Upgrading from 0.2.x
+
+Everything below is a case that was previously accepted but wrong. If your
+config was correct, nothing changes.
+
+### Behaviour changes
+
+**1. `emptyStringAsUndefined: false` now works.**
+It was documented but was a no-op for every built-in coercer — `Coercer.validate`
+unconditionally treated `''` as absent and overrode the flag. If you set it and
+adapted to the old (broken) result, an empty value now correctly reaches the
+validator and can fail. That is the documented behaviour.
+
+**2. `e.string()` rejects the empty string.**
+Its docstring always said "a non-empty string"; the check simply never ran,
+because `''` could not reach the parser until fix #1. Pass `min: 0` to allow it:
+
+```diff
+- ALLOW_EMPTY: e.string()
++ ALLOW_EMPTY: e.string({ min: 0 })
+```
+
+**3. Server variables carrying the client prefix are now rejected.**
+See [Configuration guards](#configuration-guards). A config like
+`server: { NEXT_PUBLIC_SECRET: ... }` used to be accepted while the value was
+shipped to the browser anyway. Rename the variable, or move it to
+`client`/`shared` if exposure is intended.
+
+**4. A variable declared in two groups is now rejected.**
+Previously accepted, then threw `TypeError` from `Object.keys`/spread/
+`JSON.stringify` on the client. Keep one declaration.
+
+**5. `runtimeEnvStrict` defaults to ON in the `next` and `vite` presets.**
+Those presets require an explicit `runtimeEnv` mapping anyway; now a missing
+entry is a startup error naming the key instead of a variable that is silently
+`undefined` in the browser. Only `client` and `shared` need mappings — never
+`server`. Set `runtimeEnvStrict: false` to opt out.
+
+**6. Secret redaction no longer corrupts messages.**
+The blanket literal scrub is skipped for values under 6 characters, which had
+been rewriting the *expectation*: `e.int({ min: 10 })` receiving `"1"` reported
+`Expected a number >= ***0`. Redaction of real secrets is unchanged — every
+coercer quotes the value it echoes, and quoted fragments are always redacted.
+
+**7. Non-`Promise` thenables now throw instead of vanishing.**
+A Standard Schema returning a cross-realm or polyfilled thenable was read as a
+successful `undefined` and the variable disappeared from the result with **no
+error**. It now raises the same "async validation is not supported" error a
+native promise does.
+
+### Packaging
+
+- **`engines` lowered to `>=20.9.0`** (was `>=24`), and the README's "Node ≥ 22.12
+  / ESM-only" line was wrong on both counts — the package ships dual ESM + CJS.
+- **`sideEffects` is now `["./dist/config.js", "./dist/config.cjs"]`** instead of
+  `false`. `@teispace/env/config` exports nothing and exists purely for its side
+  effect, so `false` permitted bundlers to delete
+  `import '@teispace/env/config'` outright and silently skip the entire `.env`
+  cascade.
+
+### New, purely additive
+
+`devDefault` / `testDefault`, object-level `refine`, `runtimeEnvStrict`, and a
+selectable `.env` cascade `order` (`'vite' | 'next' | 'bun'`) — see
+[Ergonomics](#ergonomics). Cloudflare Workers detection was corrected for
+`nodejs_compat` being on by default since August 2026.
+
+---
+
 ## Robustness
 
 - **Aggregated errors** — every problem reported at once, with the offending value (secrets
@@ -221,7 +460,7 @@ export default {
 - **Frozen output** — the result is `Object.freeze`d; it's the single source of truth.
 - **Never crashes on import** — runtime detection is fully defensive across Node/Bun/Deno/Workers/
   browser.
-- **Zero dependencies**, ESM, fully tree-shakeable, ships types.
+- **Zero dependencies** — and, unlike `@t3-oss/env-*`, no validator peer dependency either: the built-in `e.*` coercers work standalone, and Zod/Valibot/ArkType are optional. Dual ESM + CJS, tree-shakeable, ships types.
 
 ---
 

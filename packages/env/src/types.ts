@@ -67,8 +67,18 @@ export interface Validator<TOut> {
   /**
    * Parse a raw env value. `raw` is `undefined` when the variable is absent.
    * Implementations apply defaults, optionality, coercion, and refinement.
+   *
+   * `treatEmptyAsAbsent` (default `true`) decides whether `''` takes the
+   * absent branch — i.e. whether an empty string gets the `.default()` /
+   * `.optional()` treatment or is parsed as a real, present value. The core
+   * forwards the caller's `emptyStringAsUndefined` here; standalone callers get
+   * the forgiving default. Optional so third-party `Validator`s stay compatible.
    */
-  validate(raw: string | undefined, key: string): ValidatorResult<TOut>;
+  validate(
+    raw: string | undefined,
+    key: string,
+    treatEmptyAsAbsent?: boolean,
+  ): ValidatorResult<TOut>;
   /** Marks the var as client-safe documentation only; the leak guard uses the schema group. */
   readonly meta?: ValidatorMeta;
 }
@@ -143,6 +153,38 @@ export interface DefineEnvOptions<TSchema extends EnvSchema> {
   skipValidation?: boolean;
   /** Treat empty strings as absent (so defaults apply). Default: true. */
   emptyStringAsUndefined?: boolean;
+  /**
+   * Assert that every key in the schema has an explicit entry in `runtimeEnv`.
+   *
+   * This exists for bundler-inlined environments. Next.js replaces literal
+   * `process.env.NEXT_PUBLIC_X` at build time and Vite replaces
+   * `import.meta.env.VITE_X`; neither can see a dynamic read. So if you declare
+   * `NEXT_PUBLIC_API_URL` in the schema but forget the matching
+   * `NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL` line in `runtimeEnv`,
+   * the variable is simply absent in the browser — and you find out at runtime,
+   * in production, instead of at build time.
+   *
+   * With this on, the missing mapping is a startup error naming the exact keys.
+   * Defaults to `false` for the flat model (where `runtimeEnv` is optional and
+   * `process.env` is auto-sourced), and to `true` in the `next` and `vite`
+   * presets, where the mapping is mandatory anyway.
+   */
+  runtimeEnvStrict?: boolean;
+
+  /**
+   * Validate the fully-coerced object as a whole, after every per-variable
+   * validator has run.
+   *
+   * Per-variable `.refine()` cannot express a constraint that spans variables —
+   * "`SMTP_PASS` is required when `SMTP_HOST` is set", "exactly one of
+   * `DATABASE_URL` / `DATABASE_HOST` must be provided". Return `true` to pass,
+   * or a message (or list of messages) to fail. Failures join the same
+   * aggregated report as everything else, so the developer sees them alongside
+   * the per-variable errors rather than in a second, later crash.
+   *
+   * Synchronous only — env validation resolves eagerly at module init.
+   */
+  refine?: (env: Record<string, unknown>) => true | string | string[];
   /** Called with the structured failure instead of throwing. */
   onValidationError?: (error: EnvValidationError) => never | void;
   /** Called when a server var is accessed in a client context. */
@@ -167,6 +209,38 @@ export interface DefineSplitOptions<
   runtimeEnv?: RawEnv;
   skipValidation?: boolean;
   emptyStringAsUndefined?: boolean;
+  /**
+   * Assert that every key in the schema has an explicit entry in `runtimeEnv`.
+   *
+   * This exists for bundler-inlined environments. Next.js replaces literal
+   * `process.env.NEXT_PUBLIC_X` at build time and Vite replaces
+   * `import.meta.env.VITE_X`; neither can see a dynamic read. So if you declare
+   * `NEXT_PUBLIC_API_URL` in the schema but forget the matching
+   * `NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL` line in `runtimeEnv`,
+   * the variable is simply absent in the browser — and you find out at runtime,
+   * in production, instead of at build time.
+   *
+   * With this on, the missing mapping is a startup error naming the exact keys.
+   * Defaults to `false` for the flat model (where `runtimeEnv` is optional and
+   * `process.env` is auto-sourced), and to `true` in the `next` and `vite`
+   * presets, where the mapping is mandatory anyway.
+   */
+  runtimeEnvStrict?: boolean;
+
+  /**
+   * Validate the fully-coerced object as a whole, after every per-variable
+   * validator has run.
+   *
+   * Per-variable `.refine()` cannot express a constraint that spans variables —
+   * "`SMTP_PASS` is required when `SMTP_HOST` is set", "exactly one of
+   * `DATABASE_URL` / `DATABASE_HOST` must be provided". Return `true` to pass,
+   * or a message (or list of messages) to fail. Failures join the same
+   * aggregated report as everything else, so the developer sees them alongside
+   * the per-variable errors rather than in a second, later crash.
+   *
+   * Synchronous only — env validation resolves eagerly at module init.
+   */
+  refine?: (env: Record<string, unknown>) => true | string | string[];
   onValidationError?: (error: EnvValidationError) => never | void;
   onInvalidAccess?: (key: string) => never | void;
 }

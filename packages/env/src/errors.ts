@@ -73,6 +73,12 @@ function renderReceived(received: string | undefined, redact: boolean): string {
  * inlined received value for a secret — including per-element values from
  * `e.array({ of: ... })`, whose element strings are NOT equal to the variable's
  * top-level `received` and so would otherwise survive a literal scrub.
+ *
+ * INVARIANT: every coercer that echoes the offending value MUST quote it (via
+ * the `quote()` helper in `coercers.ts`), because this regex is the only
+ * length-independent redaction pass. An unquoted `received ${value}` escapes it
+ * and is only caught by the literal scrub, which deliberately skips short
+ * values — so an unquoted echo of a short secret would leak.
  */
 const RECEIVED_FRAGMENT_RE = /received "(?:[^"\\]|\\.)*"/g;
 
@@ -89,15 +95,35 @@ const RECEIVED_FRAGMENT_RE = /received "(?:[^"\\]|\\.)*"/g;
 function scrubSecretFromMessage(message: string, received: string, redact: boolean): string {
   if (!redact) return message;
   // (a) Redact any inlined `received "…"` fragment regardless of which value it
-  // holds (top-level, array element, or a nested coercer's own wording).
+  // holds (top-level, array element, or a nested coercer's own wording). This
+  // is the actual leak vector: it is the only place a coercer echoes the input.
   let out = message.replaceAll(RECEIVED_FRAGMENT_RE, `received "${REDACTED}"`);
-  // (b) Belt-and-suspenders for any other literal occurrence of the raw value.
-  if (received !== '') {
+
+  // (b) Belt-and-suspenders for any other literal occurrence of the raw value —
+  // but ONLY for values long enough to be a real secret.
+  //
+  // A short value is a substring of the *expectation*, not just the input, and
+  // blind replacement corrupted the message: with `e.int({ min: 10 })` and a
+  // received value of `"1"`, `replaceAll("1", "***")` rewrote the bound `10`
+  // into `***0`, so the report told the reader the minimum was `***0`. Likewise
+  // a received `"a"` mangled the article in "Expected a string of length >= 8".
+  // Anything that short is not a credential, and (a) has already covered the
+  // echo, so the scrub is pure downside below the threshold.
+  if (received.length >= MIN_SCRUBBABLE_SECRET_LENGTH) {
     const quoted = JSON.stringify(received); // e.g. "s3cr3t" with quotes
     out = out.replaceAll(quoted, `"${REDACTED}"`).replaceAll(received, REDACTED);
   }
   return out;
 }
+
+/**
+ * Below this length a "secret" cannot be meaningfully distinguished from
+ * ordinary words and digits inside a validator's own message, so the blanket
+ * literal scrub in {@link scrubSecretFromMessage} is skipped. Six characters is
+ * shorter than any credential worth protecting and long enough that incidental
+ * collisions with message text are vanishingly unlikely.
+ */
+const MIN_SCRUBBABLE_SECRET_LENGTH = 6;
 
 /** True when the message already states what was received (avoid a duplicate clause). */
 function mentionsReceived(message: string): boolean {

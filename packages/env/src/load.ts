@@ -38,6 +38,12 @@ export interface LoadEnvOptions {
    */
   override?: boolean;
   /**
+   * Which framework's precedence rules to apply to the computed cascade.
+   * Default `'vite'` (unchanged). The `next` preset passes `'next'`.
+   * Ignored when `files` is given explicitly.
+   */
+  order?: CascadeOrder;
+  /**
    * The target bag to read existing values from and write resolved values into
    * (so downstream `process.env.X` works). Default: the detected runtime env
    * (`process.env`). Pass `{}` to parse without mutating the process.
@@ -238,21 +244,49 @@ function expandValue(value: string, lookup: RawEnv): string {
 }
 
 /**
- * Compute the `.env` cascade for a mode, LOWEST precedence first. Mirrors
- * Vite/Next: `.env` < `.env.local` < `.env.[mode]` < `.env.[mode].local`.
+ * The framework whose `.env` precedence rules to follow.
+ *
+ * These genuinely differ, and the difference is silent — the same files produce
+ * different winning values:
+ *
+ * - **vite**   `.env` < `.env.local` < `.env.[mode]` < `.env.[mode].local`
+ * - **next**   `.env` < `.env.[mode]` < `.env.local` < `.env.[mode].local`
+ * - **bun**    `.env` < `.env.[mode]` < `.env.local` < `.env.[mode].local`
+ *
+ * Note `.env.local` and `.env.[mode]` are **swapped** between Vite and Next: on
+ * Vite a mode file beats your local overrides, on Next your local overrides beat
+ * the mode file. This module previously implemented Vite's order while its own
+ * doc comment claimed it "mirrors Vite/Next" — for anyone with both a
+ * `.env.local` and a `.env.production`, that silently resolved the wrong value.
+ */
+export type CascadeOrder = 'vite' | 'next' | 'bun';
+
+/**
+ * Compute the `.env` cascade for a mode, LOWEST precedence first.
  *
  * CONTRACT-NOTE: when `mode === 'test'` we intentionally SKIP `.env.local`.
- * This is a Vite convention — local overrides are developer-machine state and
- * would make test runs non-deterministic across machines/CI, so test mode
- * reads only the committed `.env`, `.env.test`, and `.env.test.local`.
+ * This is a Vite convention that Next.js shares — local overrides are
+ * developer-machine state and would make test runs non-deterministic across
+ * machines and CI, so test mode reads only the committed `.env`, `.env.test`,
+ * and `.env.test.local`.
  */
-export function resolveCascade(mode: string | undefined): string[] {
+export function resolveCascade(mode: string | undefined, order: CascadeOrder = 'vite'): string[] {
   const files = ['.env'];
-  if (mode !== 'test') files.push('.env.local');
-  if (mode) {
-    files.push(`.env.${mode}`);
-    files.push(`.env.${mode}.local`);
+  const localAllowed = mode !== 'test';
+
+  if (order === 'vite') {
+    if (localAllowed) files.push('.env.local');
+    if (mode) {
+      files.push(`.env.${mode}`);
+      files.push(`.env.${mode}.local`);
+    }
+    return files;
   }
+
+  // next / bun: the mode file sits BELOW `.env.local`.
+  if (mode) files.push(`.env.${mode}`);
+  if (localAllowed) files.push('.env.local');
+  if (mode) files.push(`.env.${mode}.local`);
   return files;
 }
 
@@ -288,7 +322,7 @@ export function loadEnv(options: LoadEnvOptions = {}): RawEnv {
   const expand = options.expand ?? true;
   const override = options.override ?? false;
 
-  const files = options.files ?? resolveCascade(mode);
+  const files = options.files ?? resolveCascade(mode, options.order ?? 'vite');
 
   // Merged values from the files only (lowest precedence first → later wins).
   const merged: RawEnv = {};

@@ -20,7 +20,16 @@ export type PresetOptions<
  * function has the exact inference of `defineEnvSplit`, so `env.X` is fully
  * typed and coerced.
  */
-export function createPreset(clientPrefix: string) {
+export function createPreset(
+  clientPrefix: string,
+  /**
+   * Default for `runtimeEnvStrict`. Enabled for bundler-inlined frameworks
+   * (Next, Vite, …) where a schema key with no literal `runtimeEnv` mapping is
+   * silently absent in the browser — the single most common way to ship a
+   * broken client env. Callers can still turn it off explicitly.
+   */
+  defaultRuntimeEnvStrict = false,
+) {
   return function defineEnv<
     TServer extends EnvSchema = Record<never, never>,
     TClient extends EnvSchema = Record<never, never>,
@@ -28,10 +37,10 @@ export function createPreset(clientPrefix: string) {
   >(
     opts: PresetOptions<TServer, TClient, TShared>,
   ): Readonly<InferSplit<TServer, TClient, TShared>> {
-    return defineEnvSplit({ ...opts, clientPrefix } as DefineSplitOptions<
-      TServer,
-      TClient,
-      TShared
-    >);
+    return defineEnvSplit({
+      runtimeEnvStrict: defaultRuntimeEnvStrict,
+      ...opts,
+      clientPrefix,
+    } as DefineSplitOptions<TServer, TClient, TShared>);
   };
 }
