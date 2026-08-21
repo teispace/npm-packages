@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.0.0](https://github.com/teispace/npm-packages/compare/next-maker-v3.0.6...next-maker-v4.0.0) (2026-08-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **next-maker:** `doctor` now exits non-zero when drift survives a `--fix` run. Pipelines that relied on the previous always-green behaviour will correctly start failing when a project has real drift.
+
+### Features
+
+* **next-maker:** make doctor --fix actually repair drift and report truthfully ([58c95e8](https://github.com/teispace/npm-packages/commit/58c95e87e615a0b065955e737f119f8993db2935))
+
 ## [3.0.6](https://github.com/teispace/npm-packages/compare/next-maker-v3.0.5...next-maker-v3.0.6) (2026-06-28)
 
 

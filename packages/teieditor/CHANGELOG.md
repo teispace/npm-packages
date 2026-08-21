@@ -1,5 +1,21 @@
 # Changelog
 
+## [4.0.0](https://github.com/teispace/npm-packages/compare/teieditor-v3.0.1...teieditor-v4.0.0) (2026-08-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **teieditor:** five keyboard shortcuts that never fired now do, so a conflicting user binding on those chords will be claimed by the built-in extensions. The word-count bar renders at the bottom instead of the top; opt out with `showWordCount={false}`. The `config` prop can no longer replace `extensions` or `editable` — it previously discarded the entire starter kit silently. `sideEffects` is now `["*.css"]` rather than `false`, which had permitted bundlers to drop `import '@teispace/teieditor/styles.css'`. `engines.node` lowered to >=20.9.0.
+
+### Features
+
+* **teieditor:** revive dead shortcuts, unblock collaboration, publish a registry ([1ed4585](https://github.com/teispace/npm-packages/commit/1ed4585ac3a64e708feb146f31328066b99ec103))
+
+
+### Bug Fixes
+
+* make two new tests independent of the environment and the build order ([8f95e06](https://github.com/teispace/npm-packages/commit/8f95e060fcaa3c0cb6749fb341e81870b2c4cb81))
+
 ## [3.0.1](https://github.com/teispace/npm-packages/compare/teieditor-v3.0.0...teieditor-v3.0.1) (2026-06-28)
 
 
