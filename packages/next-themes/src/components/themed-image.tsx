@@ -1,6 +1,7 @@
 'use client';
 
 import type { ImgHTMLAttributes } from 'react';
+import type { UseThemeHook } from '../hooks/use-theme';
 import { useTheme } from '../hooks/use-theme';
 import { resolveThemedValue } from './resolve-themed';
 
@@ -29,15 +30,19 @@ export interface ThemedImageProps<T extends string = string>
  * For guaranteed zero-flash SSR with `system` resolution, prefer CSS
  * (`html[data-theme]`-scoped `background-image`) over a JS `src` swap.
  */
-export function ThemedImage<T extends string = string>({
-  sources,
-  fallbackSrc,
-  alt,
-  ...rest
-}: ThemedImageProps<T>): React.JSX.Element | null {
-  const { resolvedTheme, theme } = useTheme<T>();
-  const src = resolveThemedValue(sources, resolvedTheme, theme, fallbackSrc);
-  if (!src) return null;
-  // biome-ignore lint/performance/noImgElement: provider-agnostic primitive; users can wrap with next/image if desired
-  return <img src={src} alt={alt ?? ''} {...rest} />;
+export function makeThemedImage(useThemeHook: UseThemeHook) {
+  return function ThemedImage<T extends string = string>({
+    sources,
+    fallbackSrc,
+    alt,
+    ...rest
+  }: ThemedImageProps<T>): React.JSX.Element | null {
+    const { resolvedTheme, theme } = useThemeHook<T>();
+    const src = resolveThemedValue(sources, resolvedTheme, theme, fallbackSrc);
+    if (!src) return null;
+    // biome-ignore lint/performance/noImgElement: provider-agnostic primitive; users can wrap with next/image if desired
+    return <img src={src} alt={alt ?? ''} {...rest} />;
+  };
 }
+
+export const ThemedImage = makeThemedImage(useTheme);

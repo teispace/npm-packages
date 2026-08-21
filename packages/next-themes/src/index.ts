@@ -21,6 +21,7 @@ export type {
   TransitionType,
 } from './core/types';
 export type { CreateThemesConfig, ThemesApi } from './factory/create-themes';
+export { useHydrated } from './hooks/use-hydrated';
 export { useTheme } from './hooks/use-theme';
 export { useThemeEffect } from './hooks/use-theme-effect';
 export { type ThemeValueMap, useThemeValue } from './hooks/use-theme-value';

@@ -17,6 +17,7 @@ import type { AdapterFactory, StorageAdapter } from './types';
  * eagerly repaired on first hydration so subsequent paints are stable.
  */
 export const hybridAdapter: AdapterFactory = (opts): StorageAdapter => {
+  const { onStorageError } = opts;
   const cookie = cookieAdapter(opts);
   const local = localAdapter(opts);
   return {
@@ -30,8 +31,8 @@ export const hybridAdapter: AdapterFactory = (opts): StorageAdapter => {
         // the browser level.
         try {
           cookie.set(l);
-        } catch (_e) {
-          /* ignore — third-party cookie blocked, etc. */
+        } catch (error) {
+          onStorageError?.(error, { operation: 'set', key: opts.cookie.name });
         }
       }
       return l;
@@ -42,13 +43,13 @@ export const hybridAdapter: AdapterFactory = (opts): StorageAdapter => {
       // sticky for this client.
       try {
         cookie.set(value);
-      } catch (_e) {
-        /* ignore */
+      } catch (error) {
+        onStorageError?.(error, { operation: 'set', key: opts.cookie.name });
       }
       try {
         local.set(value);
-      } catch (_e) {
-        /* ignore */
+      } catch (error) {
+        onStorageError?.(error, { operation: 'set', key: opts.key });
       }
     },
     subscribe(cb) {

@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitest/config';
-import { coverageConfig } from '../../vitest.coverage';
+import { withThresholds } from '../../vitest.coverage';
 
 export default defineConfig({
   test: {
@@ -7,6 +7,6 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['__tests__/setup.ts'],
-    coverage: coverageConfig,
+    coverage: withThresholds({ lines: 85, branches: 76, functions: 81, statements: 82 }),
   },
 });

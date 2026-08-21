@@ -1,27 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef } from 'react';
 import { resolveAdapter } from '../adapters/index';
+import { DefaultThemeContext } from '../core/context';
 import { ensureCursorTracker } from '../core/cursor-tracker';
 import { buildScript } from '../core/script';
 import { createStore, type ThemeStore } from '../core/store';
-import { ThemeStoreContext } from '../hooks/use-theme';
+import { useHydrated } from '../hooks/use-hydrated';
 import { resolveStorageConfig, type ThemeProviderProps } from './props';
-
-const noopSubscribe = (): (() => void) => () => {};
-/**
- * `true` during the server render, `false` once on the client. Implemented via
- * `useSyncExternalStore` so the value is stable across the hydration boundary
- * (server snapshot `true`, client snapshot `false`) without triggering a
- * hydration mismatch.
- */
-function useIsServerRender(): boolean {
-  return useSyncExternalStore(
-    noopSubscribe,
-    () => false,
-    () => true,
-  );
-}
 
 const DISABLE_CSS =
   '*,*::before,*::after{-webkit-transition:none!important;transition:none!important;-moz-transition:none!important;-o-transition:none!important;}';
@@ -58,6 +44,8 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     scriptProps,
     transition,
     onChange,
+    onStorageError,
+    themeContext,
   } = props;
 
   const {
@@ -66,8 +54,15 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     cookieOptions: resolvedCookieOptions,
   } = resolveStorageConfig(storage, storageKey, cookieOptions);
 
+  const Context = themeContext ?? DefaultThemeContext;
+
   const storeRef = useRef<ThemeStore | null>(null);
-  if (!storeRef.current) {
+  // NOTE: `storeRef.current === null` — NOT `!storeRef.current`.
+  // React Compiler's ValidateNoRefAccessInRender treats a `!ref.current` unary
+  // read during render as an error ("Cannot access refs during render") and
+  // bails on the whole component, but explicitly allows the lazy-init guard
+  // written as a comparison against null. Same behaviour, compiler-clean.
+  if (storeRef.current === null) {
     storeRef.current = createStore({
       themes,
       defaultTheme,
@@ -86,6 +81,7 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
         mode: storageMode,
         key: resolvedStorageKey,
         cookieOptions: resolvedCookieOptions,
+        onStorageError,
       }),
       transition,
       onChange,
@@ -94,7 +90,9 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
 
   // True only during SSR + the hydration render; flips to false immediately
   // after on the client. Drives whether we emit the inline <script> (see below).
-  const isServerRender = useIsServerRender();
+  // Inverted: the script is emitted only while NOT yet hydrated (i.e. during
+  // the server render and the matching hydration render).
+  const isServerRender = !useHydrated();
 
   useEffect(() => {
     const s = storeRef.current;
@@ -162,7 +160,7 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
         });
 
   return (
-    <ThemeStoreContext.Provider value={storeRef.current}>
+    <Context.Provider value={storeRef.current}>
       {script ? (
         <script
           suppressHydrationWarning
@@ -173,6 +171,6 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
         />
       ) : null}
       {children}
-    </ThemeStoreContext.Provider>
+    </Context.Provider>
   );
 }

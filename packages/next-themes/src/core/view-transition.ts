@@ -8,6 +8,12 @@ const STYLE_MARKER = 'data-teispace-vt';
 export interface ResolvedTransition {
   css: string;
   duration: number;
+  /**
+   * A second view-transition type naming the resolved theme (e.g. `'dark'`), so
+   * CSS can distinguish "switching to dark" from "switching to light" without
+   * reading any attribute.
+   */
+  typeName: string;
 }
 
 /** Normalize any shorthand into a full options object, or `null` if disabled. */
@@ -32,6 +38,8 @@ function resolveOrigin(
 export function resolveTransition(
   config: TransitionConfig | undefined,
   respectReducedMotion: boolean,
+  /** The concrete theme being switched to; surfaced as a view-transition type. */
+  typeName = 'theme',
 ): ResolvedTransition | null {
   const opts = toOptions(config);
   if (!opts) return null;
@@ -47,17 +55,17 @@ export function resolveTransition(
   const duration = opts.duration ?? 250;
   const easing = opts.easing ?? 'ease';
 
-  if (opts.css) return { css: opts.css, duration };
+  if (opts.css) return { css: opts.css, duration, typeName };
 
   const type = opts.type ?? 'fade';
-  if (type === 'fade') return { css: fadeCss(duration, easing), duration };
+  if (type === 'fade') return { css: fadeCss(duration, easing), duration, typeName };
   if (type === 'circular') {
     const viewport = {
       w: isDom() ? window.innerWidth : 1024,
       h: isDom() ? window.innerHeight : 768,
     };
     const origin = resolveOrigin(opts.origin, viewport);
-    return { css: circularCss(origin, duration, easing), duration };
+    return { css: circularCss(origin, duration, easing), duration, typeName };
   }
   return null;
 }
@@ -86,14 +94,50 @@ function circularCss(origin: { x: number; y: number }, duration: number, easing:
 }`;
 }
 
-type StartViewTransitionFn = (cb: () => void | Promise<void>) =>
-  | {
-      ready?: Promise<void>;
-      finished?: Promise<void>;
-      updateCallbackDone?: Promise<void>;
-      skipTransition?: () => void;
-    }
-  | undefined;
+interface ViewTransitionHandle {
+  ready?: Promise<void>;
+  finished?: Promise<void>;
+  updateCallbackDone?: Promise<void>;
+  skipTransition?: () => void;
+}
+
+/**
+ * Both call shapes of the API. The callback form is View Transitions level 1;
+ * the options form (level 2) adds `types`, which stamps the transition so CSS
+ * can target it with `:active-view-transition-type()`.
+ */
+type StartViewTransitionFn = (
+  cbOrOptions:
+    | (() => void | Promise<void>)
+    | { update: () => void | Promise<void>; types?: string[] },
+) => ViewTransitionHandle | undefined;
+
+/** The transition type we stamp on every theme change. */
+const VT_TYPE = 'theme';
+
+/**
+ * Whether the engine supports View Transition *types*.
+ *
+ * Detected via `:active-view-transition-type()` selector support rather than
+ * the arity of `startViewTransition`, because passing an options object to an
+ * engine that only implements level 1 does not throw — it silently treats the
+ * object as the callback and the transition never runs. Selector support is the
+ * honest proxy for "this engine understands types", and it is exactly what a
+ * consumer would write CSS against.
+ *
+ * Cross-browser as of 2026 (Chrome/Edge 125, Safari 18.2, Firefox 147).
+ */
+function supportsTransitionTypes(): boolean {
+  try {
+    return (
+      typeof CSS !== 'undefined' &&
+      typeof CSS.supports === 'function' &&
+      CSS.supports('selector(:active-view-transition-type(theme))')
+    );
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Run `apply()` wrapped in a View Transition if supported; otherwise apply
@@ -122,9 +166,18 @@ export function startViewTransition(apply: () => void, transition: ResolvedTrans
     if (style.parentNode) style.parentNode.removeChild(style);
   };
 
-  const vt = d.startViewTransition(() => {
-    apply();
-  });
+  // Stamp the transition with a type when the engine supports it, so consumers
+  // can style theme changes from their own stylesheet:
+  //
+  //   :root(:active-view-transition-type(theme)) &::view-transition-old(root) { ... }
+  //
+  // We still inject our own <style> for the built-in fade/circular animations;
+  // the type is additive and costs nothing when unused.
+  const vt = supportsTransitionTypes()
+    ? d.startViewTransition({ update: () => apply(), types: [VT_TYPE, transition.typeName] })
+    : d.startViewTransition(() => {
+        apply();
+      });
 
   if (vt?.finished && typeof vt.finished.then === 'function') {
     vt.finished.then(cleanup, cleanup);

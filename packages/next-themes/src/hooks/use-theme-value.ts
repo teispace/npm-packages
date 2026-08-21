@@ -1,10 +1,33 @@
 'use client';
 
+import type { UseThemeHook } from './use-theme';
 import { useTheme } from './use-theme';
 
 export type ThemeValueMap<T extends string, V> = Partial<Record<T | 'system', V>> & {
   default?: V;
 };
+
+export type UseThemeValueHook = <V, T extends string = string>(
+  map: ThemeValueMap<T, V>,
+) => V | undefined;
+
+/**
+ * Build a `useThemeValue` bound to a specific `useTheme`, so a factory-created
+ * API reads from its own context. See `makeUseTheme` for the why.
+ */
+export function makeUseThemeValue(useThemeHook: UseThemeHook): UseThemeValueHook {
+  return function useThemeValue<V, T extends string = string>(
+    map: ThemeValueMap<T, V>,
+  ): V | undefined {
+    const { theme, resolvedTheme } = useThemeHook<T>();
+    const resolvedKey = resolvedTheme as T;
+    const selectedKey = theme as T | 'system';
+    const hasOwn = (k: string): boolean => Object.hasOwn(map, k);
+    if (hasOwn(resolvedKey)) return map[resolvedKey];
+    if (hasOwn(selectedKey)) return map[selectedKey];
+    return map.default;
+  };
+}
 
 /**
  * Map the active theme to a value. Resolved theme is preferred (so `'system'`
@@ -14,14 +37,4 @@ export type ThemeValueMap<T extends string, V> = Partial<Record<T | 'system', V>
  * @example
  *   const color = useThemeValue({ light: '#fff', dark: '#000', default: '#fff' });
  */
-export function useThemeValue<V, T extends string = string>(
-  map: ThemeValueMap<T, V>,
-): V | undefined {
-  const { theme, resolvedTheme } = useTheme<T>();
-  const resolvedKey = resolvedTheme as T;
-  const selectedKey = theme as T | 'system';
-  const hasOwn = (k: string): boolean => Object.hasOwn(map, k);
-  if (hasOwn(resolvedKey)) return map[resolvedKey];
-  if (hasOwn(selectedKey)) return map[selectedKey];
-  return map.default;
-}
+export const useThemeValue: UseThemeValueHook = makeUseThemeValue(useTheme);

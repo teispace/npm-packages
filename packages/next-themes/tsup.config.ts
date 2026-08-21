@@ -10,6 +10,17 @@ export default defineConfig({
     adapters: 'src/adapters.ts',
     script: 'src/script.ts',
     tailwind: 'src/tailwind.ts',
+    // Fine-grained entries. A leaf component that only needs `useTheme()`
+    // should not pull the providers, the factory, and every themed component
+    // in with it. Code-splitting keeps the shared store in ONE chunk that all
+    // of these import, so there is still exactly one context at runtime.
+    'hooks/use-theme': 'src/hooks/use-theme.ts',
+    'hooks/use-theme-value': 'src/hooks/use-theme-value.ts',
+    'hooks/use-theme-effect': 'src/hooks/use-theme-effect.ts',
+    'hooks/use-hydrated': 'src/hooks/use-hydrated.ts',
+    'components/themed-image': 'src/components/themed-image.tsx',
+    'components/themed-icon': 'src/components/themed-icon.tsx',
+    'components/scoped-theme': 'src/components/scoped-theme.tsx',
   },
   format: ['esm'],
   dts: true,
@@ -39,7 +50,17 @@ export default defineConfig({
     // server file without needing to write their own `'use client'`
     // wrapper. The /server, /adapters, /script, /tailwind entries stay
     // free of the directive — they are universal/server-safe.
-    const CLIENT_ENTRIES = ['index.js', 'client.js'];
+    const CLIENT_ENTRIES = [
+      'index.js',
+      'client.js',
+      'hooks/use-theme.js',
+      'hooks/use-theme-value.js',
+      'hooks/use-theme-effect.js',
+      'hooks/use-hydrated.js',
+      'components/themed-image.js',
+      'components/themed-icon.js',
+      'components/scoped-theme.js',
+    ];
     for (const name of CLIENT_ENTRIES) {
       const path = join(distDir, name);
       if (!existsSync(path)) continue;

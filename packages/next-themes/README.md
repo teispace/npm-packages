@@ -40,6 +40,7 @@ yarn add @teispace/next-themes
   - [Tailwind v4](#tailwind-v4)
   - [Tailwind v3](#tailwind-v3)
 - [Storage adapters (advanced)](#storage-adapters-advanced)
+- [Upgrading from 2.x](#upgrading-from-2x)
 - [Migration from `next-themes`](#migration-from-next-themes)
 - [Full API reference](#full-api-reference)
   - [`ThemeProvider` props](#themeprovider-props)
@@ -302,16 +303,70 @@ export default async function RootLayout({ children }) {
 }
 ```
 
+#### With Next.js 16 Cache Components (`cacheComponents: true`)
+
+**The snippet above will not build with `cacheComponents: true`.** Cache Components
+makes reading `cookies()` outside a cache boundary a build error, and that
+includes a `getTheme()` call at the top level of a layout — `getTheme()` reads
+the theme cookie.
+
+This is not a problem for zero-flash rendering. The inline anti-FOUC script is
+what prevents the flash, and it needs no request data at all: it reads the
+cookie in the browser before first paint. `initialTheme` is only there to seed
+the *React* tree so theme-dependent components (`<ThemedImage>`, `<ThemedIcon>`,
+anything branching on `useTheme()`) render the right thing during SSR.
+
+So you have three options, in order of preference:
+
+**1. Drop `initialTheme` from the layout.** The script still eliminates the
+flash. Do this unless you render theme-dependent markup on the server.
+
+```tsx
+export default function RootLayout({ children }) {
+  return (
+    <html suppressHydrationWarning>
+      <body>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+**2. Read the cookie inside a `'use cache: private'` boundary.** That directive
+is allowed to call `cookies()`, and its result is cached per-browser and never
+on the server.
+
+```tsx
+async function ThemeShell({ children }: { children: React.ReactNode }) {
+  'use cache: private';
+  const initialTheme = await getTheme();
+  return <ThemeProvider initialTheme={initialTheme ?? undefined}>{children}</ThemeProvider>;
+}
+```
+
+**3. Opt the segment out** with `export const instant = false` if you want the
+old request-time behaviour for that route.
+
+> **Do not let a per-user value reach the inline script.** The script is emitted
+> through `useServerInsertedHTML`, so it becomes part of the prerendered static
+> shell. Passing a request-derived `initialTheme` or `forcedTheme` bakes one
+> user's theme into a shell served to everyone. Seed the React tree (option 2)
+> rather than the script.
+
+
 ### Reading the theme in middleware (sync, from `Request`)
 
 `getTheme()` has a sync overload that reads directly from a `Request` object — no `await`, no `next/headers`. Use this in middleware, edge functions, route rewriters, or anywhere you have a `Request` but no Next.js async context.
 
 ```ts
-// middleware.ts
+// proxy.ts  (Next.js 16 renamed middleware.ts -> proxy.ts, and the exported
+// function from `middleware` to `proxy`. On Next 15 and earlier use
+// middleware.ts / export function middleware.)
 import { NextResponse, type NextRequest } from 'next/server';
 import { getTheme } from '@teispace/next-themes/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const theme = getTheme(request, { defaultTheme: 'system' });
   // Branch on the theme: rewrite, set a header, redirect, etc.
   const res = NextResponse.next();
@@ -326,20 +381,36 @@ The sync overload reads the cookie *and* the `Sec-CH-Prefers-Color-Scheme` hint 
 const theme = getTheme(request, { themes: ['light', 'dark'], defaultTheme: 'light' });
 ```
 
+**Pass the whitelist `as const` and the return type narrows to it**, so server
+code can branch exhaustively without re-narrowing:
+
+```ts
+const theme = getTheme(request, { themes: ['light', 'dark'] as const });
+//    ^? 'light' | 'dark' | 'system' | null
+
+// Without `as const` (or without `themes`) you get the wider `string | null`.
+```
+
+`'system'` is always included — it is a legitimate stored value that the
+provider resolves — and `null` means neither the cookie nor the client hint
+supplied anything.
+
 > **When to use which overload**
 > - `await getTheme()` — Server Components, Route Handlers (uses `cookies()` / `headers()` from `next/headers`).
-> - `getTheme(request)` — middleware, edge functions, custom servers (works on the raw `Request`, no Next.js binding).
+> - `getTheme(request)` — proxy/middleware, edge functions, custom servers (works on the raw `Request`, no Next.js binding).
 
 ### Prefers-color-scheme client hint
 
-Modern browsers can send `Sec-CH-Prefers-Color-Scheme: light|dark` on each request — but only after the server asks for it via `Accept-CH`. With this hint, a first-time visitor with no cookie still gets zero-flash SSR matching their OS preference.
+Chromium browsers can send `Sec-CH-Prefers-Color-Scheme: light|dark` on each request — but only after the server asks for it via `Accept-CH`. With this hint, a first-time visitor with no cookie still gets zero-flash SSR matching their OS preference.
+
+> **Coverage.** `Sec-CH-Prefers-Color-Scheme` and `Accept-CH` are Chromium-only — Chrome, Edge and Chrome for Android 93+. Firefox and Safari do not send the hint and there is no sign they will. Treat this as a progressive enhancement for the majority of traffic, not a general zero-flash solution: the inline script is what guarantees no flash everywhere else.
 
 ```ts
-// middleware.ts
+// proxy.ts  (middleware.ts on Next 15 and earlier)
 import { NextResponse } from 'next/server';
 import { acceptClientHintsHeader } from '@teispace/next-themes/server';
 
-export function middleware() {
+export function proxy() {
   const res = NextResponse.next();
   res.headers.set('Accept-CH', acceptClientHintsHeader());
   // → 'Accept-CH: Sec-CH-Prefers-Color-Scheme'
@@ -431,6 +502,42 @@ Per-use props on the returned `ThemeProvider` override the factory defaults, so 
 **When to use the factory vs. the generic hook.** The factory gives perfect inference from a single config. The generic `useTheme<T>()` takes a type parameter per-call and is handy for quick prototyping. Use the factory for shipped code.
 
 ---
+
+### Each factory owns its own context
+
+`createThemes()` mints a **private React context** and binds its provider, hooks
+and components to it. Two independently-created theme APIs therefore never see
+each other's store, and can be nested:
+
+```tsx
+// app/theme.ts   — the app shell
+export const Shell = createThemes({ themes: ['light', 'dark'] as const });
+
+// widgets/embed-theme.ts — an embedded widget with its own palette
+export const Widget = createThemes({
+  themes: ['alpha', 'beta'] as const,
+  attribute: 'data-widget-theme',   // a distinct attribute avoids DOM contention
+});
+```
+
+```tsx
+<Shell.ThemeProvider>
+  <Header />                       {/* Shell.useTheme() → 'light' | 'dark' */}
+  <Widget.ThemeProvider>
+    <Embed />                      {/* Widget.useTheme() → 'alpha' | 'beta'   */}
+  </Widget.ThemeProvider>
+</Shell.ThemeProvider>
+```
+
+A factory hook used outside its own provider stays **inert** (`theme: ''`,
+`themes: []`) rather than silently falling through to a neighbouring API's
+store — so `themes.length === 0` remains a reliable "not mounted yet" check.
+
+> **Changed in 3.0.** Previously every hook and component read one
+> module-level context, so two `createThemes()` APIs collided: whichever
+> provider sat nearest in the tree served *both* hook sets, and an embedded
+> widget could report the shell's themes. See
+> [Upgrading from 2.x](#upgrading-from-2x).
 
 ## Hooks
 
@@ -714,6 +821,72 @@ a.set('dark');
 
 ---
 
+## Upgrading from 2.x
+
+Most apps need **no changes**. Everything below is either additive or affects a
+setup that was already behaving incorrectly.
+
+### Breaking
+
+**1. Each `createThemes()` gets its own context.**
+If you called `createThemes()` **once**, nothing changes. If you called it more
+than once, the APIs were previously sharing a single module-level context —
+whichever provider was nearest in the tree served *all* of them, so a second
+API could silently report the first one's themes. They are now isolated.
+
+*Symptom of relying on the old behaviour:* a hook from factory **A** used
+without an `A.ThemeProvider` above it used to pick up **B**'s provider; it now
+returns the inert state (`theme: ''`, `themes: []`). The fix is to render the
+matching provider, which is what the code always meant.
+
+```diff
+  <B.ThemeProvider>
++   <A.ThemeProvider>
+      <ComponentUsingAUseTheme />
++   </A.ThemeProvider>
+  </B.ThemeProvider>
+```
+
+**2. `main` removed from `package.json`.**
+It pointed at an ESM file, which misled CJS resolvers into `require()`-ing ESM.
+The package is ESM-only and declares that through `exports`. Tooling that
+resolved via `main` and appeared to work was relying on a broken path; use a
+bundler or Node ≥ 20.9 with ESM.
+
+**3. Cookies now default to `Secure` on HTTPS.**
+Previously `Secure` was opt-in, so the theme cookie was sent in cleartext on
+otherwise-secure sites. It is now set automatically when
+`location.protocol === 'https:'`. Pass `cookieOptions={{ secure: false }}` to
+opt out (e.g. a plain-HTTP staging host reached over a non-TLS origin).
+Server-side callers (`setThemeCookie`, `writeThemeCookie`) are unaffected —
+there is no `location` there, so pass `secure` explicitly.
+
+### Not breaking, but worth acting on
+
+- **`engines` lowered to `>=20.9.0`.** 2.x declared `>=24`, which blocked or
+  warned on Node 20/22 LTS for no technical reason. Next.js 16 itself only
+  requires 20.9.
+- **`sideEffects` is now `["*.css"]` instead of `false`.** The old value told
+  bundlers every module was side-effect-free, which permitted them to drop
+  `import '@teispace/next-themes/tailwind.css'` — an import with no bindings is
+  exactly what that flag licenses eliding. If your Tailwind preset ever
+  mysteriously failed to apply, this was why.
+- **Fine-grained subpath exports.** Importing `useTheme` from the package root
+  pulls a ~7.8 kB chunk; `@teispace/next-themes/hooks/use-theme` is 509 B. See
+  [Exports by subpath](#exports-by-subpath).
+- **`useHydrated()`** and **`onStorageError`** are new — see their sections.
+- **View transitions are now typed.** `types: ['theme', '<resolvedTheme>']` is
+  passed where supported, so you can style from CSS instead of the `css` option.
+- **`getTheme()` infers literal themes** when you pass `themes` `as const`.
+
+### Nothing to do
+
+`ThemeProvider` props, `useTheme`, `useThemeValue`, `useThemeEffect`,
+`<ThemedImage>`, `<ThemedIcon>`, `<ScopedTheme>`, storage modes, the inline
+script, and the server helpers are all source-compatible with 2.x.
+
+---
+
 ## Migration from `next-themes`
 
 The API is drop-in compatible for almost every `next-themes` app. Run the codemod:
@@ -752,6 +925,7 @@ npx jscodeshift --parser=tsx \
 
 | # | Issue | How we fix it |
 |---|---|---|
+| #397 | React 19.2 *"Encountered a script tag while rendering React component"* when the provider client-remounts (e.g. an `app/[lang]` locale switch) | The Next entry never renders the script into the React tree at all (`useServerInsertedHTML`); the generic entry emits it only while un-hydrated and drops it on the first client commit. |
 | #389 | `localStorage.getItem is not a function` on Node 25 (`window === globalThis`) | Capability probes (`hasLocalStorage()`, `isDom()`, ...) instead of `typeof window` checks. |
 | #387 / #385 | Inline `<script>` warning in React 19 / Next 16 | Script injected via `useServerInsertedHTML`, or out of the React tree via `getThemeScript()` in `<head>`. |
 | #375 | Stale theme with `cacheComponents` / `Activity` | Store lives outside React via `useSyncExternalStore` — never stale. |
@@ -862,6 +1036,52 @@ interface ThemeState {
 }
 ```
 
+### `useHydrated()`
+
+`false` during the server render and the hydration render, `true` afterwards.
+Use it to gate browser-only UI without a hydration mismatch.
+
+```tsx
+import { useHydrated } from '@teispace/next-themes/hooks/use-hydrated';
+
+const hydrated = useHydrated();
+return <span>{hydrated ? resolvedTheme : null}</span>;
+```
+
+You usually don't need it for theming itself — `<ThemedImage>`, `<ThemedIcon>`
+and `useTheme()` already read the store's seeded server snapshot.
+
+### `onStorageError`
+
+Storage failures are non-fatal by design (Safari private mode, sandboxed
+iframes, disabled cookies, quota exceeded) — theming must never break because
+persistence did. They used to be silent, which made "my theme doesn't stick"
+undebuggable. Wire this to your logger:
+
+```tsx
+<ThemeProvider
+  onStorageError={(error, { operation, key }) => {
+    reportToSentry(error, { tags: { operation, key } });
+  }}
+>
+```
+
+### View transition types
+
+Theme changes are stamped with view-transition types — `theme` plus the resolved
+theme name — so you can style them from your own CSS instead of passing a `css`
+string:
+
+```css
+:root(:active-view-transition-type(dark))::view-transition-new(root) {
+  animation: slide-in 300ms ease;
+}
+```
+
+Applied only on engines that support `:active-view-transition-type()`
+(Chrome/Edge 125+, Safari 18.2+, Firefox 147+); elsewhere the built-in
+`fade`/`circular` CSS still runs.
+
 ### Exports by subpath
 
 | Import | Purpose |
@@ -874,6 +1094,22 @@ interface ThemeState {
 | `@teispace/next-themes/tailwind` | v3 `darkMode` + `themeVariant(name)` helpers |
 | `@teispace/next-themes/tailwind.css` | v4 CSS preset (import in your global CSS) |
 | `@teispace/next-themes/codemod/from-next-themes` | jscodeshift transform file |
+
+**Fine-grained entries.** Import a single hook or component when you don't need
+the rest of the package — a leaf that only reads the theme shouldn't pull in the
+providers, the factory, and every themed component. All of these share one
+internal chunk, so there is still exactly one store and one context at runtime.
+
+| Import | gzip (transitive) |
+|---|---|
+| `@teispace/next-themes/hooks/use-theme` | 509 B |
+| `@teispace/next-themes/hooks/use-theme-value` | 601 B |
+| `@teispace/next-themes/hooks/use-theme-effect` | 613 B |
+| `@teispace/next-themes/hooks/use-hydrated` | 177 B |
+| `@teispace/next-themes/components/themed-image` | 708 B |
+| `@teispace/next-themes/components/themed-icon` | 693 B |
+| `@teispace/next-themes/components/scoped-theme` | 541 B |
+| *(full `@teispace/next-themes` entry, for comparison)* | 7,797 B |
 
 ---
 

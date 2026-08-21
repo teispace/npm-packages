@@ -13,6 +13,8 @@ export interface ResolveAdapterOptions {
   mode: StorageMode;
   key: string;
   cookieOptions?: CookieOptions;
+  /** Forwarded to every adapter; see {@link AdapterOptions.onStorageError}. */
+  onStorageError?: AdapterOptions['onStorageError'];
 }
 
 export function resolveAdapter(opts: ResolveAdapterOptions): StorageAdapter {
@@ -29,6 +31,7 @@ export function resolveAdapter(opts: ResolveAdapterOptions): StorageAdapter {
       sameSite: opts.cookieOptions?.sameSite,
       secure: opts.cookieOptions?.secure,
     },
+    onStorageError: opts.onStorageError,
   };
   switch (opts.mode) {
     case 'cookie':

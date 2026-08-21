@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import type { UseThemeHook } from '../hooks/use-theme';
 import { useTheme } from '../hooks/use-theme';
 import { resolveThemedValue } from './resolve-themed';
 
@@ -26,11 +27,15 @@ export interface ThemedIconProps<T extends string = string> {
  * component renders a fragment, so add `suppressHydrationWarning` to a
  * wrapping element you control in that case.
  */
-export function ThemedIcon<T extends string = string>({
-  variants,
-  fallback = null,
-}: ThemedIconProps<T>): React.JSX.Element {
-  const { resolvedTheme, theme } = useTheme<T>();
-  const node = resolveThemedValue(variants, resolvedTheme, theme, fallback);
-  return <>{node ?? null}</>;
+export function makeThemedIcon(useThemeHook: UseThemeHook) {
+  return function ThemedIcon<T extends string = string>({
+    variants,
+    fallback = null,
+  }: ThemedIconProps<T>): React.JSX.Element {
+    const { resolvedTheme, theme } = useThemeHook<T>();
+    const node = resolveThemedValue(variants, resolvedTheme, theme, fallback);
+    return <>{node ?? null}</>;
+  };
 }
+
+export const ThemedIcon = makeThemedIcon(useTheme);

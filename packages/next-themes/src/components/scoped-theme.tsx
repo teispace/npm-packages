@@ -1,9 +1,9 @@
 'use client';
 
 import { type ElementType, type ReactNode, useMemo } from 'react';
+import { DefaultThemeContext, type ThemeContext } from '../core/context';
 import type { ThemeStore } from '../core/store';
 import type { Attribute, Listener, ThemeState } from '../core/types';
-import { ThemeStoreContext } from '../hooks/use-theme';
 
 export interface ScopedThemeProps<T extends string = string> {
   /** The theme to apply to this sub-tree. */
@@ -28,37 +28,41 @@ export interface ScopedThemeProps<T extends string = string> {
  * no DOM root mutation — only a wrapper element with the appropriate
  * attribute(s) and an overriding React context.
  */
-export function ScopedTheme<T extends string = string>({
-  theme,
-  children,
-  as: Component = 'div',
-  attribute = 'class',
-  value,
-  className,
-  style,
-  ...rest
-}: ScopedThemeProps<T> & Record<string, unknown>): React.JSX.Element {
-  const store = useMemo<ThemeStore>(() => makeScopedStore(theme), [theme]);
-  const applied = value?.[theme] ?? theme;
-  const attrs = Array.isArray(attribute) ? attribute : [attribute];
+export function makeScopedTheme(Context: ThemeContext) {
+  return function ScopedTheme<T extends string = string>({
+    theme,
+    children,
+    as: Component = 'div',
+    attribute = 'class',
+    value,
+    className,
+    style,
+    ...rest
+  }: ScopedThemeProps<T> & Record<string, unknown>): React.JSX.Element {
+    const store = useMemo<ThemeStore>(() => makeScopedStore(theme), [theme]);
+    const applied = value?.[theme] ?? theme;
+    const attrs = Array.isArray(attribute) ? attribute : [attribute];
 
-  const scopedProps: Record<string, unknown> = { style, ...rest };
-  let classNames = className;
-  for (const attr of attrs) {
-    if (attr === 'class') {
-      classNames = classNames ? `${classNames} ${applied}` : applied;
-    } else {
-      scopedProps[attr] = applied;
+    const scopedProps: Record<string, unknown> = { style, ...rest };
+    let classNames = className;
+    for (const attr of attrs) {
+      if (attr === 'class') {
+        classNames = classNames ? `${classNames} ${applied}` : applied;
+      } else {
+        scopedProps[attr] = applied;
+      }
     }
-  }
-  if (classNames) scopedProps.className = classNames;
+    if (classNames) scopedProps.className = classNames;
 
-  return (
-    <ThemeStoreContext.Provider value={store}>
-      <Component {...scopedProps}>{children}</Component>
-    </ThemeStoreContext.Provider>
-  );
+    return (
+      <Context.Provider value={store}>
+        <Component {...scopedProps}>{children}</Component>
+      </Context.Provider>
+    );
+  };
 }
+
+export const ScopedTheme = makeScopedTheme(DefaultThemeContext);
 
 function makeScopedStore(theme: string): ThemeStore {
   const state: ThemeState = {

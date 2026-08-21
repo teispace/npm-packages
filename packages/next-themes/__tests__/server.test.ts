@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import { acceptClientHintsHeader, readColorSchemeHint } from '../src/server/client-hint';
 import { getTheme, getThemeScript, setThemeCookie } from '../src/server/get-theme';
 
@@ -189,5 +189,43 @@ describe('getThemeScript', () => {
 
   it('contains no esbuild __name artifacts', () => {
     expect(getThemeScript({})).not.toMatch(/__name\(/);
+  });
+});
+
+// ===========================================================================
+// Regression: `themes` as a literal tuple should narrow the return type.
+// Previously getTheme() always returned `string | null`, forcing server code
+// to re-narrow before it could branch exhaustively.
+// ===========================================================================
+
+describe('getTheme: literal theme inference', () => {
+  it('narrows the sync (Request) overload to the theme union', () => {
+    const req = new Request('https://example.com', {
+      headers: { cookie: 'theme=dark' },
+    });
+    const theme = getTheme(req, { themes: ['light', 'dark'] as const });
+    expectTypeOf(theme).toEqualTypeOf<'light' | 'dark' | 'system' | null>();
+    expect(theme).toBe('dark');
+  });
+
+  it('rejects a value outside the whitelist', () => {
+    const req = new Request('https://example.com', {
+      headers: { cookie: 'theme=neon' },
+    });
+    expect(getTheme(req, { themes: ['light', 'dark'] as const })).toBeNull();
+  });
+
+  it("still accepts 'system' as a stored value", () => {
+    const req = new Request('https://example.com', {
+      headers: { cookie: 'theme=system' },
+    });
+    expect(getTheme(req, { themes: ['light', 'dark'] as const })).toBe('system');
+  });
+
+  it('falls back to `string | null` when no themes are supplied', () => {
+    const req = new Request('https://example.com', { headers: { cookie: 'theme=whatever' } });
+    const theme = getTheme(req);
+    expectTypeOf(theme).toEqualTypeOf<string | null>();
+    expect(theme).toBe('whatever');
   });
 });

@@ -265,7 +265,11 @@ export function createStore(opts: StoreOptions): ThemeStore {
     };
 
     const effective = options?.transition !== undefined ? options.transition : transition;
-    const resolvedVt = resolveTransition(effective, respectReducedMotion);
+    // Resolve the concrete target theme up front so it can be stamped as a
+    // view-transition type (`types: ['theme', 'dark']`), letting consumers write
+    // direction-aware CSS without reading any DOM attribute.
+    const targetResolved = theme === 'system' ? getSystemTheme() : theme;
+    const resolvedVt = resolveTransition(effective, respectReducedMotion, targetResolved);
     if (resolvedVt) {
       startViewTransition(() => doApply(true), resolvedVt);
     } else {

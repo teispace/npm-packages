@@ -3,10 +3,10 @@
 import { useServerInsertedHTML } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { resolveAdapter } from '../adapters/index';
+import { DefaultThemeContext } from '../core/context';
 import { ensureCursorTracker } from '../core/cursor-tracker';
 import { buildScript } from '../core/script';
 import { createStore, type ThemeStore } from '../core/store';
-import { ThemeStoreContext } from '../hooks/use-theme';
 import { resolveStorageConfig, type ThemeProviderProps } from './props';
 
 const DISABLE_CSS =
@@ -42,6 +42,8 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     scriptProps,
     transition,
     onChange,
+    onStorageError,
+    themeContext,
   } = props;
 
   const {
@@ -50,8 +52,15 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     cookieOptions: resolvedCookieOptions,
   } = resolveStorageConfig(storage, storageKey, cookieOptions);
 
+  const Context = themeContext ?? DefaultThemeContext;
+
   const storeRef = useRef<ThemeStore | null>(null);
-  if (!storeRef.current) {
+  // NOTE: `storeRef.current === null` — NOT `!storeRef.current`.
+  // React Compiler's ValidateNoRefAccessInRender treats a `!ref.current` unary
+  // read during render as an error ("Cannot access refs during render") and
+  // bails on the whole component, but explicitly allows the lazy-init guard
+  // written as a comparison against null. Same behaviour, compiler-clean.
+  if (storeRef.current === null) {
     storeRef.current = createStore({
       themes,
       defaultTheme,
@@ -70,6 +79,7 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
         mode: storageMode,
         key: resolvedStorageKey,
         cookieOptions: resolvedCookieOptions,
+        onStorageError,
       }),
       transition,
       onChange,
@@ -147,7 +157,5 @@ export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
     );
   });
 
-  return (
-    <ThemeStoreContext.Provider value={storeRef.current}>{children}</ThemeStoreContext.Provider>
-  );
+  return <Context.Provider value={storeRef.current}>{children}</Context.Provider>;
 }

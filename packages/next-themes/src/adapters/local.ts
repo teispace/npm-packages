@@ -1,7 +1,7 @@
 import { hasLocalStorage, hasWindowEvents } from '../core/env';
 import type { AdapterFactory, StorageAdapter } from './types';
 
-export const localAdapter: AdapterFactory = ({ key }): StorageAdapter => ({
+export const localAdapter: AdapterFactory = ({ key, onStorageError }): StorageAdapter => ({
   get() {
     // Probe the API rather than the global. Node 25 ships `window` as
     // `globalThis` with a partial `localStorage` shim, so `typeof window`
@@ -12,7 +12,8 @@ export const localAdapter: AdapterFactory = ({ key }): StorageAdapter => ({
     if (!hasLocalStorage()) return null;
     try {
       return globalThis.localStorage.getItem(key);
-    } catch (_e) {
+    } catch (error) {
+      onStorageError?.(error, { operation: 'get', key });
       return null;
     }
   },
@@ -20,8 +21,10 @@ export const localAdapter: AdapterFactory = ({ key }): StorageAdapter => ({
     if (!hasLocalStorage()) return;
     try {
       globalThis.localStorage.setItem(key, value);
-    } catch (_e) {
-      /* ignore — quota, sandboxed iframe, etc. */
+    } catch (error) {
+      // Non-fatal by design (quota, sandboxed iframe, private mode) — but now
+      // reportable so a user can find out why persistence stopped working.
+      onStorageError?.(error, { operation: 'set', key });
     }
   },
   subscribe(cb) {

@@ -84,11 +84,27 @@ export function serializeCookie(name: string, value: string, options: CookieOpti
     `SameSite=${sameSite.charAt(0).toUpperCase()}${sameSite.slice(1)}`,
   ];
   if (options.domain) parts.push(`Domain=${options.domain}`);
-  if (options.secure) parts.push('Secure');
+  // Default `Secure` on when the page is served over HTTPS. Opt-in was the
+  // wrong default: without it the theme cookie is sent in cleartext on an
+  // otherwise-secure site for no benefit. `location` is deliberately probed
+  // through `globalThis` and guarded — this function also runs server-side
+  // (`setThemeCookie`/`writeThemeCookie`), where there is no `location` and the
+  // caller is expected to pass `secure` explicitly.
+  const secure =
+    options.secure ??
+    (() => {
+      try {
+        const loc = (globalThis as { location?: { protocol?: string } }).location;
+        return loc?.protocol === 'https:';
+      } catch {
+        return false;
+      }
+    })();
+  if (secure) parts.push('Secure');
   return parts.join('; ');
 }
 
-export const cookieAdapter: AdapterFactory = ({ cookie }): StorageAdapter => {
+export const cookieAdapter: AdapterFactory = ({ cookie, onStorageError }): StorageAdapter => {
   const { name, ...rest } = cookie;
   // Validate eagerly so a misconfigured cookie name throws at provider mount
   // (with a clear stack), not silently on every theme write.
@@ -98,7 +114,8 @@ export const cookieAdapter: AdapterFactory = ({ cookie }): StorageAdapter => {
       if (!hasDocumentCookie()) return null;
       try {
         return readCookieFromString(document.cookie, name);
-      } catch (_e) {
+      } catch (error) {
+        onStorageError?.(error, { operation: 'get', key: name });
         return null;
       }
     },
@@ -106,8 +123,8 @@ export const cookieAdapter: AdapterFactory = ({ cookie }): StorageAdapter => {
       if (!hasDocumentCookie()) return;
       try {
         document.cookie = serializeCookie(name, value, rest);
-      } catch (_e) {
-        /* sandboxed iframe, etc. */
+      } catch (error) {
+        onStorageError?.(error, { operation: 'set', key: name });
       }
     },
   };

@@ -3,7 +3,7 @@ import { type BuildScriptOptions, buildScript } from '../core/script';
 import type { CookieOptions } from '../core/types';
 import { readColorSchemeHint } from './client-hint';
 
-export interface GetThemeOptions {
+export interface GetThemeOptions<TThemes extends readonly string[] = readonly string[]> {
   cookieName?: string;
   /**
    * A raw cookie header string (for custom servers / middleware). If omitted,
@@ -25,7 +25,7 @@ export interface GetThemeOptions {
    * with an attribute the runtime would later normalize away — a real
    * hydration mismatch source.
    */
-  themes?: string[];
+  themes?: TThemes;
 }
 
 /**
@@ -57,7 +57,19 @@ export interface GetThemeOptions {
  *     headers: request.headers,
  *   });
  */
+// When `themes` is supplied as a literal tuple (`['light','dark'] as const`),
+// the return type narrows to that union rather than the unhelpful `string`, so
+// server code can branch exhaustively without re-narrowing. `'system'` is
+// included because it is always an acceptable stored value — the provider
+// resolves it — and `null` because the cookie/hint may be absent.
+export function getTheme<const TThemes extends readonly string[]>(
+  request: Request,
+  options: GetThemeOptions<TThemes> & { themes: TThemes },
+): TThemes[number] | 'system' | null;
 export function getTheme(request: Request, options?: GetThemeOptions): string | null;
+export function getTheme<const TThemes extends readonly string[]>(
+  options: GetThemeOptions<TThemes> & { themes: TThemes },
+): Promise<TThemes[number] | 'system' | null>;
 export function getTheme(options?: GetThemeOptions): Promise<string | null>;
 export function getTheme(
   requestOrOptions?: Request | GetThemeOptions,
@@ -92,7 +104,7 @@ export function getTheme(
   return resolveTheme((requestOrOptions as GetThemeOptions | undefined) ?? {});
 }
 
-function acceptTheme(value: string | null, allow: string[] | undefined): string | null {
+function acceptTheme(value: string | null, allow: readonly string[] | undefined): string | null {
   if (!value) return null;
   if (!allow) return value;
   // 'system' is always an acceptable cookie value; the provider resolves it.

@@ -1,11 +1,12 @@
 import type { ComponentType, DependencyList, ImgHTMLAttributes, ReactNode } from 'react';
-import { ScopedTheme, type ScopedThemeProps } from '../components/scoped-theme';
-import { ThemedIcon } from '../components/themed-icon';
-import { ThemedImage } from '../components/themed-image';
+import { makeScopedTheme, type ScopedThemeProps } from '../components/scoped-theme';
+import { makeThemedIcon } from '../components/themed-icon';
+import { makeThemedImage } from '../components/themed-image';
+import { createThemeContext } from '../core/context';
 import type { SetThemeOptions, ThemeState } from '../core/types';
-import { useTheme } from '../hooks/use-theme';
-import { useThemeEffect } from '../hooks/use-theme-effect';
-import { type ThemeValueMap, useThemeValue } from '../hooks/use-theme-value';
+import { makeUseTheme } from '../hooks/use-theme';
+import { makeUseThemeEffect } from '../hooks/use-theme-effect';
+import { makeUseThemeValue, type ThemeValueMap } from '../hooks/use-theme-value';
 import type { ThemeProviderProps } from '../providers/props';
 
 export interface CreateThemesConfig<T extends readonly string[]>
@@ -55,10 +56,17 @@ export function makeCreateThemes(
   return function createThemes<T extends readonly string[]>(
     config: CreateThemesConfig<T>,
   ): ThemesApi<T> {
+    // A private context per factory call. Without this, two createThemes()
+    // APIs in one app shared the module-level context: whichever provider was
+    // nearest in the tree served BOTH hook sets, so an embedded widget's
+    // useTheme() could silently report the app shell's themes.
+    const ThemeCtx = createThemeContext();
+
     const baseProps: ThemeProviderProps = {
       ...config,
       themes: config.themes as unknown as string[],
       defaultTheme: config.defaultTheme,
+      themeContext: ThemeCtx,
     };
 
     const TypedProvider: ComponentType<
@@ -66,21 +74,27 @@ export function makeCreateThemes(
     > = (props) => {
       const { children, ...overrides } = props;
       return (
-        <BaseProvider {...baseProps} {...overrides}>
+        // `themeContext` is applied after the overrides so a caller cannot
+        // accidentally detach the typed hooks from their provider.
+        <BaseProvider {...baseProps} {...overrides} themeContext={ThemeCtx}>
           {children}
         </BaseProvider>
       );
     };
     TypedProvider.displayName = 'TypedThemeProvider';
 
+    // Every hook and component below is bound to `ThemeCtx`, so this whole API
+    // reads from — and only from — the provider returned alongside it.
+    const boundUseTheme = makeUseTheme(ThemeCtx);
+
     return {
       ThemeProvider: TypedProvider,
-      useTheme: useTheme as ThemesApi<T>['useTheme'],
-      useThemeValue: useThemeValue as ThemesApi<T>['useThemeValue'],
-      useThemeEffect: useThemeEffect as ThemesApi<T>['useThemeEffect'],
-      ThemedImage: ThemedImage as unknown as ThemesApi<T>['ThemedImage'],
-      ThemedIcon: ThemedIcon as unknown as ThemesApi<T>['ThemedIcon'],
-      ScopedTheme: ScopedTheme as unknown as ThemesApi<T>['ScopedTheme'],
+      useTheme: boundUseTheme as ThemesApi<T>['useTheme'],
+      useThemeValue: makeUseThemeValue(boundUseTheme) as ThemesApi<T>['useThemeValue'],
+      useThemeEffect: makeUseThemeEffect(boundUseTheme) as ThemesApi<T>['useThemeEffect'],
+      ThemedImage: makeThemedImage(boundUseTheme) as unknown as ThemesApi<T>['ThemedImage'],
+      ThemedIcon: makeThemedIcon(boundUseTheme) as unknown as ThemesApi<T>['ThemedIcon'],
+      ScopedTheme: makeScopedTheme(ThemeCtx) as unknown as ThemesApi<T>['ScopedTheme'],
     };
   };
 }

@@ -1,4 +1,5 @@
 import type { ReactNode, ScriptHTMLAttributes } from 'react';
+import type { ThemeContext } from '../core/context';
 import type {
   Attribute,
   CookieOptions,
@@ -95,6 +96,26 @@ export interface ThemeProviderProps {
 
   /** Fired when the theme changes, with both the selected value and the resolved value. */
   onChange?: (theme: string, resolvedTheme: string) => void;
+
+  /**
+   * Called when a storage read or write throws.
+   *
+   * Storage failures are non-fatal on purpose — Safari private mode, sandboxed
+   * iframes, disabled cookies, and quota-exceeded must never break theming — but
+   * they used to be entirely silent, leaving "my theme doesn't persist" with no
+   * diagnostic. Wire this to your logger to see them.
+   */
+  onStorageError?: (error: unknown, context: { operation: 'get' | 'set'; key: string }) => void;
+
+  /**
+   * The React context this provider publishes its store on.
+   *
+   * Defaults to the package-level context that the top-level `useTheme`,
+   * `<ThemedImage>` etc. read from — which is what you want for a normal app.
+   * `createThemes()` passes its own private context here so two typed theme
+   * APIs in one tree stay isolated. You rarely set this by hand.
+   */
+  themeContext?: ThemeContext;
 }
 
 /**
