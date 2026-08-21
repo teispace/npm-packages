@@ -149,3 +149,12 @@ if (hits === 0) {
 console.log(\`\\n\${hits} deprecated symbol use(s) found.\`);
 process.exit(1);
 `;
+
+/**
+ * The files the feature owns, paired with their content. Single source of
+ * truth for both the installer and the `doctor --fix` repair path.
+ */
+export const SCRIPT_TARGETS = [
+  { relative: 'scripts/sync-env.ts', content: SYNC_ENV_SCRIPT },
+  { relative: 'scripts/check-deprecated.ts', content: CHECK_DEPRECATED_SCRIPT },
+] as const;

@@ -1,6 +1,8 @@
 import path from 'node:path';
 import { fileExists } from '../core/files';
 import { setupValidationScripts } from '../services/setup/validate-scripts';
+import { repairValidationScripts } from '../services/setup/validate-scripts/repair';
+import { withRepair } from './apply';
 import type { FeatureManifest } from './types';
 
 const SCRIPT_FILES = ['scripts/sync-env.ts', 'scripts/check-deprecated.ts'] as const;
@@ -20,5 +22,5 @@ export const validateScriptsManifest: FeatureManifest = {
     { name: 'validate' },
   ],
   injections: [],
-  apply: setupValidationScripts,
+  apply: withRepair(setupValidationScripts, repairValidationScripts),
 };

@@ -2,6 +2,8 @@ import path from 'node:path';
 import { PROJECT_PATHS } from '../config/paths';
 import { fileExists } from '../core/files';
 import { setupDarkTheme } from '../services/setup/dark-theme';
+import { repairDarkTheme } from '../services/setup/dark-theme/repair';
+import { withRepair } from './apply';
 import { unwrapJsxChain } from './transforms/unwrap-jsx';
 import type { FeatureManifest } from './types';
 
@@ -21,5 +23,5 @@ export const darkThemeManifest: FeatureManifest = {
       removePattern: unwrapJsxChain('CustomThemeProvider'),
     },
   ],
-  apply: setupDarkTheme,
+  apply: withRepair(setupDarkTheme, repairDarkTheme),
 };

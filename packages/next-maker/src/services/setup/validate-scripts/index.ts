@@ -5,18 +5,13 @@ import { startSpinner } from '../../../config/spinner';
 import { fileExists, updateJson, writeFile } from '../../../core/files';
 import { detectPackageManager, installDevPackages } from '../../../core/package-manager';
 import { addValidationScripts, type PackageJsonShape } from './package-modifier';
-import { CHECK_DEPRECATED_SCRIPT, SYNC_ENV_SCRIPT } from './scripts';
+import { SCRIPT_TARGETS } from './scripts';
 
 export {
   addValidationScripts,
   type PackageJsonShape,
 } from './package-modifier';
-export { CHECK_DEPRECATED_SCRIPT, SYNC_ENV_SCRIPT } from './scripts';
-
-const SCRIPT_TARGETS = [
-  { relative: 'scripts/sync-env.ts', content: SYNC_ENV_SCRIPT },
-  { relative: 'scripts/check-deprecated.ts', content: CHECK_DEPRECATED_SCRIPT },
-] as const;
+export { CHECK_DEPRECATED_SCRIPT, SCRIPT_TARGETS, SYNC_ENV_SCRIPT } from './scripts';
 
 export const setupValidationScripts = async (projectPath: string): Promise<void> => {
   const spinner = startSpinner('Adding validation scripts...');

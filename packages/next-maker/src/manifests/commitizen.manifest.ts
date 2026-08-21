@@ -2,6 +2,8 @@ import path from 'node:path';
 import { PROJECT_PATHS } from '../config/paths';
 import { fileExists } from '../core/files';
 import { setupCommitizen } from '../services/setup/commitizen';
+import { repairCommitizen } from '../services/setup/commitizen/repair';
+import { withRepair } from './apply';
 import type { FeatureManifest } from './types';
 
 export const commitizenManifest: FeatureManifest = {
@@ -16,5 +18,5 @@ export const commitizenManifest: FeatureManifest = {
   ],
   scripts: [{ name: 'commit', expectedValue: 'cz' }],
   injections: [],
-  apply: setupCommitizen,
+  apply: withRepair(setupCommitizen, repairCommitizen),
 };

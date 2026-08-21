@@ -74,19 +74,20 @@ describe('runSetup interactive dispatch', () => {
   // The original bug: choices returned the human label but the handler map was
   // keyed by machine values, so every selection fell through to "not
   // implemented yet". This test fails on that regression for every feature.
-  it.each(
-    SETUP_FEATURES.map((f) => f.key),
-  )('dispatches the handler when "%s" is selected', async (key) => {
-    const promptFn = vi.fn(async () => ({ feature: key })) as never;
-    const result = await runSetup({}, { promptFn, cwd: () => '/proj' });
+  it.each(SETUP_FEATURES.map((f) => f.key))(
+    'dispatches the handler when "%s" is selected',
+    async (key) => {
+      const promptFn = vi.fn(async () => ({ feature: key })) as never;
+      const result = await runSetup({}, { promptFn, cwd: () => '/proj' });
 
-    expect(result).toBe(key);
-    expect(handlerFor(key)).toHaveBeenCalledExactlyOnceWith('/proj');
-    // No other handler should fire.
-    for (const f of SETUP_FEATURES) {
-      if (f.key !== key) expect(handlerFor(f.key)).not.toHaveBeenCalled();
-    }
-  });
+      expect(result).toBe(key);
+      expect(handlerFor(key)).toHaveBeenCalledExactlyOnceWith('/proj');
+      // No other handler should fire.
+      for (const f of SETUP_FEATURES) {
+        if (f.key !== key) expect(handlerFor(f.key)).not.toHaveBeenCalled();
+      }
+    },
+  );
 
   it('offers a choice for every feature plus cancel, with name = machine key', async () => {
     const promptFn = vi.fn(async () => ({ feature: 'cancel' })) as never;

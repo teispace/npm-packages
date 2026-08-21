@@ -1,4 +1,6 @@
 import { setupRedux } from '../services/setup/redux';
+import { repairRedux } from '../services/setup/redux/repair';
+import { withRepair } from './apply';
 import { unwrapJsxChain } from './transforms/unwrap-jsx';
 import type { FeatureManifest } from './types';
 
@@ -40,5 +42,5 @@ export const reduxManifest: FeatureManifest = {
       removePattern: unwrapJsxChain('StoreProvider'),
     },
   ],
-  apply: setupRedux,
+  apply: withRepair(setupRedux, repairRedux),
 };

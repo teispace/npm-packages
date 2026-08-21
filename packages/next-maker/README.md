@@ -156,11 +156,11 @@ npx @teispace/next-maker doctor [options]
 
 | Flag | Behaviour |
 | --- | --- |
-| `--fix` | Re-runs `apply()` for every drifted feature (idempotent — safe to retry) |
+| `--fix` | Runs each drifted feature's **repair** path, then re-checks and reports FIXED / STILL DRIFTED / NO AUTOMATIC FIX AVAILABLE per feature |
 | `--feature <id>` | Only check one manifest (e.g. `redux`, `security-headers`) |
 | `--json` | Machine-readable output for CI |
 
-Exit code is `0` on a clean report and `1` when drift is found — `next-maker doctor --json` makes a useful CI gate.
+Exit code is `0` on a clean report and `1` when drift is found — `next-maker doctor --json` makes a useful CI gate. With `--fix`, the exit code reflects the state **after** the repair: `0` only when every feature re-checks clean, `1` when anything is still drifted.
 
 ```bash
 # Human report
@@ -189,6 +189,20 @@ npx @teispace/next-maker doctor --json > health.json
 
 Run with --fix to re-apply drifted features.
 ```
+
+**Sample `--fix` output:**
+
+```
+🔧 Applying fixes...
+
+  ✓ Validation Scripts FIXED
+  ✗ Internationalization STILL DRIFTED
+      • missing file: src/app/[locale]
+
+1 fixed, 1 still drifted
+```
+
+`--fix` never claims success it can't back up: every feature is re-checked after its repair runs, and only a clean re-check counts as FIXED.
 
 Manifests live under `src/manifests/`; each one declares the files, packages, scripts, and code blocks the feature consists of. Adding a manifest for a new feature is a single file — `doctor` and `remove` automatically pick it up.
 
@@ -690,8 +704,8 @@ Each feature has a manifest in `src/manifests/<feature>.manifest.ts` describing:
 - **files** — paths the feature owns (with `generated: true/false` to control deletion safety)
 - **packages** — runtime/dev dependencies
 - **scripts** — `package.json` script entries (with optional exact-value match)
-- **injections** — code blocks in shared files (with `presence` and optional `removePattern`)
-- **apply** — the existing `setup<X>()` function (for `setup` and `doctor --fix`)
+- **injections** — code blocks in shared files (with `presence`, optional `removePattern`, and optional `alternativeFiles` when the block's home depends on the project shape — e.g. `[locale]/layout.tsx` *or* `src/app/layout.tsx`; the block only has to be in one of the candidates that exist)
+- **apply** — `withRepair(setup<X>, repair<X>)`. Called with no drift it installs from scratch (`setup`); called with a drift array it takes the repair path (`doctor --fix`), fixing exactly the reported findings without consulting the installer's "already set up?" guard
 - **remove** — optional custom remover (defaults to the generic reverser)
 
 The manifest registry is consumed by:
@@ -826,14 +840,15 @@ Behaviour added in **v2.1.0** beyond the headline features. None of these change
 - **`remove ws` strips cleanly without manual intervention.** The WS manifest's reducer-registration and bridge-mount injections now carry `removePattern` functions, so `next-maker remove ws` deletes the `wsReducer` import, the `ws: wsReducer` entry, the unwrapped-on-purpose JSDoc, and the `attachWsBridge` `useEffect` block — without any "manual cleanup" messages. The init-time `cleanupWs` and the `remove ws` flow share the same pure helpers, so the byte-level output is identical.
 - **`useEffect` import auto-pruned.** When the WS bridge effect is stripped (init opt-out or `remove ws`), the `useEffect` import is dropped from `StoreProvider.tsx`'s React import line if no other `useEffect(` calls remain — avoiding the unused-import lint warning.
 - **Wording-tolerant strip helpers.** The `stripBundleSentinel`, `stripBridgeMount`, and `stripWsReducerRegistration` helpers now anchor on stable code tokens (import paths, function names, the `ws` + `persistReducer` keywords inside JSDoc) rather than literal comment text. Upstream template comment rewording can't silently break cleanup.
-- **`doctor` reports sentinel mount drift.** The HTTP manifest tracks the `<HttpClientBundleSentinel />` mount as a code injection in either `[locale]/layout.tsx` or `src/app/layout.tsx`. If you delete the mount manually, `doctor` reports it; `remove http-client` strips it.
+- **`doctor` reports sentinel mount drift — and only real drift.** The HTTP manifest tracks the `<HttpClientBundleSentinel />` mount as a single code injection with two possible homes (`alternativeFiles`): `[locale]/layout.tsx` when i18n is installed, `src/app/layout.tsx` otherwise. Only the layout that actually exists is checked, so a healthy project reports clean; if you delete the mount manually, `doctor` reports it, `doctor --fix` re-mounts it, and `remove http-client` strips it.
 
 ---
 
 ## Known issues
 
 - **`setup --redux` post-init when `ws` was opted out.** The template's `StoreProvider.tsx` ships with the WS bridge mount inline. `next-maker setup --redux` copies the template's `StoreProvider.tsx` wholesale into the project — so running it on a project where `ws` is **not** wanted leaves `import { attachWsBridge, wsClient } from '@/lib/utils/ws'` in place, and `yarn build` fails because that module doesn't exist. Workaround until a fix lands: also run `next-maker setup --ws` to install the WS layer, then `next-maker remove ws` if you don't actually want it (clean removal handles both layers). Tracked separately; out of scope for v2.1.0.
-- **`doctor --fix` is interactive.** Some setup services (notably `setup --http-client`) prompt for an action when the feature is partially installed. `doctor --fix` invokes `apply()` directly, so the prompt fires during what's meant to be a non-interactive repair. Workaround: run the specific `setup --<feature>` manually and pick the appropriate action. A non-interactive repair path is on the roadmap.
+- **`doctor --fix` can't recreate `src/app/[locale]/`.** Producing that directory means running the i18n migration, which *moves* app-router pages. Doing that unattended to a project that has since lost the segment could relocate user code with no way back, so the i18n repair skips it and doctor reports it as STILL DRIFTED with guidance. Every other part of the i18n footprint is repaired.
+- **Repairs that need starter assets need network.** `doctor --fix` re-copies deleted files (`src/i18n/`, `test/setup.ts`, `CustomThemeProvider.tsx`, …) from the starter repo via `degit`. Offline, those repairs fail and are reported as STILL DRIFTED rather than silently skipped. Package-only and code-block-only repairs work offline.
 
 ---
 

@@ -251,3 +251,156 @@ describe('reverseManifest', () => {
     expect(stillThere).toBe('// keep');
   });
 });
+
+/**
+ * Regression coverage for the `anyOf` code-block form.
+ *
+ * Before this existed, a manifest that wanted "the block lives in whichever
+ * layout the project uses" had to list both paths as separate injections —
+ * and the checker counted the path that (correctly) doesn't exist as drift.
+ * Every healthy project reported permanent drift and `doctor` exited 1.
+ */
+describe('checkManifest — injections with alternativeFiles', () => {
+  const anyOfManifest = () =>
+    sampleManifest({
+      files: [],
+      packages: [],
+      scripts: [],
+      injections: [
+        {
+          file: 'src/app/[locale]/layout.tsx',
+          alternativeFiles: ['src/app/layout.tsx'],
+          description: 'sentinel mount',
+          presence: /<Sentinel \/>/,
+        },
+      ],
+    });
+
+  const writeLayout = async (rel: string, content: string) => {
+    await mkdir(path.dirname(path.join(projectPath, rel)), { recursive: true });
+    await writeFile(path.join(projectPath, rel), content);
+  };
+
+  it('is clean when the block is in the only candidate that exists', async () => {
+    await seedPackageJson();
+    await writeLayout('src/app/layout.tsx', 'const L = () => <Sentinel />;');
+
+    const result = await checkManifest(anyOfManifest(), projectPath);
+    expect(result.drift).toEqual([]);
+  });
+
+  it('is clean when the block is in the primary candidate', async () => {
+    await seedPackageJson();
+    await writeLayout('src/app/[locale]/layout.tsx', 'const L = () => <Sentinel />;');
+
+    const result = await checkManifest(anyOfManifest(), projectPath);
+    expect(result.drift).toEqual([]);
+  });
+
+  it('reports drift once when no existing candidate carries the block', async () => {
+    await seedPackageJson();
+    await writeLayout('src/app/layout.tsx', 'const L = () => <div />;');
+
+    const result = await checkManifest(anyOfManifest(), projectPath);
+    expect(result.drift).toEqual([
+      {
+        kind: 'missingInjection',
+        file: 'src/app/layout.tsx',
+        description: 'sentinel mount',
+      },
+    ]);
+  });
+
+  it('reports drift against the primary path when no candidate exists at all', async () => {
+    await seedPackageJson();
+
+    const result = await checkManifest(anyOfManifest(), projectPath);
+    expect(result.drift).toEqual([
+      {
+        kind: 'missingInjection',
+        file: 'src/app/[locale]/layout.tsx',
+        description: 'sentinel mount',
+      },
+    ]);
+  });
+
+  it('accepts the block in either file when both candidates exist', async () => {
+    await seedPackageJson();
+    await writeLayout('src/app/[locale]/layout.tsx', 'const L = () => <Sentinel />;');
+    await writeLayout('src/app/layout.tsx', 'const L = () => <div />;');
+
+    const result = await checkManifest(anyOfManifest(), projectPath);
+    expect(result.drift).toEqual([]);
+  });
+});
+
+describe('checkManifest — script findings carry the expected value', () => {
+  it('attaches expectedValue to a missingScript finding so repairs can restore it', async () => {
+    await seedPackageJson();
+    const m = sampleManifest({ files: [], packages: [] });
+
+    const result = await checkManifest(m, projectPath);
+    expect(result.drift).toEqual([
+      { kind: 'missingScript', name: 'sample', expected: 'tsx scripts/sample.ts' },
+    ]);
+  });
+
+  it('leaves expected undefined when the manifest declares no value', async () => {
+    await seedPackageJson();
+    const m = sampleManifest({ files: [], packages: [], scripts: [{ name: 'validate' }] });
+
+    const result = await checkManifest(m, projectPath);
+    expect(result.drift).toEqual([
+      { kind: 'missingScript', name: 'validate', expected: undefined },
+    ]);
+  });
+});
+
+describe('reverseManifest — injections with alternativeFiles', () => {
+  it('strips the block from whichever candidate exists', async () => {
+    await mkdir(path.join(projectPath, 'src/app'), { recursive: true });
+    await writeFile(path.join(projectPath, 'src/app/layout.tsx'), 'const L = () => <Sentinel />;');
+
+    const m = sampleManifest({
+      files: [],
+      packages: [],
+      scripts: [],
+      injections: [
+        {
+          file: 'src/app/[locale]/layout.tsx',
+          alternativeFiles: ['src/app/layout.tsx'],
+          description: 'sentinel mount',
+          presence: /<Sentinel \/>/,
+          removePattern: /<Sentinel \/>/,
+        },
+      ],
+    });
+
+    const summary = await reverseManifest(m, projectPath);
+    expect(summary.blocksStripped).toEqual([
+      { file: 'src/app/layout.tsx', description: 'sentinel mount' },
+    ]);
+
+    const after = await readFile(path.join(projectPath, 'src/app/layout.tsx'), 'utf-8');
+    expect(after).not.toContain('Sentinel');
+  });
+
+  it('ignores candidates that do not exist', async () => {
+    const m = sampleManifest({
+      files: [],
+      packages: [],
+      scripts: [],
+      injections: [
+        {
+          file: 'src/app/[locale]/layout.tsx',
+          alternativeFiles: ['src/app/layout.tsx'],
+          description: 'sentinel mount',
+          presence: /<Sentinel \/>/,
+        },
+      ],
+    });
+
+    const summary = await reverseManifest(m, projectPath, { dryRun: true });
+    expect(summary.manualCleanup).toEqual([]);
+  });
+});

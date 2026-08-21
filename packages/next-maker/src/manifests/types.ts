@@ -66,6 +66,21 @@ export type RemoveTransform = (content: string) => string | null;
 export interface CodeBlockRequirement {
   /** File the block lives in, relative to the project root. */
   file: string;
+  /**
+   * Alternative homes for the *same* block, checked after `file`.
+   *
+   * Models "exactly one of these paths exists in a healthy project" — e.g.
+   * the HTTP bundle sentinel mounts in `src/app/[locale]/layout.tsx` when
+   * i18n is installed and in `src/app/layout.tsx` otherwise, never both.
+   *
+   * This is deliberately preferred over an `optional: true` marker on two
+   * separate requirements. `optional` would say "it's fine if this block is
+   * missing", which is a lie: the block IS required, we just don't know up
+   * front which file hosts it. With `anyOf` semantics the checker can still
+   * flag the honest failure modes — the block missing from every candidate
+   * that exists, or no candidate existing at all.
+   */
+  alternativeFiles?: string[];
   /** Human-readable label used in doctor output. */
   description: string;
   /** RegExp that matches when the block is present (for both detection and drift). */
@@ -98,11 +113,20 @@ export interface FeatureManifest extends FeatureFootprint {
    */
   detect: (projectPath: string) => Promise<boolean>;
   /**
-   * Idempotent installer. Doctor's `--fix` flag and the manifest-based
-   * `setup` path both call this. Optional because some manifests are
-   * detection-only (e.g. core artifacts that should never be re-applied).
+   * Installer / repairer.
+   *
+   * Called with no `drift` it behaves as a first-run installer (the
+   * manifest-based `setup` path). Called WITH a non-empty `drift` array it
+   * must take the repair path: fix exactly the reported findings on an
+   * already-installed feature, without consulting its own "is this already
+   * set up?" first-run guard — that guard tests the same signals as
+   * `detect()`, so honouring it during a repair would make `doctor --fix` a
+   * guaranteed no-op.
+   *
+   * Optional because some manifests are detection-only; doctor reports
+   * those as "no automatic fix available" instead of pretending.
    */
-  apply?: (projectPath: string) => Promise<void>;
+  apply?: (projectPath: string, drift?: FeatureFinding[]) => Promise<void>;
   /**
    * Custom remover. When omitted, the generic reverser walks the footprint
    * and only removes pieces it is confident about (files marked `generated`,
@@ -114,7 +138,10 @@ export interface FeatureManifest extends FeatureFootprint {
 export type FeatureFinding =
   | { kind: 'missingFile'; file: string; description?: string }
   | { kind: 'missingPackage'; name: string; depKind: DepKind }
-  | { kind: 'missingScript'; name: string }
+  // `expected` is carried through from the manifest's `expectedValue` so a
+  // repair can restore the script without importing the manifest back
+  // (services must not depend on manifests — that direction is circular).
+  | { kind: 'missingScript'; name: string; expected?: string }
   | { kind: 'mismatchedScript'; name: string; expected: string; actual: string }
   | { kind: 'missingInjection'; file: string; description: string };
 

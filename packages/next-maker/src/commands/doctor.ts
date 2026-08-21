@@ -43,6 +43,82 @@ const summary = (
   };
 };
 
+type FixStatus = 'fixed' | 'stillDrifted' | 'noApply';
+
+export interface FixOutcome {
+  id: string;
+  name: string;
+  status: FixStatus;
+  /** Drift that survived the fix (empty only when `status` is `fixed`). */
+  remaining: FeatureFinding[];
+  /** Set when `apply` threw. */
+  error?: string;
+}
+
+const OUTCOME_MARK: Record<FixStatus, string> = {
+  fixed: pc.green('✓'),
+  stillDrifted: pc.red('✗'),
+  noApply: pc.yellow('⚠️'),
+};
+
+const OUTCOME_LABEL: Record<FixStatus, string> = {
+  fixed: pc.green('FIXED'),
+  stillDrifted: pc.red('STILL DRIFTED'),
+  noApply: pc.yellow('NO AUTOMATIC FIX AVAILABLE'),
+};
+
+/**
+ * Run each drifted manifest's repair path, then RE-CHECK it.
+ *
+ * The re-check is the whole point: a service can silently decline to do
+ * anything (that was the old `--fix` bug — every setup service opens with a
+ * first-run guard, so `apply` printed a failure the command swallowed and
+ * doctor still exited 0). Recomputing drift afterwards means the report
+ * describes what is true on disk, not what we hoped `apply` did.
+ *
+ * Exported for tests.
+ */
+export const applyFixes = async (
+  drifted: FeatureCheckResult[],
+  projectPath: string,
+): Promise<FixOutcome[]> => {
+  const outcomes: FixOutcome[] = [];
+
+  for (const result of drifted) {
+    const { manifest, drift } = result;
+
+    if (!manifest.apply) {
+      outcomes.push({
+        id: manifest.id,
+        name: manifest.name,
+        status: 'noApply',
+        remaining: drift,
+      });
+      continue;
+    }
+
+    let error: string | undefined;
+    try {
+      // Pass the computed drift so the manifest takes its repair path
+      // instead of its first-run installer.
+      await manifest.apply(projectPath, drift);
+    } catch (caught) {
+      error = caught instanceof Error ? caught.message : String(caught);
+    }
+
+    const after = await checkManifest(manifest, projectPath);
+    outcomes.push({
+      id: manifest.id,
+      name: manifest.name,
+      status: after.drift.length === 0 && !error ? 'fixed' : 'stillDrifted',
+      remaining: after.drift,
+      error,
+    });
+  }
+
+  return outcomes;
+};
+
 export const registerDoctorCommand = (program: Command) => {
   program
     .command('doctor')
@@ -124,19 +200,34 @@ export const registerDoctorCommand = (program: Command) => {
         }
 
         log(pc.cyan('\n🔧 Applying fixes...\n'));
-        for (const result of stats.driftedResults) {
-          if (!result.manifest.apply) {
-            log(pc.yellow(`  ⚠️  ${result.manifest.name} has no apply() — skipping.`));
-            continue;
+        const outcomes = await applyFixes(stats.driftedResults, projectPath);
+
+        log('');
+        for (const outcome of outcomes) {
+          log(`  ${OUTCOME_MARK[outcome.status]} ${outcome.name} ${OUTCOME_LABEL[outcome.status]}`);
+          for (const f of outcome.remaining) {
+            log(`      ${pc.yellow('•')} ${formatFinding(f)}`);
           }
-          try {
-            await result.manifest.apply(projectPath);
-          } catch (error) {
-            logError(`Failed to fix ${result.manifest.name}: ${error}`);
+          if (outcome.error) {
+            log(`      ${pc.red('•')} ${outcome.error}`);
           }
         }
 
-        log(pc.green('\n✓ Doctor finished.\n'));
+        const fixed = outcomes.filter((o) => o.status === 'fixed').length;
+        const unresolved = outcomes.length - fixed;
+
+        log('');
+        log(pc.dim(`${fixed} fixed, ${unresolved} still drifted`));
+
+        if (unresolved > 0) {
+          // Never claim success while drift survives — the documented
+          // `doctor --json` CI usage relies on the exit code.
+          log(pc.yellow('\n! Doctor could not fix everything.\n'));
+          process.exit(1);
+        }
+
+        log(pc.green('\n✓ All drift fixed.\n'));
+        process.exit(0);
       } catch (error) {
         logError(`${error instanceof Error ? error.message : error}`);
         process.exit(1);

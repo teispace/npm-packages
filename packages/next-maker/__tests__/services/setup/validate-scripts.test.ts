@@ -24,17 +24,16 @@ describe('addValidationScripts', () => {
     );
   });
 
-  it.each([
-    'npm',
-    'yarn',
-    'pnpm',
-    'bun',
-  ] as const)('uses the %s runner prefix in the validate chain', (manager) => {
-    const pkg = addValidationScripts(empty(), manager);
-    const expectedPrefix = manager === 'npm' ? 'npm run' : manager === 'bun' ? 'bun run' : manager;
-    expect(pkg.scripts?.validate).toContain(`${expectedPrefix} ci:check`);
-    expect(pkg.scripts?.validate).toContain(`${expectedPrefix} build`);
-  });
+  it.each(['npm', 'yarn', 'pnpm', 'bun'] as const)(
+    'uses the %s runner prefix in the validate chain',
+    (manager) => {
+      const pkg = addValidationScripts(empty(), manager);
+      const expectedPrefix =
+        manager === 'npm' ? 'npm run' : manager === 'bun' ? 'bun run' : manager;
+      expect(pkg.scripts?.validate).toContain(`${expectedPrefix} ci:check`);
+      expect(pkg.scripts?.validate).toContain(`${expectedPrefix} build`);
+    },
+  );
 
   it('does not overwrite user-defined script entries', () => {
     const original: PackageJsonShape = {

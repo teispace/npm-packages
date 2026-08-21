@@ -2,6 +2,8 @@ import path from 'node:path';
 import { PROJECT_PATHS } from '../config/paths';
 import { fileExists, readFile } from '../core/files';
 import { hasSecurityHeaders, setupSecurityHeaders } from '../services/setup/security-headers';
+import { repairSecurityHeaders } from '../services/setup/security-headers/repair';
+import { withRepair } from './apply';
 import type { FeatureManifest } from './types';
 
 export const securityHeadersManifest: FeatureManifest = {
@@ -24,5 +26,5 @@ export const securityHeadersManifest: FeatureManifest = {
       removePattern: /\s+headers:\s*async\s*\(\)\s*=>\s*\{[\s\S]*?\n\s{0,2}\},/m,
     },
   ],
-  apply: setupSecurityHeaders,
+  apply: withRepair(setupSecurityHeaders, repairSecurityHeaders),
 };

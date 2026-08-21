@@ -2,6 +2,8 @@ import path from 'node:path';
 import { PROJECT_PATHS } from '../config/paths';
 import { fileExists, readFile } from '../core/files';
 import { setupBundleAnalyzer } from '../services/setup/bundle-analyzer';
+import { repairBundleAnalyzer } from '../services/setup/bundle-analyzer/repair';
+import { withRepair } from './apply';
 import { unwrapBundleAnalyzer } from './transforms/next-config';
 import type { FeatureManifest } from './types';
 
@@ -25,5 +27,5 @@ export const bundleAnalyzerManifest: FeatureManifest = {
       removePattern: unwrapBundleAnalyzer,
     },
   ],
-  apply: setupBundleAnalyzer,
+  apply: withRepair(setupBundleAnalyzer, repairBundleAnalyzer),
 };

@@ -4,15 +4,15 @@ import { PROJECT_PATHS } from '../../../config/paths';
 import { startSpinner } from '../../../config/spinner';
 import { fileExists, readFile, updateJson, writeFile } from '../../../core/files';
 import { detectPackageManager, installDevPackages } from '../../../core/package-manager';
+import { CZRC_CONTENT } from './czrc';
 import { addCommitizen, missingCommitizenDeps, type PackageJsonShape } from './package-modifier';
 
+export { CZRC_CONTENT } from './czrc';
 export {
   addCommitizen,
   missingCommitizenDeps,
   type PackageJsonShape,
 } from './package-modifier';
-
-const CZRC_CONTENT = `${JSON.stringify({ path: 'cz-conventional-changelog' }, null, 2)}\n`;
 
 export const setupCommitizen = async (projectPath: string): Promise<void> => {
   const spinner = startSpinner('Setting up Commitizen...');

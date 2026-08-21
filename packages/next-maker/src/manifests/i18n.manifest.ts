@@ -1,4 +1,6 @@
 import { setupI18n } from '../services/setup/i18n';
+import { repairI18n } from '../services/setup/i18n/repair';
+import { withRepair } from './apply';
 import { unwrapNextIntlPlugin } from './transforms/next-config';
 import { unwrapJsxChain } from './transforms/unwrap-jsx';
 import type { FeatureManifest } from './types';
@@ -46,5 +48,5 @@ export const i18nManifest: FeatureManifest = {
       removePattern: unwrapJsxChain('NextIntlClientProvider'),
     },
   ],
-  apply: setupI18n,
+  apply: withRepair(setupI18n, repairI18n),
 };

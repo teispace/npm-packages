@@ -2,6 +2,8 @@ import path from 'node:path';
 import { PROJECT_PATHS } from '../config/paths';
 import { fileExists, readFile } from '../core/files';
 import { setupReactCompiler } from '../services/setup/react-compiler';
+import { repairReactCompiler } from '../services/setup/react-compiler/repair';
+import { withRepair } from './apply';
 import type { FeatureManifest } from './types';
 
 export const reactCompilerManifest: FeatureManifest = {
@@ -24,5 +26,5 @@ export const reactCompilerManifest: FeatureManifest = {
       removePattern: /\n\s*reactCompiler:\s*true,?/,
     },
   ],
-  apply: setupReactCompiler,
+  apply: withRepair(setupReactCompiler, repairReactCompiler),
 };

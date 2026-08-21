@@ -4,6 +4,9 @@ import { PROJECT_PATHS } from '../../../config/paths';
 import { startSpinner } from '../../../config/spinner';
 import { fileExists, readFile, writeFile } from '../../../core/files';
 import { installDevPackage } from '../../../core/package-manager';
+import { hasReactCompilerFlag, injectReactCompilerFlag } from './transform';
+
+export { hasReactCompilerFlag, injectReactCompilerFlag } from './transform';
 
 export const setupReactCompiler = async (projectPath: string): Promise<void> => {
   const spinner = startSpinner('Enabling React Compiler...');
@@ -13,19 +16,13 @@ export const setupReactCompiler = async (projectPath: string): Promise<void> => 
       throw new Error(`${PROJECT_PATHS.NEXT_CONFIG} not found.`);
     }
 
-    let content = await readFile(nextConfigPath);
-    if (content.includes('reactCompiler:')) {
+    const content = await readFile(nextConfigPath);
+    if (hasReactCompilerFlag(content)) {
       spinner.fail('React Compiler is already configured in next.config.ts.');
       return;
     }
 
-    // Inject `reactCompiler: true` inside `const nextConfig: NextConfig = { ... };`
-    const configBlock = /(const\s+nextConfig\s*:\s*NextConfig\s*=\s*\{)/;
-    if (!configBlock.test(content)) {
-      throw new Error('Could not locate `const nextConfig: NextConfig = {` in next.config.ts.');
-    }
-    content = content.replace(configBlock, '$1\n  reactCompiler: true,');
-    await writeFile(nextConfigPath, content);
+    await writeFile(nextConfigPath, injectReactCompilerFlag(content));
 
     spinner.text = 'Installing babel-plugin-react-compiler...';
     await installDevPackage(projectPath, 'babel-plugin-react-compiler');

@@ -2,6 +2,8 @@ import path from 'node:path';
 import { PROJECT_PATHS } from '../config/paths';
 import { fileExists } from '../core/files';
 import { setupTests } from '../services/setup/tests';
+import { repairTests } from '../services/setup/tests/repair';
+import { withRepair } from './apply';
 import type { FeatureManifest } from './types';
 
 export const testsManifest: FeatureManifest = {
@@ -34,5 +36,5 @@ export const testsManifest: FeatureManifest = {
     { name: 'test:watch', expectedValue: 'vitest' },
   ],
   injections: [],
-  apply: setupTests,
+  apply: withRepair(setupTests, repairTests),
 };

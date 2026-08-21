@@ -2,6 +2,8 @@ import { access, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setupWs } from '../services/setup/ws';
 import { stripBridgeMount, stripWsReducerRegistration } from '../services/setup/ws/injectors';
+import { repairWs } from '../services/setup/ws/repair';
+import { withRepair } from './apply';
 import type { FeatureManifest } from './types';
 
 /**
@@ -69,5 +71,5 @@ export const wsManifest: FeatureManifest = {
       removePattern: stripBridgeMount,
     },
   ],
-  apply: setupWs,
+  apply: withRepair(setupWs, repairWs),
 };

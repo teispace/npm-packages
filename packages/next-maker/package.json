@@ -43,20 +43,20 @@
   },
   "dependencies": {
     "commander": "^15.0.0",
-    "degit": "^3.4.7",
+    "degit": "^3.8.0",
     "enquirer": "^2.4.1",
     "ora": "^9.4.1",
     "picocolors": "^1.1.1",
-    "png-to-ico": "^3.0.1",
-    "sharp": "^0.35.2"
+    "png-to-ico": "^3.0.2",
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@types/degit": "^2.8.6",
-    "@types/node": "^26.0.1",
-    "esbuild": "^0.28.1",
-    "tsx": "^4.22.4",
+    "@types/node": "^26.2.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.11"
   },
   "engines": {
     "node": ">=24.0.0"

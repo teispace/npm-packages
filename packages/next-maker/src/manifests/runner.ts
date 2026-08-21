@@ -3,6 +3,7 @@ import { PROJECT_PATHS } from '../config/paths';
 import { fileExists, readFile, writeFile } from '../core/files';
 import { detectPackageManager, uninstallPackages } from '../core/package-manager';
 import type {
+  CodeBlockRequirement,
   FeatureCheckResult,
   FeatureFinding,
   FeatureManifest,
@@ -29,6 +30,16 @@ const writePackageJson = async (projectPath: string, pkg: PackageJsonShape): Pro
 
 const depsFor = (pkg: PackageJsonShape, kind: PackageRequirement['kind']): Record<string, string> =>
   (kind === 'dependency' ? pkg.dependencies : pkg.devDependencies) ?? {};
+
+/**
+ * Every path a code block may legitimately live in, in priority order.
+ * Single-home requirements yield exactly one entry, so callers can always
+ * treat an injection as a candidate list.
+ */
+export const injectionPaths = (injection: CodeBlockRequirement): string[] => [
+  injection.file,
+  ...(injection.alternativeFiles ?? []),
+];
 
 /**
  * Compute drift: walk every piece of the manifest's footprint and report
@@ -67,7 +78,7 @@ export const checkManifest = async (
     for (const script of manifest.scripts) {
       const actual = scripts[script.name];
       if (!actual) {
-        drift.push({ kind: 'missingScript', name: script.name });
+        drift.push({ kind: 'missingScript', name: script.name, expected: script.expectedValue });
       } else if (script.expectedValue && actual !== script.expectedValue) {
         drift.push({
           kind: 'mismatchedScript',
@@ -80,8 +91,15 @@ export const checkManifest = async (
   }
 
   for (const injection of manifest.injections) {
-    const filePath = path.join(projectPath, injection.file);
-    if (!fileExists(filePath)) {
+    const candidates = injectionPaths(injection);
+    const present = candidates.filter((rel) => fileExists(path.join(projectPath, rel)));
+
+    // No candidate exists at all. For a single-home requirement that's the
+    // classic "the file we inject into is gone" drift; for an `anyOf`
+    // requirement it means the project has none of the files the block could
+    // possibly live in, which is equally broken. Report against the primary
+    // path so the message names something concrete.
+    if (present.length === 0) {
       drift.push({
         kind: 'missingInjection',
         file: injection.file,
@@ -89,11 +107,23 @@ export const checkManifest = async (
       });
       continue;
     }
-    const content = await readFile(filePath);
-    if (!injection.presence.test(content)) {
+
+    // The block only has to be in ONE of the candidates that actually exist.
+    // A candidate that isn't on disk is not drift — it's simply not the
+    // variant this project uses.
+    let found = false;
+    for (const rel of present) {
+      const content = await readFile(path.join(projectPath, rel));
+      if (injection.presence.test(content)) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
       drift.push({
         kind: 'missingInjection',
-        file: injection.file,
+        file: present[0],
         description: injection.description,
       });
     }
@@ -138,36 +168,41 @@ export const reverseManifest = async (
   };
 
   // 1. Strip code blocks first — they reference files/packages we may delete next.
+  //    An `anyOf` requirement is stripped from every candidate that exists and
+  //    carries the block, so remove stays symmetrical with check: whichever
+  //    layout variant the project uses, the block comes back out.
   for (const injection of manifest.injections) {
-    const filePath = path.join(projectPath, injection.file);
-    if (!fileExists(filePath)) continue;
-    if (!injection.removePattern) {
-      summary.manualCleanup.push({ file: injection.file, description: injection.description });
-      continue;
-    }
-    const content = await readFile(filePath);
-    if (!injection.presence.test(content)) continue;
-
-    // RemoveTransform supports two shapes — RegExp for simple replace, or a
-    // function that returns the transformed content (or null to bail out to
-    // manual cleanup when the file shape has drifted from expectations).
-    let stripped: string;
-    if (typeof injection.removePattern === 'function') {
-      const out = injection.removePattern(content);
-      if (out === null) {
-        summary.manualCleanup.push({ file: injection.file, description: injection.description });
+    for (const rel of injectionPaths(injection)) {
+      const filePath = path.join(projectPath, rel);
+      if (!fileExists(filePath)) continue;
+      if (!injection.removePattern) {
+        summary.manualCleanup.push({ file: rel, description: injection.description });
         continue;
       }
-      stripped = out;
-    } else {
-      stripped = content.replace(injection.removePattern, '');
-    }
+      const content = await readFile(filePath);
+      if (!injection.presence.test(content)) continue;
 
-    if (stripped !== content) {
-      if (!dryRun) await writeFile(filePath, stripped);
-      summary.blocksStripped.push({ file: injection.file, description: injection.description });
-    } else {
-      summary.manualCleanup.push({ file: injection.file, description: injection.description });
+      // RemoveTransform supports two shapes — RegExp for simple replace, or a
+      // function that returns the transformed content (or null to bail out to
+      // manual cleanup when the file shape has drifted from expectations).
+      let stripped: string;
+      if (typeof injection.removePattern === 'function') {
+        const out = injection.removePattern(content);
+        if (out === null) {
+          summary.manualCleanup.push({ file: rel, description: injection.description });
+          continue;
+        }
+        stripped = out;
+      } else {
+        stripped = content.replace(injection.removePattern, '');
+      }
+
+      if (stripped !== content) {
+        if (!dryRun) await writeFile(filePath, stripped);
+        summary.blocksStripped.push({ file: rel, description: injection.description });
+      } else {
+        summary.manualCleanup.push({ file: rel, description: injection.description });
+      }
     }
   }
 
