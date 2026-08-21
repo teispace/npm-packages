@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.0.0](https://github.com/teispace/npm-packages/compare/next-themes-v2.0.4...next-themes-v3.0.0) (2026-08-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **next-themes:** `createThemes()` no longer shares a context with other factories. Apps calling it once are unaffected; apps calling it more than once were relying on behaviour that served the wrong store. `main` has been removed from package.json because it pointed at an ESM file and misled CJS resolvers. Cookies now set `Secure` automatically on HTTPS — pass `cookieOptions={{ secure: false }}` to opt out. `sideEffects` is now `["*.css"]` rather than `false`, which had permitted bundlers to drop `import '@teispace/next-themes/tailwind.css'`. `engines.node` lowered to >=20.9.0.
+
+### Features
+
+* **next-themes:** isolate factory contexts and ship fine-grained entries ([81a94bf](https://github.com/teispace/npm-packages/commit/81a94bfdbdd63837c84e677d03cf3b0759135632))
+
+
+### Bug Fixes
+
+* make two new tests independent of the environment and the build order ([8f95e06](https://github.com/teispace/npm-packages/commit/8f95e060fcaa3c0cb6749fb341e81870b2c4cb81))
+
 ## [2.0.4](https://github.com/teispace/npm-packages/compare/next-themes-v2.0.3...next-themes-v2.0.4) (2026-06-28)
 
 

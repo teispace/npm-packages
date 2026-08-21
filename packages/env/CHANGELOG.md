@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/teispace/npm-packages/compare/env-v0.2.4...env-v1.0.0) (2026-08-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **env:** configurations that declared a variable in two groups, or a server variable carrying the client prefix, are now rejected at define time. `emptyStringAsUndefined: false` now behaves as documented, `e.string()` rejects the empty string (use `min: 0` to opt out), and the next/vite presets default `runtimeEnvStrict` to on. `sideEffects` is now an allow-list rather than `false`, which previously permitted bundlers to delete `import '@teispace/env/config'` outright and silently skip the .env cascade. `engines.node` lowered to >=20.9.0.
+
+### Features
+
+* **env:** harden validation and add cross-field, dev and strict ergonomics ([bdd57df](https://github.com/teispace/npm-packages/commit/bdd57dfe26cc86976e2312c9c6237987a0a0c675))
+
 ## [0.2.4](https://github.com/teispace/npm-packages/compare/env-v0.2.3...env-v0.2.4) (2026-06-28)
 
 
