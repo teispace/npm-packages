@@ -217,7 +217,16 @@ function parseArgs(argv: string[]): { baseUrl?: string } {
   return { baseUrl: value };
 }
 
-function main(): void {
+/**
+ * Generate `registry.json` and `r/*.json` from the shared group manifest.
+ *
+ * Exported so the test suite can produce the artifacts it asserts on instead of
+ * depending on `yarn build` having run first. CI runs the test job before the
+ * build job, and these files are gitignored (the build regenerates them, and
+ * `prepublishOnly` guarantees they are fresh in the tarball) — so a test that
+ * merely *read* them passed locally and failed on a clean checkout.
+ */
+export function buildRegistry(argv: string[] = []): void {
   const pkg = JSON.parse(readFileSync(join(PACKAGE_ROOT, 'package.json'), 'utf8')) as {
     name: string;
     version: string;
@@ -225,7 +234,7 @@ function main(): void {
   };
 
   const options: BuildOptions = {
-    ...parseArgs(process.argv.slice(2)),
+    ...parseArgs(argv),
     packageName: pkg.name,
     packageVersion: pkg.version,
     homepage: pkg.homepage,
@@ -271,4 +280,9 @@ function main(): void {
   );
 }
 
-main();
+// Only self-execute when run directly (`tsx src/registry/build-registry.ts`),
+// so importing this module from a test does not write files as a side effect.
+const isDirectRun = process.argv[1]
+  ? resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+  : false;
+if (isDirectRun) buildRegistry(process.argv.slice(2));

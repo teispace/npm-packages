@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { buildRegistry } from '../../src/registry/build-registry.js';
 import {
   bareSpecifier,
   extractDependencies,
@@ -57,6 +58,11 @@ function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, 'utf8')) as T;
 }
 
+// Generate the artifacts rather than assume `yarn build` ran. `registry.json`
+// and `r/*.json` are gitignored build output, and CI runs the test job BEFORE
+// the build job — reading them directly passed locally (stale files present)
+// and failed with ENOENT on a clean checkout.
+buildRegistry();
 const manifest = readJson<RegistryManifest>(join(PACKAGE_ROOT, 'registry.json'));
 
 describe('registry manifest (shared source of truth)', () => {

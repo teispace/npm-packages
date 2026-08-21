@@ -6,18 +6,34 @@ import { useTheme } from '../src/hooks/use-theme';
 import { ThemeProvider } from '../src/providers/client';
 
 /**
- * The suite's setup installs a plain-object localStorage polyfill (see
- * `__tests__/setup.ts`), so it does NOT inherit from `Storage.prototype` —
- * spy on the instance method directly.
+ * Replace `globalThis.localStorage` wholesale with a stub whose `setItem`
+ * throws.
+ *
+ * Assigning to `localStorage.setItem` is NOT portable here. Depending on the
+ * Node version, `globalThis.localStorage` is either jsdom's real `Storage`
+ * (where `setItem` lives on `Storage.prototype`, so an instance assignment does
+ * not shadow it) or the plain-object polyfill this suite's setup installs when
+ * the inherited implementation is unusable (see `__tests__/setup.ts`). The
+ * instance-assignment version of this test passed locally on Node 26 and failed
+ * on CI's Node 24 for exactly that reason.
+ *
+ * Swapping the whole binding via `defineProperty` works against both shapes.
+ * `getItem` is kept functional because `hasLocalStorage()` probes for both
+ * methods before the adapter will attempt a write at all.
  */
 function breakLocalStorageWrites(): () => void {
-  const ls = globalThis.localStorage;
-  const original = ls.setItem;
-  ls.setItem = () => {
-    throw new DOMException('QuotaExceededError');
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const stub: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> = {
+    getItem: () => null,
+    setItem: () => {
+      throw new DOMException('QuotaExceededError');
+    },
+    removeItem: () => {},
   };
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: stub });
   return () => {
-    ls.setItem = original;
+    if (original) Object.defineProperty(globalThis, 'localStorage', original);
+    else delete (globalThis as { localStorage?: unknown }).localStorage;
   };
 }
 
