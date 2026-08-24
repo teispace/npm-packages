@@ -46,8 +46,13 @@ export type ModuleKind = (typeof MODULE)[keyof typeof MODULE];
 export interface QrMatrix {
   /** Width and height in modules, excluding the quiet zone. */
   readonly size: number;
-  /** Symbol version, 1-40. */
+  /** Symbol version: 1-40 for QR, or 1-4 meaning M1-M4 when `variant` is `'micro'`. */
   readonly version: number;
+  /**
+   * Which symbology this is. Absent means a full QR symbol, so existing code
+   * that never heard of Micro QR keeps working unchanged.
+   */
+  readonly variant?: 'qr' | 'micro';
   /** The level actually used, which may exceed the requested one when `boostEcc` is on. */
   readonly ecc: EccLevel;
   /** Mask pattern applied, 0-7. */

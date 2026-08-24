@@ -27,6 +27,19 @@ export {
   versionBits,
 } from './core/matrix.js';
 export {
+  encodeMicro,
+  MICRO_LEVELS,
+  MICRO_MASK_FUNCTIONS,
+  MICRO_VERSIONS,
+  type MicroEncodeOptions,
+  type MicroVersion,
+  microDataBits,
+  microFormatBits,
+  microModeBits,
+  microSize,
+  microVersionOf,
+} from './core/micro.js';
+export {
   ALPHANUMERIC_CHARSET,
   buildSegments,
   countBits,

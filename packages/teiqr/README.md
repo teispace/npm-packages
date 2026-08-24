@@ -649,6 +649,49 @@ scan(png).bytes;   // → the same bytes back
 
 ---
 
+## Micro QR
+
+A separate, smaller symbology for when a full QR code will not fit — circuit
+boards, pharmaceutical blisters, cable labels. An M1 symbol is 11 modules across
+where a version-1 QR symbol is 21, under a third of the area.
+
+```ts
+import { encodeMicro } from 'teiqr/core';
+
+encodeMicro('12345');                          // M1, 11x11
+encodeMicro('HELLO', { ecc: 'M' });            // M2 or larger
+encodeMicro('hello', { version: 'M4' });       // byte mode needs M3+
+```
+
+The result is an ordinary `QrMatrix` tagged `variant: 'micro'`, so it renders,
+rasterises and exports through everything else unchanged.
+
+| Version | Size | Levels | Modes |
+| --- | --- | --- | --- |
+| M1 | 11x11 | detection only | numeric |
+| M2 | 13x13 | L, M | numeric, alphanumeric |
+| M3 | 15x15 | L, M | numeric, alphanumeric, byte, Kanji |
+| M4 | 17x17 | L, M, Q | numeric, alphanumeric, byte, Kanji |
+
+There is no level H, M1 carries error *detection* rather than correction, and
+capacity tops out at 35 digits, 21 alphanumeric characters or 15 bytes — past
+that, use a full QR symbol.
+
+> **How this is verified.** Micro QR shares almost nothing with QR beyond
+> Reed-Solomon: four mask patterns instead of eight, a different format-info XOR
+> mask, narrower count fields, and a four-bit final data codeword in M1 and M3.
+> A single wrong table value produces a symbol that round-trips through our own
+> decoder perfectly and is rejected by every real scanner. So every version,
+> level and mask is compared **module-for-module against `segno`**, an
+> independent ISO-conformant implementation — 420 fixtures, checked on every
+> test run. That caught two real bugs during development: QR's column-direction
+> expression, whose arithmetic only holds for QR's 4v+17 sizes, and padding M1
+> and M3 with `0xEC`/`0x11` where the standard requires zeros.
+>
+> Micro QR **encoding** is implemented; decoding Micro QR symbols is not yet.
+
+---
+
 ## Structured Append
 
 A single symbol tops out at 2,953 bytes. Structured Append spreads one payload across up to 16
@@ -1038,7 +1081,7 @@ Stated plainly, because a library that hides these wastes your afternoon:
   Both are reported in `rasterize().omitted`. SVG handles both fully.
 - **JPEG/WebP/AVIF decoding needs `createImageBitmap`** (so, `scanAsync` in a browser, Worker
   or Deno). PNG is decoded natively everywhere.
-- **Micro QR and rMQR are not implemented.**
+- **rMQR is not implemented.** Micro QR encoding is; decoding Micro QR symbols is not.
 
 ---
 
