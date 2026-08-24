@@ -7,6 +7,7 @@ export default defineConfig({
     render: 'src/render.ts',
     validate: 'src/validate.ts',
     payload: 'src/payload.ts',
+    export: 'src/export.ts',
     raster: 'src/raster.ts',
     verify: 'src/verify.ts',
     terminal: 'src/terminal.ts',

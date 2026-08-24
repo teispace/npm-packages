@@ -94,6 +94,16 @@
         "default": "./dist/payload.cjs"
       }
     },
+    "./export": {
+      "import": {
+        "types": "./dist/export.d.ts",
+        "default": "./dist/export.js"
+      },
+      "require": {
+        "types": "./dist/export.d.cts",
+        "default": "./dist/export.cjs"
+      }
+    },
     "./raster": {
       "import": {
         "types": "./dist/raster.d.ts",

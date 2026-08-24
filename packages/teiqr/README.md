@@ -70,6 +70,7 @@ Both still scan — but only one follows the standard. This is pinned by a regre
 
 - [Quick start](#quick-start) · [Encoding](#encoding) · [Styling](#styling) · [Output formats](#output-formats)
 - [Scanning](#scanning) · [Cloning an existing code](#cloning-an-existing-code) · [Validation](#validation)
+- [PDF/EPS](#pdf-and-eps--print-ready-vector-at-a-real-physical-size) · [ZIP & batch](#zip-and-csv-driven-batch)
 - [Payloads](#payloads) · [Extensibility](#extensibility)
 - [Kanji, ECI, binary](#kanji-eci-and-binary) · [Structured Append](#structured-append) · [Terminal](#terminal-output)
 - [Entry points & bundle size](#entry-points-and-bundle-size) · [Runtime support](#runtime-support)
@@ -278,6 +279,61 @@ import { rasterize } from 'teiqr/raster';
 const { pixels, width, height, omitted } = rasterize(matrix, style, { scale: 8 });
 // `pixels` is RGBA, exactly like canvas ImageData — composite it however you like.
 ```
+
+### PDF and EPS — print-ready vector at a real physical size
+
+```ts
+import { exportQr } from 'teiqr/export';
+
+const { bytes, mime, extension, omitted } =
+  exportQr(matrix, { moduleShape: 'rounded' }, 'pdf', { sideMm: 40, title: 'Table 12' });
+
+await writeFile(`menu.${extension}`, bytes);
+```
+
+`sideMm` is the actual printed size, not a pixel count — a 40 mm PDF opens as 40 mm in
+Illustrator, InDesign or a print shop's RIP. Every format serialises from the same scene, so
+the geometry cannot drift between your SVG preview and the PDF that goes to press.
+
+Both are **synchronous and canvas-free**, including logo embedding: raster logos are decoded
+with this package's own PNG decoder rather than drawn to a canvas, which is why PDF export
+produces the same document on a server as in a browser. PDF carries logo transparency through
+a soft mask; EPS has no soft mask worth relying on across RIPs, so it flattens onto the
+background colour beneath the logo.
+
+Returns bytes rather than a `Blob`, so the same call works in Node and streams straight into a
+Worker `Response`.
+
+### ZIP and CSV-driven batch
+
+```ts
+import { createZip, exportQr, parseCsv, planBatch, uniqueFilenames } from 'teiqr/export';
+import { serializePayload } from 'teiqr/payload';
+
+const plan = planBatch('wifi', parseCsv(csvText));
+const names = uniqueFilenames(plan.rows.map((r) => r.filename));
+
+const zip = createZip(
+  plan.rows.map((row, i) => ({
+    name: `${names[i]}.png`,
+    data: exportQr(qr(serializePayload('wifi', row.values)).matrix, {}, 'png', { scale: 10 }).bytes,
+    store: true,   // PNG is already compressed
+  })),
+);
+```
+
+`planBatch` matches CSV columns to payload fields by several aliases — a column headed
+`Network Name`, `SSID` or `Network name (SSID)` all find the same field, because all three are
+what people actually type. Rows missing a required field come back with a populated `missing`
+array rather than being dropped.
+
+> **It will not invent data for you.** A column your sheet omits stays absent, and the row is
+> reported as incomplete. The alternative — filling from the payload type's sample — would
+> quietly emit five hundred codes all pointing at the sample network. Pass
+> `{ fillFromSample: true }` if you want that behaviour for an interactive editor.
+
+The ZIP writer is synchronous and produces byte-identical archives across builds (entries are
+stamped with a fixed timestamp), so output is diffable and cacheable.
 
 ---
 
@@ -619,15 +675,16 @@ Import the whole toolkit, or exactly the part you need. Measured with esbuild, m
 
 | Entry             | Gzipped | What it is                                |
 | ----------------- | ------: | ----------------------------------------- |
-| `teiqr`           | 33.5 kB | everything                                |
-| `teiqr/core`      |  7.0 kB | encoding only                             |
-| `teiqr/render`    |  4.4 kB | scene + SVG                               |
-| `teiqr/validate`  |  4.6 kB | scannability analysis                     |
-| `teiqr/payload`   |  8.0 kB | 32 typed builders + parsers               |
-| `teiqr/raster`    |  9.1 kB | DEFLATE + PNG + rasteriser                |
-| `teiqr/verify`    |  8.8 kB | decoder + scanner                         |
+| `teiqr`           | 32.7 kB | everything                                |
+| `teiqr/core`      |  6.8 kB | encoding only                             |
+| `teiqr/render`    |  4.3 kB | scene + SVG                               |
+| `teiqr/validate`  |  4.5 kB | scannability analysis                     |
+| `teiqr/payload`   |  7.8 kB | 32 typed builders + parsers               |
+| `teiqr/export`    | 20.2 kB | PDF, EPS, ZIP, CSV batch                  |
+| `teiqr/raster`    |  8.9 kB | DEFLATE + PNG + rasteriser                |
+| `teiqr/verify`    |  8.6 kB | decoder + scanner                         |
 | `teiqr/terminal`  |  0.4 kB | text output                               |
-| `teiqr/kanji`     | 10.8 kB | Shift-JIS table (opt-in)                  |
+| `teiqr/kanji`     | 10.5 kB | Shift-JIS table (opt-in)                  |
 
 Individual functions tree-shake further — `encode` alone is **5.3 kB**, `toPng` **9.0 kB**,
 `scan` **8.1 kB**.

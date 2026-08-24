@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ECI, encode, encodeStructured } from '../src/core.js';
+import { createZip, exportQr, parseCsv, planBatch, toCsv, uniqueFilenames } from '../src/export.js';
 import { clone, qr } from '../src/index.js';
 import {
   getPayloadType,
@@ -252,6 +253,48 @@ describe('README examples actually run', () => {
       { scale: 8 },
     );
     expect(omitted.some((o) => o.includes('label'))).toBe(true);
+  });
+
+  it('the PDF/EPS export example', () => {
+    const { bytes, mime, extension, omitted } = exportQr(
+      encode('menu'),
+      { moduleShape: 'rounded' },
+      'pdf',
+      { sideMm: 40, title: 'Table 12' },
+    );
+    expect(bytes.length).toBeGreaterThan(0);
+    expect(mime).toBe('application/pdf');
+    expect(extension).toBe('pdf');
+    expect(omitted).toEqual([]);
+    // 40mm is the actual page size, as the README claims.
+    const box = /MediaBox\s*\[\s*0\s+0\s+([\d.]+)/.exec(new TextDecoder().decode(bytes));
+    expect(Number(box?.[1])).toBeCloseTo((40 / 25.4) * 72, 1);
+  });
+
+  it('the ZIP + CSV batch example', () => {
+    const csvText = toCsv(['name', 'ssid', 'password'], [['cafe', 'Pokhara Cafe', 'pw1']]);
+    const plan = planBatch('wifi', parseCsv(csvText));
+    const names = uniqueFilenames(plan.rows.map((r) => r.filename));
+    const zip = createZip(
+      plan.rows.map((row, i) => ({
+        name: `${names[i]}.png`,
+        data: exportQr(qr(serializePayload('wifi', row.values)).matrix, {}, 'png', { scale: 10 })
+          .bytes,
+        store: true,
+      })),
+    );
+    expect(zip.length).toBeGreaterThan(22);
+    expect(new TextDecoder().decode(zip)).toContain('cafe.png');
+  });
+
+  it('planBatch does not invent data, as the README promises', () => {
+    const plan = planBatch('wifi', parseCsv(toCsv(['name', 'password'], [['x', 'pw']])));
+    expect(plan.rows[0].values.ssid).toBeUndefined();
+    expect(plan.rows[0].missing).toContain('ssid');
+    const filled = planBatch('wifi', parseCsv(toCsv(['name', 'password'], [['x', 'pw']])), {
+      fillFromSample: true,
+    });
+    expect(filled.rows[0].values.ssid).toBeDefined();
   });
 
   it('renderSvg returns the documented fields', () => {
