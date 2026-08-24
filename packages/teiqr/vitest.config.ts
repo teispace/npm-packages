@@ -3,7 +3,7 @@ import { withThresholds } from '../../vitest.coverage';
 
 export default defineConfig({
   test: {
-    include: ['__tests__/**/*.test.ts'],
+    include: ['__tests__/**/*.test.ts', '__tests__/**/*.test.tsx'],
     // Everything here is runtime-agnostic and DOM-free; the Node environment is
     // both faster and a more faithful target than jsdom. The cross-runtime
     // suite proves the DOM-free claim by making DOM globals throw.

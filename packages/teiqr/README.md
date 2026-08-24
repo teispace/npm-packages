@@ -28,19 +28,49 @@ None of them can scan. All of them make you install a second library to do it.
 
 `teiqr` is one MIT-licensed package that does the whole job:
 
-|                              | teiqr | `qrcode` | `qr-code-styling` | `qrcode.react` | `uqr` |
-| ---------------------------- | :---: | :------: | :---------------: | :------------: | :---: |
-| Generate                     |  ✅   |    ✅    |        ✅         |       ✅       |  ✅   |
-| **Decode / scan**            |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |
-| Styled modules & eyes        |  ✅   |    ❌    |        ✅         |       ❌       |  ❌   |
-| PNG without a canvas         |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |
-| Scannability validation      |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |
-| Kanji · ECI · Structured Append | ✅ |    ❌    |        ❌         |       ❌       |  ❌   |
-| ESM + CJS + bundled types    |  ✅   |    ❌    |        ❌         |       ✅       |  ✅   |
-| Runtime dependencies         | **0** |    7     |         1         |       0        |   0   |
-| License                      |  MIT  |   MIT    |        MIT        |      ISC       |  MIT  |
+|                                 | teiqr | `qrcode` | `qr-code-styling` | `qrcode.react` | `uqr` | `@paulmillr/qr` |
+| ------------------------------- | :---: | :------: | :---------------: | :------------: | :---: | :-------------: |
+| Generate                        |  ✅   |    ✅    |        ✅         |       ✅       |  ✅   |       ✅        |
+| Decode / scan                   |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |       ✅        |
+| Camera scanning from a photo    |  ❌   |    ❌    |        ❌         |       ❌       |  ❌   |       ✅        |
+| Styled modules & eyes           |  ✅   |    ❌    |        ✅         |       ❌       |  ❌   |       ❌        |
+| PNG without a canvas            |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |       ✅        |
+| PDF / EPS vector export         |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |       ❌        |
+| Scannability validation         |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |       ❌        |
+| Payload builders **and parsers**|  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |       ❌        |
+| ECI                             |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |       ❌        |
+| Kanji                           |  ✅   |    ✅    |        ❌         |       ❌       |  ❌   |       ✅        |
+| Structured Append               |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |       ❌        |
+| React components                |  ✅   |    ❌    |        ❌         |       ✅       |  ❌   |       ❌        |
+| ESM + CJS + bundled types       |  ✅   |    ❌    |        ❌         |       ✅       |  ✅   |       ✅        |
+| Runtime dependencies            | **0** |    7     |         1         |       0        |   0   |      **0**      |
+| License                         |  MIT  |   MIT    |        MIT        |      ISC       |  MIT  |  Apache-2.0/MIT |
 
 <sub>Registry data checked August 2026. `qrious` (GPL-3.0) and `qr-image` (last published 2016) omitted.</sub>
+
+**Credit where it is due:** [`@paulmillr/qr`](https://github.com/paulmillr/qr) is the closest
+thing to a peer here — zero dependencies, it decodes, and it does something this library does
+not: **perspective correction**, so it reads codes from photographs taken at an angle. If
+decoding camera photos is your main need, use it. `teiqr` decodes rendered images rather than
+photographs; the trade is that it adds styling, validation, vector export, payload parsing,
+ECI and Structured Append on top.
+
+### Long-standing requests in other libraries that work here
+
+Every row links to a real open issue somewhere else:
+
+| Asked for | Where | In `teiqr` |
+| --- | --- | --- |
+| ESM instead of CommonJS | [qrcode#236](https://github.com/soldair/node-qrcode/issues/236) | ESM + CJS, with types per entry |
+| A logo in the centre | [qrcode#240](https://github.com/soldair/node-qrcode/issues/240) | `logo`, with exact damage analysis |
+| Custom module shapes | [qrcode#237](https://github.com/soldair/node-qrcode/issues/237) | 10 shapes, 6 eye frames, 5 eye balls |
+| A synchronous data-URL method | [qrcode#186](https://github.com/soldair/node-qrcode/issues/186) | every output is synchronous |
+| Works on Cloudflare Workers | [qrcode#349](https://github.com/soldair/node-qrcode/issues/349) | no canvas anywhere; Workers tested |
+| `global is not defined` | [qrcode#217](https://github.com/soldair/node-qrcode/issues/217) | no Node globals in the bundle |
+| Mask pattern selection | [qrcode-generator#111](https://github.com/kazuhikoarase/qrcode-generator/issues) | `mask: 0-7`, or spec-conformant auto |
+| TypeScript types exported | [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator/issues) | fully typed, types bundled |
+| UTF-8 / umlaut handling | [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator/issues) | UTF-8 throughout, plus explicit ECI |
+| Encoding non-text data | [qrcode.react](https://github.com/zpao/qrcode.react) — "supports encoding text only" | `Uint8Array` and raw segments |
 
 ### Three things no other JavaScript QR library does
 
@@ -73,7 +103,7 @@ Both still scan — but only one follows the standard. This is pinned by a regre
 - [PDF/EPS](#pdf-and-eps--print-ready-vector-at-a-real-physical-size) · [ZIP & batch](#zip-and-csv-driven-batch)
 - [Payloads](#payloads) · [Extensibility](#extensibility)
 - [Kanji, ECI, binary](#kanji-eci-and-binary) · [Structured Append](#structured-append) · [Terminal](#terminal-output)
-- [Entry points & bundle size](#entry-points-and-bundle-size) · [Runtime support](#runtime-support)
+- [React](#react) · [Entry points & bundle size](#entry-points-and-bundle-size) · [Runtime support](#runtime-support)
 - [API reference](#api-reference) · [Conformance & testing](#conformance-and-testing)
 
 ---
@@ -669,6 +699,118 @@ On a dark terminal you need `invert: true` — a scanner expects dark modules on
 
 ---
 
+## React
+
+Plain React — the only peer dependency is `react` itself, and it is optional. No framework
+coupling: this works in Vite, Create React App, Remix, Astro, or a bare React app.
+
+```bash
+npm install teiqr react
+```
+
+```tsx
+import { QrCode } from 'teiqr/react';
+
+<QrCode value="https://example.com" size={256} title="Link to example.com" />
+```
+
+Every encoding and styling option is a prop:
+
+```tsx
+<QrCode
+  value={bytes}            // string, Uint8Array, or segments — not text-only
+  ecc="H"
+  moduleShape="rounded"
+  eyeFrame="circle"
+  size={256}
+  title="Scan to pay"
+  className="rounded-xl"   // unrecognised props go straight to the <svg>
+  onClick={handleClick}
+/>
+```
+
+**Real elements, not injected markup.** The component builds actual React elements rather than
+generating an SVG string and passing it to `dangerouslySetInnerHTML`. That means it reconciles
+normally instead of replacing the whole subtree on every change, it accepts a `ref` and event
+handlers, and no interpolated string derived from user input reaches the DOM.
+
+**Server rendering works.** SVG output is deterministic — gradient ids are hashes of the fill,
+not counters — so server and client markup match and hydration stays quiet. This is asserted by
+test, not assumed.
+
+**Encoding is cached across renders.** Encoding a large symbol is real work, and the common
+call site passes an inline object:
+
+```tsx
+<QrCode value={url} moduleShape="rounded" />   // a fresh options object every render
+```
+
+A `useMemo` keyed on those props would miss every single time, because object identity changes.
+`useQrCode` caches on a structural digest of the inputs instead, so inline literals still hit.
+
+### Canvas
+
+```tsx
+import { QrCanvas } from 'teiqr/react';
+<QrCanvas value="https://example.com" size={256} />
+```
+
+Prefer `<QrCode>` unless you are compositing into other canvas content or need `toDataURL` from
+the element. When you do need a canvas, this one is **sharp on retina displays by default** —
+the backing store is sized in device pixels and the CSS size set separately. Canvas-based QR
+components commonly size the bitmap in CSS pixels, so the browser upscales a 256×256 bitmap
+onto 512 physical pixels and the module edges smear; `qrcode.react` documents this and asks you
+to manage sizing yourself.
+
+Pixels come from this package's own rasteriser via `putImageData`, so canvas output is
+identical to PNG output rather than a second, subtly different drawing path.
+
+### Camera scanning
+
+```tsx
+import { useQrScanner } from 'teiqr/react';
+
+function Scanner() {
+  const { ref, result, error, scanning, start, stop } = useQrScanner({
+    onResult: (r) => console.log(r.text),
+    facingMode: 'environment',   // rear camera
+    fps: 10,                     // frames analysed per second
+    repeatDelayMs: 1500,         // before the same payload fires again
+    maxSize: 640,                // frames downscaled before decoding
+  });
+
+  if (error) return <p>{error.message}</p>;
+  return <video ref={ref} playsInline muted />;
+}
+```
+
+Handles the parts that are easy to get wrong: frames are throttled and downscaled before
+decoding (a 1080p frame is far more detail than a decoder needs), the same payload does not
+fire sixty times a second, and **every media track is stopped on unmount** — forgetting that is
+what leaves the camera indicator light on after a component goes away.
+
+Requires a secure context (HTTPS or localhost); browsers refuse camera access otherwise, and
+that refusal is surfaced through `onError` rather than thrown.
+
+### React Server Components
+
+`teiqr/react` carries a `'use client'` directive, which is a React convention rather than a
+Next.js one — inert in a plain React app, and what an RSC bundler needs. The build verifies the
+directive survives bundling, because Rollup strips module-level directives by default and the
+resulting failure surfaces as a confusing error in *your* application, not ours.
+
+For a server-rendered code with no client JavaScript at all, skip the component and render the
+string directly:
+
+```tsx
+import { renderSvg } from 'teiqr/render';
+import { encode } from 'teiqr/core';
+
+const { svg } = renderSvg(encode(url), { moduleShape: 'rounded' });
+```
+
+---
+
 ## Entry points and bundle size
 
 Import the whole toolkit, or exactly the part you need. Measured with esbuild, minified, gzipped:
@@ -685,9 +827,22 @@ Import the whole toolkit, or exactly the part you need. Measured with esbuild, m
 | `teiqr/verify`    |  8.6 kB | decoder + scanner                         |
 | `teiqr/terminal`  |  0.4 kB | text output                               |
 | `teiqr/kanji`     | 10.5 kB | Shift-JIS table (opt-in)                  |
+| `teiqr/react`     | 19.2 kB | components + hooks (`react` external)     |
 
-Individual functions tree-shake further — `encode` alone is **5.3 kB**, `toPng` **9.0 kB**,
-`scan` **8.1 kB**.
+Individual functions tree-shake further, and this is measured rather than assumed — bundling a
+single import and grepping the output for unrelated code:
+
+| Import | Gzipped | Unrelated code pulled in |
+| --- | ---: | --- |
+| `encode` | 5.2 kB | none |
+| `toPng` | 8.8 kB | none |
+| `scan` | 7.9 kB | none |
+| `toTerminal` | 0.4 kB | none |
+| `parsePayload` | 7.3 kB | none |
+| `<QrCode>` | 9.0 kB | none — the camera scanner is not included |
+| `useQrScanner` | 8.9 kB | none — the renderer is not included |
+
+Importing `toTerminal` costs 0.4 kB out of a 32.7 kB whole.
 
 Both ESM and CJS are published, with bundled `.d.ts` for each entry point.
 
@@ -799,14 +954,17 @@ decoder, so "it scans" does not rest on our own decoder agreeing with our own en
 
 Stated plainly, because a library that hides these wastes your afternoon:
 
-- **The scanner assumes an axis-aligned, unskewed image.** It is built to verify rendered
-  output, not to decode photographs — there is no perspective correction. For camera input,
-  use a dedicated scanner.
+- **The decoder has no perspective correction.** It assumes the symbol is axis-aligned and
+  unskewed, which is true of rendered output and of a code held flat to a camera, and untrue of
+  a photograph taken at an angle. `useQrScanner` works well for the former; for reading
+  arbitrary photos, [`@paulmillr/qr`](https://github.com/paulmillr/qr) does perspective
+  correction and is the better tool.
 - **Raster output cannot draw frame label text**, and can only embed **PNG** data-URI logos.
   Both are reported in `rasterize().omitted`. SVG handles both fully.
 - **JPEG/WebP/AVIF decoding needs `createImageBitmap`** (so, `scanAsync` in a browser, Worker
   or Deno). PNG is decoded natively everywhere.
 - **Micro QR and rMQR are not implemented.**
+- **A CLI is not shipped yet.**
 
 ---
 

@@ -12,12 +12,21 @@ export default defineConfig({
     verify: 'src/verify.ts',
     terminal: 'src/terminal.ts',
     kanji: 'src/kanji.ts',
+    react: 'src/react.tsx',
   },
   // Dual ESM + CJS. ESM is the primary target, but CJS is still what a great
   // many Node tools resolve to, and an import-only exports map fails them with
   // ERR_PACKAGE_PATH_NOT_EXPORTED.
   format: ['esm', 'cjs'],
-  dts: true,
+  dts: {
+    // Declaration generation needs the DOM lib, because the React entry's props
+    // reference HTMLCanvasElement and friends. The main tsconfig deliberately
+    // omits DOM to guarantee the non-React code never reaches for a browser
+    // global — that guarantee is still enforced, by `tsc -p tsconfig.json` at
+    // authoring time and by the runtime-portability suite at test time. Types
+    // do not execute, so widening the lib here costs nothing.
+    compilerOptions: { lib: ['ES2022', 'DOM', 'DOM.Iterable'] },
+  },
   clean: true,
   splitting: true,
   treeshake: true,

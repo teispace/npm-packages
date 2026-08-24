@@ -34,7 +34,8 @@
     "zero-dependency",
     "cloudflare-workers",
     "deno",
-    "bun"
+    "bun",
+    "react"
   ],
   "sideEffects": [
     "./dist/kanji.js",
@@ -144,6 +145,16 @@
         "default": "./dist/kanji.cjs"
       }
     },
+    "./react": {
+      "import": {
+        "types": "./dist/react.d.ts",
+        "default": "./dist/react.js"
+      },
+      "require": {
+        "types": "./dist/react.d.cts",
+        "default": "./dist/react.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -153,12 +164,12 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && node scripts/preserve-directives.mjs",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.react.json",
     "clean": "rm -rf dist",
     "prepublishOnly": "yarn clean && yarn build"
   },
@@ -166,7 +177,12 @@
     "node": ">=20.9.0"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "jsdom": "^30.0.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"
@@ -174,5 +190,13 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   }
 }
