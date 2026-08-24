@@ -40,6 +40,18 @@ export {
   microVersionOf,
 } from './core/micro.js';
 export {
+  encodeRmqr,
+  RMQR_SPECS,
+  RMQR_VERSIONS,
+  type RmqrEncodeOptions,
+  type RmqrLevel,
+  type RmqrVersion,
+  rmqrFormatBits,
+  rmqrMask,
+  rmqrVersionOf,
+} from './core/rmqr.js';
+export type { RmqrBlockGroup, RmqrVersionSpec } from './core/rmqr-tables.js';
+export {
   ALPHANUMERIC_CHARSET,
   buildSegments,
   countBits,

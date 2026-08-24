@@ -44,15 +44,27 @@ export type ModuleKind = (typeof MODULE)[keyof typeof MODULE];
 
 /** A fully-placed QR symbol. */
 export interface QrMatrix {
-  /** Width and height in modules, excluding the quiet zone. */
+  /**
+   * Modules along the longer side, excluding the quiet zone.
+   *
+   * For square symbologies — QR and Micro QR — this is both dimensions, and
+   * `width`/`height` are absent. rMQR is rectangular, so it sets all three.
+   */
   readonly size: number;
-  /** Symbol version: 1-40 for QR, or 1-4 meaning M1-M4 when `variant` is `'micro'`. */
+  /** Modules across. Absent for square symbols, where `size` is both. */
+  readonly width?: number;
+  /** Modules down. Absent for square symbols, where `size` is both. */
+  readonly height?: number;
+  /**
+   * Symbol version: 1-40 for QR, 1-4 meaning M1-M4 for `'micro'`, or 1-32
+   * indexing {@link RMQR_VERSIONS} for `'rmqr'`.
+   */
   readonly version: number;
   /**
-   * Which symbology this is. Absent means a full QR symbol, so existing code
-   * that never heard of Micro QR keeps working unchanged.
+   * Which symbology this is. Absent means a full QR symbol, so code written
+   * before Micro QR and rMQR existed keeps working unchanged.
    */
-  readonly variant?: 'qr' | 'micro';
+  readonly variant?: 'qr' | 'micro' | 'rmqr';
   /** The level actually used, which may exceed the requested one when `boostEcc` is on. */
   readonly ecc: EccLevel;
   /** Mask pattern applied, 0-7. */

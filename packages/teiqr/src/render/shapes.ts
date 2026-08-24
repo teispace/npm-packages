@@ -156,16 +156,22 @@ const barsPath = (
   isDark: NeighbourTest,
   axis: 'vertical' | 'horizontal',
   inset: number,
+  rows = size,
 ): string => {
   const parts: string[] = [];
   const thickness = 1 - inset * 2;
   const radius = thickness / 2;
 
-  for (let major = 0; major < size; major++) {
+  // A vertical bar runs down a column, so its major axis is the column index
+  // and its minor axis the row index; horizontal bars are the transpose.
+  const majorCount = axis === 'vertical' ? size : rows;
+  const minorCount = axis === 'vertical' ? rows : size;
+
+  for (let major = 0; major < majorCount; major++) {
     let runStart = -1;
-    for (let minor = 0; minor <= size; minor++) {
+    for (let minor = 0; minor <= minorCount; minor++) {
       const dark =
-        minor < size && (axis === 'vertical' ? isDark(major, minor) : isDark(minor, major));
+        minor < minorCount && (axis === 'vertical' ? isDark(major, minor) : isDark(minor, major));
 
       if (dark && runStart === -1) runStart = minor;
       if (!dark && runStart !== -1) {
@@ -207,17 +213,19 @@ export const bodyPath = (
   shape: ModuleShape,
   isDark: NeighbourTest,
   gap = 0,
+  /** Row count, when the grid is not square. Defaults to `size`. */
+  rows = size,
 ): string => {
   const inset = Math.max(0, Math.min(0.4, gap)) / 2;
 
   if (shape === 'vertical' || shape === 'horizontal') {
-    return barsPath(size, isDark, shape, inset);
+    return barsPath(size, isDark, shape, inset, rows);
   }
 
   // Connected shapes must touch, so they ignore the gap.
   const effectiveInset = shape === 'fluid' ? 0 : inset;
   const parts: string[] = [];
-  for (let y = 0; y < size; y++) {
+  for (let y = 0; y < rows; y++) {
     for (let x = 0; x < size; x++) {
       if (isDark(x, y)) parts.push(modulePath(shape, x, y, effectiveInset, isDark));
     }

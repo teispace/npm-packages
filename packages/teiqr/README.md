@@ -692,6 +692,50 @@ that, use a full QR symbol.
 
 ---
 
+## rMQR — rectangular symbols
+
+For surfaces that are long and thin: test tubes, cable wraps, PCB edges. ISO/IEC 23941 defines
+32 fixed rectangles from 7x43 up to 17x139 — the widest is nearly twenty times wider than it is
+tall, where neither a square QR nor a Micro QR symbol would fit at all.
+
+```ts
+import { encodeRmqr } from 'teiqr/core';
+
+encodeRmqr('SERIAL-4417');                        // flattest symbol that fits
+encodeRmqr('https://example.com', { ecc: 'H' });
+encodeRmqr('12345', { version: 'R7x43' });        // pin an exact size
+encodeRmqr('long payload', { fit: 'area' });      // minimise modules instead of height
+```
+
+`fit` defaults to `'width'`, which picks the flattest symbol that fits — usually the point of
+reaching for rMQR. `'height'` prefers tall and narrow; `'area'` just minimises total modules.
+
+The result is a `QrMatrix` tagged `variant: 'rmqr'` carrying `width` and `height` alongside
+`size`, and it renders, rasterises and exports through everything else. Square symbols are
+unchanged: they leave `width`/`height` absent and `size` means both, exactly as before.
+
+Structurally it matches neither predecessor: a 7x7 finder top-left and a 5x5 *sub*-finder
+bottom-right, corner patterns at the other two corners, alignment patterns along both long
+edges, **one** mask pattern rather than eight, and error correction at M or H only.
+
+> **How this is verified, and two bugs it found in the reference.** Every version is compared
+> module-for-module against [`rmqrcode`](https://github.com/tomtsuruhara/rmqrcode), an
+> independent implementation — 224 fixtures. Where the reference is correct, we match it
+> exactly. Two categories are excluded because it is wrong there, not us:
+>
+> - **Mixed block sizes.** Its interleaver uses `break` where the standard skips an exhausted
+>   block and continues, so it silently drops data codewords — one of 73 for R13x99-M, four of
+>   76 for R17x139-H. Those symbols cannot decode. A test asserts our interleaving is lossless
+>   at every size, since that is the exact bug class.
+> - **R17x43-M.** Its table lists a 60-codeword block against that version's own total of 61.
+>   The H blocks sum to 61, the module count gives 61x8 + 1 = 489, and 60 - 39 = 21 error
+>   correction codewords has no generator polynomial in its own table — which is why it raises
+>   `KeyError: 21` on that version. We use 61, giving 22.
+>
+> Encoding only; decoding rMQR symbols is not implemented.
+
+---
+
 ## Structured Append
 
 A single symbol tops out at 2,953 bytes. Structured Append spreads one payload across up to 16
@@ -1081,7 +1125,7 @@ Stated plainly, because a library that hides these wastes your afternoon:
   Both are reported in `rasterize().omitted`. SVG handles both fully.
 - **JPEG/WebP/AVIF decoding needs `createImageBitmap`** (so, `scanAsync` in a browser, Worker
   or Deno). PNG is decoded natively everywhere.
-- **rMQR is not implemented.** Micro QR encoding is; decoding Micro QR symbols is not.
+- **Micro QR and rMQR encode but do not decode.** `scan()` reads full QR symbols only.
 
 ---
 

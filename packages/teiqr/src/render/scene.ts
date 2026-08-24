@@ -51,9 +51,16 @@ export type Scene = {
 /** Label band height in modules, when a frame carries text. */
 export const LABEL_HEIGHT = 6;
 
+/** Module dimensions, honouring rectangular symbologies like rMQR. */
+export const matrixDimensions = (matrix: QrMatrix): { cols: number; rows: number } => ({
+  cols: matrix.width ?? matrix.size,
+  rows: matrix.height ?? matrix.size,
+});
+
 const isBodyModule = (matrix: QrMatrix, x: number, y: number): boolean => {
-  if (x < 0 || y < 0 || x >= matrix.size || y >= matrix.size) return false;
-  const i = y * matrix.size + x;
+  const { cols, rows } = matrixDimensions(matrix);
+  if (x < 0 || y < 0 || x >= cols || y >= rows) return false;
+  const i = y * cols + x;
   if (matrix.modules[i] !== 1) return false;
   const kind = matrix.kinds[i];
   return kind !== MODULE.FINDER && kind !== MODULE.SEPARATOR;
@@ -64,12 +71,16 @@ const solid = (color: string): Fill => ({ kind: 'solid', color });
 export const buildScene = (matrix: QrMatrix, style: Partial<QrStyle> = {}): Scene => {
   const s: QrStyle = { ...DEFAULT_STYLE, ...style };
   const quiet = Math.max(0, s.quietZone);
-  const width = matrix.size + quiet * 2;
+  const { cols, rows } = matrixDimensions(matrix);
+  const width = cols + quiet * 2;
 
   const frame = s.frame && s.frame.style !== 'none' ? s.frame : null;
   const hasLabel = Boolean(frame && frame.style !== 'box' && frame.text.trim());
   const labelBand = hasLabel ? LABEL_HEIGHT : 0;
-  const height = width + labelBand;
+  // Square symbols keep their existing behaviour exactly; only a rectangular
+  // matrix produces a non-square code area.
+  const codeHeight = rows + quiet * 2;
+  const height = codeHeight + labelBand;
   const labelOnTop = frame?.style === 'label-top';
   const codeOffsetY = labelOnTop ? labelBand : 0;
 
@@ -90,6 +101,7 @@ export const buildScene = (matrix: QrMatrix, style: Partial<QrStyle> = {}): Scen
   if (s.background) {
     const inset = frame ? frame.border : 0;
     const side = width - inset * 2;
+    const sideY = codeHeight - inset * 2;
     const bx = inset;
     const by = codeOffsetY + inset;
     items.push(
@@ -100,7 +112,7 @@ export const buildScene = (matrix: QrMatrix, style: Partial<QrStyle> = {}): Scen
               bx,
               by,
               side,
-              side,
+              sideY,
               s.cornerRadius,
               s.cornerRadius,
               s.cornerRadius,
@@ -111,7 +123,7 @@ export const buildScene = (matrix: QrMatrix, style: Partial<QrStyle> = {}): Scen
             inCode: false,
             paintKey: 'g',
           }
-        : { kind: 'rect', x: bx, y: by, w: side, h: side, fill: s.background, paintKey: 'g' },
+        : { kind: 'rect', x: bx, y: by, w: side, h: sideY, fill: s.background, paintKey: 'g' },
     );
   }
 
@@ -121,13 +133,14 @@ export const buildScene = (matrix: QrMatrix, style: Partial<QrStyle> = {}): Scen
   const excavated = geometry && s.logo?.excavate ? geometry.covered : null;
 
   const body = bodyPath(
-    matrix.size,
+    cols,
     s.moduleShape,
     (x, y) => {
-      if (excavated?.has(y * matrix.size + x)) return false;
+      if (excavated?.has(y * cols + x)) return false;
       return isBodyModule(matrix, x, y);
     },
     s.gap ?? 0,
+    rows,
   );
   if (body) {
     items.push({
@@ -140,7 +153,10 @@ export const buildScene = (matrix: QrMatrix, style: Partial<QrStyle> = {}): Scen
     });
   }
 
-  const origins = eyeOrigins(matrix.size);
+  // rMQR has one 7x7 finder and one 5x5 sub-finder rather than three corner
+  // eyes, so the eye styling does not apply and its finders are drawn as body
+  // modules like everything else.
+  const origins = matrix.variant === 'rmqr' ? [] : eyeOrigins(cols);
   const frames = origins.map(([ox, oy]) => eyeFramePath(ox, oy, s.eyeFrame)).join('');
   if (frames) {
     // evenodd is what turns each frame's outer and inner outline into a ring.
