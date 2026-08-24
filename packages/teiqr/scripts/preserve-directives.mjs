@@ -25,6 +25,11 @@ const CLIENT_ENTRIES = ['react'];
 
 const DIRECTIVE = "'use client';";
 
+/** Entry basenames that must start with a Node shebang, without extension. */
+const EXECUTABLE_ENTRIES = ['cli'];
+
+const SHEBANG = '#!/usr/bin/env node\n';
+
 /**
  * Insert the directive at the very top of a file.
  *
@@ -80,6 +85,29 @@ for (const { path, entry, extension } of checked) {
   }
 }
 
+// The shebang matters for the same reason: bundlers drop it, and npm makes
+// `bin` targets executable without adding one back, so `npx teiqr` would fail
+// with a syntax error as the shell tried to run JavaScript.
+let shebangs = 0;
+for (const entry of EXECUTABLE_ENTRIES) {
+  const path = join(DIST, `${entry}.js`);
+  let source;
+  try {
+    source = await readFile(path, 'utf8');
+  } catch {
+    throw new Error(`preserve-directives: expected ${entry}.js in dist, but it is missing.`);
+  }
+  if (!source.startsWith('#!')) {
+    await writeFile(path, SHEBANG + source);
+    shebangs++;
+  }
+  const final = await readFile(path, 'utf8');
+  if (!final.startsWith('#!')) {
+    throw new Error(`preserve-directives: ${entry}.js has no shebang; \`npx teiqr\` would fail.`);
+  }
+}
+
 console.log(
-  `preserve-directives: 'use client' applied to ${changed} file(s), verified on ${checked.length}`,
+  `preserve-directives: 'use client' applied to ${changed} file(s), verified on ${checked.length}; ` +
+    `shebang applied to ${shebangs} file(s)`,
 );

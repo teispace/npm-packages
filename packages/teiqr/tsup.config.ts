@@ -13,6 +13,7 @@ export default defineConfig({
     terminal: 'src/terminal.ts',
     kanji: 'src/kanji.ts',
     react: 'src/react.tsx',
+    cli: 'src/cli.ts',
   },
   // Dual ESM + CJS. ESM is the primary target, but CJS is still what a great
   // many Node tools resolve to, and an import-only exports map fails them with

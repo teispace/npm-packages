@@ -198,5 +198,8 @@
     "react": {
       "optional": true
     }
+  },
+  "bin": {
+    "teiqr": "./dist/cli.js"
   }
 }

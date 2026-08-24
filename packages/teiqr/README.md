@@ -103,7 +103,8 @@ Both still scan — but only one follows the standard. This is pinned by a regre
 - [PDF/EPS](#pdf-and-eps--print-ready-vector-at-a-real-physical-size) · [ZIP & batch](#zip-and-csv-driven-batch)
 - [Payloads](#payloads) · [Extensibility](#extensibility)
 - [Kanji, ECI, binary](#kanji-eci-and-binary) · [Structured Append](#structured-append) · [Terminal](#terminal-output)
-- [React](#react) · [Entry points & bundle size](#entry-points-and-bundle-size) · [Runtime support](#runtime-support)
+- [Command line](#command-line) · [React](#react) · [Entry points & bundle size](#entry-points-and-bundle-size)
+- [Runtime support](#runtime-support)
 - [API reference](#api-reference) · [Conformance & testing](#conformance-and-testing)
 
 ---
@@ -699,6 +700,80 @@ On a dark terminal you need `invert: true` — a scanner expects dark modules on
 
 ---
 
+## Command line
+
+```bash
+npx teiqr "https://example.com"                    # prints to the terminal
+npx teiqr "https://example.com" -o code.png        # writes a file
+npx teiqr scan ticket.png                          # decodes an image
+npx teiqr batch guests.csv -t wifi -o codes.zip    # one code per row
+npx teiqr types                                    # list payload types
+```
+
+No install needed, and no dependencies pulled in — the argument parser is part of the package,
+because adding `commander` would more than double the install size of something whose whole
+pitch is that it installs nothing.
+
+**Generating**
+
+```bash
+teiqr "text" -o code.svg                # format inferred from the extension
+teiqr "text" -o code.pdf --side-mm 40   # print-ready at a real size
+teiqr "text" --shape rounded --eye-frame circle --colour '#123a6b'
+teiqr "text" --ecc H --scale 12 --quiet-zone 4
+teiqr "text" --validate                 # scannability report alongside the code
+teiqr --invert "text"                   # for dark-background terminals
+```
+
+Build a typed payload without hand-writing its escaping:
+
+```bash
+teiqr -t wifi ssid="Pokhara Cafe" password=himalaya2026 -o wifi.png
+teiqr -t vcard firstName=Ada lastName=Lovelace email=ada@example.com -o card.svg
+```
+
+**Scanning**
+
+```bash
+teiqr scan ticket.png                # prints the payload
+teiqr scan sheet.png --all           # every code in the image
+teiqr scan wifi.png --parse          # decomposed into fields
+teiqr scan ticket.png --json         # full result, including version and ecc
+```
+
+```console
+$ teiqr scan wifi.png --parse
+WIFI:T:WPA;S:Pokhara Cafe;P:himalaya2026;;
+  type: wifi (exact)
+  encryption: WPA
+  ssid: Pokhara Cafe
+  password: himalaya2026
+```
+
+**Batch**
+
+```bash
+teiqr batch guests.csv -t wifi -o ./codes       # a directory of PNGs
+teiqr batch guests.csv -t wifi -o codes.zip     # a single archive
+teiqr batch guests.csv -t vcard -f svg -o ./out
+```
+
+Rows missing a required column are reported by line number and the command exits non-zero,
+rather than quietly emitting codes built from sample data:
+
+```console
+$ teiqr batch bad.csv -t wifi -o ./out
+row 2: missing ssid
+1 row(s) are missing required fields. Add the columns, or pass --fill-from-sample to use the type's sample values.
+$ echo $?
+1
+```
+
+Exit codes: `0` success, `1` runtime failure (no code found, unreadable file, incomplete rows),
+`2` bad arguments.
+
+---
+
 ## React
 
 Plain React — the only peer dependency is `react` itself, and it is optional. No framework
@@ -964,7 +1039,6 @@ Stated plainly, because a library that hides these wastes your afternoon:
 - **JPEG/WebP/AVIF decoding needs `createImageBitmap`** (so, `scanAsync` in a browser, Worker
   or Deno). PNG is decoded natively everywhere.
 - **Micro QR and rMQR are not implemented.**
-- **A CLI is not shipped yet.**
 
 ---
 
