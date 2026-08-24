@@ -6698,6 +6698,8 @@ __metadata:
   peerDependenciesMeta:
     react:
       optional: true
+  bin:
+    teiqr: ./dist/cli.js
   languageName: unknown
   linkType: soft
 
