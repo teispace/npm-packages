@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    // No DOM. The core, render, validate, payload and PDF/EPS paths must
+    // compile — and run — with no browser globals at all, which is what makes
+    // them usable from Node, Workers, Deno and Bun. The handful of modules
+    // that genuinely need a canvas declare the shapes they use locally, so a
+    // stray `document` reference is a compile error rather than a runtime
+    // surprise for a Workers user.
+    "lib": ["ES2022"],
+    "declaration": true,
+    "declarationMap": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
+    "ignoreDeprecations": "6.0",
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "paths": {
+      "teiqr": ["./src"],
+      "teiqr/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
+}

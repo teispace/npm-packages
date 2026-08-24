@@ -6680,6 +6680,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"teiqr@workspace:packages/teiqr":
+  version: 0.0.0-use.local
+  resolution: "teiqr@workspace:packages/teiqr"
+  dependencies:
+    "@types/node": "npm:^26.2.0"
+    tsup: "npm:^8.5.1"
+    typescript: "npm:^6.0.3"
+    vitest: "npm:^4.1.11"
+  languageName: unknown
+  linkType: soft
+
 "thenify-all@npm:^1.0.0":
   version: 1.6.0
   resolution: "thenify-all@npm:1.6.0"
