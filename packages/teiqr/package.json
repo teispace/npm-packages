@@ -199,7 +199,5 @@
       "optional": true
     }
   },
-  "bin": {
-    "teiqr": "./dist/cli.js"
-  }
+  "bin": "./dist/cli.js"
 }

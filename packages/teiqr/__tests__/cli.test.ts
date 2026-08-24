@@ -177,10 +177,14 @@ describe('teiqr <text>', () => {
 
   it('splits an oversized payload into a Structured Append set', async () => {
     const h = harness();
+    // SVG rather than PNG, deliberately. The behaviour under test is that one
+    // payload becomes several files; rasterising it would mean four ~1850px
+    // version-40 symbols, which is thirteen megapixels of work that proves
+    // nothing extra and times out on CI under coverage instrumentation.
     const long = 'abcdefghij0123456789'.repeat(400);
-    expect(await run([long, '--split', '-o', 'part.png'], h.io)).toBe(0);
-    expect(h.fs.has('part-1.png')).toBe(true);
-    expect(h.fs.has('part-2.png')).toBe(true);
+    expect(await run([long, '--split', '-o', 'part.svg'], h.io)).toBe(0);
+    expect(h.fs.has('part-1.svg')).toBe(true);
+    expect(h.fs.has('part-2.svg')).toBe(true);
     expect(h.out).toMatch(/Wrote \d+ symbols/);
   });
 
