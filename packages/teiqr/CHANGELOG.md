@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.5](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.4...teiqr-v0.0.5) (2026-08-25)
+
+
+### Bug Fixes
+
+* **teiqr:** repair clone field merging and backslash escaping, halve PNG cost ([#119](https://github.com/teispace/npm-packages/issues/119)) ([8981771](https://github.com/teispace/npm-packages/commit/8981771b226188c61e2db2f148738820f800f9f5))
+
 ## [0.0.4](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.3...teiqr-v0.0.4) (2026-08-25)
 
 
