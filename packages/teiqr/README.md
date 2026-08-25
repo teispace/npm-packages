@@ -1282,11 +1282,16 @@ Stated plainly, because a library that hides these wastes your afternoon:
   perspective correction.
 - **Photographs are read, but not every one.** Uneven lighting, defocus, sensor noise and low
   contrast are simulated and handled, and the suite includes a real photograph — a phone shot
-  of a code on a laptop screen, tilted, with screen dust and moiré. Measured against 91
-  photographs of codes in the wild the scanner reads 46%, up from 31% before the finder
-  scoring and retry passes described below. Most remaining failures are symbols located
-  correctly whose sampling grid drifts by about a module toward the far corner. More
-  photographs, especially of *printed* codes, are the most useful contribution here.
+  of a code on a laptop screen, tilted, with screen dust and moiré. A failed scan does not
+  give up after one threshold: it tries a global one, then the frame at half size, then at
+  double size, each of which recovers symbols the others do not. Enlarging is the one that
+  matters most, and the reason is not resolution — finder patterns are detected by run
+  lengths in *whole pixels* against the 1:1:3:1:1 ratio, so at three pixels per module a run
+  that should be three and lands on four is a 33% error, and the symbol is never located at
+  all. Every retry is gated on having seen a finder-shaped run at full size, so an empty
+  camera frame pays for none of them. Measured against 283 photographs of codes in the wild
+  the scanner reads 48%, up from 31% before this work. More photographs, especially of
+  *printed* codes, are the most useful contribution here.
 - **Raster output cannot draw frame label text**, and can only embed **PNG** data-URI logos.
   Both are reported in `rasterize().omitted`. SVG handles both fully.
 - **WebP and AVIF need `createImageBitmap`** (so, `scanAsync` in a browser, Worker or Deno).

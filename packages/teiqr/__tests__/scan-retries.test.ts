@@ -105,6 +105,66 @@ describe('the doubling retry', () => {
   }
 });
 
+/**
+ * Salt-and-pepper speckle: isolated pixels forced to pure black or white.
+ *
+ * This is the noise a half-size pass exists for. It is high-frequency by
+ * construction, so averaging 2x2 removes it almost entirely while the modules
+ * — twelve pixels across here — survive untouched. A threshold at full size
+ * has no such luxury and slices straight through it.
+ */
+const speckle = (source: Image, density: number, initialSeed: number): Image => {
+  const data = Uint8Array.from(source.data);
+  let seed = initialSeed;
+  const next = () => {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed;
+  };
+  const count = Math.round(source.width * source.height * density);
+  for (let i = 0; i < count; i++) {
+    const x = (next() >> 8) % source.width;
+    const y = (next() >> 8) % source.height;
+    const value = (next() >> 16) & 1 ? 255 : 0;
+    const at = (y * source.width + x) * 4;
+    data[at] = value;
+    data[at + 1] = value;
+    data[at + 2] = value;
+  }
+  return { data, width: source.width, height: source.height };
+};
+
+describe('the halving retry', () => {
+  // 348x348 with a 12-pixel module pitch, speckled hard enough that neither
+  // threshold reads it at full size.
+  const scale = 12;
+  const text = 'HALVING PROBE';
+  const image = speckle(render(text, scale), 0.26, 1);
+
+  it('is genuinely needed', () => {
+    expect(image.width).toBeGreaterThanOrEqual(320);
+    expect(singlePass(image)).toBeNull();
+    expect(singlePass(image, { global: true })).toBeNull();
+    // And the gate the rung sits behind is open, which is the other half of
+    // the premise: a frame with no finder candidates never gets this far.
+    expect(
+      findFinders(binarize(image.data, image.width, image.height), image.width, image.height)
+        .length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('recovers the symbol', () => {
+    expect(tryScan({ data: image.data, width: image.width, height: image.height })?.text).toBe(
+      text,
+    );
+  });
+
+  it('reports the module pitch at full resolution, not half', () => {
+    const result = scan({ data: image.data, width: image.width, height: image.height });
+    expect(result.moduleSize).toBeGreaterThan(scale * 0.6);
+    expect(result.moduleSize).toBeLessThan(scale * 1.6);
+  });
+});
+
 describe('geometry after a resized retry', () => {
   /**
    * A symbol recovered from an enlarged copy was reporting its pitch and
