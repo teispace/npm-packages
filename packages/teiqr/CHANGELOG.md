@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.2](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.1...teiqr-v0.0.2) (2026-08-25)
+
+
+### Documentation
+
+* **teiqr:** make the README about teiqr, not about other packages ([e07b4de](https://github.com/teispace/npm-packages/commit/e07b4de8f9b427bc9fb4ff296a40e18f76560e5a))
+
 ## 0.0.1 (2026-08-25)
 
 
