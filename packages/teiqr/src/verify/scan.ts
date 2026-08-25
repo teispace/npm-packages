@@ -279,6 +279,39 @@ const alignmentScore = (modules: Uint8Array, size: number, version: number): num
 const MAX_DECODE_ATTEMPTS = 3;
 
 /**
+ * Reflect a sampled grid about its main diagonal.
+ *
+ * This is what a mirrored capture needs, and the reason it is a transpose
+ * rather than a left-right flip is worth stating. Grouping has already decided
+ * which finder is the corner and which two are the arms, and labelled them
+ * top-left, top-right and bottom-left. Photograph the symbol through glass, or
+ * off a mirror, or print it on the inside of a window, and that labelling
+ * still succeeds — it just picks the two arms out in the opposite order. The
+ * grid that comes back is therefore the symbol reflected about its own
+ * diagonal, and reflecting it again puts it right.
+ *
+ * Nothing else in the symbol notices. Finders sit at three corners of a
+ * square, timing runs along both row six and column six, and the alignment
+ * positions are the same list in each axis — every one of them is unchanged by
+ * a transpose, which is exactly why a mirrored symbol reads as a perfect fit
+ * and then fails Reed-Solomon. On a real photograph this scored 0 of 243
+ * function modules wrong while the payload was unrecoverable under all
+ * thirty-two combinations of level and mask.
+ *
+ * The format information is the one part that is not diagonally symmetric —
+ * its two copies swap places — so it is also the first thing to fail, and a
+ * mirrored symbol reports unreadable format rather than anything about
+ * mirroring.
+ */
+const transpose = (grid: Uint8Array, size: number): Uint8Array => {
+  const out = new Uint8Array(grid.length);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) out[y * size + x] = grid[x * size + y];
+  }
+  return out;
+};
+
+/**
  * Sample and decode one located symbol out of a binarised image.
  *
  * The grid is read through a fitted perspective transform rather than a fixed
@@ -382,8 +415,10 @@ export const decodeLocation = (
   scored.sort((a, b) => b.score - a.score);
 
   const kinds = functionPatternKinds(version);
+  const attempts = scored.slice(0, MAX_DECODE_ATTEMPTS);
   let firstFailure: unknown = null;
-  for (const { grid, fit } of scored.slice(0, MAX_DECODE_ATTEMPTS)) {
+
+  for (const { grid, fit } of attempts) {
     try {
       const result = decodeMatrix({ size, version, modules: grid, kinds }, { trustHeader: false });
       return { ...result, moduleSize: pitch, origin: transformPoint(fit, 0, 0) };
@@ -394,6 +429,25 @@ export const decodeLocation = (
       firstFailure ??= error;
     }
   }
+
+  // Every fit failed the right way up. Try them mirrored.
+  //
+  // Second, never first: a symbol that reads either way round should be read
+  // the way it was printed, and a reflected grid has to satisfy the format
+  // information's BCH code and then Reed-Solomon before it is accepted, so it
+  // cannot claim a symbol that was merely damaged.
+  for (const { grid, fit } of attempts) {
+    try {
+      const result = decodeMatrix(
+        { size, version, modules: transpose(grid, size), kinds },
+        { trustHeader: false },
+      );
+      return { ...result, moduleSize: pitch, origin: transformPoint(fit, 0, 0) };
+    } catch {
+      // Not mirrored either; the upright failure is the one worth reporting.
+    }
+  }
+
   throw firstFailure ?? new NotFoundError('Symbol extends past the edge of the image');
 };
 
