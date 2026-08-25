@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.11](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.10...teiqr-v0.0.11) (2026-08-25)
+
+
+### Tests
+
+* **teiqr:** run the CLI examples from the README, and fix two that were wrong ([#132](https://github.com/teispace/npm-packages/issues/132)) ([caba122](https://github.com/teispace/npm-packages/commit/caba122f09052ce50d5dcc6c7579fd4d2195709e))
+
 ## [0.0.10](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.9...teiqr-v0.0.10) (2026-08-25)
 
 
