@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.10](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.9...teiqr-v0.0.10) (2026-08-25)
+
+
+### Bug Fixes
+
+* **teiqr:** let the CLI scan JPEGs without an import nobody can add ([#130](https://github.com/teispace/npm-packages/issues/130)) ([0eb1a8d](https://github.com/teispace/npm-packages/commit/0eb1a8d4043b1bc7cb91e286bf3980235a6b6f2d))
+
 ## [0.0.9](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.8...teiqr-v0.0.9) (2026-08-25)
 
 
