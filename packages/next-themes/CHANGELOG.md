@@ -1,12 +1,5 @@
 # Changelog
 
-## [0.0.6](https://github.com/teispace/npm-packages/compare/next-themes-v3.0.0...next-themes-v0.0.6) (2026-08-25)
-
-
-### Miscellaneous Chores
-
-* **teiqr:** pin the next release to 0.0.6 ([863e200](https://github.com/teispace/npm-packages/commit/863e200eedc422fd8215b1da726b09f556368949))
-
 ## [3.0.0](https://github.com/teispace/npm-packages/compare/next-themes-v2.0.4...next-themes-v3.0.0) (2026-08-21)
 
 

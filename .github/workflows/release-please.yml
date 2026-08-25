@@ -4,6 +4,21 @@ on:
   push:
     branches:
       - main
+  # Manual recovery. A publish can fail after release-please has already tagged
+  # and released — a registry hiccup, an auth expiry, one bad package in the
+  # batch — and re-running the original job is no help, because it checks out
+  # the commit that triggered it rather than whatever fixed the problem. Without
+  # this there is no way to publish a tagged release except by inventing a new
+  # version, which is the wrong answer to "the tarball did not upload".
+  workflow_dispatch:
+    inputs:
+      publish_paths:
+        description: >-
+          Package directories to publish, space-separated (e.g. "packages/teiqr").
+          Publishes the version each package.json declares, skipping any already
+          on the registry.
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -12,6 +27,7 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
       paths_released: ${{ steps.release.outputs.paths_released }}
@@ -32,7 +48,9 @@ jobs:
     name: Publish to npm
     runs-on: ubuntu-latest
     needs: release-please
-    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
+    if: >-
+      ${{ always() && (needs.release-please.outputs.releases_created == 'true'
+      || github.event_name == 'workflow_dispatch') }}
     timeout-minutes: 15
     permissions:
       contents: write
@@ -78,11 +96,16 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           PATHS_RELEASED: ${{ needs.release-please.outputs.paths_released }}
+          MANUAL_PATHS: ${{ inputs.publish_paths }}
         run: |
-          echo "Paths released: $PATHS_RELEASED"
-
-          # Parse the paths_released JSON array
-          RELEASED_PATHS=$(echo "$PATHS_RELEASED" | jq -r '.[]' 2>/dev/null || echo "")
+          if [ -n "$MANUAL_PATHS" ]; then
+            echo "Manual publish requested: $MANUAL_PATHS"
+            RELEASED_PATHS="$MANUAL_PATHS"
+          else
+            echo "Paths released: $PATHS_RELEASED"
+            # Parse the paths_released JSON array
+            RELEASED_PATHS=$(echo "$PATHS_RELEASED" | jq -r '.[]' 2>/dev/null || echo "")
+          fi
 
           if [ -z "$RELEASED_PATHS" ]; then
             echo "⚠️ No paths released, skipping publish"
@@ -91,6 +114,7 @@ jobs:
           fi
 
           PUBLISHED=()
+          FAILED=()
 
           # Publish each released package
           for package_path in $RELEASED_PATHS; do
@@ -121,13 +145,18 @@ jobs:
               # dist that matches the current source. Rebuilding here too was a
               # redundant second full build per package (teieditor's is the
               # 8GB-heap tsup run).
-              cd "$package_path"
-              npm publish --provenance --access public
-              cd - > /dev/null
-
-              PUBLISHED+=("{\"name\":\"$PACKAGE_NAME\",\"version\":\"$PACKAGE_VERSION\",\"path\":\"$package_path\"}")
-
-              echo "✅ Successfully published $PACKAGE_NAME@$PACKAGE_VERSION"
+              # A failure here is recorded and the loop continues. Under plain
+              # `set -e` the first bad package ends the job, so an unrelated
+              # problem in one package silently prevents every later one from
+              # publishing at all — which is exactly how a good release was lost
+              # behind a stale version in a sibling package.
+              if (cd "$package_path" && npm publish --provenance --access public); then
+                PUBLISHED+=("{\"name\":\"$PACKAGE_NAME\",\"version\":\"$PACKAGE_VERSION\",\"path\":\"$package_path\"}")
+                echo "✅ Successfully published $PACKAGE_NAME@$PACKAGE_VERSION"
+              else
+                FAILED+=("$PACKAGE_NAME@$PACKAGE_VERSION")
+                echo "❌ Failed to publish $PACKAGE_NAME@$PACKAGE_VERSION"
+              fi
             else
               echo "⚠️ No package.json found in $package_path"
             fi
@@ -142,6 +171,11 @@ jobs:
             echo "EOF" >> $GITHUB_OUTPUT
           else
             echo "published_packages=" >> $GITHUB_OUTPUT
+          fi
+
+          if [ ${#FAILED[@]} -gt 0 ]; then
+            echo "::error::Failed to publish: ${FAILED[*]}"
+            exit 1
           fi
 
       - name: Comment on release

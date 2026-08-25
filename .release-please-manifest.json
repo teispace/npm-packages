@@ -1,7 +1,7 @@
 {
-  "packages/next-maker": "0.0.6",
-  "packages/teieditor": "0.0.6",
-  "packages/next-themes": "0.0.6",
-  "packages/env": "0.0.6",
+  "packages/next-maker": "4.0.0",
+  "packages/teieditor": "4.0.0",
+  "packages/next-themes": "3.0.0",
+  "packages/env": "1.0.0",
   "packages/teiqr": "0.0.6"
 }
