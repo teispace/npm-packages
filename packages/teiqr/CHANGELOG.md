@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.7](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.6...teiqr-v0.0.7) (2026-08-25)
+
+
+### Features
+
+* **teiqr:** decode baseline JPEG, opt-in via teiqr/jpeg ([#124](https://github.com/teispace/npm-packages/issues/124)) ([d3ff58a](https://github.com/teispace/npm-packages/commit/d3ff58a02666e2998db24edf8b199c73b8def26f))
+
 ## [0.0.6](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.5...teiqr-v0.0.6) (2026-08-25)
 
 
