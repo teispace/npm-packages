@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.5](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.4...teiqr-v0.3.5) (2026-08-25)
+
+
+### Documentation
+
+* **teiqr:** quote the read rate against a denominator that means something ([#150](https://github.com/teispace/npm-packages/issues/150)) ([e2f9b0f](https://github.com/teispace/npm-packages/commit/e2f9b0fede299259bf04ddbf1cc648dfefb376b7))
+
 ## [0.3.4](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.3...teiqr-v0.3.4) (2026-08-25)
 
 
