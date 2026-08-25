@@ -243,13 +243,63 @@ export const encodePng = (
   return out;
 };
 
+/** Samples per pixel for each PNG colour type. Absent keys are not valid types. */
+const CHANNELS_FOR_COLOUR: Readonly<Record<number, number>> = {
+  0: 1, // greyscale
+  2: 3, // truecolour
+  3: 1, // palette index
+  4: 2, // greyscale + alpha
+  6: 4, // truecolour + alpha
+};
+
 /**
- * Decode a PNG this library produced, back to RGBA pixels.
+ * Bit depths each colour type may use, per ISO/IEC 15948 table 11.1.
  *
- * Deliberately narrow: it handles 8-bit RGB and RGBA, non-interlaced, which is
- * everything {@link encodePng} emits. It exists so the verifier can read back
- * a rendered symbol and prove it still decodes, without pulling in a general
- * image library.
+ * The pairing matters: a palette index is never 16 bits, and truecolour is
+ * never sub-byte. Checking the combination rather than each field separately
+ * rejects headers that are individually plausible but jointly impossible.
+ */
+const DEPTHS_FOR_COLOUR: Readonly<Record<number, readonly number[]>> = {
+  0: [1, 2, 4, 8, 16],
+  2: [8, 16],
+  3: [1, 2, 4, 8],
+  4: [8, 16],
+  6: [8, 16],
+};
+
+/**
+ * The seven Adam7 interlace passes as `[xStart, yStart, xStep, yStep]`.
+ *
+ * Each pass is a complete, independently filtered sub-image sampled on its own
+ * lattice, which is why the filter state resets at every pass boundary rather
+ * than running through the file.
+ */
+const ADAM7: readonly (readonly [number, number, number, number])[] = [
+  [0, 0, 8, 8],
+  [4, 0, 8, 8],
+  [0, 4, 4, 8],
+  [2, 0, 4, 4],
+  [0, 2, 2, 4],
+  [1, 0, 2, 2],
+  [0, 1, 1, 2],
+];
+
+/** Multiplier that widens a sub-byte sample to the full 0-255 range. */
+const WIDEN: Readonly<Record<number, number>> = { 1: 255, 2: 85, 4: 17, 8: 1 };
+
+/**
+ * Decode a PNG to RGBA pixels.
+ *
+ * Covers the whole of the PNG colour model — greyscale, truecolour, palette
+ * and both alpha variants, at every bit depth each allows, interlaced or not,
+ * honouring `tRNS` transparency. That breadth is not gold-plating: {@link scan}
+ * accepts images from anywhere, and a black-and-white QR code is exactly the
+ * kind of image encoders and optimisers store as 1-bit palette or greyscale
+ * rather than as RGBA. A decoder that read back only what {@link encodePng}
+ * writes would reject most QR PNGs in existence.
+ *
+ * Sub-byte samples are widened to 8 bits and 16-bit samples are truncated to
+ * their high byte, so the result is always 8-bit RGBA regardless of the source.
  */
 export const decodePng = (
   bytes: Uint8Array,
@@ -261,7 +311,11 @@ export const decodePng = (
   let offset = 8;
   let width = 0;
   let height = 0;
-  let channels = 4;
+  let depth = 8;
+  let colour = 6;
+  let interlaced = false;
+  let palette: Uint8Array | null = null;
+  let transparency: Uint8Array | null = null;
   const idat: Uint8Array[] = [];
 
   const readUint32 = (at: number): number =>
@@ -297,12 +351,22 @@ export const decodePng = (
       if (width < 1 || height < 1 || width > MAX_DIMENSION || height > MAX_DIMENSION) {
         throw new Error(`PNG dimensions out of range: ${width}x${height}`);
       }
-      if (data[8] !== 8) throw new Error(`Unsupported bit depth: ${data[8]}`);
-      if (data[9] === 2) channels = 3;
-      else if (data[9] === 6) channels = 4;
-      else throw new Error(`Unsupported colour type: ${data[9]}`);
-      if (data[12] !== 0) throw new Error('Interlaced PNG is not supported');
+      depth = data[8];
+      colour = data[9];
+      const allowed = DEPTHS_FOR_COLOUR[colour];
+      if (!allowed) throw new Error(`Unsupported colour type: ${colour}`);
+      if (!allowed.includes(depth)) {
+        throw new Error(`Unsupported bit depth ${depth} for colour type ${colour}`);
+      }
+      if (data[10] !== 0) throw new Error(`Unsupported compression method: ${data[10]}`);
+      if (data[11] !== 0) throw new Error(`Unsupported filter method: ${data[11]}`);
+      if (data[12] > 1) throw new Error(`Unsupported interlace method: ${data[12]}`);
+      interlaced = data[12] === 1;
       sawHeader = true;
+    } else if (type === 'PLTE') {
+      palette = data.slice();
+    } else if (type === 'tRNS') {
+      transparency = data.slice();
     } else if (type === 'IDAT') {
       idat.push(data);
     } else if (type === 'IEND') {
@@ -314,6 +378,7 @@ export const decodePng = (
 
   if (!sawHeader) throw new Error('Not a PNG (no IHDR chunk)');
   if (idat.length === 0) throw new Error('PNG has no image data');
+  if (colour === 3 && !palette) throw new Error('Palette PNG has no PLTE chunk');
 
   const merged = new Uint8Array(idat.reduce((n, d) => n + d.length, 0));
   let at = 0;
@@ -322,51 +387,149 @@ export const decodePng = (
     at += d.length;
   }
 
-  // The bound the inflater is held to: one filter byte plus a row of samples,
-  // for each declared row. A valid stream produces exactly this; anything
-  // claiming more is either corrupt or deliberately expanding.
-  const raw = inflateZlib(merged, (width * channels + 1) * height);
-  const stride = width * channels;
-  const pixels = new Uint8Array(width * height * 4);
-  const line = new Uint8Array(stride);
-  const prev = new Uint8Array(stride);
+  const samples = CHANNELS_FOR_COLOUR[colour];
+  const bitsPerPixel = samples * depth;
+  // The filter's "corresponding byte in the previous pixel" step, which the
+  // spec rounds up to one byte. Sub-byte formats therefore filter bytewise.
+  const unit = Math.max(1, bitsPerPixel >> 3);
+  const strideOf = (pixelsWide: number): number => Math.ceil((bitsPerPixel * pixelsWide) / 8);
 
-  for (let y = 0; y < height; y++) {
-    const type = raw[y * (stride + 1)];
-    const src = y * (stride + 1) + 1;
-    for (let i = 0; i < stride; i++) {
-      const value = raw[src + i];
-      const left = i >= channels ? line[i - channels] : 0;
-      const up = prev[i];
-      const upLeft = i >= channels ? prev[i - channels] : 0;
-      let out: number;
-      switch (type) {
-        case 1:
-          out = value + left;
-          break;
-        case 2:
-          out = value + up;
-          break;
-        case 3:
-          out = value + ((left + up) >> 1);
-          break;
-        case 4:
-          out = value + paeth(left, up, upLeft);
-          break;
-        default:
-          out = value;
+  const passes = interlaced ? ADAM7 : ([[0, 0, 1, 1]] as const);
+  const layout = passes.map(([xStart, yStart, xStep, yStep]) => {
+    const pixelsWide = Math.ceil((width - xStart) / xStep);
+    const rows = Math.ceil((height - yStart) / yStep);
+    return { xStart, yStart, xStep, yStep, pixelsWide, rows, stride: strideOf(pixelsWide) };
+  });
+
+  // The bound the inflater is held to: one filter byte plus a row of samples,
+  // for every row of every pass. A valid stream produces exactly this; anything
+  // claiming more is either corrupt or deliberately expanding.
+  let expected = 0;
+  for (const pass of layout) {
+    if (pass.pixelsWide > 0 && pass.rows > 0) expected += pass.rows * (pass.stride + 1);
+  }
+
+  const raw = inflateZlib(merged, expected);
+  // Reading short would not hang — past the end a typed array yields
+  // `undefined`, which coerces to zero — it would quietly invent grey pixels.
+  // Truncated input should say so rather than decode to plausible nonsense.
+  if (raw.length < expected) throw new Error('Truncated PNG: image data is shorter than declared');
+
+  const pixels = new Uint8Array(width * height * 4);
+  const maxSample = depth === 16 ? 0xffff : (1 << depth) - 1;
+
+  // tRNS stores its key at 16 bits regardless of depth; only the low bits are
+  // significant, so mask before comparing against a sample read at depth.
+  //
+  // The length check is not pedantry. A tRNS too short for its colour type
+  // would read `undefined` past its end, which coerces to zero — silently
+  // keying out *black*, the one value a QR code cannot afford to lose. A
+  // malformed chunk is better ignored than half-read.
+  const keyBytes = colour === 0 ? 2 : 6;
+  const keyed =
+    transparency !== null && (colour === 0 || colour === 2) && transparency.length >= keyBytes;
+  const key = (index: number): number =>
+    (((transparency as Uint8Array)[index * 2] << 8) | (transparency as Uint8Array)[index * 2 + 1]) &
+    maxSample;
+  const keyGrey = keyed && colour === 0 ? key(0) : -1;
+  const keyRed = keyed && colour === 2 ? key(0) : -1;
+  const keyGreen = keyed && colour === 2 ? key(1) : -1;
+  const keyBlue = keyed && colour === 2 ? key(2) : -1;
+
+  const widen = (value: number): number => (depth === 16 ? value >> 8 : value * WIDEN[depth]);
+
+  let cursor = 0;
+
+  for (const pass of layout) {
+    if (pass.pixelsWide <= 0 || pass.rows <= 0) continue;
+    const { stride } = pass;
+    const line = new Uint8Array(stride);
+    const prev = new Uint8Array(stride);
+
+    // Sample `index` of the current row, at the image's native bit depth.
+    const sampleAt = (index: number): number => {
+      if (depth === 8) return line[index];
+      if (depth === 16) return (line[index * 2] << 8) | line[index * 2 + 1];
+      const bit = index * depth;
+      return (line[bit >> 3] >> (8 - depth - (bit & 7))) & maxSample;
+    };
+
+    for (let row = 0; row < pass.rows; row++) {
+      const filter = raw[cursor];
+      const src = cursor + 1;
+      for (let i = 0; i < stride; i++) {
+        const value = raw[src + i];
+        const left = i >= unit ? line[i - unit] : 0;
+        const up = prev[i];
+        const upLeft = i >= unit ? prev[i - unit] : 0;
+        let out: number;
+        switch (filter) {
+          case 1:
+            out = value + left;
+            break;
+          case 2:
+            out = value + up;
+            break;
+          case 3:
+            out = value + ((left + up) >> 1);
+            break;
+          case 4:
+            out = value + paeth(left, up, upLeft);
+            break;
+          default:
+            out = value;
+        }
+        line[i] = out & 0xff;
       }
-      line[i] = out & 0xff;
+      cursor += stride + 1;
+
+      const y = pass.yStart + row * pass.yStep;
+      for (let col = 0; col < pass.pixelsWide; col++) {
+        const d = (y * width + pass.xStart + col * pass.xStep) * 4;
+        const base = col * samples;
+
+        if (colour === 3) {
+          const entry = sampleAt(base);
+          const plte = palette as Uint8Array;
+          const index = entry * 3;
+          // A bit depth admits more indices than the palette need define, so an
+          // out-of-range index is a property of the file, not of this reader.
+          if (index + 3 > plte.length) throw new Error('PNG palette index out of range');
+          pixels[d] = plte[index];
+          pixels[d + 1] = plte[index + 1];
+          pixels[d + 2] = plte[index + 2];
+          // tRNS on a palette image lists alpha per entry, and may stop early;
+          // every entry it does not reach is opaque.
+          pixels[d + 3] = transparency && entry < transparency.length ? transparency[entry] : 0xff;
+          continue;
+        }
+
+        if (colour === 0 || colour === 4) {
+          const grey = sampleAt(base);
+          const value = widen(grey);
+          pixels[d] = value;
+          pixels[d + 1] = value;
+          pixels[d + 2] = value;
+          pixels[d + 3] = colour === 4 ? widen(sampleAt(base + 1)) : grey === keyGrey ? 0 : 0xff;
+          continue;
+        }
+
+        const red = sampleAt(base);
+        const green = sampleAt(base + 1);
+        const blue = sampleAt(base + 2);
+        pixels[d] = widen(red);
+        pixels[d + 1] = widen(green);
+        pixels[d + 2] = widen(blue);
+        pixels[d + 3] =
+          colour === 6
+            ? widen(sampleAt(base + 3))
+            : red === keyRed && green === keyGreen && blue === keyBlue
+              ? 0
+              : 0xff;
+      }
+
+      prev.set(line);
     }
-    for (let x = 0; x < width; x++) {
-      const s = x * channels;
-      const d = (y * width + x) * 4;
-      pixels[d] = line[s];
-      pixels[d + 1] = line[s + 1];
-      pixels[d + 2] = line[s + 2];
-      pixels[d + 3] = channels === 4 ? line[s + 3] : 255;
-    }
-    prev.set(line);
   }
 
   return { pixels, width, height };

@@ -112,15 +112,32 @@ describe('malformed PNG input', () => {
     expect(() => decodePng(bytes)).toThrow(/beyond its declared size/);
   });
 
-  it('rejects unsupported bit depths, colour types and interlacing', () => {
+  it('rejects headers the format does not define', () => {
+    // Note what is *not* here: 16-bit samples, palette images and interlacing
+    // were once rejected too, and are now read. These are the headers that
+    // remain genuinely impossible rather than merely unimplemented — an
+    // undefined colour type, a depth that type may not use, and compression,
+    // filter and interlace methods the spec has never assigned. Rewriting a
+    // real file's header is the cheapest way to reach the check, since no
+    // encoder will produce one of these on request.
+    //
+    // `__tests__/png-variants.test.ts` covers the other side: every header the
+    // format *does* define, decoded and scanned.
     for (const [offset, value, message] of [
-      [24, 16, /bit depth/],
-      [25, 3, /colour type/],
-      [28, 1, /Interlaced/],
+      [25, 5, /colour type/],
+      [25, 9, /colour type/],
+      [24, 3, /bit depth/],
+      [24, 16, /bit depth/], // legal for truecolour, never for a palette
+      [26, 1, /compression method/],
+      [27, 1, /filter method/],
+      [28, 2, /interlace method/],
     ] as const) {
       const bytes = validPng();
+      // Colour type 3 makes the depth cases meaningful: 16 bits is fine for the
+      // truecolour original, so the pairing is what has to be caught.
+      if (offset === 24) bytes[25] = 3;
       bytes[offset] = value;
-      expect(() => decodePng(bytes), String(message)).toThrow(message);
+      expect(() => decodePng(bytes), `${offset}=${value}`).toThrow(message);
     }
   });
 
