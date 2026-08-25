@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ECI, encode, encodeStructured } from '../src/core.js';
@@ -360,6 +360,31 @@ describe('README numbers match reality', () => {
     expect(rmqr).toHaveLength(1);
     expect(Number(rmqr[0][1])).toBe(read('rmqr.json'));
     expect(README).toContain(`reads all ${read('rmqr.json')} of the reference's own symbols`);
+  });
+
+  it('quotes a test count close to the real one', () => {
+    // The one figure in this README that nothing was checking, and it had
+    // rotted from 148 while reality passed three times that. An exact match
+    // would be circular — adding this test changes the count — so it is a
+    // tolerance: wide enough not to nag, narrow enough to catch neglect.
+    const claimed = Number(/\*\*(\d+) tests\.\*\*/.exec(README)?.[1]);
+    expect(Number.isFinite(claimed)).toBe(true);
+
+    const files = readdirSync(import.meta.dirname).filter(
+      (name) => name.endsWith('.test.ts') || name.endsWith('.test.tsx'),
+    );
+    let blocks = 0;
+    for (const file of files) {
+      const source = readFileSync(join(import.meta.dirname, file), 'utf8');
+      blocks += (source.match(/^\s*it(\.skip)?\(/gm) ?? []).length;
+    }
+
+    // Table-driven suites generate several cases from one `it`, so the real
+    // total is higher than this floor; the README must never be below it.
+    expect(claimed, `README says ${claimed}, found ${blocks} it() blocks`).toBeGreaterThanOrEqual(
+      blocks,
+    );
+    expect(claimed).toBeLessThan(blocks * 3);
   });
 
   it('quotes the real N4 conformance figure', () => {
