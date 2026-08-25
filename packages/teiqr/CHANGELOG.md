@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.9](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.8...teiqr-v0.0.9) (2026-08-25)
+
+
+### Performance Improvements
+
+* **teiqr:** skip zero rows and DC-only blocks in the JPEG inverse DCT ([#128](https://github.com/teispace/npm-packages/issues/128)) ([ecced58](https://github.com/teispace/npm-packages/commit/ecced58029bf017921c8cba9586fcebb44d3fd56))
+
 ## [0.0.8](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.7...teiqr-v0.0.8) (2026-08-25)
 
 
