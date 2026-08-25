@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.0](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.12...teiqr-v0.1.0) (2026-08-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **teiqr:** stop reporting that a logo damages nothing when it damages plenty ([#136](https://github.com/teispace/npm-packages/issues/136))
+
+### Bug Fixes
+
+* **teiqr:** stop reporting that a logo damages nothing when it damages plenty ([#136](https://github.com/teispace/npm-packages/issues/136)) ([4c24160](https://github.com/teispace/npm-packages/commit/4c24160b328bdf894891605e97c4890ea74ff5aa))
+
 ## [0.0.12](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.11...teiqr-v0.0.12) (2026-08-25)
 
 
