@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.8](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.7...teiqr-v0.0.8) (2026-08-25)
+
+
+### Features
+
+* **teiqr:** decode progressive JPEG ([#126](https://github.com/teispace/npm-packages/issues/126)) ([3620995](https://github.com/teispace/npm-packages/commit/3620995ee9bef5d4d39cd31631647d3cec873c57))
+
 ## [0.0.7](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.6...teiqr-v0.0.7) (2026-08-25)
 
 
