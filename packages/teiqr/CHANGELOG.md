@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/teispace/npm-packages/compare/teiqr-v0.2.0...teiqr-v0.3.0) (2026-08-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **teiqr:** refuse to build a payload whose required fields are missing ([#140](https://github.com/teispace/npm-packages/issues/140))
+
+### Bug Fixes
+
+* **teiqr:** refuse to build a payload whose required fields are missing ([#140](https://github.com/teispace/npm-packages/issues/140)) ([a166028](https://github.com/teispace/npm-packages/commit/a166028bf641777723be91e3b4dea4c4555b6021))
+
 ## [0.2.0](https://github.com/teispace/npm-packages/compare/teiqr-v0.1.0...teiqr-v0.2.0) (2026-08-25)
 
 
