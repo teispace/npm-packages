@@ -18,6 +18,15 @@ import {
 
 const SIGNATURE = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
+/**
+ * Largest image edge this decoder will accept, in pixels.
+ *
+ * PNG stores dimensions as unsigned 32-bit, which a hostile file is free to
+ * max out. 32768 is far beyond any QR symbol anyone rasterises and still keeps
+ * the worst-case allocation to a few gigabytes rather than an impossible one.
+ */
+const MAX_DIMENSION = 32768;
+
 /** CRC-32 table, built once. PNG appends this over each chunk's type and data. */
 const CRC_TABLE = (() => {
   const table = new Uint32Array(256);
@@ -210,8 +219,17 @@ export const decodePng = (
   const readUint32 = (at: number): number =>
     ((bytes[at] << 24) | (bytes[at + 1] << 16) | (bytes[at + 2] << 8) | bytes[at + 3]) >>> 0;
 
-  while (offset < bytes.length) {
+  let sawHeader = false;
+
+  // A chunk header is 8 bytes and its trailer 4, so anything claiming to start
+  // within 12 bytes of the end cannot be a chunk.
+  while (offset + 12 <= bytes.length) {
     const length = readUint32(offset);
+    // A chunk that runs past the buffer is malformed. Without this the
+    // subarray below silently truncates and the walk marches off the end.
+    if (offset + 12 + length > bytes.length) {
+      throw new Error('Truncated PNG: chunk runs past the end of the buffer');
+    }
     const type = String.fromCharCode(
       bytes[offset + 4],
       bytes[offset + 5],
@@ -221,13 +239,22 @@ export const decodePng = (
     const data = bytes.subarray(offset + 8, offset + 8 + length);
 
     if (type === 'IHDR') {
+      if (length < 13) throw new Error('Truncated PNG: IHDR is too short');
       width = readUint32(offset + 8);
       height = readUint32(offset + 12);
+      // Dimensions are read as unsigned 32-bit, so a hostile header can claim
+      // billions of pixels. Rejecting up front matters more than it looks:
+      // width * height * 4 is what gets allocated, and 2^31 squared overflows
+      // into a number no allocation can serve.
+      if (width < 1 || height < 1 || width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        throw new Error(`PNG dimensions out of range: ${width}x${height}`);
+      }
       if (data[8] !== 8) throw new Error(`Unsupported bit depth: ${data[8]}`);
       if (data[9] === 2) channels = 3;
       else if (data[9] === 6) channels = 4;
       else throw new Error(`Unsupported colour type: ${data[9]}`);
       if (data[12] !== 0) throw new Error('Interlaced PNG is not supported');
+      sawHeader = true;
     } else if (type === 'IDAT') {
       idat.push(data);
     } else if (type === 'IEND') {
@@ -237,6 +264,9 @@ export const decodePng = (
     offset += length + 12;
   }
 
+  if (!sawHeader) throw new Error('Not a PNG (no IHDR chunk)');
+  if (idat.length === 0) throw new Error('PNG has no image data');
+
   const merged = new Uint8Array(idat.reduce((n, d) => n + d.length, 0));
   let at = 0;
   for (const d of idat) {
@@ -244,7 +274,10 @@ export const decodePng = (
     at += d.length;
   }
 
-  const raw = inflateZlib(merged);
+  // The bound the inflater is held to: one filter byte plus a row of samples,
+  // for each declared row. A valid stream produces exactly this; anything
+  // claiming more is either corrupt or deliberately expanding.
+  const raw = inflateZlib(merged, (width * channels + 1) * height);
   const stride = width * channels;
   const pixels = new Uint8Array(width * height * 4);
   const line = new Uint8Array(stride);
@@ -295,7 +328,7 @@ export const decodePng = (
  * Minimal INFLATE, enough to read back what {@link encodePng} writes plus the
  * dynamic-Huffman streams other encoders produce.
  */
-const inflateZlib = (input: Uint8Array): Uint8Array => {
+const inflateZlib = (input: Uint8Array, maxOutput = Number.POSITIVE_INFINITY): Uint8Array => {
   // Skip the two-byte zlib header; the Adler trailer is not checked here
   // because the PNG CRC already covers the chunk.
   let pos = 2;
@@ -305,6 +338,15 @@ const inflateZlib = (input: Uint8Array): Uint8Array => {
 
   const bits = (count: number): number => {
     while (bitCount < count) {
+      // Reading past the end must fail, not quietly yield zeros.
+      //
+      // `input[pos]` is `undefined` beyond the buffer and `undefined << n` is
+      // `0`, so without this check the reader hands back an endless stream of
+      // zero bits — which the loops below happily consume forever, growing
+      // `out` as they go. A truncated PNG then hangs the process instead of
+      // throwing, and since this is reached straight from `scan()`, that is a
+      // denial of service on any caller handling images it did not create.
+      if (pos >= input.length) throw new Error('Truncated PNG stream');
       bitBuffer |= input[pos++] << bitCount;
       bitCount += 8;
     }
@@ -312,6 +354,18 @@ const inflateZlib = (input: Uint8Array): Uint8Array => {
     bitBuffer >>>= count;
     bitCount -= count;
     return value;
+  };
+
+  /**
+   * Refuse to inflate more than the image could possibly need.
+   *
+   * A second backstop behind the bounds check above: a *malicious* stream can
+   * be perfectly well-formed and still expand without limit, and no amount of
+   * input validation catches that. The caller knows how many bytes a valid
+   * image would produce, so anything beyond it is not worth allocating.
+   */
+  const guardOutput = (): void => {
+    if (out.length > maxOutput) throw new Error('PNG stream expands beyond its declared size');
   };
 
   /** Build a canonical Huffman decode table from code lengths. */
@@ -353,7 +407,9 @@ const inflateZlib = (input: Uint8Array): Uint8Array => {
       bitCount = 0;
       const length = input[pos] | (input[pos + 1] << 8);
       pos += 4;
+      if (pos + length > input.length) throw new Error('Truncated PNG stream');
       for (let i = 0; i < length; i++) out.push(input[pos++]);
+      guardOutput();
     } else {
       let literalTree: ReturnType<typeof buildTree>;
       let distanceTree: ReturnType<typeof buildTree>;
@@ -395,13 +451,18 @@ const inflateZlib = (input: Uint8Array): Uint8Array => {
         if (symbol === 256) break;
         if (symbol < 256) {
           out.push(symbol);
+          guardOutput();
         } else {
           const li = symbol - 257;
           const length = LENGTH_BASE[li] + bits(LENGTH_EXTRA[li]);
           const di = decodeSymbol(distanceTree);
           const distance = DIST_BASE[di] + bits(DIST_EXTRA[di]);
           const from = out.length - distance;
+          // A back-reference before the start of the stream is malformed; copying
+          // it would splice `undefined` into the output and corrupt the image.
+          if (from < 0) throw new Error('Invalid back-reference in PNG stream');
           for (let i = 0; i < length; i++) out.push(out[from + i]);
+          guardOutput();
         }
       }
     }
