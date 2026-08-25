@@ -35,7 +35,7 @@ const ENTRIES = [
   ['teiqr/verify', 'verify', 'decoder + scanner'],
   ['teiqr/terminal', 'terminal', 'text output'],
   ['teiqr/kanji', 'kanji', 'Shift-JIS table (opt-in)'],
-  ['teiqr/jpeg', 'jpeg', 'baseline JPEG decoder (opt-in)'],
+  ['teiqr/jpeg', 'jpeg', 'JPEG decoder, incl. progressive (opt-in)'],
   ['teiqr/react', 'react', 'components + hooks (react external)'],
 ];
 

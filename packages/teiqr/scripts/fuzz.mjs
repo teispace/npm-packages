@@ -152,7 +152,7 @@ const pick = () => corpus[int(corpus.length)];
 // consuming bits that a reader running past the end could feed forever. The
 // fixtures are real files from an independent encoder, so mutating them reaches
 // header fields and entropy data no synthetic buffer would.
-const JPEGS = ['qr-444.jpg', 'qr-420.jpg', 'qr-low.jpg', 'qr-gray.jpg'];
+const JPEGS = ['qr-444.jpg', 'qr-420.jpg', 'qr-low.jpg', 'qr-gray.jpg', 'qr-422.jpg', 'qr-progressive.jpg', 'qr-progressive-gray.jpg'];
 const jpegCorpus = JPEGS.map((name) => {
   const bytes = new Uint8Array(readFileSync('${fixtures}/' + name));
   const image = decodeJpeg(bytes);
