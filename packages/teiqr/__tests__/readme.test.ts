@@ -168,6 +168,18 @@ describe('README examples actually run', () => {
     for (const key of ['span', 'minSideMm', 'minModuleMm', 'recommendedSideMm', 'recommendedPx']) {
       expect(report.print, `print.${key}`).toHaveProperty(key);
     }
+
+    // Presence is not enough, and this test learned that the hard way: a
+    // report of all zeroes has every one of these keys, and that is exactly
+    // what a logo missing its `padding` used to produce. The README does not
+    // promise the fields exist, it promises they say something true about the
+    // logo — so the numbers are checked, not just the shape.
+    expect(report.coverage?.coveredModules).toBeGreaterThan(0);
+    expect(report.coverage?.coveredFraction).toBeGreaterThan(0);
+    expect(report.coverage?.damagedCodewords).toBeGreaterThan(0);
+    expect(report.coverage?.worstBlockCapacity).toBeGreaterThan(0);
+    expect(report.print.recommendedSideMm).toBeGreaterThan(0);
+    expect(report.print.recommendedPx).toBeGreaterThan(0);
   });
 
   it('the extensibility examples', () => {

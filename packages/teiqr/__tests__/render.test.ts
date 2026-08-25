@@ -6,6 +6,7 @@ import type { QrMatrix } from '../src/core/types.js';
 import { PAYLOAD_TYPES, serializePayload } from '../src/payload/index.js';
 import { decodePng } from '../src/raster/png.js';
 import { toPng } from '../src/raster/scene-raster.js';
+import { logoGeometry } from '../src/render/logo.js';
 import { renderSvg } from '../src/render/svg.js';
 import type { ModuleShape } from '../src/render/types.js';
 import { DEFAULT_STYLE } from '../src/render/types.js';
@@ -100,6 +101,66 @@ describe('validation', () => {
       background: { kind: 'solid', color: '#8a8a8a' },
     });
     expect(result.issues.some((i) => i.code === 'contrast-low' && i.level === 'error')).toBe(true);
+  });
+
+  /**
+   * The most natural way to describe a logo is `{ href, sizeRatio }`, and it
+   * used to report that the logo damaged nothing.
+   *
+   * `padding` is typed as required but a JavaScript caller can omit it, and
+   * anything assembling the object at runtime can too. `Math.max(0, undefined)`
+   * is `NaN`, every comparison against `NaN` is false, so the loop that counts
+   * obscured modules never ran and the covered set came back empty. Not an
+   * error, not a warning — a confident "your logo is fine" about a logo
+   * consuming most of a Reed-Solomon block.
+   *
+   * That is the exact opposite of what this package claims to do about logos,
+   * which is why it is pinned by value rather than by shape.
+   */
+  it('counts the same modules whether or not padding is given', () => {
+    const matrix = encode('https://example.com', { ecc: 'H', boostEcc: false });
+    const base = { href: 'data:image/png;base64,', sizeRatio: 0.3 } as const;
+
+    const omitted = logoGeometry(matrix, base as never);
+    const explicit = logoGeometry(matrix, { ...base, padding: 0 } as never);
+
+    expect(omitted.covered.size).toBe(explicit.covered.size);
+    expect(omitted.covered.size).toBeGreaterThan(0);
+  });
+
+  it('reports real damage figures for a bare logo, not zeroes', () => {
+    const report = validate(encode('https://example.com', { ecc: 'H', boostEcc: false }), {
+      logo: { href: 'data:image/png;base64,', sizeRatio: 0.3 } as never,
+    });
+
+    // Values, not just keys. The earlier test for this asserted only that the
+    // fields existed, which a report full of zeroes satisfies perfectly.
+    expect(report.coverage?.coveredModules).toBeGreaterThan(0);
+    expect(report.coverage?.damagedCodewords).toBeGreaterThan(0);
+    expect(report.coverage?.worstBlockDamaged).toBeGreaterThan(0);
+    expect(report.coverage?.utilisation).toBeGreaterThan(0);
+  });
+
+  it('treats a non-finite padding as none rather than as nothing covered', () => {
+    const matrix = encode('https://example.com', { ecc: 'H', boostEcc: false });
+    const nan = logoGeometry(matrix, {
+      href: 'x',
+      sizeRatio: 0.3,
+      padding: Number.NaN,
+    } as never);
+    expect(nan.covered.size).toBe(
+      logoGeometry(matrix, { href: 'x', sizeRatio: 0.3, padding: 0 } as never).covered.size,
+    );
+  });
+
+  it('refuses a logo whose size it was never told', () => {
+    // Unlike padding, there is no honest default for sizeRatio: picking one
+    // would mean reporting damage for a logo nobody described.
+    const matrix = encode('https://example.com');
+    expect(() => logoGeometry(matrix, { href: 'x' } as never)).toThrow(/sizeRatio/);
+    expect(() => logoGeometry(matrix, { href: 'x', sizeRatio: Number.NaN } as never)).toThrow(
+      /finite/,
+    );
   });
 
   it('errors when a logo destroys more than error correction can recover', () => {

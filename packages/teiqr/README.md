@@ -1221,7 +1221,7 @@ order are not), and the wording of error messages.
 
 ## Conformance and testing
 
-**602 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
+**606 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
 
 - **Round trip across the whole parameter space** — all 40 versions, all 4 error correction
   levels, all 8 masks, binary payloads to 2 kB, astral-plane emoji, ECI, hand-built segments.
