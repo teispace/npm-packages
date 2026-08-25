@@ -11,16 +11,16 @@ import { registerImageDecoder } from '../src/verify/image-registry.js';
 import { toPixels } from '../src/verify/input.js';
 
 /**
- * Baseline JPEG, against files this package did not encode.
+ * JPEG, against files this package did not encode.
  *
- * Every fixture was produced by macOS `sips` from the PNG beside them — a real,
- * independent encoder — so the Huffman tables, quantisation tables, restart
- * intervals and subsampling choices are all somebody else's. See
- * `fixtures/jpeg/README.md` for how to regenerate them.
+ * Every fixture came from macOS `sips` or libjpeg's `cjpeg`/`jpegtran`, from
+ * the PNG beside them — real, independent encoders — so the Huffman tables,
+ * quantisation tables, restart intervals, subsampling and scan structure are
+ * all somebody else's. See `fixtures/jpeg/README.md` for how to regenerate.
  *
  * The point of decoding a photograph at all is that a camera never produces a
  * PNG. A scanner that reads only PNG reads what a website served and never what
- * someone actually shot.
+ * someone actually shot — and much of what a website serves is progressive.
  */
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'jpeg');
@@ -49,6 +49,9 @@ describe('baseline JPEG decoding', () => {
     ['qr-420.jpg', '4:2:0, chroma at quarter resolution'],
     ['qr-low.jpg', '4:2:0 at low quality, heavy ringing'],
     ['qr-gray.jpg', 'single-component greyscale'],
+    ['qr-422.jpg', '4:2:2, chroma at half horizontal resolution'],
+    ['qr-progressive.jpg', 'progressive, ten scans'],
+    ['qr-progressive-gray.jpg', 'progressive greyscale, six scans'],
   ])('decodes %s — %s', (name) => {
     const image = decodeJpeg(load(name));
     expect(image.width).toBe(source.width);
@@ -100,7 +103,15 @@ describe('baseline JPEG decoding', () => {
 });
 
 describe('scanning a JPEG end to end', () => {
-  it.each(['qr-444.jpg', 'qr-420.jpg', 'qr-low.jpg', 'qr-gray.jpg'])('reads %s', (name) => {
+  it.each([
+    'qr-444.jpg',
+    'qr-420.jpg',
+    'qr-low.jpg',
+    'qr-gray.jpg',
+    'qr-422.jpg',
+    'qr-progressive.jpg',
+    'qr-progressive-gray.jpg',
+  ])('reads %s', (name) => {
     expect(scan(load(name)).text).toBe(PAYLOAD);
   });
 
@@ -118,17 +129,21 @@ describe('formats and files it refuses', () => {
     expect(isJpeg(new Uint8Array(0))).toBe(false);
   });
 
-  it('names progressive JPEG rather than decoding it wrongly', () => {
-    // A progressive file's coefficients arrive across several scans by spectral
-    // band. Decoding it as baseline would not fail — it would produce a smeared
-    // image from the first scan alone, which is worse than an error because it
-    // looks like a scanner problem rather than a format one.
+  it('rejects a frame header claiming a structure the scans do not have', () => {
+    // Progressive is decoded now, so relabelling a baseline file as SOF2 is no
+    // longer "unsupported" — it is a lie about the data that follows. What
+    // matters is that it ends rather than looping or inventing an image.
     const bytes = load('qr-420.jpg');
     const sof = bytes.findIndex((b, i) => b === 0xff && bytes[i + 1] === 0xc0);
     expect(sof).toBeGreaterThan(0);
-    const progressive = Uint8Array.from(bytes);
-    progressive[sof + 1] = 0xc2;
-    expect(() => decodeJpeg(progressive)).toThrow(/Progressive JPEG is not supported/);
+    const mislabelled = Uint8Array.from(bytes);
+    mislabelled[sof + 1] = 0xc2;
+    try {
+      const image = decodeJpeg(mislabelled);
+      expect(image.pixels.length).toBe(image.width * image.height * 4);
+    } catch {
+      // Either outcome is acceptable; hanging is not.
+    }
   });
 
   it('names arithmetic coding rather than producing noise', () => {
@@ -391,5 +406,87 @@ describe('headers rewritten by hand', () => {
     ]);
 
     expect(decodeJpeg(rebuilt).pixels).toEqual(decodeJpeg(original).pixels);
+  });
+});
+
+describe('progressive JPEG', () => {
+  /**
+   * The decisive test, and the reason these fixtures were made with `jpegtran`
+   * rather than a re-encode.
+   *
+   * `jpegtran -progressive` is **lossless**: it rearranges the very same
+   * quantised coefficients into spectral bands and bit planes without going
+   * near a pixel. So a correct progressive decoder must reproduce the baseline
+   * file's output *exactly* — not approximately, not "close enough to scan".
+   *
+   * That is a far stronger claim than any tolerance could express. Progressive
+   * decoding has four distinct paths (DC first, DC refinement, AC first, AC
+   * refinement) and the refinement passes interleave correction bits for
+   * already-placed coefficients with newly nonzero ones. A mistake in any of
+   * them shifts a coefficient by a bit, which is invisible to a scan and
+   * glaring against a byte-for-byte comparison.
+   */
+  it.each([
+    ['qr-progressive.jpg', 'qr-420.jpg', 'colour, ten scans'],
+    ['qr-progressive-gray.jpg', 'qr-gray.jpg', 'greyscale, six scans'],
+  ])('%s decodes identically to %s (%s)', (progressiveName, baselineName) => {
+    expect(decodeJpeg(load(progressiveName)).pixels).toEqual(decodeJpeg(load(baselineName)).pixels);
+  });
+
+  it('really is progressive, with more than one scan', () => {
+    // Guards the tests above from passing vacuously if a fixture were ever
+    // regenerated as baseline: comparing a baseline file against a baseline
+    // file proves nothing at all.
+    const bytes = load('qr-progressive.jpg');
+    let sofMarker = 0;
+    let scans = 0;
+    for (let i = 2; i + 1 < bytes.length; i++) {
+      if (bytes[i] !== 0xff) continue;
+      if (bytes[i + 1] === 0xc2) sofMarker = 0xc2;
+      if (bytes[i + 1] === 0xda) scans++;
+    }
+    expect(sofMarker).toBe(0xc2);
+    expect(scans).toBeGreaterThan(1);
+  });
+
+  it('terminates on truncations and corruption of a progressive file', () => {
+    // Progressive adds four decode paths and an end-of-band run counter that
+    // spans blocks, so it needs its own pass rather than inheriting the
+    // baseline file's. A refinement scan reading past the end is exactly the
+    // shape that loops.
+    const full = load('qr-progressive.jpg');
+    for (let length = 2; length < full.length; length += 97) {
+      try {
+        const image = decodeJpeg(full.subarray(0, length));
+        expect(image.pixels.length, `truncated to ${length}`).toBe(image.width * image.height * 4);
+      } catch {
+        // Terminating is the whole assertion.
+      }
+    }
+    for (let seed = 0; seed < 30; seed++) {
+      const bytes = Uint8Array.from(full);
+      for (let i = 0; i < 8; i++) {
+        bytes[((seed * 613 + i * 29) % (bytes.length - 600)) + 600] ^= 0x5a;
+      }
+      try {
+        decodeJpeg(bytes);
+      } catch {
+        // Likewise.
+      }
+    }
+    expect(true).toBe(true);
+  });
+});
+
+describe('4:2:2 chroma subsampling', () => {
+  it('reads the one subsampling sips will not emit', () => {
+    // 4:2:2 halves chroma horizontally but not vertically, so it is the case
+    // that catches an upsampler which assumes the two axes scale together.
+    // `sips` picks its own subsampling, so this fixture comes from libjpeg's
+    // `cjpeg -sample 2x1`.
+    const image = decodeJpeg(load('qr-422.jpg'));
+    expect(image.width).toBe(source.width);
+    expect(image.height).toBe(source.height);
+    expect(meanError(image.pixels)).toBeLessThan(6);
   });
 });

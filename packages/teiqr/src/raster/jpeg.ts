@@ -7,15 +7,22 @@
  * read PNG can read what a website served, never what a phone shot.
  *
  * ### What is covered
- * Baseline and extended sequential Huffman (SOF0/SOF1), greyscale and YCbCr,
- * every chroma subsampling the format allows, restart intervals, and Adobe's
- * APP14 transform flag for the files that store RGB directly.
+ * Huffman-coded JPEG in all three of its structures: baseline (SOF0), extended
+ * sequential (SOF1) and **progressive** (SOF2). Greyscale and YCbCr, every
+ * chroma subsampling the format allows, 8- and 16-bit quantisation tables,
+ * restart intervals, and Adobe's APP14 transform flag for the files that store
+ * RGB directly.
  *
- * Progressive JPEG (SOF2) is **not** decoded, and says so rather than
- * producing a smeared image. It is a different coding structure — coefficients
- * arrive across multiple scans by spectral band and bit position — and is
- * rarely what a camera writes. Arithmetic coding (SOF9/SOF10) is likewise
- * refused; it is legal, patent-encumbered in practice, and essentially unused.
+ * Progressive matters more than its share of cameras suggests: it is what a
+ * great deal of the web serves, and a scanner is usually pointed at an image
+ * that came from somewhere. Its coefficients arrive across several scans, split
+ * by spectral band and by bit position, so a block is only complete once the
+ * last scan has run — which is why nothing is reconstructed until every scan is
+ * read.
+ *
+ * Arithmetic coding (SOF9/SOF10) is refused by name; it is legal,
+ * patent-encumbered in practice, and essentially unused. So are the lossless,
+ * differential and hierarchical modes.
  */
 
 /** Largest edge accepted, matching the PNG decoder's bound for the same reason. */
@@ -113,7 +120,7 @@ export const isJpeg = (bytes: Uint8Array): boolean =>
   bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8;
 
 /**
- * Decode a baseline JPEG to 8-bit RGBA pixels.
+ * Decode a JPEG to 8-bit RGBA pixels.
  *
  * Alpha is always 255: JPEG has no transparency.
  */
@@ -138,6 +145,8 @@ export const decodeJpeg = (
   let restartInterval = 0;
   /** Adobe APP14 colour transform: -1 when absent, else 0 = none, 1 = YCbCr. */
   let adobeTransform = -1;
+  /** SOF2: coefficients arrive across several scans rather than all at once. */
+  let progressive = false;
 
   let offset = 2;
 
@@ -192,10 +201,12 @@ export const decodeJpeg = (
       }
 
       case 0xc0:
-      case 0xc1: {
-        // SOF0 baseline / SOF1 extended sequential. Both are Huffman-coded and
-        // decode identically here; the difference is a precision allowance
-        // that 8-bit files never exercise.
+      case 0xc1:
+      case 0xc2: {
+        // SOF0 baseline / SOF1 extended sequential / SOF2 progressive. All
+        // three are Huffman-coded and share this header exactly; they differ
+        // only in how the scans that follow are structured.
+        progressive = marker === 0xc2;
         if (frame) throw new Error('JPEG has more than one frame');
         if (segment[0] !== 8) throw new Error(`Unsupported sample precision: ${segment[0]}`);
         const height = (segment[1] << 8) | segment[2];
@@ -255,11 +266,6 @@ export const decodeJpeg = (
         break;
       }
 
-      case 0xc2:
-        throw new Error(
-          'Progressive JPEG is not supported. Re-save as baseline, or use scanAsync() ' +
-            'where the host provides createImageBitmap.',
-        );
       case 0xc9:
       case 0xca:
         throw new Error('Arithmetic-coded JPEG is not supported');
@@ -326,15 +332,20 @@ export const decodeJpeg = (
           component.acTable = segment[2 + i * 2] & 15;
           scan.push(component);
         }
-        offset = decodeScan(
-          bytes,
-          offset + length,
-          frame,
-          scan,
-          dcTables,
-          acTables,
+        // Spectral selection and successive approximation. A baseline scan
+        // always carries 0/63/0/0, so the same fields drive both paths and
+        // there is no second code path to keep in step.
+        const spectralStart = segment[1 + count * 2];
+        const spectralEnd = segment[2 + count * 2];
+        const approximation = segment[3 + count * 2];
+        offset = decodeScan(bytes, offset + length, frame, scan, dcTables, acTables, {
           restartInterval,
-        );
+          progressive,
+          spectralStart,
+          spectralEnd,
+          approximationHigh: approximation >> 4,
+          approximationLow: approximation & 15,
+        });
         continue;
       }
 
@@ -356,8 +367,27 @@ export const decodeJpeg = (
   return toRgba(frame, adobeTransform);
 };
 
+/** Spectral selection and successive approximation for one scan. */
+interface ScanParameters {
+  readonly restartInterval: number;
+  readonly progressive: boolean;
+  /** First and last coefficient of the band this scan carries, in zig-zag order. */
+  readonly spectralStart: number;
+  readonly spectralEnd: number;
+  /** Bit position already sent (0 on a first pass) and the one being sent now. */
+  readonly approximationHigh: number;
+  readonly approximationLow: number;
+}
+
 /**
- * Read the entropy-coded segment, filling every component's coefficient array.
+ * Read one entropy-coded segment, filling every component's coefficient array.
+ *
+ * Baseline sends every coefficient of a block in one pass. Progressive sends
+ * bands of coefficients across several scans, and sends each band's bits from
+ * the most significant downwards, so a block is only complete once the last
+ * scan has run. Both funnel through here because they share the bit reader,
+ * the Huffman walk and the restart handling — only what happens per block
+ * differs.
  *
  * Returns the offset of the marker that ended the scan.
  */
@@ -376,13 +406,29 @@ const decodeScan = (
   scan: Component[],
   dcTables: (HuffmanTable | null)[],
   acTables: (HuffmanTable | null)[],
-  restartInterval: number,
+  parameters: ScanParameters,
 ): number => {
+  const {
+    restartInterval,
+    progressive,
+    spectralStart,
+    spectralEnd,
+    approximationHigh,
+    approximationLow,
+  } = parameters;
+
   let offset = start;
   let bitBuffer = 0;
   let bitCount = 0;
   /** Set when the reader reaches a marker, so the scan stops rather than eating it. */
   let atMarker = false;
+  /**
+   * Blocks left to skip because an end-of-band run said they are all zero.
+   *
+   * Progressive AC scans code long stretches of empty bands as a single run,
+   * which is most of where their compression comes from.
+   */
+  let eobrun = 0;
 
   const nextBit = (): number => {
     if (bitCount === 0) {
@@ -439,11 +485,12 @@ const decodeScan = (
   const extend = (value: number, n: number): number =>
     n === 0 ? 0 : value < 1 << (n - 1) ? value - (1 << n) + 1 : value;
 
-  const decodeBlock = (component: Component, blockOffset: number): void => {
+  /** Baseline: every coefficient of the block, in one pass. */
+  const decodeBaseline = (component: Component, at: number): void => {
     const dcLength = decodeHuffman(dcTables[component.dcTable]);
     const diff = dcLength === 0 ? 0 : extend(receive(dcLength), dcLength);
     component.pred += diff;
-    component.coefficients[blockOffset] = component.pred;
+    component.coefficients[at] = component.pred;
 
     let k = 1;
     while (k < 64) {
@@ -457,15 +504,141 @@ const decodeScan = (
       }
       k += run;
       if (k > 63) break;
-      component.coefficients[blockOffset + ZIGZAG[k]] = extend(receive(size), size);
+      component.coefficients[at + ZIGZAG[k]] = extend(receive(size), size);
       k++;
     }
   };
 
+  /** Progressive DC, first pass: the top bits of the DC coefficient. */
+  const decodeDcFirst = (component: Component, at: number): void => {
+    const dcLength = decodeHuffman(dcTables[component.dcTable]);
+    const diff = dcLength === 0 ? 0 : extend(receive(dcLength), dcLength);
+    component.pred += diff;
+    component.coefficients[at] = component.pred << approximationLow;
+  };
+
+  /** Progressive DC, refinement: one more bit of a coefficient already sent. */
+  const decodeDcRefine = (component: Component, at: number): void => {
+    if (nextBit()) component.coefficients[at] |= 1 << approximationLow;
+  };
+
+  /** Progressive AC, first pass over a band. */
+  const decodeAcFirst = (component: Component, at: number): void => {
+    if (eobrun > 0) {
+      eobrun--;
+      return;
+    }
+    let k = spectralStart;
+    while (k <= spectralEnd) {
+      const rs = decodeHuffman(acTables[component.acTable]);
+      const size = rs & 15;
+      const run = rs >> 4;
+      if (size === 0) {
+        if (run < 15) {
+          // An end-of-band run: this block and the next `2^run - 1` have
+          // nothing further in this band.
+          eobrun = (1 << run) - 1;
+          if (run) eobrun += receive(run);
+          break;
+        }
+        k += 16;
+        continue;
+      }
+      k += run;
+      if (k > spectralEnd) break;
+      component.coefficients[at + ZIGZAG[k]] =
+        extend(receive(size), size) * (1 << approximationLow);
+      k++;
+    }
+  };
+
+  /**
+   * Progressive AC, refinement pass.
+   *
+   * The awkward one. Newly nonzero coefficients arrive interleaved with
+   * correction bits for coefficients earlier scans already placed, and the run
+   * length counts only the ones that are still zero — so the walk has to step
+   * over history without consuming run length for it.
+   */
+  const decodeAcRefine = (component: Component, at: number): void => {
+    const positive = 1 << approximationLow;
+    const negative = -1 << approximationLow;
+    let k = spectralStart;
+
+    /** Append one correction bit to a coefficient that is already nonzero. */
+    const correct = (index: number): void => {
+      const current = component.coefficients[index];
+      if (current === 0) return;
+      if (nextBit() && (current & positive) === 0) {
+        component.coefficients[index] = current >= 0 ? current + positive : current + negative;
+      }
+    };
+
+    if (eobrun <= 0) {
+      while (k <= spectralEnd) {
+        const rs = decodeHuffman(acTables[component.acTable]);
+        const size = rs & 15;
+        let run = rs >> 4;
+        let value = 0;
+
+        if (size === 0) {
+          if (run < 15) {
+            eobrun = 1 << run;
+            if (run) eobrun += receive(run);
+            break;
+          }
+          // ZRL in a refinement scan still means "sixteen zero-history
+          // coefficients", and correction bits are sent for anything nonzero
+          // encountered on the way.
+        } else {
+          value = nextBit() ? positive : negative;
+        }
+
+        while (k <= spectralEnd) {
+          const index = at + ZIGZAG[k];
+          if (component.coefficients[index] !== 0) {
+            correct(index);
+          } else {
+            if (run === 0) {
+              if (value !== 0) component.coefficients[index] = value;
+              break;
+            }
+            run--;
+          }
+          k++;
+        }
+        k++;
+        if (atMarker) return;
+      }
+    }
+
+    if (eobrun > 0) {
+      // Inside an end-of-band run nothing new arrives, but coefficients that
+      // are already nonzero still get their correction bit.
+      while (k <= spectralEnd) {
+        correct(at + ZIGZAG[k]);
+        k++;
+      }
+      eobrun--;
+    }
+  };
+
+  const decodeBlock = progressive
+    ? spectralStart === 0
+      ? approximationHigh === 0
+        ? decodeDcFirst
+        : decodeDcRefine
+      : approximationHigh === 0
+        ? decodeAcFirst
+        : decodeAcRefine
+    : decodeBaseline;
+
   const { mcusPerLine, mcusPerColumn } = frame;
 
   // A scan naming one component is non-interleaved and walks that component's
-  // own block grid; several components interleave into MCUs.
+  // own block grid; several components interleave into MCUs. Every progressive
+  // AC scan is non-interleaved by definition, since a band belongs to one
+  // component.
   //
   // The grid is sized from the component's true dimensions, *not* from its
   // MCU-padded `blocksPerLine`. The two agree whenever the component is not
@@ -481,6 +654,10 @@ const decodeScan = (
   let decoded = 0;
   while (decoded < units) {
     for (const component of scan) component.pred = 0;
+    // A restart interval resets the end-of-band run as well as the DC
+    // predictors: the point of a restart marker is that decoding can resume
+    // from it with no carried state at all.
+    eobrun = 0;
 
     const end = Math.min(units, decoded + perRestart);
     for (; decoded < end; decoded++) {

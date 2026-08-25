@@ -35,7 +35,7 @@ One MIT-licensed package covering the whole job, with no runtime dependencies:
 - **Validate** whether a code will actually scan — contrast, quiet zone, shape risk, print
   size, and exactly how much of the error correction budget a logo consumes.
 - **Decode** from a matrix or an image, with full Reed-Solomon recovery. PNG is read
-  natively in every shape the format allows; baseline JPEG too, opt-in.
+  natively in every shape the format allows; JPEG too, baseline and progressive, opt-in.
 - **Export** to SVG, PNG, PDF, EPS and ZIP, all synchronously and without a canvas.
 - **Build payloads** for 32 typed formats — and parse them back into fields.
 
@@ -365,16 +365,19 @@ synchronously, on every runtime, with no canvas:
 
 ```ts
 import { scan } from 'teiqr/verify';
-import 'teiqr/jpeg';                          // baseline JPEG, +2.9 kB
+import 'teiqr/jpeg';                          // JPEG, +3.3 kB
 
 scan(await readFile('photo.jpg')).text;
 ```
 
 It is a separate entry for the same reason the Shift-JIS table is: a code you generated
 is never a JPEG, so the Huffman tables and inverse DCT stay out of the default bundle.
-Baseline and extended sequential, greyscale and colour, every chroma subsampling, and
-restart intervals. Progressive JPEG is named as unsupported rather than decoded into a
-smear — `scanAsync()` still handles it wherever the host has `createImageBitmap`.
+
+All three Huffman structures are read — baseline, extended sequential and **progressive** —
+in greyscale or colour, at every chroma subsampling, with restart intervals and `tRNS`-style
+Adobe colour transforms. Progressive matters more than its share of cameras suggests: it is
+what much of the web serves, and a scanner is usually pointed at an image that came from
+somewhere else.
 
 ### What can be read, and from where
 
@@ -1058,7 +1061,7 @@ gzipped, by `scripts/measure-bundles.mjs` — run it yourself after `yarn build`
 | `teiqr/verify`    | 17.2 kB | decoder + scanner, all three symbologies  |
 | `teiqr/terminal`  |  0.4 kB | text output                               |
 | `teiqr/kanji`     | 10.8 kB | Shift-JIS table (opt-in)                  |
-| `teiqr/jpeg`      |  2.9 kB | baseline JPEG decoder (opt-in)            |
+| `teiqr/jpeg`      |  3.3 kB | JPEG decoder, incl. progressive (opt-in)  |
 | `teiqr/react`     | 28.4 kB | components + hooks (`react` external)     |
 
 `core` and `verify` carry the rMQR tables — 32 fixed sizes with no closed form, so they have
@@ -1199,7 +1202,7 @@ order are not), and the wording of error messages.
 
 ## Conformance and testing
 
-**561 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
+**572 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
 
 - **Round trip across the whole parameter space** — all 40 versions, all 4 error correction
   levels, all 8 masks, binary payloads to 2 kB, astral-plane emoji, ECI, hand-built segments.
@@ -1219,9 +1222,11 @@ order are not), and the wording of error messages.
   segmentation so the comparison is about bit layout rather than mode choice.
 - **Degraded input** — uneven light, veiling glare, defocus, sensor noise and low contrast,
   each asserted to be a case a single global threshold genuinely fails.
-- **Baseline JPEG** — 4:4:4, 4:2:0, greyscale and low-quality fixtures encoded by a
-  different tool entirely, decoded and compared against the exact pixels they were made
-  from. A code that merely *scans* proves little; a mis-scaled inverse DCT still scans.
+- **JPEG, baseline and progressive** — 4:4:4, 4:2:2, 4:2:0, greyscale and low-quality
+  fixtures encoded by other tools entirely, decoded and compared against the exact pixels
+  they were made from. A code that merely *scans* proves little; a mis-scaled inverse DCT
+  still scans. The progressive files are `jpegtran` conversions of the baseline ones, which
+  is lossless — so they must decode **byte-identically**, which no tolerance could assert.
 - **PNG in every shape the format allows** — greyscale, truecolour, palette and both alpha
   variants, at every bit depth each permits, interlaced and not, with `tRNS` transparency.
   Every fixture is built by hand from the spec's tables and compressed with Node's zlib, so
@@ -1252,9 +1257,9 @@ Stated plainly, because a library that hides these wastes your afternoon:
   guesswork until someone points a real camera at it.
 - **Raster output cannot draw frame label text**, and can only embed **PNG** data-URI logos.
   Both are reported in `rasterize().omitted`. SVG handles both fully.
-- **Progressive JPEG, WebP and AVIF need `createImageBitmap`** (so, `scanAsync` in a browser,
-  Worker or Deno). PNG is decoded natively everywhere; baseline JPEG is too, with
-  `import 'teiqr/jpeg'`.
+- **WebP and AVIF need `createImageBitmap`** (so, `scanAsync` in a browser, Worker or Deno).
+  PNG is decoded natively everywhere, and JPEG — baseline and progressive alike — with
+  `import 'teiqr/jpeg'`. Arithmetic-coded and lossless JPEG are refused by name.
 
 ---
 

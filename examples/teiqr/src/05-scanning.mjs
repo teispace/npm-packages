@@ -111,7 +111,7 @@ console.log(`    scanned -> ${scan(palette).text}`);
 check(scan(palette).text === url, 'a 1-bit palette PNG should scan');
 check(palette.length < png.length, 'the palette encoding should be the smaller one');
 
-section('A photograph, not a render: baseline JPEG');
+section('A photograph, not a render: JPEG, baseline and progressive');
 // A camera never produces a PNG. `import 'teiqr/jpeg'` registers a baseline
 // decoder so scan() reads JPEG synchronously, on any runtime, with no canvas
 // and no await — the same call, just more formats.
@@ -123,6 +123,14 @@ const assets = join(dirname(dirname(fileURLToPath(import.meta.url))), 'assets');
 const photo = new Uint8Array(readFileSync(join(assets, 'photographed.jpg')));
 console.log(`    a 4:2:0 JPEG (${photo.length.toLocaleString()} bytes) -> ${scan(photo).text}`);
 check(scan(photo).text === 'https://example.com/photographed', 'the JPEG should scan');
+
+// Progressive JPEG too — the same image with its coefficients rearranged into
+// spectral bands and bit planes, which is what much of the web serves. It is a
+// genuinely different decode path, and `jpegtran -progressive` is lossless, so
+// the two must produce the same pixels rather than merely the same payload.
+const progressive = new Uint8Array(readFileSync(join(assets, 'photographed-progressive.jpg')));
+console.log(`    the same code, progressive        -> ${scan(progressive).text}`);
+check(scan(progressive).text === scan(photo).text, 'both encodings should agree');
 
 // Same bytes, same call, no format argument anywhere: whatever the image is,
 // scan() works it out. Without the teiqr/jpeg import these bytes are refused
