@@ -365,7 +365,7 @@ synchronously, on every runtime, with no canvas:
 
 ```ts
 import { scan } from 'teiqr/verify';
-import 'teiqr/jpeg';                          // JPEG, +3.3 kB
+import 'teiqr/jpeg';                          // JPEG, +3.4 kB
 
 scan(await readFile('photo.jpg')).text;
 ```
@@ -1061,7 +1061,7 @@ gzipped, by `scripts/measure-bundles.mjs` — run it yourself after `yarn build`
 | `teiqr/verify`    | 17.2 kB | decoder + scanner, all three symbologies  |
 | `teiqr/terminal`  |  0.4 kB | text output                               |
 | `teiqr/kanji`     | 10.8 kB | Shift-JIS table (opt-in)                  |
-| `teiqr/jpeg`      |  3.3 kB | JPEG decoder, incl. progressive (opt-in)  |
+| `teiqr/jpeg`      |  3.4 kB | JPEG decoder, incl. progressive (opt-in)  |
 | `teiqr/react`     | 28.4 kB | components + hooks (`react` external)     |
 
 `core` and `verify` carry the rMQR tables — 32 fixed sizes with no closed form, so they have

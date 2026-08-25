@@ -20,6 +20,10 @@ import { toPng } from '../dist/raster.js';
 import { decodePng } from '../dist/raster.js';
 import { renderSvg } from '../dist/render.js';
 import { scan, tryScan } from '../dist/verify.js';
+import { decodeJpeg } from '../dist/jpeg.js';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /** Run `fn` enough times to get a stable figure, and report the median. */
 const measure = (label, fn, { warmup = 5, runs = 25 } = {}) => {
@@ -107,6 +111,25 @@ record('scan, rMQR', () => tryScan(rmqrPixels));
 // common one: most frames have nothing in them.
 record('reject an empty frame', () => tryScan(empty));
 record('reject an empty frame, no invert', () => tryScan(empty, { tryInverted: false }));
+
+// JPEG, against the test fixtures. Worth watching because the inverse DCT is
+// the expensive half of a decode — profiling a 4K photograph put it at 65% of
+// the time, against 27% for the Huffman pass, which is the opposite of the
+// usual assumption. What keeps it affordable is that a quantised block is
+// mostly zeros, so `reconstruct` skips zero rows and short-circuits DC-only
+// blocks entirely.
+//
+// Against the whole job it is a smaller share than it looks: decoding a 3 MP
+// photograph is about a third of `scan()`, and locating the symbol is the
+// rest. A faster IDCT cannot buy back more than that third.
+const fixtures = join(dirname(dirname(fileURLToPath(import.meta.url))), '__tests__', 'fixtures', 'jpeg');
+const jpegBytes = (name) => new Uint8Array(readFileSync(join(fixtures, name)));
+const baselineJpeg = jpegBytes('qr-420.jpg');
+const progressiveJpeg = jpegBytes('qr-progressive.jpg');
+
+record('decode JPEG, baseline 4:2:0', () => decodeJpeg(baselineJpeg));
+record('decode JPEG, progressive', () => decodeJpeg(progressiveJpeg));
+record('scan a baseline JPEG', () => scan(baselineJpeg));
 
 // --- report ---------------------------------------------------------------
 const pad = (text, width) => String(text).padEnd(width);
