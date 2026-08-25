@@ -68,6 +68,48 @@ const SWEEP = (() => {
   return { cos, sin, cos4, sin4 };
 })();
 
+/**
+ * Reflect a sampled grid about its main diagonal.
+ *
+ * A mirrored capture — through glass, off a mirror, printed on the inside of a
+ * window — samples to the symbol reflected about its own diagonal, because
+ * every landmark the locator uses is diagonally symmetric and the orientation
+ * it derives is therefore still valid. Reflecting the grid again puts it back.
+ */
+const transposeGrid = (grid: Uint8Array, size: number): Uint8Array => {
+  const out = new Uint8Array(grid.length);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) out[y * size + x] = grid[x * size + y];
+  }
+  return out;
+};
+
+/**
+ * Reflect a rectangular grid left to right.
+ *
+ * rMQR cannot use the diagonal reflection: transposing a 27x7 symbol gives a
+ * 7x27 one, which is not a size the format defines. Its symbol is wider than
+ * it is tall and its two landmarks sit at opposite corners, so a mirrored
+ * capture lands on a left-right reflection of the true grid instead.
+ */
+const flipGridX = (grid: Uint8Array, width: number, height: number): Uint8Array => {
+  const out = new Uint8Array(grid.length);
+  for (let y = 0; y < height; y++) {
+    const row = y * width;
+    for (let x = 0; x < width; x++) out[row + x] = grid[row + width - 1 - x];
+  }
+  return out;
+};
+
+/** Reflect a rectangular grid top to bottom. */
+const flipGridY = (grid: Uint8Array, width: number, height: number): Uint8Array => {
+  const out = new Uint8Array(grid.length);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) out[y * width + x] = grid[(height - 1 - y) * width + x];
+  }
+  return out;
+};
+
 export const finderAngle = (
   dark: Uint8Array,
   width: number,
@@ -192,18 +234,24 @@ export const readMicroAt = (
       // Off the edge of the image means this size cannot be right, but a
       // larger one is only worse, so stop rather than continue.
       if (!modules) break;
-      try {
-        const result = decodeMicroMatrix({ size, modules });
-        return {
-          ...result,
-          version: MICRO_VERSIONS.indexOf(result.version) + 1,
-          segments: result.segments,
-          mask: result.mask,
-          moduleSize: finder.size,
-          origin: transformPoint(transform, 0, 0),
-        };
-      } catch {
-        // Wrong size or wrong quarter turn; keep trying.
+      // Upright first, then mirrored. The reflection reuses the grid that has
+      // already been sampled, so it costs a decode rather than another pass
+      // over the image — and a reflected grid still has to satisfy the format
+      // information and Reed-Solomon before it is believed.
+      for (const candidate of [modules, transposeGrid(modules, size)]) {
+        try {
+          const result = decodeMicroMatrix({ size, modules: candidate });
+          return {
+            ...result,
+            version: MICRO_VERSIONS.indexOf(result.version) + 1,
+            segments: result.segments,
+            mask: result.mask,
+            moduleSize: finder.size,
+            origin: transformPoint(transform, 0, 0),
+          };
+        } catch {
+          // Wrong size, wrong quarter turn, or not mirrored; keep trying.
+        }
       }
     }
   }
@@ -310,18 +358,34 @@ export const readRmqrAt = (
       for (const transform of fits) {
         const modules = sampleGrid(dark, width, height, spec.width, spec.height, transform);
         if (!modules) continue;
-        try {
-          const result = decodeRmqrMatrix({ modules, width: spec.width, height: spec.height });
-          return {
-            ...result,
-            version: RMQR_VERSIONS.indexOf(result.version) + 1,
-            ecc: result.ecc,
-            mask: 0,
-            moduleSize: finder.size,
-            origin: transformPoint(transform, 0, 0),
-          };
-        } catch {
-          // Wrong size, wrong quarter turn, or a sub-finder that was not one.
+        // Upright first, then the two reflections that keep the symbol's own
+        // proportions. Which of them a mirrored capture produces depends on
+        // the quarter turn the orientation landed on, so both are tried; each
+        // reuses the grid already sampled, so the cost is a decode rather than
+        // another pass over the image.
+        for (const candidate of [
+          modules,
+          flipGridX(modules, spec.width, spec.height),
+          flipGridY(modules, spec.width, spec.height),
+        ]) {
+          try {
+            const result = decodeRmqrMatrix({
+              modules: candidate,
+              width: spec.width,
+              height: spec.height,
+            });
+            return {
+              ...result,
+              version: RMQR_VERSIONS.indexOf(result.version) + 1,
+              ecc: result.ecc,
+              mask: 0,
+              moduleSize: finder.size,
+              origin: transformPoint(transform, 0, 0),
+            };
+          } catch {
+            // Wrong size, wrong quarter turn, a sub-finder that was not one,
+            // or simply not mirrored.
+          }
         }
       }
     }
