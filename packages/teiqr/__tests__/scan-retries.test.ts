@@ -197,6 +197,42 @@ describe('geometry after a resized retry', () => {
   });
 });
 
+/** Flip every colour channel, leaving alpha alone. */
+const invert = (source: Image): Image => {
+  const data = Uint8Array.from(source.data);
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = 255 - data[i];
+    data[i + 1] = 255 - data[i + 1];
+    data[i + 2] = 255 - data[i + 2];
+  }
+  return { data, width: source.width, height: source.height };
+};
+
+describe('a light-on-dark code that also needs enlarging', () => {
+  /**
+   * The two retries compose, and they share machinery: the inverted pass
+   * reuses the luminance the first pass derived rather than building a second
+   * RGBA buffer, and the resize rungs work on that luminance too. Inverting
+   * before converting and converting before inverting must agree — they do,
+   * because luminance is a weighted sum whose weights total one — but that is
+   * an argument, and this is the test.
+   */
+  const text = 'INVERTED AND SMALL';
+  const image = invert(resample(render(text, 4), 0.42));
+
+  it('needs the inverted pass', () => {
+    expect(() =>
+      scan({ data: image.data, width: image.width, height: image.height }, { tryInverted: false }),
+    ).toThrow();
+  });
+
+  it('reads with both retries in play', () => {
+    expect(tryScan({ data: image.data, width: image.width, height: image.height })?.text).toBe(
+      text,
+    );
+  });
+});
+
 describe('frames with nothing in them', () => {
   /**
    * The resizing rungs are gated on having seen at least one finder-shaped

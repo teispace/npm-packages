@@ -432,8 +432,8 @@ const claimedBy = (locations: readonly SymbolLocation[]): Set<Candidate> => {
  * Returns them ordered top-to-bottom, then left-to-right, which is reading
  * order for a printed sheet.
  */
-export const scanAllPixels = (pixels: Uint8Array, width: number, height: number): ScanResult[] => {
-  const dark = binarize(pixels, width, height);
+export const scanAllGray = (gray: Uint8Array, width: number, height: number): ScanResult[] => {
+  const dark = binarizeGray(gray, width, height);
   const finders = findFinders(dark, width, height);
   const locations = groupFinders(finders);
   const results: ScanResult[] = [];
@@ -459,13 +459,10 @@ export const scanAllPixels = (pixels: Uint8Array, width: number, height: number)
   return results.sort((a, b) => a.origin.y - b.origin.y || a.origin.x - b.origin.x);
 };
 
-/**
- * Locate and decode a symbol in an RGBA pixel buffer.
- *
- * @param pixels Row-major RGBA, `width * height * 4`.
- * @throws {NotFoundError} when no symbol can be located.
- * @throws {UncorrectableError} when a symbol is found but too damaged to read.
- */
+/** {@link scanAllGray}, for a caller holding RGBA. */
+export const scanAllPixels = (pixels: Uint8Array, width: number, height: number): ScanResult[] =>
+  scanAllGray(toGray(pixels, width, height), width, height);
+
 /**
  * Below this, halving costs more detail than the noise it removes.
  *
@@ -474,29 +471,33 @@ export const scanAllPixels = (pixels: Uint8Array, width: number, height: number)
  */
 const MIN_HALVING_SIZE = 320;
 
-/** Average each 2x2 block into one pixel. */
-const halve = (
-  pixels: Uint8Array,
+/**
+ * Average each 2x2 block into one sample.
+ *
+ * Works on luminance rather than RGBA: the composite over white has already
+ * happened, so this is a quarter of the memory traffic and, unlike averaging
+ * the colour channels, it cannot lose a partially transparent pixel's
+ * contribution on the way through.
+ */
+const halveGray = (
+  gray: Uint8Array,
   width: number,
   height: number,
-): { pixels: Uint8Array; width: number; height: number } => {
+): { gray: Uint8Array; width: number; height: number } => {
   const w = width >> 1;
   const h = height >> 1;
-  const out = new Uint8Array(w * h * 4);
+  const out = new Uint8Array(w * h);
   for (let y = 0; y < h; y++) {
-    const top = (y * 2 * width) << 2;
-    const bottom = ((y * 2 + 1) * width) << 2;
+    const top = y * 2 * width;
+    const bottom = (y * 2 + 1) * width;
+    const row = y * w;
     for (let x = 0; x < w; x++) {
-      const a = top + (x << 3);
-      const b = bottom + (x << 3);
-      const d = (y * w + x) << 2;
-      for (let c = 0; c < 3; c++) {
-        out[d + c] = (pixels[a + c] + pixels[a + 4 + c] + pixels[b + c] + pixels[b + 4 + c]) >> 2;
-      }
-      out[d + 3] = 255;
+      const a = top + (x << 1);
+      const b = bottom + (x << 1);
+      out[row + x] = (gray[a] + gray[a + 1] + gray[b] + gray[b + 1]) >> 2;
     }
   }
-  return { pixels: out, width: w, height: h };
+  return { gray: out, width: w, height: h };
 };
 
 /**
@@ -533,49 +534,46 @@ const MAX_DOUBLING_PIXELS = 4_000_000;
  * instead of enlarging does not work either — it rescues a fifth as many, and
  * blurring *and* enlarging is worse than enlarging alone.
  */
-const double = (
-  pixels: Uint8Array,
+const doubleGray = (
+  gray: Uint8Array,
   width: number,
   height: number,
-): { pixels: Uint8Array; width: number; height: number } => {
+): { gray: Uint8Array; width: number; height: number } => {
   const w = width * 2;
   const h = height * 2;
 
-  // Separable: horizontally into a half-height buffer, then vertically. Doing
-  // it in two one-dimensional passes is four samples of work per output pixel
-  // rather than the sixteen a naive two-dimensional pass would cost.
+  // Separable: horizontally into a half-height buffer, then vertically. Two
+  // one-dimensional passes are four samples of work per output sample rather
+  // than the sixteen a naive two-dimensional pass would cost.
   //
   // With a factor of exactly two the interpolation weights are always 3:1, so
   // every sample is integer arithmetic and nothing is computed per pixel.
-  const rows = new Uint8Array(w * height * 4);
+  const rows = new Uint8Array(w * height);
   for (let y = 0; y < height; y++) {
-    const src = y * width * 4;
-    const dst = y * w * 4;
+    const src = y * width;
+    const dst = y * w;
     for (let x = 0; x < width; x++) {
-      const here = src + (x << 2);
-      const left = src + ((x === 0 ? 0 : x - 1) << 2);
-      const right = src + ((x === width - 1 ? x : x + 1) << 2);
-      const out = dst + (x << 3);
-      for (let c = 0; c < 4; c++) {
-        rows[out + c] = (3 * pixels[here + c] + pixels[left + c] + 2) >> 2;
-        rows[out + 4 + c] = (3 * pixels[here + c] + pixels[right + c] + 2) >> 2;
-      }
+      const here = gray[src + x];
+      const left = gray[src + (x === 0 ? 0 : x - 1)];
+      const right = gray[src + (x === width - 1 ? x : x + 1)];
+      rows[dst + (x << 1)] = (3 * here + left + 2) >> 2;
+      rows[dst + (x << 1) + 1] = (3 * here + right + 2) >> 2;
     }
   }
 
-  const out = new Uint8Array(w * h * 4);
+  const out = new Uint8Array(w * h);
   for (let y = 0; y < height; y++) {
-    const here = y * w * 4;
-    const above = (y === 0 ? 0 : y - 1) * w * 4;
-    const below = (y === height - 1 ? y : y + 1) * w * 4;
-    const top = y * 2 * w * 4;
-    const bottom = (y * 2 + 1) * w * 4;
-    for (let i = 0; i < w * 4; i++) {
+    const here = y * w;
+    const above = (y === 0 ? 0 : y - 1) * w;
+    const below = (y === height - 1 ? y : y + 1) * w;
+    const top = y * 2 * w;
+    const bottom = (y * 2 + 1) * w;
+    for (let i = 0; i < w; i++) {
       out[top + i] = (3 * rows[here + i] + rows[above + i] + 2) >> 2;
       out[bottom + i] = (3 * rows[here + i] + rows[below + i] + 2) >> 2;
     }
   }
-  return { pixels: out, width: w, height: h };
+  return { gray: out, width: w, height: h };
 };
 
 /**
@@ -636,10 +634,23 @@ const attempt = (dark: Uint8Array, width: number, height: number): Attempt => {
   return { result: null, error, finders: finders.length };
 };
 
-export const scanPixels = (pixels: Uint8Array, width: number, height: number): ScanResult => {
-  // Luminance once, for however many thresholds this frame ends up needing.
-  const gray = toGray(pixels, width, height);
-
+/**
+ * Locate and decode a symbol in an image already reduced to luminance.
+ *
+ * The whole retry ladder lives here rather than in {@link scanPixels} so that
+ * the conversion happens exactly once per frame. It used to happen up to six
+ * times: once per threshold, again on the halved copy, again on the doubled
+ * one, and the whole lot a second time for the inverted pass — each a full
+ * sweep over every pixel doing an alpha composite and a weighted sum, to
+ * rebuild something already in hand. Resizing in luminance is a quarter of
+ * the memory traffic too, and inverting it is `255 - g` over one channel
+ * instead of allocating a second RGBA buffer.
+ *
+ * @param gray One byte per pixel, `width * height`, composited over white.
+ * @throws {NotFoundError} when no symbol can be located.
+ * @throws {UncorrectableError} when a symbol is found but too damaged to read.
+ */
+export const scanGray = (gray: Uint8Array, width: number, height: number): ScanResult => {
   // The local threshold first: it is strictly better on a photograph, which is
   // the hard case, and no worse on rendered output.
   const local = attempt(binarizeGray(gray, width, height), width, height);
@@ -672,9 +683,9 @@ export const scanPixels = (pixels: Uint8Array, width: number, height: number): S
   // on images that were about to return nothing anyway.
   const sawSomething = local.finders > 0 || global.finders > 0;
   if (sawSomething && width >= MIN_HALVING_SIZE && height >= MIN_HALVING_SIZE) {
-    const half = halve(pixels, width, height);
+    const half = halveGray(gray, width, height);
     const smaller = attempt(
-      binarize(half.pixels, half.width, half.height),
+      binarizeGray(half.gray, half.width, half.height),
       half.width,
       half.height,
     );
@@ -696,9 +707,9 @@ export const scanPixels = (pixels: Uint8Array, width: number, height: number): S
   // A frame with none of them has nothing for a resize to rescue, and behind a
   // camera running ten frames a second that frame is the common case.
   if (sawSomething && width * height <= MAX_DOUBLING_PIXELS) {
-    const bigger = double(pixels, width, height);
+    const bigger = doubleGray(gray, width, height);
     const enlarged = attempt(
-      binarize(bigger.pixels, bigger.width, bigger.height),
+      binarizeGray(bigger.gray, bigger.width, bigger.height),
       bigger.width,
       bigger.height,
     );
@@ -707,6 +718,16 @@ export const scanPixels = (pixels: Uint8Array, width: number, height: number): S
 
   throw local.error ?? new NotFoundError('Found no readable symbol');
 };
+
+/**
+ * Locate and decode a symbol in an RGBA pixel buffer.
+ *
+ * @param pixels Row-major RGBA, `width * height * 4`.
+ * @throws {NotFoundError} when no symbol can be located.
+ * @throws {UncorrectableError} when a symbol is found but too damaged to read.
+ */
+export const scanPixels = (pixels: Uint8Array, width: number, height: number): ScanResult =>
+  scanGray(toGray(pixels, width, height), width, height);
 
 export { type BinarizeOptions, binarize } from './binarize.js';
 export { type Candidate, findFinders } from './finder.js';
