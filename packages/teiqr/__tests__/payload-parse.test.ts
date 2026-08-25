@@ -301,7 +301,16 @@ describe('the escape character survives a round trip', () => {
 
   it('round trips MeCard values containing backslashes', () => {
     for (const name of AWKWARD) {
-      const wire = serializePayload('mecard', { lastName: name, phone: '+1234' });
+      // `firstName` is required, and supplying it is the point rather than
+      // noise: this test used to build a MeCard with no name at all, which
+      // serialised happily to `MECARD:N:,;;`. The escaping was what was under
+      // test, so the incompleteness went unnoticed until serialisation started
+      // refusing it.
+      const wire = serializePayload('mecard', {
+        firstName: 'Ada',
+        lastName: name,
+        phone: '+1234',
+      });
       const parsed = parsePayload(wire);
       expect(parsed.values.lastName, wire).toBe(name);
       expect(serializePayload('mecard', parsed.values)).toBe(wire);
@@ -313,5 +322,62 @@ describe('the escape character survives a round trip', () => {
       const wire = serializePayload('vcard', { firstName: 'A', lastName: 'B', org });
       expect(parsePayload(wire).values.org, wire).toBe(org);
     }
+  });
+});
+
+/**
+ * A payload with its required fields missing is not a payload.
+ *
+ * `serializePayload('url', {})` used to return the empty string, which encodes
+ * as a QR code carrying nothing. `'review'` returned a Google review link with
+ * no place attached, `'vcard'` a contact card with no name, `'wifi'` a network
+ * with no SSID. Every one of them scannable, every one useless, and none of
+ * them complaining — thirty-one of the thirty-two built-in types behaved this
+ * way.
+ *
+ * The field metadata always said which fields were required, and
+ * `isPayloadComplete` could always check it. Only this function never asked,
+ * while `planBatch` did — which is why a CSV row missing a column has always
+ * been reported rather than silently turned into a code pointing nowhere.
+ */
+describe('required fields are required', () => {
+  it('refuses every built-in type when its required fields are absent', () => {
+    const types = PAYLOAD_TYPES.filter((type) => type.fields.some((f) => f.required));
+    // Guards the loop against passing vacuously if the metadata ever empties.
+    expect(types.length).toBeGreaterThan(25);
+
+    for (const type of types) {
+      expect(() => serializePayload(type.id, {}), type.id).toThrow(/is required|are required/);
+    }
+  });
+
+  it('names the type and the field, so the message is useful anywhere', () => {
+    expect(() => serializePayload('wifi', { password: 'x' })).toThrow(
+      'Cannot build a wifi payload: ssid is required.',
+    );
+    expect(() => serializePayload('vcard', { lastName: 'Lovelace' })).toThrow(/firstName/);
+  });
+
+  it('treats an empty or whitespace-only value as absent', () => {
+    // A required field present but empty is the case that produced
+    // `WIFI:T:WPA;S:;;` — technically populated, actually not.
+    expect(() => serializePayload('wifi', { ssid: '' })).toThrow(/ssid is required/);
+  });
+
+  it('still serialises the moment the required fields are there', () => {
+    expect(serializePayload('wifi', { ssid: 'Cafe' })).toContain('S:Cafe');
+    expect(serializePayload('url', { url: 'https://example.com' })).toBe('https://example.com');
+  });
+
+  it('every built-in sample is complete enough to serialise', () => {
+    // The samples are what `--fill-from-sample` and the docs offer, so a
+    // sample that cannot itself be serialised would be a broken promise.
+    for (const type of PAYLOAD_TYPES) {
+      expect(() => serializePayload(type.id, type.sample), type.id).not.toThrow();
+    }
+  });
+
+  it('refuses a type it does not know instead of returning an empty string', () => {
+    expect(() => serializePayload('not-a-type', { a: 'b' })).toThrow(/Unknown payload type/);
   });
 });

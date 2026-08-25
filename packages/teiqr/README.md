@@ -326,6 +326,11 @@ const zip = createZip(
 what people actually type. Rows missing a required field come back with a populated `missing`
 array rather than being dropped.
 
+`serializePayload` refuses a payload whose required fields are absent, rather than emitting
+one that scans and says nothing — `serializePayload('url', {})` used to return the empty
+string. The field metadata always recorded which fields are required; now the serialiser
+checks it, the way `planBatch` always has.
+
 > **It will not invent data for you.** A column your sheet omits stays absent, and the row is
 > reported as incomplete. The alternative — filling from the payload type's sample — would
 > quietly emit five hundred codes all pointing at the sample network. Pass
@@ -1221,7 +1226,7 @@ order are not), and the wording of error messages.
 
 ## Conformance and testing
 
-**617 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
+**623 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
 
 - **Round trip across the whole parameter space** — all 40 versions, all 4 error correction
   levels, all 8 masks, binary payloads to 2 kB, astral-plane emoji, ECI, hand-built segments.
