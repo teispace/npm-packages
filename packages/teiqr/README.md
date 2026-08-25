@@ -1289,9 +1289,12 @@ Stated plainly, because a library that hides these wastes your afternoon:
   lengths in *whole pixels* against the 1:1:3:1:1 ratio, so at three pixels per module a run
   that should be three and lands on four is a 33% error, and the symbol is never located at
   all. Every retry is gated on having seen a finder-shaped run at full size, so an empty
-  camera frame pays for none of them. Measured against 283 photographs of codes in the wild
-  the scanner reads 48%, up from 31% before this work. More photographs, especially of
-  *printed* codes, are the most useful contribution here.
+  camera frame pays for none of them. Measured against 420 photographs of codes in the wild
+  the scanner reads 50%, up from 31% before this work. That figure understates it and is
+  quoted anyway: the corpus comes from an image search, so a good part of it is pictures
+  with no readable code in them at all. Of the 248 images in it that some decoder can
+  provably read, this one reads 85%. More photographs, especially of *printed* codes, are
+  the most useful contribution here.
 - **Raster output cannot draw frame label text**, and can only embed **PNG** data-URI logos.
   Both are reported in `rasterize().omitted`. SVG handles both fully.
 - **WebP and AVIF need `createImageBitmap`** (so, `scanAsync` in a browser, Worker or Deno).
