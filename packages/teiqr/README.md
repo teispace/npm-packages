@@ -403,6 +403,14 @@ finder centres plus the bottom-right alignment pattern give the four corresponde
 homography needs, and candidate fits are scored against the timing patterns — known in advance
 for every symbol — so a misdetected alignment pattern is rejected rather than believed.
 
+All three symbologies also read **mirrored** — through a shop window, off a mirror, or printed
+on the inside of glass. A reflection is invisible to everything that locates a symbol: the
+finders sit at the corners of a square, timing runs along both row six and column six, and the
+alignment positions are the same list in each axis. So a mirrored code used to locate perfectly
+and then fail error correction with nothing to say about why. Reflections are only tried once
+every upright fit has failed, and they reuse the grid already sampled, so an upright symbol
+pays nothing for it.
+
 The compact symbologies have fewer landmarks: Micro QR has one finder, rMQR has a finder plus a
 5x5 sub-finder, and a lone 7x7 finder is rotationally symmetric — it fixes position and scale
 and says nothing about which way up the symbol is. Their orientation is recovered from the
