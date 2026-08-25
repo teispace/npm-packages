@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.0...teiqr-v0.3.1) (2026-08-25)
+
+
+### Bug Fixes
+
+* **teiqr:** rank finder triples by size as well as shape, and test a real photo ([#142](https://github.com/teispace/npm-packages/issues/142)) ([3a6801b](https://github.com/teispace/npm-packages/commit/3a6801bc6bb6a907f4f72108b5f0b258ac2d2249))
+
 ## [0.3.0](https://github.com/teispace/npm-packages/compare/teiqr-v0.2.0...teiqr-v0.3.0) (2026-08-25)
 
 
