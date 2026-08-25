@@ -59,7 +59,8 @@ yarn workspace teiqr-examples serve
 # http://localhost:8080
 ```
 
-Generate with live validation, and scan with the camera. It loads `teiqr`
+Generate with live validation, scan a PNG or JPEG from disk, and scan with the camera.
+It loads `teiqr`
 straight from `dist/` through an import map — **no bundler, no framework, no
 build step**. That is the point rather than a shortcut: a package that needs a
 toolchain to run in a browser is not really dependency-free, and demonstrating

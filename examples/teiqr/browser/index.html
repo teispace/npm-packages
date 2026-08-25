@@ -78,6 +78,14 @@
 <div id="out"></div>
 <div id="report"></div>
 
+<h2>Scan a file</h2>
+<p>
+  A PNG or a JPEG, straight from disk. The encoded bytes go to <code>scan()</code> exactly
+  as they came off the filesystem — the browser is never asked to decode them.
+</p>
+<input id="file" type="file" accept="image/png,image/jpeg" />
+<div id="fileResult"></div>
+
 <h2>Scan with the camera</h2>
 <p>Needs HTTPS or localhost — browsers refuse camera access otherwise.</p>
 <button id="start">Start camera</button>
@@ -87,8 +95,19 @@
 <script type="module">
   import { qr } from 'teiqr';
   import { tryScan } from 'teiqr/verify.js';
+  // Side-effect import: teaches scan() to read JPEG. Opt-in, because a page
+  // that only ever scans its own PNGs should not carry a JPEG decoder.
+  import 'teiqr/jpeg.js';
 
   const $ = (id) => document.getElementById(id);
+
+  // Scanned text is whatever someone points at the page, so it is never
+  // interpolated into HTML unescaped.
+  const escapeHtml = (text) =>
+    String(text).replace(
+      /[&<>"']/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+    );
 
   const render = () => {
     const code = qr($('text').value || ' ', {
@@ -141,5 +160,22 @@
     } catch (error) {
       $('scanned').textContent = `Camera unavailable: ${error.message}`;
     }
+  });
+
+  $('file').addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Encoded bytes go straight in. The browser is never asked to decode
+    // anything — no <img>, no canvas, no createImageBitmap — which is exactly
+    // why this behaves the same here as in Node or a Worker.
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const found = tryScan(bytes);
+
+    $('fileResult').innerHTML = found
+      ? `<p><strong>${escapeHtml(found.text)}</strong><br />
+         <small>${escapeHtml(file.name)} — version ${found.version}, level ${found.ecc},
+         ${found.corrected} codeword(s) repaired</small></p>`
+      : `<p><small>No QR code found in ${escapeHtml(file.name)}.</small></p>`;
   });
 </script>

@@ -868,7 +868,7 @@ On a dark terminal you need `invert: true` — a scanner expects dark modules on
 npx teiqr "https://example.com"                    # prints to the terminal
 npx teiqr "https://example.com" -o code.png        # writes a file
 npx teiqr scan ticket.png                          # decodes an image
-npx teiqr batch guests.csv -t wifi -o codes.zip    # one code per row
+npx teiqr batch wifi.csv -t wifi -o codes.zip    # one code per row
 npx teiqr types                                    # list payload types
 ```
 
@@ -915,10 +915,18 @@ WIFI:T:WPA;S:Pokhara Cafe;P:himalaya2026;;
 
 **Batch**
 
+The CSV's header names the payload fields; one code comes out per row.
+
+```csv
+ssid,password,encryption
+Pokhara Cafe,himalaya2026,WPA
+Teispace HQ,letmein,WPA
+```
+
 ```bash
-teiqr batch guests.csv -t wifi -o ./codes       # a directory of PNGs
-teiqr batch guests.csv -t wifi -o codes.zip     # a single archive
-teiqr batch guests.csv -t vcard -f svg -o ./out
+teiqr batch wifi.csv -t wifi -o ./codes         # a directory of PNGs
+teiqr batch wifi.csv -t wifi -o codes.zip       # a single archive
+teiqr batch guests.csv -t vcard -f svg -o ./out # a different type, so different columns
 ```
 
 Rows missing a required column are reported by line number and the command exits non-zero,
@@ -1206,7 +1214,7 @@ order are not), and the wording of error messages.
 
 ## Conformance and testing
 
-**575 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
+**598 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
 
 - **Round trip across the whole parameter space** — all 40 versions, all 4 error correction
   levels, all 8 masks, binary payloads to 2 kB, astral-plane emoji, ECI, hand-built segments.
