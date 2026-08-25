@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.1...teiqr-v0.3.2) (2026-08-25)
+
+
+### Performance Improvements
+
+* **teiqr:** read half again as many real photographs, and faster ([#144](https://github.com/teispace/npm-packages/issues/144)) ([e791989](https://github.com/teispace/npm-packages/commit/e791989e900a88f86d636551970dd46ecc0c1075))
+
 ## [0.3.1](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.0...teiqr-v0.3.1) (2026-08-25)
 
 
