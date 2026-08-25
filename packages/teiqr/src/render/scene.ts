@@ -1,3 +1,4 @@
+import { requireFiniteOptions } from '../core/numbers.js';
 import type { QrMatrix } from '../core/types.js';
 import { eyeBallPath, eyeFramePath, eyeOrigins } from './eyes.js';
 import { logoGeometry } from './logo.js';
@@ -81,8 +82,15 @@ const isBodyModule = (
 
 const solid = (color: string): Fill => ({ kind: 'solid', color });
 
+/** Style fields that are plain numbers, and must therefore be finite. */
+const STYLE_NUMBERS = ['quietZone', 'moduleSize', 'gap', 'cornerRadius'] as const;
+
 export const buildScene = (matrix: QrMatrix, style: Partial<QrStyle> = {}): Scene => {
   const s: QrStyle = { ...DEFAULT_STYLE, ...style };
+  // Checked here because every format is serialised from this scene, so one
+  // guard covers SVG, PNG, PDF and EPS alike. A non-finite value would
+  // otherwise travel all the way into the output as the literal text "NaN".
+  requireFiniteOptions(s as unknown as Record<string, unknown>, STYLE_NUMBERS, 'style');
   const quiet = Math.max(0, s.quietZone);
   const { cols, rows } = matrixDimensions(matrix);
   const width = cols + quiet * 2;

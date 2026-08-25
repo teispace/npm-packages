@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { encode } from '../src/core/encode.js';
+import { exportQr } from '../src/export/index.js';
 import { decodePng, encodePng } from '../src/raster/png.js';
 import { toPng } from '../src/raster/scene-raster.js';
+import { renderSvg } from '../src/render/svg.js';
+import { validate } from '../src/validate/index.js';
 import { scan, tryScan } from '../src/verify/api.js';
 import { decodeMatrix } from '../src/verify/decode-matrix.js';
 import { decodeMicroMatrix } from '../src/verify/decode-micro.js';
@@ -271,5 +274,76 @@ describe('malformed matrices', () => {
       ).toThrow();
       expect(() => decodeMicroMatrix({ size: 11, modules: noise(121) })).toThrow();
     }
+  });
+});
+
+/**
+ * Numeric options that cannot mean anything.
+ *
+ * `NaN` is how this package has failed silently three separate times: the
+ * DEFLATE reader running past its buffer, `logoGeometry` computing
+ * `Math.max(0, undefined)`, and every numeric export option. The mechanism
+ * never varies — a comparison against `NaN` is false, so guards pass and loops
+ * do not run — and neither does the result: a wrong answer wearing the shape
+ * of a right one.
+ *
+ * Here it was not even an answer but a *file*. `sideMm: NaN` produced a PDF
+ * with `MediaBox [0 0 NaN NaN]`, which Apple's CoreGraphics refuses to open,
+ * written to disk with no complaint from anything. A `quietZone` of `NaN` put
+ * the literal text "NaN" into SVG coordinates.
+ *
+ * Zero and negative values are deliberately still accepted: they mean
+ * something, and the code clamps them. Only the impossible ones are refused.
+ */
+describe('numeric options that cannot mean anything', () => {
+  const matrix = encode('https://example.com/finite');
+  const impossible: readonly [string, number][] = [
+    ['NaN', Number.NaN],
+    ['Infinity', Number.POSITIVE_INFINITY],
+    ['-Infinity', Number.NEGATIVE_INFINITY],
+  ];
+
+  it.each(['quietZone', 'moduleSize', 'gap', 'cornerRadius'])(
+    'refuses a non-finite style.%s rather than writing NaN into the output',
+    (field) => {
+      for (const [label, value] of impossible) {
+        expect(() => renderSvg(matrix, { [field]: value }), `${field} = ${label}`).toThrow(
+          /must be a finite number/,
+        );
+      }
+    },
+  );
+
+  it.each(['sideMm', 'scale', 'dpi'])('refuses a non-finite export option %s', (field) => {
+    for (const [label, value] of impossible) {
+      expect(() => exportQr(matrix, {}, 'pdf', { [field]: value }), `${field} = ${label}`).toThrow(
+        /must be a finite number/,
+      );
+    }
+  });
+
+  it.each(['scanDistanceMm', 'dpi'])('refuses a non-finite validate option %s', (field) => {
+    for (const [label, value] of impossible) {
+      expect(() => validate(matrix, {}, { [field]: value }), `${field} = ${label}`).toThrow(
+        /must be a finite number/,
+      );
+    }
+  });
+
+  it('still accepts zero and negative values, which mean something', () => {
+    // A quiet zone of zero is a code with no margin — a real thing to ask for,
+    // and the validator's job to warn about rather than the renderer's to
+    // refuse. Rejecting these would be over-correction.
+    expect(() => renderSvg(matrix, { quietZone: 0 })).not.toThrow();
+    expect(() => renderSvg(matrix, { gap: -1 })).not.toThrow();
+    expect(() => exportQr(matrix, {}, 'png', { scale: 0 })).not.toThrow();
+    expect(() => validate(matrix, {}, { scanDistanceMm: 0 })).not.toThrow();
+  });
+
+  it('names the option that was wrong', () => {
+    // A message that does not say which field it means sends the reader
+    // hunting through an options bag.
+    expect(() => exportQr(matrix, {}, 'pdf', { sideMm: Number.NaN })).toThrow(/options\.sideMm/);
+    expect(() => renderSvg(matrix, { quietZone: Number.NaN })).toThrow(/style\.quietZone/);
   });
 });

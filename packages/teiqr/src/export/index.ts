@@ -6,6 +6,7 @@
  * synchronous and dependency-free.
  */
 
+import { requireFiniteOptions } from '../core/numbers.js';
 import type { QrMatrix } from '../core/types.js';
 import { encodePng, type PngOptions } from '../raster/png.js';
 import { type RasterOptions, rasterize } from '../raster/scene-raster.js';
@@ -103,6 +104,11 @@ export const exportQr = (
   format: ExportFormat,
   options: ExportOptions = {},
 ): ExportResult => {
+  requireFiniteOptions(
+    options as unknown as Record<string, unknown>,
+    ['sideMm', 'scale', 'dpi', 'level'],
+    'options',
+  );
   const info = BY_ID.get(format);
   if (!info) {
     throw new RangeError(
