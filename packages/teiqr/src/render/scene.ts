@@ -1,4 +1,4 @@
-import { MODULE, type QrMatrix } from '../core/types.js';
+import type { QrMatrix } from '../core/types.js';
 import { eyeBallPath, eyeFramePath, eyeOrigins } from './eyes.js';
 import { logoGeometry } from './logo.js';
 import { bodyPath, roundedRect } from './shapes.js';
@@ -57,13 +57,26 @@ export const matrixDimensions = (matrix: QrMatrix): { cols: number; rows: number
   rows: matrix.height ?? matrix.size,
 });
 
-const isBodyModule = (matrix: QrMatrix, x: number, y: number): boolean => {
+/**
+ * Whether a module is painted by the body pass.
+ *
+ * Dark modules belong to the body unless a styled eye is going to paint them,
+ * which is why this takes the eye origins rather than testing the module kind
+ * alone. rMQR has finder patterns but no eyes — the shapes do not describe its
+ * 5x5 sub-finder — so its finders have to be drawn here or they are not drawn
+ * at all, which is a symbol that renders cleanly and cannot be scanned.
+ */
+const isBodyModule = (
+  matrix: QrMatrix,
+  eyes: readonly [number, number][],
+  x: number,
+  y: number,
+): boolean => {
   const { cols, rows } = matrixDimensions(matrix);
   if (x < 0 || y < 0 || x >= cols || y >= rows) return false;
   const i = y * cols + x;
   if (matrix.modules[i] !== 1) return false;
-  const kind = matrix.kinds[i];
-  return kind !== MODULE.FINDER && kind !== MODULE.SEPARATOR;
+  return !eyes.some(([ox, oy]) => x >= ox && x < ox + 7 && y >= oy && y < oy + 7);
 };
 
 const solid = (color: string): Fill => ({ kind: 'solid', color });
@@ -132,12 +145,16 @@ export const buildScene = (matrix: QrMatrix, style: Partial<QrStyle> = {}): Scen
   const geometry = s.logo ? logoGeometry(matrix, s.logo) : null;
   const excavated = geometry && s.logo?.excavate ? geometry.covered : null;
 
+  // Which modules the eye shapes will claim has to be known before the body
+  // pass, so the two never paint the same module and never leave one unpainted.
+  const origins = eyeOrigins(cols, matrix.variant ?? 'qr');
+
   const body = bodyPath(
     cols,
     s.moduleShape,
     (x, y) => {
       if (excavated?.has(y * cols + x)) return false;
-      return isBodyModule(matrix, x, y);
+      return isBodyModule(matrix, origins, x, y);
     },
     s.gap ?? 0,
     rows,
@@ -153,10 +170,6 @@ export const buildScene = (matrix: QrMatrix, style: Partial<QrStyle> = {}): Scen
     });
   }
 
-  // rMQR has one 7x7 finder and one 5x5 sub-finder rather than three corner
-  // eyes, so the eye styling does not apply and its finders are drawn as body
-  // modules like everything else.
-  const origins = matrix.variant === 'rmqr' ? [] : eyeOrigins(cols);
   const frames = origins.map(([ox, oy]) => eyeFramePath(ox, oy, s.eyeFrame)).join('');
   if (frames) {
     // evenodd is what turns each frame's outer and inner outline into a ring.

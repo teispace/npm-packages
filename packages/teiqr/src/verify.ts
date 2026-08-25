@@ -36,6 +36,7 @@ export {
   type RmqrDecodeResult,
   readRmqrFormat,
 } from './verify/decode-rmqr.js';
+export { type Candidate, findFinders } from './verify/finder.js';
 export {
   type ImageDataLike,
   type ImageInput,
@@ -44,5 +45,22 @@ export {
   toPixels,
   toPixelsAsync,
 } from './verify/input.js';
+export { readCompactAt, readMicroAt, readRmqrAt } from './verify/locate-compact.js';
+export {
+  type PerspectiveTransform,
+  quadrilateralToQuadrilateral,
+  sampleGrid,
+  transformPoint,
+} from './verify/perspective.js';
 export { correct } from './verify/reed-solomon.js';
-export { NotFoundError, type ScanResult, scanPixels } from './verify/scan.js';
+export {
+  binarize,
+  decodeLocation,
+  groupFinders,
+  locateSymbols,
+  NotFoundError,
+  type ScanResult,
+  type SymbolLocation,
+  scanAllPixels,
+  scanPixels,
+} from './verify/scan.js';

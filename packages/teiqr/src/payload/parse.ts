@@ -26,6 +26,7 @@ import {
   unfoldLines,
 } from './escape.js';
 import { getPayloadType } from './index.js';
+import { profileUrlPattern, SOCIAL_NETWORKS } from './social.js';
 import type { PayloadValues } from './types.js';
 
 /** A recognised payload, decomposed into the fields its type declares. */
@@ -438,7 +439,59 @@ const URL_PATTERNS: ReadonlyArray<{
     },
   },
   { type: 'pdf', test: /^https?:\/\/\S+\.pdf(\?|$)/i },
+
+  // App-store links, which is as far as the `app` type can honestly be
+  // recovered. Its serialiser writes a single plain URL — a static QR cannot
+  // branch on the scanning device — so a generic fallback link is
+  // indistinguishable from an ordinary `url` payload and is left as one. A
+  // store link is not, and carries which platform it is for.
+  {
+    type: 'app',
+    test: /^https?:\/\/(apps|itunes)\.apple\.com\//i,
+    extract: (text) => compact({ ios: text }),
+  },
+  {
+    type: 'app',
+    test: /^https?:\/\/play\.google\.com\/store\/apps\//i,
+    extract: (text) => compact({ android: text }),
+  },
+
+  // Social profiles, derived from the same table the serialiser writes from,
+  // so a network cannot be written in a form its own parser will not read.
+  // These come last: `linkedin.com/in/x` must not be claimed by a broader
+  // pattern above, and none of the patterns above are social hosts.
+  ...SOCIAL_NETWORKS.map((network) => ({
+    type: network.id,
+    test: profileUrlPattern(network),
+    extract: (text: string): PayloadValues | null => {
+      const handle = profileUrlPattern(network).exec(text)?.[1];
+      // Reserved paths that are not profiles. Without this, a link to
+      // `github.com/about` parses as a profile named "about" and a clone of
+      // it silently becomes someone else's page.
+      if (!handle || RESERVED_PROFILE_PATHS.has(handle.toLowerCase())) return null;
+      return compact({ handle });
+    },
+  })),
 ];
+
+/**
+ * Path segments that look like a handle but are the site's own pages.
+ *
+ * Kept deliberately short. The cost of missing one is a payload typed as a
+ * profile instead of a URL, which `clone()` still round-trips correctly; the
+ * cost of over-listing is refusing a real handle.
+ */
+const RESERVED_PROFILE_PATHS: ReadonlySet<string> = new Set([
+  'about',
+  'explore',
+  'help',
+  'home',
+  'login',
+  'privacy',
+  'settings',
+  'signup',
+  'terms',
+]);
 
 const urlParser: PayloadParser = {
   type: 'url',
@@ -522,8 +575,13 @@ export const parsePayload = (text: string): ParsedPayload => {
   if (url) {
     for (const pattern of URL_PATTERNS) {
       if (!pattern.test.test(text.trim())) continue;
-      const extracted = pattern.extract?.(text.trim()) ?? url;
-      return describe(pattern.type, extracted, 'heuristic');
+      if (!pattern.extract) return describe(pattern.type, url, 'heuristic');
+      // A null extraction means the URL matched the shape but is not really
+      // this type after all — `github.com/about` is not a profile. Keep
+      // looking rather than claiming the type with generic URL fields, which
+      // would make a clone of that link point somewhere else entirely.
+      const extracted = pattern.extract(text.trim());
+      if (extracted) return describe(pattern.type, extracted, 'heuristic');
     }
     return describe('url', url, 'heuristic');
   }
