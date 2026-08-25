@@ -350,3 +350,149 @@ describe('help and discovery', () => {
     }
   });
 });
+
+/**
+ * Every command the README shows, actually run.
+ *
+ * The library examples in the README have been executed by `readme.test.ts`
+ * from the start; the CLI examples never were, and the gap showed. `teiqr scan
+ * photo.jpg` was documented and broken — it told the reader to add
+ * `import 'teiqr/jpeg'`, which is not something anyone can do at a shell
+ * prompt. The batch examples pointed three commands at one `guests.csv` while
+ * asking for two payload types that need different columns, so following them
+ * in order failed on the third.
+ *
+ * Both are the same failure: prose that no test reads. This runs whatever the
+ * README currently says, so a new example is covered the moment it is written
+ * and a broken one fails the build.
+ */
+describe('the CLI examples in the README', () => {
+  /**
+   * Split a shell-ish command into argv, honouring single and double quotes.
+   *
+   * Character by character rather than by regex, because a quote can open
+   * partway through a word: `ssid="Pokhara Cafe"` is one argument, and an
+   * alternation of `"..."` or `\S+` splits it in the wrong place.
+   */
+  const argv = (line: string): string[] => {
+    const parts: string[] = [];
+    let current = '';
+    let quote: string | null = null;
+    let started = false;
+
+    for (const char of line) {
+      if (quote) {
+        if (char === quote) quote = null;
+        else current += char;
+      } else if (char === '"' || char === "'") {
+        quote = char;
+        started = true;
+      } else if (/\s/.test(char)) {
+        if (started) parts.push(current);
+        current = '';
+        started = false;
+      } else {
+        current += char;
+        started = true;
+      }
+    }
+    if (started) parts.push(current);
+    return parts;
+  };
+
+  const commands = (() => {
+    const { readFileSync } = require('node:fs') as typeof import('node:fs');
+    const { join } = require('node:path') as typeof import('node:path');
+    const readme = readFileSync(join(import.meta.dirname, '..', 'README.md'), 'utf8');
+    const found: string[] = [];
+    // Only ```bash blocks. A ```console block deliberately shows a *failing*
+    // command with its output, which is documentation of an error path rather
+    // than an example to run.
+    for (const block of readme.matchAll(/```bash\n([\s\S]*?)```/g)) {
+      for (const raw of block[1].split('\n')) {
+        const line = raw.replace(/\s+#.*$/, '').trim();
+        if (!/^(npx )?teiqr\s/.test(line)) continue;
+        found.push(line.replace(/^npx /, ''));
+      }
+    }
+    return found;
+  })();
+
+  /**
+   * A reader follows the examples in order, with one set of files.
+   *
+   * The runner below synthesises each command's inputs from that same command,
+   * so it proves every example works *in isolation* — which is not what the
+   * README promises. It promises a sequence someone can follow. Three commands
+   * pointed at one `guests.csv` while asking for two payload types that need
+   * different columns, and the third failed for anyone who tried.
+   *
+   * So this is asserted separately: a data file named in the README means one
+   * shape, whoever reads it.
+   */
+  it('names each CSV with a single payload type', () => {
+    const typeFor = new Map<string, Set<string>>();
+    for (const command of commands) {
+      const args = argv(command);
+      const at = args.findIndex((a) => a === '-t' || a === '--type');
+      if (at === -1) continue;
+      const type = args[at + 1];
+      for (const arg of args) {
+        if (!arg.endsWith('.csv')) continue;
+        const seen = typeFor.get(arg) ?? new Set<string>();
+        seen.add(type);
+        typeFor.set(arg, seen);
+      }
+    }
+    for (const [file, types] of typeFor) {
+      expect([...types], `${file} is used with more than one payload type`).toHaveLength(1);
+    }
+  });
+
+  it('finds the commands to run', () => {
+    // Without this the suite below would vacuously pass if the extraction
+    // broke or the README were restructured.
+    expect(commands.length).toBeGreaterThan(10);
+  });
+
+  it.each(commands)('%s', async (command) => {
+    const args = argv(command).slice(1);
+
+    // Build whatever this command reads. Inputs are inferred from the command
+    // itself rather than hard-coded, so the fixtures cannot drift from the
+    // examples the way the examples drifted from the code.
+    const files: Record<string, Uint8Array | string> = {};
+    const typeFlag = args[args.indexOf('-t') + 1] ?? args[args.indexOf('--type') + 1];
+
+    for (const arg of args) {
+      if (arg.endsWith('.png') || arg.endsWith('.jpg')) {
+        // Only inputs need to exist; outputs are named by -o.
+        if (args[args.indexOf(arg) - 1]?.match(/^(-o|--output)$/)) continue;
+      }
+      if (arg.endsWith('.png')) {
+        const h = harness();
+        await run(['WIFI:T:WPA;S:Cafe;P:hunter2;;', '-o', 'x.png'], h.io);
+        files[arg] = h.fs.get('x.png') as Uint8Array;
+      } else if (arg.endsWith('.jpg')) {
+        const { readFileSync } = await import('node:fs');
+        const { join } = await import('node:path');
+        files[arg] = new Uint8Array(
+          readFileSync(join(import.meta.dirname, 'fixtures', 'jpeg', 'qr-420.jpg')),
+        );
+      } else if (arg.endsWith('.csv')) {
+        // Columns come from the payload type the same command asks for, which
+        // is exactly the coupling the README got wrong.
+        const { getPayloadType } = await import('../src/payload/index.js');
+        const type = getPayloadType(typeFlag ?? 'wifi');
+        if (!type) throw new Error(`README names an unknown payload type: ${typeFlag}`);
+        const columns = type.fields.map((f) => f.name);
+        const row = columns.map((name) => String(type.sample[name] ?? 'x')).join(',');
+        files[arg] = `${columns.join(',')}\n${row}\n${row}\n`;
+      }
+    }
+
+    const h = harness(files);
+    const code = await run(args, h.io);
+    expect(code, `${command}\n${h.err}`).toBe(0);
+  });
+});
