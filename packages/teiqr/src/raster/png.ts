@@ -420,7 +420,14 @@ export const decodePng = (
 
   // tRNS stores its key at 16 bits regardless of depth; only the low bits are
   // significant, so mask before comparing against a sample read at depth.
-  const keyed = transparency !== null && (colour === 0 || colour === 2);
+  //
+  // The length check is not pedantry. A tRNS too short for its colour type
+  // would read `undefined` past its end, which coerces to zero — silently
+  // keying out *black*, the one value a QR code cannot afford to lose. A
+  // malformed chunk is better ignored than half-read.
+  const keyBytes = colour === 0 ? 2 : 6;
+  const keyed =
+    transparency !== null && (colour === 0 || colour === 2) && transparency.length >= keyBytes;
   const key = (index: number): number =>
     (((transparency as Uint8Array)[index * 2] << 8) | (transparency as Uint8Array)[index * 2 + 1]) &
     maxSample;

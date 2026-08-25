@@ -427,3 +427,24 @@ describe('headers the spec does not allow', () => {
     expect(() => decodePng(truncated)).toThrow(/shorter than declared/);
   });
 });
+
+describe('malformed ancillary chunks', () => {
+  it('ignores a tRNS chunk too short for its colour type', () => {
+    // Reading past a short chunk yields `undefined`, which coerces to zero —
+    // and zero is black, the one value a QR code cannot afford to lose. A
+    // half-read key would turn every dark module transparent, composite it to
+    // white, and produce a blank image rather than an error.
+    const png = buildPng({
+      depth: 8,
+      colour: 0,
+      trns: [0],
+      sample: (x, y) => [isLight(x, y) ? 255 : 0],
+    });
+
+    const { pixels } = decodePng(png);
+    const alphas = new Set<number>();
+    for (let i = 3; i < pixels.length; i += 4) alphas.add(pixels[i]);
+    expect(alphas).toEqual(new Set([255]));
+    expect(scan(png).text).toBe(PAYLOAD);
+  });
+});
