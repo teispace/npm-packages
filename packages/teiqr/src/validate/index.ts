@@ -7,6 +7,7 @@
  * {@link registerValidationRule} and the `rules` option below.
  */
 
+import { requireFiniteOptions } from '../core/numbers.js';
 import type { QrMatrix } from '../core/types.js';
 import { logoGeometry } from '../render/logo.js';
 import { DEFAULT_STYLE, type QrStyle } from '../render/types.js';
@@ -58,6 +59,11 @@ export const validate = (
   style: Partial<QrStyle> = {},
   options: ValidateOptions = {},
 ): Validation => {
+  requireFiniteOptions(
+    options as unknown as Record<string, unknown>,
+    ['scanDistanceMm', 'dpi'],
+    'options',
+  );
   const { scanDistanceMm = 300, dpi = 300 } = options;
   // Fill in defaults so rules can rely on every field being present.
   const resolved: QrStyle = { ...DEFAULT_STYLE, ...style };

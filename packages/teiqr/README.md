@@ -1221,7 +1221,7 @@ order are not), and the wording of error messages.
 
 ## Conformance and testing
 
-**606 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
+**617 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
 
 - **Round trip across the whole parameter space** — all 40 versions, all 4 error correction
   levels, all 8 masks, binary payloads to 2 kB, astral-plane emoji, ECI, hand-built segments.
@@ -1250,6 +1250,10 @@ order are not), and the wording of error messages.
   variants, at every bit depth each permits, interlaced and not, with `tRNS` transparency.
   Every fixture is built by hand from the spec's tables and compressed with Node's zlib, so
   the reader faces bytes this package did not write.
+- **Numeric options that cannot mean anything** — `NaN` and `Infinity` are refused at every
+  entry point rather than travelling into the output. They used to produce a PDF whose
+  `MediaBox` was `[0 0 NaN NaN]`, which CoreGraphics will not open, and SVG coordinates
+  reading `NaN`. Zero and negative values still mean something and are still accepted.
 - **Malformed input** — truncations, single-byte corruptions, a decompression bomb and pure
   noise, because a decoder reads bytes someone else wrote. A nightly job fuzzes the same
   surface for cases nobody wrote a test for.
