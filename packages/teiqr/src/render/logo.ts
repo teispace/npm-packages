@@ -29,9 +29,24 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
  */
 export const logoGeometry = (matrix: QrMatrix, logo: LogoOptions): LogoGeometry => {
   const { size } = matrix;
+
+  // Both fields are typed as required, and a JavaScript caller can still omit
+  // them — as can anyone assembling the object at runtime. Left alone, the
+  // arithmetic below turns a missing number into `NaN`, every comparison
+  // against `NaN` is false, the module loop never runs, and the result is an
+  // empty covered set. Which is to say: "this logo damages nothing", reported
+  // with total confidence about a logo that damages plenty. That is the worst
+  // answer this function could give, so neither value is allowed to be NaN.
+  //
+  // `padding` has an obvious default and takes it. `sizeRatio` does not:
+  // choosing one would mean reporting damage figures for a logo nobody
+  // described, and inventing the input is not better than refusing it.
+  if (!Number.isFinite(logo.sizeRatio)) {
+    throw new TypeError(`logo.sizeRatio must be a finite number, got ${String(logo.sizeRatio)}`);
+  }
   const ratio = clamp(logo.sizeRatio, 0.05, 0.5);
   const box = size * ratio;
-  const padding = Math.max(0, logo.padding);
+  const padding = Number.isFinite(logo.padding) ? Math.max(0, logo.padding) : 0;
 
   // Centre the logo, snapping to the module grid so the cleared area has
   // straight edges rather than clipping modules in half.
