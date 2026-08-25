@@ -166,7 +166,13 @@ export const useQrScanner = (options: UseQrScannerOptions = {}): QrScannerState 
         }
         streamRef.current = stream;
         videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {
+        // `?.` because `play()` is only specified to return a promise in
+        // reasonably modern browsers, and returns undefined elsewhere —
+        // notably in jsdom, where these tests run. Calling `.catch` on
+        // undefined throws a TypeError that the chain below then reports as a
+        // camera failure, so the scanner never starts and the caller is told
+        // the wrong reason. One optional-chain turns that into a no-op.
+        videoRef.current.play()?.catch(() => {
           // Autoplay can be refused; the caller can still call play() on the
           // element from a user gesture. Frame grabbing tolerates a paused
           // video by checking readyState.

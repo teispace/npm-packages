@@ -30,7 +30,12 @@ export default defineConfig({
     // followed briefly pushed branches back under the floor, since a decoder is
     // mostly error paths no real file reaches; covering them by rewriting
     // headers by hand restored it rather than the floor being lowered to suit.
-    // Current: 95.0 lines / 84.6 branches / 95.3 functions / 93.4 statements.
-    coverage: withThresholds({ lines: 94, branches: 84, functions: 95, statements: 93 }),
+    // Raised a fourth time when the camera hook's documented behaviour got
+    // tests: autoStart, repeat suppression and downscaling were all prose the
+    // suite never read. Reaching them needed a faked camera — jsdom has no
+    // canvas and reports `readyState` 0 forever — which is why they were
+    // missing rather than merely forgotten.
+    // Current: 95.6 lines / 85.7 branches / 95.3 functions / 94.1 statements.
+    coverage: withThresholds({ lines: 95, branches: 85, functions: 95, statements: 94 }),
   },
 });
