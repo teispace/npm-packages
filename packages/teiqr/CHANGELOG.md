@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.12](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.11...teiqr-v0.0.12) (2026-08-25)
+
+
+### Bug Fixes
+
+* **teiqr:** stop a spurious camera error, and test what the scanner promises ([#134](https://github.com/teispace/npm-packages/issues/134)) ([0ab081c](https://github.com/teispace/npm-packages/commit/0ab081cf36d1187265948f1edaa1ce1a615f607c))
+
 ## [0.0.11](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.10...teiqr-v0.0.11) (2026-08-25)
 
 
