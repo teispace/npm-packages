@@ -296,27 +296,56 @@ const findRingCentresInRegion = (
 
   const found: { x: number; y: number; error: number }[] = [];
 
+  // Only three consecutive runs are ever examined at once, so they are carried
+  // in scalars and the row is walked once. The straightforward version built an
+  // object per run and sliced a fresh three-element array per position, which
+  // is a great deal of garbage for a function that is called for every rMQR
+  // size at every orientation of every finder candidate — measured at a fifth
+  // of all time spent on an image that does not decode.
   for (let y = top; y <= bottom; y++) {
-    const runs: { start: number; length: number; dark: boolean }[] = [];
+    const row = y * width;
+    // Only the centre run's start is ever needed, so the window carries the
+    // preceding run's length and colour and nothing more.
+    let beforeLength = 0;
+    let beforeDark = false;
+    let centreStart = 0;
+    let centreLength = 0;
+    let centreDark = false;
+    let filled = 0;
+
     let x = left;
     while (x <= right) {
-      const isDark = dark[y * width + x] === 1;
+      const isDark = dark[row + x] === 1;
       const start = x;
-      while (x <= right && (dark[y * width + x] === 1) === isDark) x++;
-      runs.push({ start, length: x - start, dark: isDark });
-    }
+      while (x <= right && (dark[row + x] === 1) === isDark) x++;
+      const length = x - start;
 
-    for (let i = 0; i + 2 < runs.length; i++) {
-      const [before, centre, after] = runs.slice(i, i + 3);
-      if (before.dark || !centre.dark) continue;
-      if (!near(before.length) || !near(centre.length) || !near(after.length)) continue;
+      // With the third run in hand, test the window before rotating it on.
+      if (
+        filled >= 2 &&
+        !beforeDark &&
+        centreDark &&
+        near(beforeLength) &&
+        near(centreLength) &&
+        near(length)
+      ) {
+        const hitX = centreStart + centreLength / 2;
+        const column = Math.round(hitX);
+        if (
+          column >= 0 &&
+          column < width &&
+          verifyRingColumn(dark, width, height, column, y, moduleSize)
+        ) {
+          found.push({ x: hitX, y, error: Math.hypot(hitX - centreX, y - centreY) });
+        }
+      }
 
-      const hitX = centre.start + centre.length / 2;
-      const column = Math.round(hitX);
-      if (column < 0 || column >= width) continue;
-      if (!verifyRingColumn(dark, width, height, column, y, moduleSize)) continue;
-
-      found.push({ x: hitX, y, error: Math.hypot(hitX - centreX, y - centreY) });
+      beforeLength = centreLength;
+      beforeDark = centreDark;
+      centreStart = start;
+      centreLength = length;
+      centreDark = isDark;
+      filled++;
     }
   }
 

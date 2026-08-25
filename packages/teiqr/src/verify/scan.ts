@@ -21,11 +21,16 @@ import {
   MIN_VERSION,
   sizeForVersion,
 } from '../core/version.js';
-import { binarize } from './binarize.js';
+import { binarize, binarizeGray, toGray } from './binarize.js';
 import { type DecodeResult, decodeMatrix } from './decode-matrix.js';
 import { type Candidate, findFinders, findRingCentres, pitchBetween } from './finder.js';
 import { readCompactAt } from './locate-compact.js';
-import { quadrilateralToQuadrilateral, sampleGrid, transformPoint } from './perspective.js';
+import {
+  type PerspectiveTransform,
+  quadrilateralToQuadrilateral,
+  sampleGrid,
+  transformPoint,
+} from './perspective.js';
 import { UncorrectableError } from './reed-solomon.js';
 
 /** Raised when no symbol could be located in the image. */
@@ -263,6 +268,17 @@ const alignmentScore = (modules: Uint8Array, size: number, version: number): num
 };
 
 /**
+ * How many candidate grids are put through Reed-Solomon before giving up.
+ *
+ * Bounded because the alignment search can return several ring-shaped things
+ * in a busy photograph, and a symbol whose true fit is not in the top few was
+ * never going to decode — the cost of trying them all lands on the failures,
+ * which in a camera loop are the frames that repeat. Three covers the case
+ * this exists for: the extrapolated corner plus the two best rings.
+ */
+const MAX_DECODE_ATTEMPTS = 3;
+
+/**
  * Sample and decode one located symbol out of a binarised image.
  *
  * The grid is read through a fitted perspective transform rather than a fixed
@@ -331,18 +347,24 @@ export const decodeLocation = (
     }
   }
 
-  // Choose between them by how well each reproduces the timing patterns.
+  // Rank the candidates by how well each reproduces the modules that are known
+  // a priori, then decode them in that order and keep the first that survives
+  // Reed-Solomon.
   //
-  // This is the step that makes alignment detection safe. Picking whichever
+  // Ranking is the step that makes alignment detection safe. Picking whichever
   // candidate lies nearest the estimate is not good enough, because the
   // estimate itself is the thing perspective has distorted — on a large tilted
   // symbol a chance light-dark-light run in the data can sit closer to it than
-  // the real pattern. The timing rows are known a priori for every symbol, so
-  // scoring against them asks the only question that matters: does this fit
-  // actually land on the modules? A wrong candidate scores near chance.
-  let modules: Uint8Array | null = null;
-  let chosen = fits[0];
-  let bestScore = -1;
+  // the real pattern. Scoring against known modules asks the only question
+  // that matters: does this fit actually land on them? A wrong candidate
+  // scores near chance.
+  //
+  // Decoding past the winner matters because the score is a proxy and
+  // Reed-Solomon is the real answer, and the two disagree in both directions.
+  // A fit can lose a single alignment module to binarisation noise, rank
+  // second, and still decode perfectly — while the fit that edged it out
+  // fails. Ranking decides the order to try, not the result.
+  const scored: { grid: Uint8Array; fit: PerspectiveTransform; score: number }[] = [];
   for (const fit of fits) {
     const grid = sampleGrid(dark, width, height, size, size, fit);
     if (!grid) continue;
@@ -351,21 +373,28 @@ export const decodeLocation = (
     // weaker of the two decides — averaging would let a perfect timing score
     // paper over a hopeless corner, which is the exact failure this is for.
     const score = Math.min(timingScore(grid, size), alignmentScore(grid, size, version));
-    if (score > bestScore) {
-      bestScore = score;
-      modules = grid;
-      chosen = fit;
-    }
-    // A perfect fit cannot be improved on, so stop looking.
-    if (bestScore === 1) break;
+    scored.push({ grid, fit, score });
+    // A perfect fit cannot be improved on, so stop sampling further ones.
+    if (score === 1) break;
   }
 
-  if (!modules) throw new NotFoundError('Symbol extends past the edge of the image');
+  if (scored.length === 0) throw new NotFoundError('Symbol extends past the edge of the image');
+  scored.sort((a, b) => b.score - a.score);
 
   const kinds = functionPatternKinds(version);
-  const result = decodeMatrix({ size, version, modules, kinds }, { trustHeader: false });
-  const origin = transformPoint(chosen, 0, 0);
-  return { ...result, moduleSize: pitch, origin };
+  let firstFailure: unknown = null;
+  for (const { grid, fit } of scored.slice(0, MAX_DECODE_ATTEMPTS)) {
+    try {
+      const result = decodeMatrix({ size, version, modules: grid, kinds }, { trustHeader: false });
+      return { ...result, moduleSize: pitch, origin: transformPoint(fit, 0, 0) };
+    } catch (error) {
+      // Report the best-ranked failure rather than the last one: it is the fit
+      // most likely to be the intended symbol, so its error describes what
+      // actually went wrong.
+      firstFailure ??= error;
+    }
+  }
+  throw firstFailure ?? new NotFoundError('Symbol extends past the edge of the image');
 };
 
 /**
@@ -470,6 +499,101 @@ const halve = (
   return { pixels: out, width: w, height: h };
 };
 
+/**
+ * Largest image worth doubling, in pixels.
+ *
+ * Doubling adds no information, so it only ever helps an image that had too
+ * few pixels per module to begin with — and an image this large did not. The
+ * cap is what stops a 12-megapixel photograph from allocating a buffer of
+ * nearly 200MB to learn nothing.
+ */
+const MAX_DOUBLING_PIXELS = 4_000_000;
+
+/**
+ * Double the image, interpolating between neighbours.
+ *
+ * Doubling carries no new information, which makes it sound useless, and the
+ * measurement says otherwise: on a corpus of photographs this recovers more
+ * symbols than every other retry put together. What it adds is *precision*,
+ * and the finder scanner is where that is spent.
+ *
+ * Finders are detected by run lengths in whole pixels, tested against the
+ * 1:1:3:1:1 ratio. At three pixels per module a run that should be three
+ * pixels long and lands on four is a 33% error, which is wide enough to fail
+ * the ratio test outright — so a perfectly good symbol is never even located.
+ * At double size the same run is six pixels against seven, a 16% error, and
+ * it passes. The threshold blocks, a fixed eight pixels wide, gain the same
+ * way: they go from spanning three modules to spanning one and a half.
+ *
+ * Interpolation is the part that matters, and it took a measurement to
+ * believe. Nearest-neighbour doubling rescues a third as many symbols, because
+ * replicating a pixel leaves every run length exactly twice what it was and
+ * the ratio error unchanged. Only interpolated values put an edge somewhere
+ * other than the original pixel boundaries, which is the whole point. Blurring
+ * instead of enlarging does not work either — it rescues a fifth as many, and
+ * blurring *and* enlarging is worse than enlarging alone.
+ */
+const double = (
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+): { pixels: Uint8Array; width: number; height: number } => {
+  const w = width * 2;
+  const h = height * 2;
+
+  // Separable: horizontally into a half-height buffer, then vertically. Doing
+  // it in two one-dimensional passes is four samples of work per output pixel
+  // rather than the sixteen a naive two-dimensional pass would cost.
+  //
+  // With a factor of exactly two the interpolation weights are always 3:1, so
+  // every sample is integer arithmetic and nothing is computed per pixel.
+  const rows = new Uint8Array(w * height * 4);
+  for (let y = 0; y < height; y++) {
+    const src = y * width * 4;
+    const dst = y * w * 4;
+    for (let x = 0; x < width; x++) {
+      const here = src + (x << 2);
+      const left = src + ((x === 0 ? 0 : x - 1) << 2);
+      const right = src + ((x === width - 1 ? x : x + 1) << 2);
+      const out = dst + (x << 3);
+      for (let c = 0; c < 4; c++) {
+        rows[out + c] = (3 * pixels[here + c] + pixels[left + c] + 2) >> 2;
+        rows[out + 4 + c] = (3 * pixels[here + c] + pixels[right + c] + 2) >> 2;
+      }
+    }
+  }
+
+  const out = new Uint8Array(w * h * 4);
+  for (let y = 0; y < height; y++) {
+    const here = y * w * 4;
+    const above = (y === 0 ? 0 : y - 1) * w * 4;
+    const below = (y === height - 1 ? y : y + 1) * w * 4;
+    const top = y * 2 * w * 4;
+    const bottom = (y * 2 + 1) * w * 4;
+    for (let i = 0; i < w * 4; i++) {
+      out[top + i] = (3 * rows[here + i] + rows[above + i] + 2) >> 2;
+      out[bottom + i] = (3 * rows[here + i] + rows[below + i] + 2) >> 2;
+    }
+  }
+  return { pixels: out, width: w, height: h };
+};
+
+/**
+ * Restate a result found on a resized copy in the caller's own coordinates.
+ *
+ * The retries that resize the image were reporting `moduleSize` and `origin`
+ * in the coordinates of the copy, so a symbol recovered by the half-size pass
+ * described itself at half its real pitch and half its real position. Nothing
+ * in the decoded text changes, which is why it went unnoticed — but a caller
+ * drawing an overlay from `origin` drew it in the wrong place, at the wrong
+ * size, and only for the images that needed the retry.
+ */
+const rescale = (result: ScanResult, factor: number): ScanResult => ({
+  ...result,
+  moduleSize: result.moduleSize * factor,
+  origin: { x: result.origin.x * factor, y: result.origin.y * factor },
+});
+
 /** The outcome of one pass, plus how much of a symbol it saw. */
 interface Attempt {
   readonly result: ScanResult | null;
@@ -513,9 +637,12 @@ const attempt = (dark: Uint8Array, width: number, height: number): Attempt => {
 };
 
 export const scanPixels = (pixels: Uint8Array, width: number, height: number): ScanResult => {
+  // Luminance once, for however many thresholds this frame ends up needing.
+  const gray = toGray(pixels, width, height);
+
   // The local threshold first: it is strictly better on a photograph, which is
   // the hard case, and no worse on rendered output.
-  const local = attempt(binarize(pixels, width, height), width, height);
+  const local = attempt(binarizeGray(gray, width, height), width, height);
   if (local.result) return local.result;
 
   // Then once globally, and only ever on failure.
@@ -528,7 +655,7 @@ export const scanPixels = (pixels: Uint8Array, width: number, height: number): S
   // loses, and the retry is free on everything that already worked.
   const global =
     local.finders > 0
-      ? attempt(binarize(pixels, width, height, { global: true }), width, height)
+      ? attempt(binarizeGray(gray, width, height, { global: true }), width, height)
       : { result: null, error: null, finders: 0 };
   if (global.result) return global.result;
 
@@ -543,14 +670,39 @@ export const scanPixels = (pixels: Uint8Array, width: number, height: number): S
   //
   // Only reached when both thresholds have already failed, so the cost lands
   // on images that were about to return nothing anyway.
-  if (width >= MIN_HALVING_SIZE && height >= MIN_HALVING_SIZE) {
+  const sawSomething = local.finders > 0 || global.finders > 0;
+  if (sawSomething && width >= MIN_HALVING_SIZE && height >= MIN_HALVING_SIZE) {
     const half = halve(pixels, width, height);
     const smaller = attempt(
       binarize(half.pixels, half.width, half.height),
       half.width,
       half.height,
     );
-    if (smaller.result) return smaller.result;
+    if (smaller.result) return rescale(smaller.result, 2);
+  }
+
+  // Then the opposite: double the image and try once more.
+  //
+  // Halving and doubling rescue disjoint sets. Halving is for a symbol carried
+  // on more pixels than it needs, where the surplus is noise; doubling is for
+  // one carried on too few, where the finder scanner's whole-pixel run lengths
+  // are too coarse to recognise it. Cheapest first, so the quarter-size pass
+  // runs before the quadruple-size one.
+  //
+  // Both resizing passes are gated on having seen at least one finder-shaped
+  // thing at full size. That gate is what keeps an empty video frame cheap,
+  // and it is measured to cost nothing: every symbol these retries recover had
+  // finder candidates all along — they simply failed to group into a symbol.
+  // A frame with none of them has nothing for a resize to rescue, and behind a
+  // camera running ten frames a second that frame is the common case.
+  if (sawSomething && width * height <= MAX_DOUBLING_PIXELS) {
+    const bigger = double(pixels, width, height);
+    const enlarged = attempt(
+      binarize(bigger.pixels, bigger.width, bigger.height),
+      bigger.width,
+      bigger.height,
+    );
+    if (enlarged.result) return rescale(enlarged.result, 0.5);
   }
 
   throw local.error ?? new NotFoundError('Found no readable symbol');
