@@ -97,38 +97,6 @@ const base64ToBytes = (base64: string): Uint8Array => {
   return new Uint8Array(Buffer.from(clean, 'base64'));
 };
 
-/**
- * Decode encoded image bytes through a canvas, for formats with no native
- * reader here: WebP, AVIF, and progressive JPEG.
- *
- * Returns null outside a browser-like environment.
- *
- * This once said that writing a JPEG decoder would cost more code than the
- * rest of the library. That turned out to be wrong by an order of magnitude —
- * baseline JPEG is 2.9 kB gzipped in `teiqr/jpeg` — so the claim is gone and
- * the format is decoded. What remains here is genuinely better delegated: the
- * newer codecs are large, and the host already has them.
- */
-const decodeViaCanvas = (bytes: Uint8Array): NormalizedImage | null => {
-  const g = globalThis as Record<string, unknown>;
-  const OffscreenCanvasCtor = g.OffscreenCanvas as
-    | (new (
-        w: number,
-        h: number,
-      ) => {
-        getContext(t: '2d'): {
-          drawImage(image: unknown, x: number, y: number): void;
-          getImageData(x: number, y: number, w: number, h: number): ImageDataLike;
-        } | null;
-      })
-    | undefined;
-  if (!OffscreenCanvasCtor || typeof g.createImageBitmap !== 'function') return null;
-  // createImageBitmap is asynchronous, so a synchronous path cannot use it.
-  // The async `scanAsync` entry point handles these formats instead.
-  void bytes;
-  return null;
-};
-
 /** Draw an already-decoded drawable (canvas, image, video, bitmap) to pixels. */
 const drawableToPixels = (source: DrawableLike): NormalizedImage | null => {
   const g = globalThis as Record<string, unknown>;
@@ -212,15 +180,16 @@ export const toPixels = (input: ImageInput): NormalizedImage => {
       const { pixels, width, height } = decodePng(bytes);
       return { pixels, width, height };
     }
-    // Formats added by a side-effect import, such as `teiqr/jpeg`. Tried
-    // before the canvas so a registered decoder wins over a host API: it is
-    // synchronous, and it behaves identically on every runtime.
+    // Formats added by a side-effect import, such as `teiqr/jpeg`.
     const registered = decodeRegistered(bytes);
     if (registered) {
       return { pixels: registered.pixels, width: registered.width, height: registered.height };
     }
-    const viaCanvas = decodeViaCanvas(bytes);
-    if (viaCanvas) return viaCanvas;
+    // Nothing else can be done *synchronously*. A browser can decode WebP and
+    // AVIF, but only through `createImageBitmap`, which returns a promise —
+    // there is no host API that turns encoded bytes into pixels without
+    // awaiting something. That is the whole reason `scanAsync` exists, and why
+    // this is an error rather than a fallback.
     throw new TypeError(
       "Unsupported image format. PNG is decoded natively; for JPEG add `import 'teiqr/jpeg'`. " +
         'For WebP or AVIF either use scanAsync(), or decode to pixels yourself and pass ' +
