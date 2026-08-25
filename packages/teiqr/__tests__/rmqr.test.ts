@@ -9,22 +9,53 @@ import {
   type RmqrVersion,
   rmqrFormatBits,
   rmqrMask,
+  rmqrModel,
   rmqrVersionOf,
 } from '../src/core/rmqr.js';
-import { QrCapacityError } from '../src/core/types.js';
+import {
+  ALPHANUMERIC_CHARSET,
+  makeAlphanumericSegment,
+  makeByteSegment,
+  makeKanjiSegment,
+  makeNumericSegment,
+  planBitsWith,
+  planSegmentsWith,
+  segmentBits,
+} from '../src/core/segment.js';
+import { QrCapacityError, type QrSegment } from '../src/core/types.js';
+import { decodeRmqrMatrix } from '../src/verify/decode-rmqr.js';
+import '../src/kanji.js';
 import { toPng } from '../src/raster/scene-raster.js';
 import { renderSvg } from '../src/render/svg.js';
 
+type FixtureMode = 'numeric' | 'alphanumeric' | 'byte' | 'kanji';
+
 interface Fixture {
+  /** The segmentation the reference was given, so both encoders write the same runs. */
+  segments: [string, FixtureMode][];
   text: string;
   version: RmqrVersion;
   ecc: RmqrLevel;
   rows: string[];
 }
 
-const fixtures: { _source: string; _excluded: string; cases: Fixture[] } = JSON.parse(
-  readFileSync(join(import.meta.dirname, 'fixtures', 'rmqr.json'), 'utf8'),
-);
+const fixtures: {
+  _source: string;
+  _segments: string;
+  _excluded: string;
+  cases: Fixture[];
+} = JSON.parse(readFileSync(join(import.meta.dirname, 'fixtures', 'rmqr.json'), 'utf8'));
+
+const encoder = new TextEncoder();
+
+/** Build the exact segments the fixture pins, rather than letting the optimiser choose. */
+const pinned = (fixture: Fixture): QrSegment[] =>
+  fixture.segments.map(([text, mode]) => {
+    if (mode === 'numeric') return makeNumericSegment(text);
+    if (mode === 'alphanumeric') return makeAlphanumericSegment(text);
+    if (mode === 'kanji') return makeKanjiSegment(text);
+    return makeByteSegment(encoder.encode(text));
+  });
 
 const toRows = (matrix: { width?: number; height?: number; size: number; modules: Uint8Array }) => {
   const cols = matrix.width ?? matrix.size;
@@ -39,8 +70,14 @@ const toRows = (matrix: { width?: number; height?: number; size: number; modules
 };
 
 describe('rMQR conformance against an independent implementation', () => {
+  it('covers multi-segment and Kanji payloads, not only single-mode ones', () => {
+    const shapes = new Set(fixtures.cases.map((f) => f.segments.map(([, m]) => m).join('+')));
+    expect([...shapes].filter((s) => s.includes('+')).length).toBeGreaterThan(3);
+    expect([...shapes].some((s) => s.includes('kanji'))).toBe(true);
+  });
+
   it('has a broad fixture set', () => {
-    expect(fixtures.cases.length).toBeGreaterThan(200);
+    expect(fixtures.cases.length).toBeGreaterThan(400);
     // Layout is shared across all 32 sizes, so covering most of them exercises
     // every distinct width, height and alignment-column arrangement.
     expect(new Set(fixtures.cases.map((f) => f.version)).size).toBeGreaterThanOrEqual(24);
@@ -49,12 +86,13 @@ describe('rMQR conformance against an independent implementation', () => {
   it('reproduces every fixture exactly', () => {
     const failures: string[] = [];
     for (const fixture of fixtures.cases) {
-      const matrix = encodeRmqr(fixture.text, {
+      const matrix = encodeRmqr(pinned(fixture), {
         version: fixture.version,
         ecc: fixture.ecc,
       });
       if (toRows(matrix).join('\n') !== fixture.rows.join('\n')) {
-        failures.push(`${JSON.stringify(fixture.text)} ${fixture.version}-${fixture.ecc}`);
+        const shape = fixture.segments.map(([t, m]) => `${m}[${t}]`).join('+');
+        failures.push(`${shape} ${fixture.version}-${fixture.ecc}`);
       }
     }
     expect(failures).toEqual([]);
@@ -193,6 +231,134 @@ describe('rMQR encoding behaviour', () => {
     const rect = encodeRmqr('SERIAL-4417');
     // Seven modules tall is the whole point: it fits on a cable or a test tube.
     expect(rect.height).toBeLessThanOrEqual(9);
+  });
+});
+
+describe('rMQR capacity tables are internally consistent', () => {
+  // The check that caught R13x27-M, where the reference listed 14 data
+  // codewords against its own stated 96 data bits. A table can be wrong in a
+  // way no round trip notices, so the table itself is asserted.
+  it('has data bits equal to the data codewords for every size and level', () => {
+    const mismatches: string[] = [];
+    for (const version of RMQR_VERSIONS) {
+      const spec = RMQR_SPECS[version];
+      for (const level of ['M', 'H'] as const) {
+        const codewords = spec.blocks[level].reduce((total, g) => total + g.num * g.k, 0);
+        if (codewords * 8 !== spec.dataBits[level]) {
+          mismatches.push(`${version}-${level}: ${codewords * 8} vs ${spec.dataBits[level]}`);
+        }
+      }
+    }
+    expect(mismatches).toEqual([]);
+  });
+
+  it('has blocks summing to the stated codeword total for every size and level', () => {
+    const mismatches: string[] = [];
+    for (const version of RMQR_VERSIONS) {
+      const spec = RMQR_SPECS[version];
+      for (const level of ['M', 'H'] as const) {
+        const total = spec.blocks[level].reduce((sum, g) => sum + g.num * g.c, 0);
+        if (total !== spec.codewordsTotal) {
+          mismatches.push(`${version}-${level}: ${total} vs ${spec.codewordsTotal}`);
+        }
+      }
+    }
+    expect(mismatches).toEqual([]);
+  });
+
+  it('gives every count field room for the largest payload of its mode', () => {
+    const overflows: string[] = [];
+    for (const version of RMQR_VERSIONS) {
+      const spec = RMQR_SPECS[version];
+      const budget = spec.dataBits.M - 3;
+      const most = {
+        numeric: Math.floor((budget - spec.countBits.numeric) / 10) * 3 + 2,
+        alphanumeric: Math.floor((budget - spec.countBits.alphanumeric) / 11) * 2 + 1,
+        byte: Math.floor((budget - spec.countBits.byte) / 8),
+        kanji: Math.floor((budget - spec.countBits.kanji) / 13),
+      };
+      for (const [mode, count] of Object.entries(most)) {
+        const width = spec.countBits[mode as keyof typeof most];
+        if (count >= 1 << width) overflows.push(`${version} ${mode}: ${count} needs > ${width}`);
+      }
+    }
+    expect(overflows).toEqual([]);
+  });
+});
+
+describe('rMQR mode selection', () => {
+  // The conformance fixtures pin their segmentation so both encoders write the
+  // same runs; these cover the choice itself.
+
+  const singleModeBits = (text: string, version: RmqrVersion): number => {
+    const model = rmqrModel(version);
+    const candidates: QrSegment[][] = [];
+    if (/^[0-9]*$/.test(text)) candidates.push([makeNumericSegment(text)]);
+    if ([...text].every((c) => ALPHANUMERIC_CHARSET.includes(c))) {
+      candidates.push([makeAlphanumericSegment(text)]);
+    }
+    candidates.push([makeByteSegment(encoder.encode(text))]);
+    return Math.min(...candidates.map((segments) => segmentBits(segments, model)));
+  };
+
+  it('never chooses a segmentation larger than encoding the whole string in one mode', () => {
+    const payloads = ['SERIAL-4417', 'abc123XYZ', 'HELLO WORLD 123', 'order/1234567890'];
+    for (const text of payloads) {
+      for (const version of RMQR_VERSIONS) {
+        const model = rmqrModel(version);
+        const plan = planSegmentsWith(text, model);
+        expect(planBitsWith(plan, model), `${text} at ${version}`).toBeLessThanOrEqual(
+          singleModeBits(text, version),
+        );
+      }
+    }
+  });
+
+  it('splits a URL with a long numeric tail rather than sending it all as bytes', () => {
+    const text = 'https://example.com/order/1234567890';
+    const model = rmqrModel('R13x99');
+    const plan = planSegmentsWith(text, model);
+    expect(plan.segments.map((seg) => seg.mode)).toContain('numeric');
+    expect(planBitsWith(plan, model)).toBeLessThan(singleModeBits(text, 'R13x99'));
+  });
+
+  it('round trips a multi-segment payload, reporting each run', () => {
+    const result = decodeRmqrMatrix(encodeRmqr('abc123XYZ', { version: 'R13x99' }));
+    expect(result.text).toBe('abc123XYZ');
+    expect(result.segments.map((seg) => seg.mode)).toEqual(['byte', 'alphanumeric']);
+  });
+});
+
+describe('rMQR Kanji mode', () => {
+  it('selects Kanji where it is cheaper than bytes', () => {
+    const result = decodeRmqrMatrix(encodeRmqr('漢字', { kanji: true }));
+    expect(result.segments.map((seg) => seg.mode)).toEqual(['kanji']);
+    expect(result.text).toBe('漢字');
+  });
+
+  it('fits Japanese text in a smaller symbol than byte mode would', () => {
+    const text = 'こんにちは世界。日本語のテキストです';
+    const withKanji = encodeRmqr(text, { kanji: true, fit: 'area' });
+    const withoutKanji = encodeRmqr(text, { kanji: false, fit: 'area' });
+    const area = (m: { width?: number; height?: number }) => (m.width ?? 0) * (m.height ?? 0);
+    expect(area(withKanji)).toBeLessThan(area(withoutKanji));
+    expect(decodeRmqrMatrix(withKanji).text).toBe(text);
+    expect(decodeRmqrMatrix(withoutKanji).text).toBe(text);
+  });
+
+  it('mixes Kanji with other modes in one symbol', () => {
+    const result = decodeRmqrMatrix(encodeRmqr('漢字123', { kanji: true, version: 'R13x99' }));
+    expect(result.text).toBe('漢字123');
+    expect(result.segments.map((seg) => seg.mode)).toEqual(['kanji', 'numeric']);
+  });
+});
+
+describe('rMQR binary payloads', () => {
+  it('encodes raw bytes, not only text', () => {
+    const bytes = Uint8Array.from([0x00, 0xff, 0x7f, 0x80, 0x01]);
+    const result = decodeRmqrMatrix(encodeRmqr(bytes));
+    expect(Array.from(result.bytes)).toEqual(Array.from(bytes));
+    expect(result.mode).toBe('byte');
   });
 });
 

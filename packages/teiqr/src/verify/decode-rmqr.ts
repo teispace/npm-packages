@@ -18,8 +18,8 @@ import {
   rmqrLayout,
   rmqrMask,
 } from '../core/rmqr.js';
-import { ALPHANUMERIC_CHARSET } from '../core/segment.js';
 import { MODULE, type QrMatrix } from '../core/types.js';
+import { BitReader, type DecodedSegment, joinSegments, readPayload } from './bitstream.js';
 import { correct, UncorrectableError } from './reed-solomon.js';
 
 const MODE_BY_INDICATOR: Readonly<Record<number, RmqrMode>> = {
@@ -38,7 +38,13 @@ export interface RmqrDecodeResult {
   readonly bytes: Uint8Array;
   readonly version: RmqrVersion;
   readonly ecc: RmqrLevel;
+  /**
+   * Mode of the first segment. Kept for callers that predate multi-segment
+   * support; {@link segments} is the complete answer.
+   */
   readonly mode: RmqrMode;
+  /** Every run of characters the symbol carries, in order. */
+  readonly segments: DecodedSegment[];
   /** Codewords Reed-Solomon repaired across all blocks. */
   readonly corrected: number;
 }
@@ -155,75 +161,29 @@ const deinterleaveAndCorrect = (
   return { data: Uint8Array.from(data), corrected };
 };
 
-/** Read the payload out of the recovered data codewords. */
-const readSegment = (
-  data: Uint8Array,
-  version: RmqrVersion,
-): { text: string; bytes: Uint8Array; mode: RmqrMode } => {
-  const capacity = data.length * 8;
-  let pos = 0;
-  const read = (width: number): number => {
-    if (pos + width > capacity) throw new UncorrectableError('rMQR bitstream exhausted');
-    let value = 0;
-    for (let i = 0; i < width; i++) {
-      value = (value << 1) | ((data[pos >>> 3] >>> (7 - (pos & 7))) & 1);
-      pos++;
-    }
-    return value;
-  };
+/**
+ * Read the segments out of the recovered data codewords.
+ *
+ * Unlike Micro QR, rMQR reserves indicator 0 for the terminator and starts
+ * numeric mode at 1, so the loop ends on an explicit value rather than on a
+ * zero-length segment.
+ */
+const readSegments = (data: Uint8Array, version: RmqrVersion): DecodedSegment[] => {
+  const reader = new BitReader(data);
+  const segments: DecodedSegment[] = [];
 
-  const indicator = read(3);
-  const mode = MODE_BY_INDICATOR[indicator];
-  if (!mode) throw new UncorrectableError(`Unknown rMQR mode indicator ${indicator}`);
+  while (reader.remaining >= 3) {
+    const indicator = reader.read(3);
+    if (indicator === 0) break;
 
-  const count = read(RMQR_SPECS[version].countBits[mode]);
-  const encoder = new TextEncoder();
+    const mode = MODE_BY_INDICATOR[indicator];
+    if (!mode) throw new UncorrectableError(`Unknown rMQR mode indicator ${indicator}`);
 
-  if (mode === 'numeric') {
-    let text = '';
-    let left = count;
-    while (left >= 3) {
-      text += String(read(10)).padStart(3, '0');
-      left -= 3;
-    }
-    if (left === 2) text += String(read(7)).padStart(2, '0');
-    else if (left === 1) text += String(read(4));
-    return { text, bytes: encoder.encode(text), mode };
+    const count = reader.read(RMQR_SPECS[version].countBits[mode]);
+    segments.push({ mode, ...readPayload(reader, mode, count) });
   }
 
-  if (mode === 'alphanumeric') {
-    let text = '';
-    let left = count;
-    while (left >= 2) {
-      const pair = read(11);
-      text += ALPHANUMERIC_CHARSET[Math.floor(pair / 45)] + ALPHANUMERIC_CHARSET[pair % 45];
-      left -= 2;
-    }
-    if (left === 1) text += ALPHANUMERIC_CHARSET[read(6)];
-    return { text, bytes: encoder.encode(text), mode };
-  }
-
-  if (mode === 'byte') {
-    const bytes = new Uint8Array(count);
-    for (let i = 0; i < count; i++) bytes[i] = read(8);
-    return { text: new TextDecoder('utf-8').decode(bytes), bytes, mode };
-  }
-
-  const bytes: number[] = [];
-  for (let i = 0; i < count; i++) {
-    const packed = read(13);
-    const combined = Math.floor(packed / 0xc0) * 0x100 + (packed % 0xc0);
-    const sjis = combined + (combined < 0x1f00 ? 0x8140 : 0xc140);
-    bytes.push(sjis >>> 8, sjis & 0xff);
-  }
-  const raw = Uint8Array.from(bytes);
-  let text = '';
-  try {
-    text = new TextDecoder('shift_jis').decode(raw);
-  } catch {
-    // Not every runtime ships the Shift-JIS decoder; the bytes are still exact.
-  }
-  return { text, bytes: raw, mode };
+  return segments;
 };
 
 /**
@@ -263,6 +223,9 @@ export const decodeRmqrMatrix = (
   }
 
   const { data, corrected } = deinterleaveAndCorrect(stream, version, ecc);
-  const { text, bytes, mode } = readSegment(data, version);
-  return { text, bytes, version, ecc, mode, corrected };
+  const segments = readSegments(data, version);
+  const { text, bytes } = joinSegments(segments);
+  // An empty symbol still has to name a mode; numeric is the natural default.
+  const mode = (segments[0]?.mode ?? 'numeric') as RmqrMode;
+  return { text, bytes, version, ecc, mode, segments, corrected };
 };

@@ -61,6 +61,26 @@ const COUNT_BITS: Readonly<
 export const modeIndicator = (mode: QrMode): number => MODE_INDICATOR[mode];
 
 /**
+ * What a symbology charges for a segment header, and which modes it offers.
+ *
+ * QR, Micro QR and rMQR differ in only three numbers — how wide the mode
+ * indicator is, what value it takes, and how wide the character count is — so
+ * the optimiser, the bit writer and the decoder are all written against this
+ * rather than against one symbology. Asking for a mode a symbol cannot carry
+ * then returns `null` instead of silently producing a subtly wrong count
+ * field, which is a class of bug that survives every round trip through its
+ * own decoder.
+ */
+export interface SymbologyModel {
+  /** Width of the mode indicator field. Zero for Micro QR M1, which is numeric-only. */
+  readonly modeBits: number;
+  /** Value of the mode indicator for a mode. */
+  indicator(mode: QrMode): number;
+  /** Character-count field width, or null when this symbology cannot carry the mode. */
+  countBits(mode: QrMode): number | null;
+}
+
+/**
  * Width of the character-count field. Header modes carry no count, so it is
  * zero for them and the writer emits only the indicator and the payload.
  */
@@ -68,6 +88,37 @@ export const countBits = (mode: QrMode, version: number): number => {
   if (isCountlessMode(mode)) return 0;
   const band = version <= 9 ? 0 : version <= 26 ? 1 : 2;
   return COUNT_BITS[mode][band];
+};
+
+/** The header cost model for a full QR symbol at `version`. */
+export const qrModel = (version: number): SymbologyModel => ({
+  modeBits: 4,
+  indicator: modeIndicator,
+  // Header modes report 0 rather than null: they are available, they simply
+  // carry no character count.
+  countBits: (mode) => countBits(mode, version),
+});
+
+/**
+ * Write segments as mode indicator, character count and payload, in order.
+ *
+ * Field order is the one thing all three symbologies agree on, so they share
+ * this writer. Zero-width fields are no-ops, which is what lets Micro QR M1
+ * (no mode indicator) and the ECI header (no character count) go through
+ * unchanged.
+ */
+export const writeSegments = (
+  w: BitWriter,
+  segments: readonly QrSegment[],
+  model: SymbologyModel,
+): void => {
+  for (const seg of segments) {
+    const cb = model.countBits(seg.mode);
+    if (cb === null) throw new RangeError(`This symbol cannot carry ${seg.mode} data`);
+    w.pushBits(model.indicator(seg.mode), model.modeBits);
+    w.pushBits(seg.charCount, cb);
+    w.pushArray(seg.bits);
+  }
 };
 
 export const isNumericChar = (c: string): boolean => c >= '0' && c <= '9';
@@ -224,18 +275,36 @@ export interface Plan {
 }
 
 /**
- * Choose the cheapest assignment of characters to modes for a given version.
+ * Choose the cheapest assignment of characters to modes for a given QR version.
+ *
+ * Version matters because count-field widths do, so a string can segment
+ * differently at version 9 and version 10.
+ */
+export const planSegments = (text: string, version: number, allowKanji = false): Plan =>
+  planSegmentsWith(text, qrModel(version), allowKanji);
+
+/**
+ * Choose the cheapest assignment of characters to modes under any symbology.
  *
  * A Viterbi pass over four modes: for each character, carry the cheapest
- * running cost of *ending* in each mode, then walk the backpointers. Version
- * matters because count-field widths do, so a string can segment differently
- * at version 9 and version 10.
+ * running cost of *ending* in each mode, then walk the backpointers. Modes the
+ * model reports as unavailable are priced at infinity, which is how Micro QR
+ * M2 — alphanumeric and numeric only — rules out byte mode without a second
+ * code path.
+ *
+ * When no assignment exists at all (a lowercase letter in an M2 symbol, say)
+ * the returned plan has no segments and `bits` is infinite, so a caller
+ * searching versions can move on to the next one.
  */
-export const planSegments = (text: string, version: number, allowKanji = false): Plan => {
+export const planSegmentsWith = (text: string, model: SymbologyModel, allowKanji = false): Plan => {
   const units = toUnits(text, allowKanji);
   if (units.length === 0) return { units, segments: [], bits: 0 };
 
-  const headCost = (m: number): number => (4 + countBits(MODES[m], version)) * 6;
+  const widths = MODES.map((mode) => model.countBits(mode));
+  const headCost = (m: number): number => {
+    const cb = widths[m];
+    return cb === null ? Number.POSITIVE_INFINITY : (model.modeBits + cb) * 6;
+  };
 
   // Cost of a run that has just opened in each mode, before any character.
   let costs = MODES.map((_, m) => headCost(m));
@@ -243,10 +312,10 @@ export const planSegments = (text: string, version: number, allowKanji = false):
 
   for (const unit of units) {
     const charCost: (number | null)[] = [
-      unit.byteLen * SIXTHS_PER_BYTE,
-      unit.alnum ? SIXTHS_ALNUM : null,
-      unit.numeric ? SIXTHS_NUMERIC : null,
-      unit.kanji !== undefined ? SIXTHS_KANJI : null,
+      widths[0] === null ? null : unit.byteLen * SIXTHS_PER_BYTE,
+      widths[1] !== null && unit.alnum ? SIXTHS_ALNUM : null,
+      widths[2] !== null && unit.numeric ? SIXTHS_NUMERIC : null,
+      widths[3] !== null && unit.kanji !== undefined ? SIXTHS_KANJI : null,
     ];
 
     const next = new Array<number>(MODES.length);
@@ -268,7 +337,10 @@ export const planSegments = (text: string, version: number, allowKanji = false):
         // a whole bit first, because a real encoder cannot carry a fractional
         // bit across a mode boundary, then pays a fresh header.
         const base = p === m ? costs[p] : Math.ceil(costs[p] / 6) * 6 + headCost(m);
-        if (base < best) {
+        // Ties go to staying put. Two encodings of the same length are equally
+        // valid, and the one with fewer mode switches is the one every other
+        // implementation produces, which keeps conformance comparisons honest.
+        if (base < best || (base === best && p === m)) {
           best = base;
           bestFrom = p;
         }
@@ -284,6 +356,10 @@ export const planSegments = (text: string, version: number, allowKanji = false):
 
   let end = 0;
   for (let m = 1; m < MODES.length; m++) if (costs[m] < costs[end]) end = m;
+  // No mode this symbology offers can represent the text.
+  if (!Number.isFinite(costs[end])) {
+    return { units, segments: [], bits: Number.POSITIVE_INFINITY };
+  }
 
   const path = new Int8Array(units.length);
   let cur = end;
@@ -336,27 +412,49 @@ export const makeSegments = (text: string, version: number, allowKanji = false):
   buildSegments(planSegments(text, version, allowKanji));
 
 /**
- * Total bits these segments occupy at the given version, headers included.
+ * Total bits ready-made segments occupy under a symbology, headers included.
  *
- * Returns Infinity when any character count overflows its field: that version
- * cannot carry the segment however much room the codewords appear to leave,
- * and treating it as merely expensive would produce a corrupt symbol.
+ * Returns Infinity when a segment cannot be written there at all — the mode is
+ * unavailable, or a character count overflows its field. Either way the symbol
+ * cannot carry it however much room the codewords appear to leave, and
+ * treating it as merely expensive would produce a corrupt symbol.
  */
-export const totalBits = (segments: readonly QrSegment[], version: number): number => {
+export const segmentBits = (segments: readonly QrSegment[], model: SymbologyModel): number => {
   let total = 0;
   for (const seg of segments) {
-    const cb = countBits(seg.mode, version);
-    if (!isCountlessMode(seg.mode) && seg.charCount >= 1 << cb) return Number.POSITIVE_INFINITY;
-    total += 4 + cb + seg.bits.length;
+    const cb = model.countBits(seg.mode);
+    if (cb === null) return Number.POSITIVE_INFINITY;
+    // Header modes have a zero-width count field and a zero count, so this
+    // never fires for them.
+    if (seg.charCount >= 1 << cb) return Number.POSITIVE_INFINITY;
+    total += model.modeBits + cb + seg.bits.length;
   }
   return total;
 };
 
+/** Total bits these segments occupy in a full QR symbol at `version`. */
+export const totalBits = (segments: readonly QrSegment[], version: number): number =>
+  segmentBits(segments, qrModel(version));
+
 /** Bit cost of a plan at `version`, without materialising it. */
-export const planBits = (plan: Plan, version: number): number => {
+export const planBits = (plan: Plan, version: number): number =>
+  planBitsWith(plan, qrModel(version));
+
+/**
+ * Bit cost of a plan under any symbology, without materialising it.
+ *
+ * Infinite when the plan cannot be written at all: no assignment was found, a
+ * mode is unavailable here, or a character count overflows its field — all of
+ * which mean "try a larger symbol" rather than "this is merely expensive".
+ */
+export const planBitsWith = (plan: Plan, model: SymbologyModel): number => {
+  if (plan.segments.length === 0) {
+    return plan.units.length === 0 ? 0 : Number.POSITIVE_INFINITY;
+  }
   let total = 0;
   for (const seg of plan.segments) {
-    const cb = countBits(seg.mode, version);
+    const cb = model.countBits(seg.mode);
+    if (cb === null) return Number.POSITIVE_INFINITY;
     const count = planCharCount(plan, seg);
     if (count >= 1 << cb) return Number.POSITIVE_INFINITY;
     let payload: number;
@@ -377,7 +475,7 @@ export const planBits = (plan: Plan, version: number): number => {
       default:
         payload = count * 8;
     }
-    total += 4 + cb + payload;
+    total += model.modeBits + cb + payload;
   }
   return total;
 };

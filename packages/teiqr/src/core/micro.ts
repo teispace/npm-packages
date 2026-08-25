@@ -30,12 +30,22 @@
 import { BitWriter } from './bits.js';
 import { computeDivisor, computeRemainder } from './galois.js';
 import {
-  ALPHANUMERIC_CHARSET,
-  makeAlphanumericSegment,
+  buildSegments,
   makeByteSegment,
-  makeNumericSegment,
+  planBitsWith,
+  planSegmentsWith,
+  type SymbologyModel,
+  segmentBits,
+  writeSegments,
 } from './segment.js';
-import { type EccLevel, MODULE, QrCapacityError, type QrMatrix } from './types.js';
+import {
+  type EccLevel,
+  MODULE,
+  QrCapacityError,
+  type QrInput,
+  type QrMatrix,
+  type QrSegment,
+} from './types.js';
 
 /** Micro QR versions, in ascending capacity. */
 export type MicroVersion = 'M1' | 'M2' | 'M3' | 'M4';
@@ -102,7 +112,7 @@ export const MICRO_CODEWORDS: Readonly<Record<string, { total: number; ecc: numb
 /** Width of the mode indicator, §7.4.1: 0 bits in M1, rising to 3 in M4. */
 export const microModeBits = (version: MicroVersion): number => MICRO_VERSIONS.indexOf(version);
 
-/** Micro QR mode indicator values. Kanji is 3 but is not encoded here. */
+/** Micro QR mode indicator values, §7.4.1 Table 2. */
 export const MICRO_MODE_INDICATOR = { numeric: 0, alphanumeric: 1, byte: 2, kanji: 3 } as const;
 
 export type MicroMode = keyof typeof MICRO_MODE_INDICATOR;
@@ -121,6 +131,20 @@ export const MICRO_COUNT_BITS: Readonly<
   byte: { M1: undefined, M2: undefined, M3: 4, M4: 5 },
   kanji: { M1: undefined, M2: undefined, M3: 3, M4: 4 },
 };
+
+/**
+ * Header cost model for a Micro QR version, shared with the optimiser, the bit
+ * writer and the decoder.
+ *
+ * Note what falls out of the table above: a mode a version cannot carry
+ * reports `null`, so M1 offers numeric alone and M2 has no byte mode without
+ * either of those being special-cased anywhere else.
+ */
+export const microModel = (version: MicroVersion): SymbologyModel => ({
+  modeBits: microModeBits(version),
+  indicator: (mode) => MICRO_MODE_INDICATOR[mode as MicroMode],
+  countBits: (mode) => MICRO_COUNT_BITS[mode as MicroMode]?.[version] ?? null,
+});
 
 /** Terminator length, §7.4.9: 3 bits in M1, 5 in M2, 7 in M3, 9 in M4. */
 const terminatorBits = (version: MicroVersion): number => 3 + 2 * MICRO_VERSIONS.indexOf(version);
@@ -325,8 +349,7 @@ const evaluateMask = (g: Grid): number => {
  * short M3 payload exposed it.
  */
 const buildDataCodewords = (
-  text: string,
-  mode: MicroMode,
+  segments: readonly QrSegment[],
   version: MicroVersion,
   ecc: EccLevel,
 ): Uint8Array => {
@@ -334,23 +357,7 @@ const buildDataCodewords = (
   const shortFinalCodeword = version === 'M1' || version === 'M3';
 
   const w = new BitWriter(Math.ceil(capacity / 8));
-  const modeBits = microModeBits(version);
-  if (modeBits > 0) w.pushBits(MICRO_MODE_INDICATOR[mode], modeBits);
-
-  const countBits = MICRO_COUNT_BITS[mode][version];
-  if (countBits === undefined) {
-    throw new RangeError(`Micro QR ${version} cannot encode ${mode} data`);
-  }
-
-  const segment =
-    mode === 'numeric'
-      ? makeNumericSegment(text)
-      : mode === 'alphanumeric'
-        ? makeAlphanumericSegment(text)
-        : makeByteSegment(new TextEncoder().encode(text));
-
-  w.pushBits(segment.charCount, countBits);
-  w.pushArray(segment.bits);
+  writeSegments(w, segments, microModel(version));
 
   if (w.length > capacity) throw new QrCapacityError(w.length, capacity, 0);
 
@@ -390,13 +397,45 @@ export interface MicroEncodeOptions {
    * need.
    */
   boostEcc?: boolean;
+  /**
+   * Allow Kanji mode when it would produce a smaller symbol. Requires a
+   * registered Shift-JIS table (`import 'teiqr/kanji'`); without one this is
+   * ignored, exactly as it is for full QR.
+   *
+   * Kanji is available in M3 and M4 only, and costs 13 bits per character
+   * against byte mode's 24 for the same text, so it is often the difference
+   * between fitting M4 and not fitting at all.
+   */
+  kanji?: boolean;
 }
 
-/** Pick the narrowest mode that can represent the text. */
-const detectMode = (text: string): MicroMode => {
-  if (/^[0-9]*$/.test(text)) return 'numeric';
-  if ([...text].every((c) => ALPHANUMERIC_CHARSET.includes(c))) return 'alphanumeric';
-  return 'byte';
+/**
+ * Plan the payload for one version, or `null` when this version cannot carry
+ * it at all — a lowercase letter in M2, say, which has no byte mode.
+ *
+ * Segmentation is per version rather than once up front because the available
+ * modes and the count-field widths both change between them: the same string
+ * is one byte segment in M3 and can be a cheaper numeric/alphanumeric split
+ * in M4.
+ */
+const planFor = (
+  input: QrInput,
+  version: MicroVersion,
+  allowKanji: boolean,
+): { segments: readonly QrSegment[]; bits: number } | null => {
+  const model = microModel(version);
+
+  // Raw bytes and hand-built segments are not optimised, only priced.
+  if (typeof input !== 'string') {
+    const segments = input instanceof Uint8Array ? [makeByteSegment(input)] : input;
+    const bits = segmentBits(segments, model);
+    return Number.isFinite(bits) ? { segments, bits } : null;
+  }
+
+  const plan = planSegmentsWith(input, model, allowKanji);
+  const bits = planBitsWith(plan, model);
+  if (!Number.isFinite(bits)) return null;
+  return { segments: buildSegments(plan), bits };
 };
 
 /**
@@ -411,9 +450,14 @@ const detectMode = (text: string): MicroMode => {
  * @example encodeMicro('12345')            // M1
  * @example encodeMicro('HELLO', { ecc: 'M' })
  */
-export const encodeMicro = (text: string, options: MicroEncodeOptions = {}): QrMatrix => {
-  const { ecc: requested = 'L', version: forced, mask: forcedMask, boostEcc = true } = options;
-  const mode = detectMode(text);
+export const encodeMicro = (input: QrInput, options: MicroEncodeOptions = {}): QrMatrix => {
+  const {
+    ecc: requested = 'L',
+    version: forced,
+    mask: forcedMask,
+    boostEcc = true,
+    kanji = false,
+  } = options;
 
   if (
     forcedMask !== undefined &&
@@ -423,10 +467,20 @@ export const encodeMicro = (text: string, options: MicroEncodeOptions = {}): QrM
   }
 
   const candidates = forced ? [forced] : MICRO_VERSIONS;
-  let chosen: { version: MicroVersion; ecc: EccLevel } | null = null;
+  let chosen: {
+    version: MicroVersion;
+    ecc: EccLevel;
+    segments: readonly QrSegment[];
+  } | null = null;
+  let closest = Number.POSITIVE_INFINITY;
 
   for (const version of candidates) {
-    if (MICRO_COUNT_BITS[mode][version] === undefined) continue;
+    const planned = planFor(input, version, kanji);
+    if (!planned) continue;
+    // Remember the best case seen, so the capacity error can report a real
+    // shortfall rather than a guess.
+    if (planned.bits < closest) closest = planned.bits;
+
     // Prefer the strongest level this version offers that still fits, so a
     // small payload gets the most protection available at no size cost.
     const available = MICRO_LEVELS[version];
@@ -440,26 +494,29 @@ export const encodeMicro = (text: string, options: MicroEncodeOptions = {}): QrM
     const order = boostEcc ? [...atLeastRequested].reverse() : [atLeastRequested[0]];
 
     for (const level of order) {
-      try {
-        buildDataCodewords(text, mode, version, level);
-        chosen = { version, ecc: level };
+      if (planned.bits <= microDataBits(version, level)) {
+        chosen = { version, ecc: level, segments: planned.segments };
         break;
-      } catch {
-        // Does not fit at this level; try a weaker one, then a larger version.
       }
     }
     if (chosen) break;
   }
 
   if (!chosen) {
-    throw new QrCapacityError(text.length * 8, DATA_BITS['M4-L'], 4);
+    // `closest` is infinite only when no version can carry the data at all,
+    // in which case there is no meaningful bit count to report.
+    throw new QrCapacityError(
+      Number.isFinite(closest) ? closest : Number.POSITIVE_INFINITY,
+      DATA_BITS['M4-L'],
+      4,
+    );
   }
 
-  const { version, ecc } = chosen;
+  const { version, ecc, segments } = chosen;
   const size = microSize(version);
   const symbolNumber = MICRO_SYMBOL_NUMBER[key(version, ecc)];
 
-  const data = buildDataCodewords(text, mode, version, ecc);
+  const data = buildDataCodewords(segments, version, ecc);
   const { ecc: eccCount } = MICRO_CODEWORDS[key(version, ecc)];
   // Reed-Solomon operates on whole bytes, so the short final codeword of M1
   // and M3 participates as a byte whose low nibble is zero.

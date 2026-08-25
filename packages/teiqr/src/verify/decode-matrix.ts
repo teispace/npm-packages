@@ -14,9 +14,10 @@
 
 import { blockLayout } from '../core/encode.js';
 import { dataModuleSequence, formatBits, MASK_FUNCTIONS } from '../core/matrix.js';
-import { ALPHANUMERIC_CHARSET as ALPHANUMERIC, countBits } from '../core/segment.js';
+import { countBits } from '../core/segment.js';
 import { type EccLevel, MODULE, type QrMatrix, type QrMode } from '../core/types.js';
 import { eccCodewordsPerBlock, numEccBlocks, numRawDataModules } from '../core/version.js';
+import { BitReader, type DecodedSegment, joinSegments, readPayload } from './bitstream.js';
 import { decodeMicroMatrix } from './decode-micro.js';
 import { decodeRmqrMatrix } from './decode-rmqr.js';
 import { correct, UncorrectableError } from './reed-solomon.js';
@@ -29,14 +30,6 @@ const MODE_BY_INDICATOR: Readonly<Record<number, QrMode>> = {
   7: 'eci',
   8: 'kanji',
 };
-
-export interface DecodedSegment {
-  readonly mode: QrMode;
-  /** Decoded text. Byte segments are interpreted per the active ECI, UTF-8 by default. */
-  readonly text: string;
-  /** Raw bytes, for byte segments. */
-  readonly bytes?: Uint8Array;
-}
 
 /** Position of a symbol within a Structured Append set. */
 export interface StructuredHeader {
@@ -61,26 +54,6 @@ export interface DecodeResult {
   readonly eci?: number;
   /** Structured Append position, when the symbol is part of a set. */
   readonly structured?: StructuredHeader;
-}
-
-/** Reader over a packed codeword stream. */
-class BitReader {
-  private pos = 0;
-  constructor(private readonly bytes: Uint8Array) {}
-
-  get remaining(): number {
-    return this.bytes.length * 8 - this.pos;
-  }
-
-  read(width: number): number {
-    if (width > this.remaining) throw new RangeError('Bitstream exhausted');
-    let value = 0;
-    for (let i = 0; i < width; i++) {
-      value = (value << 1) | ((this.bytes[this.pos >>> 3] >>> (7 - (this.pos & 7))) & 1);
-      this.pos++;
-    }
-    return value;
-  }
 }
 
 /**
@@ -190,7 +163,6 @@ const readSegments = (
   const segments: DecodedSegment[] = [];
   let eci: number | undefined;
   let structured: StructuredHeader | undefined;
-  const utf8 = new TextDecoder('utf-8');
 
   while (reader.remaining >= 4) {
     const indicator = reader.read(4);
@@ -218,50 +190,7 @@ const readSegments = (
     }
 
     const count = reader.read(countBits(mode, version));
-
-    if (mode === 'numeric') {
-      let text = '';
-      let left = count;
-      while (left >= 3) {
-        text += String(reader.read(10)).padStart(3, '0');
-        left -= 3;
-      }
-      if (left === 2) text += String(reader.read(7)).padStart(2, '0');
-      else if (left === 1) text += String(reader.read(4));
-      segments.push({ mode, text });
-    } else if (mode === 'alphanumeric') {
-      let text = '';
-      let left = count;
-      while (left >= 2) {
-        const pair = reader.read(11);
-        text += ALPHANUMERIC[Math.floor(pair / 45)] + ALPHANUMERIC[pair % 45];
-        left -= 2;
-      }
-      if (left === 1) text += ALPHANUMERIC[reader.read(6)];
-      segments.push({ mode, text });
-    } else if (mode === 'byte') {
-      const bytes = new Uint8Array(count);
-      for (let i = 0; i < count; i++) bytes[i] = reader.read(8);
-      segments.push({ mode, text: utf8.decode(bytes), bytes });
-    } else {
-      // Kanji: 13 bits per character, rebased into one of two Shift-JIS ranges.
-      const bytes: number[] = [];
-      for (let i = 0; i < count; i++) {
-        const packed = reader.read(13);
-        const combined = Math.floor(packed / 0xc0) * 0x100 + (packed % 0xc0);
-        const sjis = combined + (combined < 0x1f00 ? 0x8140 : 0xc140);
-        bytes.push(sjis >>> 8, sjis & 0xff);
-      }
-      const raw = Uint8Array.from(bytes);
-      let text: string;
-      try {
-        text = new TextDecoder('shift_jis').decode(raw);
-      } catch {
-        // Not every runtime ships the Shift-JIS decoder; the bytes are still exact.
-        text = '';
-      }
-      segments.push({ mode, text, bytes: raw });
-    }
+    segments.push({ mode, ...readPayload(reader, mode, count) });
   }
 
   return { segments, eci, structured };
@@ -289,7 +218,7 @@ export const decodeMatrix = (
       version: matrix.version,
       ecc: result.ecc,
       mask: result.mask,
-      segments: [{ mode: result.mode, text: result.text, bytes: result.bytes }],
+      segments: result.segments,
       corrected: result.corrected,
     };
   }
@@ -301,7 +230,7 @@ export const decodeMatrix = (
       version: matrix.version,
       ecc: result.ecc as EccLevel,
       mask: 0,
-      segments: [{ mode: result.mode, text: result.text, bytes: result.bytes }],
+      segments: result.segments,
       corrected: result.corrected,
     };
   }
@@ -324,21 +253,7 @@ export const decodeMatrix = (
 
   const { data, corrected } = deinterleaveAndCorrect(stream, version, ecc);
   const { segments, eci, structured } = readSegments(data, version);
-
-  const text = segments
-    .filter((s) => s.mode !== 'eci' && s.mode !== 'structured')
-    .map((s) => s.text)
-    .join('');
-  const byteParts = segments.filter((s) => s.bytes).map((s) => s.bytes as Uint8Array);
-  const bytes =
-    byteParts.length > 0
-      ? byteParts.reduce((acc, part) => {
-          const merged = new Uint8Array(acc.length + part.length);
-          merged.set(acc);
-          merged.set(part, acc.length);
-          return merged;
-        }, new Uint8Array(0))
-      : new TextEncoder().encode(text);
+  const { text, bytes } = joinSegments(segments);
 
   return {
     text,
@@ -353,4 +268,4 @@ export const decodeMatrix = (
   };
 };
 
-export { UncorrectableError };
+export { type DecodedSegment, UncorrectableError };
