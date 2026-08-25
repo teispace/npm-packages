@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.6](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.5...teiqr-v0.3.6) (2026-08-25)
+
+
+### Features
+
+* **teiqr:** read symbols captured through glass or off a mirror ([#152](https://github.com/teispace/npm-packages/issues/152)) ([7bf4af4](https://github.com/teispace/npm-packages/commit/7bf4af4b46d9d71af18253b79d5b8bab6b592b92))
+
+
+### Documentation
+
+* **teiqr:** document that all three symbologies read mirrored ([#154](https://github.com/teispace/npm-packages/issues/154)) ([e77adb9](https://github.com/teispace/npm-packages/commit/e77adb9c83acc86280709fbd7c90c5174a758695))
+
 ## [0.3.5](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.4...teiqr-v0.3.5) (2026-08-25)
 
 
