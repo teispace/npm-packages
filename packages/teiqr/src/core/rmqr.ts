@@ -35,19 +35,39 @@ import {
   type RmqrVersion,
 } from './rmqr-tables.js';
 import {
-  ALPHANUMERIC_CHARSET,
-  makeAlphanumericSegment,
+  buildSegments,
   makeByteSegment,
-  makeNumericSegment,
+  planBitsWith,
+  planSegmentsWith,
+  type SymbologyModel,
+  segmentBits,
+  writeSegments,
 } from './segment.js';
-import { MODULE, QrCapacityError, type QrMatrix } from './types.js';
+import { MODULE, QrCapacityError, type QrInput, type QrMatrix, type QrSegment } from './types.js';
 
 export type { RmqrLevel, RmqrVersion };
 export { RMQR_SPECS, RMQR_VERSIONS };
 
-/** Mode indicators, §7.4.1. Three bits, unlike QR's four. */
+/**
+ * Mode indicators, §7.4.1. Three bits, unlike QR's four, and offset by one:
+ * zero is the terminator, so numeric starts at 1.
+ */
 export const RMQR_MODE_INDICATOR = { numeric: 1, alphanumeric: 2, byte: 3, kanji: 4 } as const;
 export type RmqrMode = keyof typeof RMQR_MODE_INDICATOR;
+
+/**
+ * Header cost model for an rMQR size, shared with the optimiser, the bit
+ * writer and the decoder.
+ *
+ * All four modes are available at every size — unlike Micro QR — but the
+ * count-field widths vary, so the cheapest segmentation of a string is not the
+ * same at R7x43 as at R17x139.
+ */
+export const rmqrModel = (version: RmqrVersion): SymbologyModel => ({
+  modeBits: 3,
+  indicator: (mode) => RMQR_MODE_INDICATOR[mode as RmqrMode],
+  countBits: (mode) => RMQR_SPECS[version].countBits[mode as RmqrMode] ?? null,
+});
 
 /**
  * The single mask pattern, §7.8.
@@ -326,25 +346,50 @@ export interface RmqrEncodeOptions {
    * ones. `'area'` minimises total modules regardless of shape.
    */
   fit?: 'width' | 'height' | 'area';
+  /**
+   * Allow Kanji mode when it would produce a smaller symbol. Requires a
+   * registered Shift-JIS table (`import 'teiqr/kanji'`); without one this is
+   * ignored, exactly as it is for full QR.
+   */
+  kanji?: boolean;
 }
 
-const detectMode = (text: string): RmqrMode => {
-  if (/^[0-9]*$/.test(text)) return 'numeric';
-  if ([...text].every((c) => ALPHANUMERIC_CHARSET.includes(c))) return 'alphanumeric';
-  return 'byte';
-};
+interface RmqrPlan {
+  readonly segments: readonly QrSegment[];
+  readonly bits: number;
+}
 
-/** Bits the payload needs at a given version, including headers. */
-const requiredBits = (text: string, mode: RmqrMode, version: RmqrVersion): number => {
+/**
+ * Plan the payload for one size.
+ *
+ * Count-field widths differ between sizes, so this is memoised on those widths
+ * rather than on the version: the 32 sizes share far fewer distinct width
+ * tuples than that, and the version search asks about all of them.
+ */
+const planFor = (
+  input: QrInput,
+  version: RmqrVersion,
+  allowKanji: boolean,
+  cache: Map<string, RmqrPlan>,
+): RmqrPlan => {
   const spec = RMQR_SPECS[version];
-  const countBits = spec.countBits[mode];
-  const segment =
-    mode === 'numeric'
-      ? makeNumericSegment(text)
-      : mode === 'alphanumeric'
-        ? makeAlphanumericSegment(text)
-        : makeByteSegment(new TextEncoder().encode(text));
-  return 3 + countBits + segment.bits.length;
+  const model = rmqrModel(version);
+
+  // Raw bytes and hand-built segments are not optimised, only priced.
+  if (typeof input !== 'string') {
+    const segments = input instanceof Uint8Array ? [makeByteSegment(input)] : input;
+    return { segments, bits: segmentBits(segments, model) };
+  }
+
+  const { numeric, alphanumeric, byte, kanji } = spec.countBits;
+  const key = `${numeric}.${alphanumeric}.${byte}.${kanji}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+
+  const plan = planSegmentsWith(input, model, allowKanji);
+  const result: RmqrPlan = { segments: buildSegments(plan), bits: planBitsWith(plan, model) };
+  cache.set(key, result);
+  return result;
 };
 
 /**
@@ -354,15 +399,14 @@ const requiredBits = (text: string, mode: RmqrMode, version: RmqrVersion): numbe
  * @example encodeRmqr('SERIAL-4417', { ecc: 'H', fit: 'width' })
  * @example encodeRmqr('12345', { version: 'R7x43' })
  */
-export const encodeRmqr = (text: string, options: RmqrEncodeOptions = {}): QrMatrix => {
-  const { ecc = 'M', version: forced, fit = 'width' } = options;
-  const mode = detectMode(text);
+export const encodeRmqr = (input: QrInput, options: RmqrEncodeOptions = {}): QrMatrix => {
+  const { ecc = 'M', version: forced, fit = 'width', kanji = false } = options;
+  const cache = new Map<string, RmqrPlan>();
+  const planned = (v: RmqrVersion): RmqrPlan => planFor(input, v, kanji, cache);
 
   let chosen: RmqrVersion | undefined = forced;
   if (!chosen) {
-    const candidates = RMQR_VERSIONS.filter(
-      (v) => requiredBits(text, mode, v) <= RMQR_SPECS[v].dataBits[ecc],
-    );
+    const candidates = RMQR_VERSIONS.filter((v) => planned(v).bits <= RMQR_SPECS[v].dataBits[ecc]);
     if (candidates.length > 0) {
       const score = (v: RmqrVersion): number => {
         const spec = RMQR_SPECS[v];
@@ -378,16 +422,12 @@ export const encodeRmqr = (text: string, options: RmqrEncodeOptions = {}): QrMat
 
   if (!chosen) {
     const largest = RMQR_VERSIONS[RMQR_VERSIONS.length - 1];
-    throw new QrCapacityError(
-      requiredBits(text, mode, largest),
-      RMQR_SPECS[largest].dataBits[ecc],
-      0,
-    );
+    throw new QrCapacityError(planned(largest).bits, RMQR_SPECS[largest].dataBits[ecc], 0);
   }
 
   const spec = RMQR_SPECS[chosen];
   const capacity = spec.dataBits[ecc];
-  const needed = requiredBits(text, mode, chosen);
+  const { segments, bits: needed } = planned(chosen);
   if (needed > capacity) throw new QrCapacityError(needed, capacity, 0);
 
   // --- data codewords -----------------------------------------------------
@@ -395,15 +435,7 @@ export const encodeRmqr = (text: string, options: RmqrEncodeOptions = {}): QrMat
   const dataCodewords = groups.reduce((total, g) => total + g.num * g.k, 0);
 
   const w = new BitWriter(dataCodewords);
-  w.pushBits(RMQR_MODE_INDICATOR[mode], 3);
-  const segment =
-    mode === 'numeric'
-      ? makeNumericSegment(text)
-      : mode === 'alphanumeric'
-        ? makeAlphanumericSegment(text)
-        : makeByteSegment(new TextEncoder().encode(text));
-  w.pushBits(segment.charCount, spec.countBits[mode]);
-  w.pushArray(segment.bits);
+  writeSegments(w, segments, rmqrModel(chosen));
 
   // Terminator of up to three bits, then pad to the codeword boundary and fill
   // with the same alternating pad codewords QR uses.

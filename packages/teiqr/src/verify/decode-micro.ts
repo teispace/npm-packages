@@ -29,8 +29,8 @@ import {
   microLayout,
   microModeBits,
 } from '../core/micro.js';
-import { ALPHANUMERIC_CHARSET } from '../core/segment.js';
 import { type EccLevel, MODULE, type QrMatrix } from '../core/types.js';
+import { BitReader, type DecodedSegment, joinSegments, readPayload } from './bitstream.js';
 import { correct, UncorrectableError } from './reed-solomon.js';
 
 /** Reverse of {@link MICRO_MODE_INDICATOR}. */
@@ -58,7 +58,13 @@ export interface MicroDecodeResult {
   readonly version: MicroVersion;
   readonly ecc: EccLevel;
   readonly mask: number;
+  /**
+   * Mode of the first segment. Kept for callers that predate multi-segment
+   * support; {@link segments} is the complete answer.
+   */
   readonly mode: MicroMode;
+  /** Every run of characters the symbol carries, in order. */
+  readonly segments: DecodedSegment[];
   /** Codewords Reed-Solomon repaired. Always 0 for M1, which cannot correct. */
   readonly corrected: number;
 }
@@ -106,82 +112,48 @@ export const readMicroFormat = (
   return { symbolNumber: bestSymbol, mask: bestMask };
 };
 
-/** Read the payload out of the recovered data codewords. */
-const readSegment = (
+/**
+ * Read the segments out of the recovered data codewords.
+ *
+ * Terminator detection is the subtle part. Micro QR does not reserve an
+ * indicator value for the terminator the way rMQR does — indicator 0 *is*
+ * numeric mode. What the standard defines instead is a run of zero bits as
+ * wide as a mode indicator plus a numeric character count (3 bits in M1,
+ * rising to 9 in M4), which reads back as a numeric segment of zero
+ * characters. Treating that as the terminator is therefore exact rather than a
+ * heuristic: a zero-character segment contributes nothing either way.
+ *
+ * M1 needs no special case here. Its mode indicator is zero bits wide, so the
+ * loop reads mode 0 — numeric, the only mode M1 has — and then stops at the
+ * first zero count, which is the padding.
+ */
+const readSegments = (
   data: Uint8Array,
   version: MicroVersion,
   capacity: number,
-): { text: string; bytes: Uint8Array; mode: MicroMode } => {
-  let pos = 0;
-  const read = (width: number): number => {
-    if (width === 0) return 0;
-    if (pos + width > capacity) throw new UncorrectableError('Micro QR bitstream exhausted');
-    let value = 0;
-    for (let i = 0; i < width; i++) {
-      value = (value << 1) | ((data[pos >>> 3] >>> (7 - (pos & 7))) & 1);
-      pos++;
-    }
-    return value;
-  };
-
+): DecodedSegment[] => {
+  const reader = new BitReader(data, capacity);
   const modeBits = microModeBits(version);
-  // M1 has a zero-width mode indicator: it is numeric-only by definition.
-  const mode = modeBits === 0 ? 'numeric' : MODE_BY_INDICATOR[read(modeBits)];
-  if (!mode) throw new UncorrectableError('Unknown Micro QR mode indicator');
+  const segments: DecodedSegment[] = [];
 
-  const countBits = MICRO_COUNT_BITS[mode][version];
-  if (countBits === undefined) {
-    throw new UncorrectableError(`Micro QR ${version} cannot carry ${mode} data`);
-  }
-  const count = read(countBits);
+  while (reader.remaining >= modeBits) {
+    const mode = MODE_BY_INDICATOR[reader.read(modeBits)];
+    if (!mode) throw new UncorrectableError('Unknown Micro QR mode indicator');
 
-  const encoder = new TextEncoder();
-  if (mode === 'numeric') {
-    let text = '';
-    let left = count;
-    while (left >= 3) {
-      text += String(read(10)).padStart(3, '0');
-      left -= 3;
+    const countBits = MICRO_COUNT_BITS[mode][version];
+    if (countBits === undefined) {
+      throw new UncorrectableError(`Micro QR ${version} cannot carry ${mode} data`);
     }
-    if (left === 2) text += String(read(7)).padStart(2, '0');
-    else if (left === 1) text += String(read(4));
-    return { text, bytes: encoder.encode(text), mode };
+    // Too little left for a count field means what remains is padding.
+    if (reader.remaining < countBits) break;
+
+    const count = reader.read(countBits);
+    if (count === 0 && mode === 'numeric') break;
+
+    segments.push({ mode, ...readPayload(reader, mode, count) });
   }
 
-  if (mode === 'alphanumeric') {
-    let text = '';
-    let left = count;
-    while (left >= 2) {
-      const pair = read(11);
-      text += ALPHANUMERIC_CHARSET[Math.floor(pair / 45)] + ALPHANUMERIC_CHARSET[pair % 45];
-      left -= 2;
-    }
-    if (left === 1) text += ALPHANUMERIC_CHARSET[read(6)];
-    return { text, bytes: encoder.encode(text), mode };
-  }
-
-  if (mode === 'byte') {
-    const bytes = new Uint8Array(count);
-    for (let i = 0; i < count; i++) bytes[i] = read(8);
-    return { text: new TextDecoder('utf-8').decode(bytes), bytes, mode };
-  }
-
-  // Kanji: 13 bits per character, rebased into one of two Shift-JIS ranges.
-  const bytes: number[] = [];
-  for (let i = 0; i < count; i++) {
-    const packed = read(13);
-    const combined = Math.floor(packed / 0xc0) * 0x100 + (packed % 0xc0);
-    const sjis = combined + (combined < 0x1f00 ? 0x8140 : 0xc140);
-    bytes.push(sjis >>> 8, sjis & 0xff);
-  }
-  const raw = Uint8Array.from(bytes);
-  let text = '';
-  try {
-    text = new TextDecoder('shift_jis').decode(raw);
-  } catch {
-    // Not every runtime ships the Shift-JIS decoder; the bytes are still exact.
-  }
-  return { text, bytes: raw, mode };
+  return segments;
 };
 
 /**
@@ -268,6 +240,9 @@ export const decodeMicroMatrix = (
     dataBytes.set(block.subarray(0, dataBytes.length));
   }
 
-  const { text, bytes, mode } = readSegment(dataBytes, version, capacity);
-  return { text, bytes, version, ecc, mask, mode, corrected };
+  const segments = readSegments(dataBytes, version, capacity);
+  const { text, bytes } = joinSegments(segments);
+  // An empty symbol still has to name a mode; numeric is the only one M1 has.
+  const mode = (segments[0]?.mode ?? 'numeric') as MicroMode;
+  return { text, bytes, version, ecc, mask, mode, segments, corrected };
 };

@@ -27,9 +27,9 @@ scan(pngBytes).text;                              // → 'https://example.com'
 
 One MIT-licensed package covering the whole job, with no runtime dependencies:
 
-- **Encode** QR (versions 1-40), Micro QR (M1-M4) and rMQR (32 rectangular sizes). Full QR
-  additionally does optimal multi-mode segmentation, ECI, Kanji, binary payloads and
-  Structured Append; the two compact symbologies encode a single mode per symbol.
+- **Encode** QR (versions 1-40), Micro QR (M1-M4) and rMQR (32 rectangular sizes), all three
+  with optimal multi-mode segmentation, Kanji and binary payloads. Full QR additionally does
+  ECI and Structured Append, which the compact symbologies do not define.
 - **Style** with 10 module shapes, 6 eye frames, 5 eye balls, gradients, logos and frames.
 - **Validate** whether a code will actually scan — contrast, quiet zone, shape risk, print
   size, and exactly how much of the error correction budget a logo consumes.
@@ -118,11 +118,15 @@ encode('https://example.com', {
 });
 ```
 
-**Optimal segmentation is automatic.** Mode switching costs a 4-bit indicator plus a count
+**Optimal segmentation is automatic.** Mode switching costs a mode indicator plus a count
 field, so the cheapest encoding of a string is rarely one mode throughout. `teiqr` runs a
 Viterbi pass over numeric, alphanumeric, byte and Kanji modes in exact sixth-of-a-bit
 arithmetic, so `https://example.com/order/1234567890` encodes as byte + numeric rather than
 all-byte. This routinely saves a whole version.
+
+The same pass drives Micro QR and rMQR, priced against their own narrower headers and
+against the modes each version actually offers — so it is one verified optimiser, not three
+approximations of one.
 
 **`boostEcc` is free redundancy.** The chosen version usually has slack left over; spending it
 on stronger error correction costs no extra modules:
@@ -369,7 +373,8 @@ decodeMatrix(encodeRmqr('HELLO')).text;    // 'HELLO'
 ```
 
 `decodeMicroMatrix` and `decodeRmqrMatrix` are also exported directly when you want the
-symbology-specific result, which carries the version label (`'M3'`, `'R13x99'`) and the mode.
+symbology-specific result, which carries the version label (`'M3'`, `'R13x99'`) and the
+segments the symbol was built from.
 
 ```ts
 tryScan(frame);            // → ScanResult | null, for camera loops where most frames are empty
@@ -614,7 +619,8 @@ qr('こんにちは世界', { kanji: true }).svg();  // smaller symbol than byte
 ```
 
 Characters with no Shift-JIS mapping (emoji, for instance) fall back to byte mode
-automatically, without breaking the surrounding Kanji run.
+automatically, without breaking the surrounding Kanji run. `encodeMicro` and `encodeRmqr`
+take the same `kanji` option; Micro QR offers the mode in M3 and M4 only.
 
 **ECI** declares the charset of what follows. Most scanners already sniff UTF-8 successfully,
 and some older readers reject symbols carrying an ECI header, so `teiqr` never emits one
@@ -646,7 +652,15 @@ import { encodeMicro } from 'teiqr/core';
 encodeMicro('12345');                          // M1, 11x11
 encodeMicro('HELLO', { ecc: 'M' });            // M2 or larger
 encodeMicro('hello', { version: 'M4' });       // byte mode needs M3+
+encodeMicro('abc123XYZ');                      // byte + alphanumeric, not all bytes
+encodeMicro('漢字', { kanji: true });           // 13 bits a character, not 24
+encodeMicro(new Uint8Array([0xde, 0xad]));     // raw binary
 ```
+
+Text is segmented across modes the same way a full QR symbol is, bounded by what each
+version offers: M1 is numeric-only and M2 has no byte mode, so a payload those cannot
+describe grows to the next size rather than failing. Kanji needs a registered Shift-JIS
+table (`import 'teiqr/kanji'`) and is available in M3 and M4.
 
 The result is an ordinary `QrMatrix` tagged `variant: 'micro'`, so it renders,
 rasterises and exports through everything else unchanged.
@@ -668,11 +682,16 @@ that, use a full QR symbol.
 > A single wrong table value produces a symbol that round-trips through our own
 > decoder perfectly and is rejected by every real scanner. So every version,
 > level and mask is compared **module-for-module against an independent
-> ISO-conformant implementation** — 420 fixtures, checked on every test run. That caught two real bugs during development: QR's column-direction
+> ISO-conformant implementation** — 612 fixtures, checked on every test run. That caught two real bugs during development: QR's column-direction
 > expression, whose arithmetic only holds for QR's 4v+17 sizes, and padding M1
 > and M3 with `0xEC`/`0x11` where the standard requires zeros.
 >
-> Decoding is implemented too, and verified the same way: the decoder reads all 420 of those
+> Each fixture pins its segmentation explicitly, including mixed-mode and Kanji runs. Two
+> encoders can both be correct and still split a string differently, so comparing module
+> matrices only means something when both are given the same segments; our own mode
+> *selection* is asserted separately, as never being larger than any single-mode encoding.
+>
+> Decoding is implemented too, and verified the same way: the decoder reads all 612 of those
 > independently-produced symbols back to their exact payloads. Round-tripping our own encoder would only prove the
 > two halves agree with each other.
 >
@@ -694,7 +713,13 @@ encodeRmqr('SERIAL-4417');                        // flattest symbol that fits
 encodeRmqr('https://example.com', { ecc: 'H' });
 encodeRmqr('12345', { version: 'R7x43' });        // pin an exact size
 encodeRmqr('long payload', { fit: 'area' });      // minimise modules instead of height
+encodeRmqr('漢字', { kanji: true });               // 13 bits a character, not 24
+encodeRmqr(new Uint8Array([0xde, 0xad]));         // raw binary
 ```
+
+All four modes are available at every size, and text is segmented across them optimally. The
+count-field widths differ between sizes, so the cheapest split of a string at `R7x43` is not
+always the cheapest at `R17x139` — the encoder re-plans per size rather than choosing once.
 
 `fit` defaults to `'width'`, which picks the flattest symbol that fits — usually the point of
 reaching for rMQR. `'height'` prefers tall and narrow; `'area'` just minimises total modules.
@@ -707,9 +732,10 @@ Structurally it matches neither predecessor: a 7x7 finder top-left and a 5x5 *su
 bottom-right, corner patterns at the other two corners, alignment patterns along both long
 edges, **one** mask pattern rather than eight, and error correction at M or H only.
 
-> **How this is verified, and two bugs it found in the reference.** Every version is compared
-> module-for-module against an independent implementation — 224 fixtures. Where the reference is correct, we match it
-> exactly. Two categories are excluded because it is wrong there, not us:
+> **How this is verified, and three bugs it found in the reference.** Every version is compared
+> module-for-module against an independent implementation — 507 fixtures, each pinning its
+> segmentation so both encoders write the same runs. Where the reference is correct, we match it
+> exactly. Three categories are excluded because it is wrong there, not us:
 >
 > - **Mixed block sizes.** Its interleaver uses `break` where the standard skips an exhausted
 >   block and continues, so it silently drops data codewords — one of 73 for R13x99-M, four of
@@ -719,10 +745,15 @@ edges, **one** mask pattern rather than eight, and error correction at M or H on
 >   The H blocks sum to 61, the module count gives 61x8 + 1 = 489, and 60 - 39 = 21 error
 >   correction codewords has no generator polynomial in its own table — which is why it raises
 >   `KeyError: 21` on that version. We use 61, giving 22.
+> - **R13x27-M.** Its table lists 14 data codewords against its own stated 96 data bits, which
+>   is 12. Every other entry in that table has data codewords x 8 equal to its data bits, and
+>   the two other 21-codeword sizes both split M as 12 data and 9 error correction while
+>   agreeing with R13x27 exactly at H. We use 12. A test now asserts that invariant across all
+>   32 sizes and both levels, which is what surfaced this one.
 >
-> Decoding is implemented too, and reads all 224 of the reference's own symbols correctly. A
+> Decoding is implemented too, and reads all 507 of the reference's own symbols correctly. A
 > test covers the mixed-block-size versions specifically, since that is where the reference
-> loses data, along with R17x43-M, which it cannot produce at all.
+> loses data, along with the two sizes whose tables we correct.
 
 ---
 
@@ -964,36 +995,42 @@ const { svg } = renderSvg(encode(url), { moduleShape: 'rounded' });
 
 ## Entry points and bundle size
 
-Import the whole toolkit, or exactly the part you need. Measured with esbuild, minified, gzipped:
+Import the whole toolkit, or exactly the part you need. Measured with esbuild, minified and
+gzipped, by `scripts/measure-bundles.mjs` — run it yourself after `yarn build`:
 
 | Entry             | Gzipped | What it is                                |
 | ----------------- | ------: | ----------------------------------------- |
-| `teiqr`           | 32.7 kB | everything                                |
-| `teiqr/core`      |  6.8 kB | encoding only                             |
-| `teiqr/render`    |  4.3 kB | scene + SVG                               |
-| `teiqr/validate`  |  4.5 kB | scannability analysis                     |
-| `teiqr/payload`   |  7.8 kB | 32 typed builders + parsers               |
-| `teiqr/export`    | 20.2 kB | PDF, EPS, ZIP, CSV batch                  |
-| `teiqr/raster`    |  8.9 kB | DEFLATE + PNG + rasteriser                |
-| `teiqr/verify`    |  8.6 kB | decoder + scanner                         |
+| `teiqr`           | 40.2 kB | everything                                |
+| `teiqr/core`      | 11.6 kB | encoding, all three symbologies           |
+| `teiqr/render`    |  4.5 kB | scene + SVG                               |
+| `teiqr/validate`  |  4.6 kB | scannability analysis                     |
+| `teiqr/payload`   |  8.0 kB | 32 typed builders + parsers               |
+| `teiqr/export`    | 20.8 kB | PDF, EPS, ZIP, CSV batch                  |
+| `teiqr/raster`    |  9.2 kB | DEFLATE + PNG + rasteriser                |
+| `teiqr/verify`    | 13.2 kB | decoder + scanner, all three symbologies  |
 | `teiqr/terminal`  |  0.4 kB | text output                               |
-| `teiqr/kanji`     | 10.5 kB | Shift-JIS table (opt-in)                  |
-| `teiqr/react`     | 19.2 kB | components + hooks (`react` external)     |
+| `teiqr/kanji`     | 10.8 kB | Shift-JIS table (opt-in)                  |
+| `teiqr/react`     | 24.5 kB | components + hooks (`react` external)     |
 
-Individual functions tree-shake further, and this is measured rather than assumed — bundling a
-single import and grepping the output for unrelated code:
+`core` and `verify` carry the rMQR tables — 32 fixed sizes with no closed form, so they have
+to be listed. Importing `encode` alone is 5.5 kB, because a symbol you never build is a symbol
+the bundler drops.
+
+Individual functions tree-shake further, and this is measured rather than assumed — the same
+script bundles a single import and greps the output for markers that appear only in code it
+should have excluded:
 
 | Import | Gzipped | Unrelated code pulled in |
 | --- | ---: | --- |
-| `encode` | 5.2 kB | none |
-| `toPng` | 8.8 kB | none |
-| `scan` | 7.9 kB | none |
+| `encode` | 5.5 kB | none |
+| `toPng` | 9.1 kB | none |
+| `scan` | 12.4 kB | none |
 | `toTerminal` | 0.4 kB | none |
-| `parsePayload` | 7.3 kB | none |
-| `<QrCode>` | 9.0 kB | none — the camera scanner is not included |
-| `useQrScanner` | 8.9 kB | none — the renderer is not included |
+| `parsePayload` | 7.5 kB | none |
+| `<QrCode>` | 9.5 kB | none — the camera scanner is not included |
+| `useQrScanner` | 13.5 kB | none — the renderer is not included |
 
-Importing `toTerminal` costs 0.4 kB out of a 32.7 kB whole.
+Importing `toTerminal` costs 0.4 kB out of a 40.2 kB whole.
 
 Both ESM and CJS are published, with bundled `.d.ts` for each entry point.
 

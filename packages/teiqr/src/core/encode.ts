@@ -8,13 +8,13 @@ import { buildMatrix } from './matrix.js';
 import {
   buildSegments,
   countBits,
-  isCountlessMode,
   makeByteSegment,
   makeEciSegment,
-  modeIndicator,
   planBits,
   planSegments,
+  qrModel,
   totalBits,
+  writeSegments,
 } from './segment.js';
 import {
   type EccLevel,
@@ -100,11 +100,7 @@ const buildDataCodewords = (
   const capacity = capacityBits(version, ecc);
   const w = new BitWriter(capacity >>> 3);
 
-  for (const seg of segments) {
-    w.pushBits(modeIndicator(seg.mode), 4);
-    if (!isCountlessMode(seg.mode)) w.pushBits(seg.charCount, countBits(seg.mode, version));
-    w.pushArray(seg.bits);
-  }
+  writeSegments(w, segments, qrModel(version));
 
   if (w.length > capacity) {
     throw new QrCapacityError(w.length, capacity, version);

@@ -36,6 +36,7 @@ export {
   microDataBits,
   microFormatBits,
   microModeBits,
+  microModel,
   microSize,
   microVersionOf,
 } from './core/micro.js';
@@ -48,6 +49,7 @@ export {
   type RmqrVersion,
   rmqrFormatBits,
   rmqrMask,
+  rmqrModel,
   rmqrVersionOf,
 } from './core/rmqr.js';
 export type { RmqrBlockGroup, RmqrVersionSpec } from './core/rmqr-tables.js';
@@ -67,9 +69,15 @@ export {
   modeIndicator,
   type Plan,
   planBits,
+  planBitsWith,
   planSegments,
+  planSegmentsWith,
+  qrModel,
   type SegmentPlan,
+  type SymbologyModel,
+  segmentBits,
   totalBits,
+  writeSegments,
 } from './core/segment.js';
 export {
   encodeStructured,

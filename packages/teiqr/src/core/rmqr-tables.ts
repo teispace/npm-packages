@@ -111,16 +111,38 @@ export const RMQR_LEVELS = ['M', 'H'] as const;
 export type RmqrLevel = (typeof RMQR_LEVELS)[number];
 
 /**
- * One correction to the reference data this was checked against.
+ * Two corrections to the reference data this was checked against.
  *
- * `rmqrcode` lists R17x43-M as a single block of 60 codewords, but the same
- * version's total is 61 and its H blocks sum to exactly 61. Every other one of
- * the 32 versions has blocks summing to its own total, and the module count
- * settles it: R17x43 has 61*8 + 1 remainder = 489 data modules, so M must
- * carry 61 codewords or nine modules would be left unfilled where the standard
- * allows one. The value here is 61, giving 22 error correction codewords.
+ * **R17x43-M.** `rmqrcode` lists it as a single block of 60 codewords, but the
+ * same version's total is 61 and its H blocks sum to exactly 61. Every other
+ * one of the 32 versions has blocks summing to its own total, and the module
+ * count settles it: R17x43 has 61*8 + 1 remainder = 489 data modules, so M
+ * must carry 61 codewords or nine modules would be left unfilled where the
+ * standard allows one. The value here is 61, giving 22 error correction
+ * codewords.
  *
- * R17x43-M is therefore excluded from the conformance fixtures — our output is
+ * **R13x27-M.** `rmqrcode` lists 14 data codewords against its own
+ * `number_of_data_bits` of 96, which is 12 codewords. One of the two is a
+ * transcription error, and four signals point the same way:
+ *
+ * 1. Every other version and level in that table has `k * 8` equal to its
+ *    stated data bits. R13x27-M is the only exception.
+ * 2. The two other versions with a 21-codeword total — R7x59 and R9x43 — both
+ *    split M as 12 data and 9 error correction, and their data bits are 96.
+ * 3. All three of those versions agree exactly at level H (7 data, 14 error
+ *    correction), so an M level that diverged would be the odd one out twice.
+ * 4. 7 error correction codewords would give R13x27-M the weakest correction
+ *    ratio of any M symbol in the standard, 3 of 21 against a table that
+ *    otherwise runs 17-19% for comparable sizes; 9 gives 4 of 21, in line
+ *    with the identically-sized versions.
+ *
+ * The value here is therefore 12 data codewords, giving 9 for error
+ * correction. It is an inference from the table's own internal consistency
+ * rather than a reading of the ISO text, but a symbol built the other way
+ * would carry two codewords of padding inside its data block and be
+ * deinterleaved differently by any decoder using the corrected structure.
+ *
+ * Both versions are excluded from the conformance fixtures — our output is
  * deliberately not the reference's there.
  */
 // biome-ignore format: one row per version keeps this table readable against the standard
@@ -205,10 +227,11 @@ export const RMQR_SPECS: Readonly<Record<RmqrVersion, RmqrVersionSpec>> = {
     codewordsTotal: 132,
     blocks: { M: [{ num: 2, c: 66, k: 42 }], H: [{ num: 3, c: 44, k: 14 }] },
     dataBits: { M: 672, H: 336 } },
+  // R13x27-M: k corrected from 14 to 12; see the note above RMQR_SPECS.
   'R13x27': { indicator: 16, height: 13, width: 27, remainder: 4,
     countBits: { numeric: 5, alphanumeric: 5, byte: 4, kanji: 3 },
     codewordsTotal: 21,
-    blocks: { M: [{ num: 1, c: 21, k: 14 }], H: [{ num: 1, c: 21, k: 7 }] },
+    blocks: { M: [{ num: 1, c: 21, k: 12 }], H: [{ num: 1, c: 21, k: 7 }] },
     dataBits: { M: 96, H: 56 } },
   'R13x43': { indicator: 17, height: 13, width: 43, remainder: 1,
     countBits: { numeric: 6, alphanumeric: 6, byte: 5, kanji: 5 },

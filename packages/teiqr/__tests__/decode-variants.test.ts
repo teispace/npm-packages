@@ -33,7 +33,7 @@ describe('Micro QR decoding', () => {
   // The decisive test. Round-tripping our own encoder would only prove the two
   // halves agree with each other; these are symbols an independent
   // implementation produced, so reading them proves we read the real format.
-  it('reads every symbol segno produced, all 420 of them', () => {
+  it('reads every symbol segno produced, multi-segment and Kanji included', () => {
     const failures: string[] = [];
     for (const fixture of microFixtures.cases) {
       const { modules, width } = fromRows(fixture.rows);
@@ -54,7 +54,7 @@ describe('Micro QR decoding', () => {
       }
     }
     expect(failures).toEqual([]);
-    expect(microFixtures.cases.length).toBeGreaterThan(400);
+    expect(microFixtures.cases.length).toBeGreaterThan(600);
   });
 
   it('round trips our own encoder across every version and level', () => {
@@ -140,7 +140,7 @@ describe('rMQR decoding', () => {
       }
     }
     expect(failures).toEqual([]);
-    expect(rmqrFixtures.cases.length).toBeGreaterThan(200);
+    expect(rmqrFixtures.cases.length).toBeGreaterThan(400);
   });
 
   it('round trips our own encoder across all 32 sizes and both levels', () => {

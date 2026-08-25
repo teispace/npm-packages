@@ -20,8 +20,10 @@ export default defineConfig({
     // layers landed together. Those added roughly 2,500 lines, a slice of
     // which is genuinely hard to reach from Node — the canvas paths in
     // <QrCanvas>, the createImageBitmap fallbacks, and error branches that
-    // need a failing filesystem. Current: 88.8 lines / 75.2 branches /
-    // 91.8 functions / 86.9 statements.
-    coverage: withThresholds({ lines: 88, branches: 74, functions: 91, statements: 86 }),
+    // need a failing filesystem. Raised again when Micro QR and rMQR gained
+    // multi-segment and Kanji encoding, which replaced three copies of the
+    // segment reader with one. Current: 89.7 lines / 76.3 branches /
+    // 92.4 functions / 87.9 statements.
+    coverage: withThresholds({ lines: 89, branches: 76, functions: 92, statements: 87 }),
   },
 });

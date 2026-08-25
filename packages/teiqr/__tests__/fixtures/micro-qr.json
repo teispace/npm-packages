@@ -1,8 +1,10 @@
 {
-  "_source": "Generated with segno 1.6.6, an independent ISO/IEC 18004-conformant implementation, via scripts/generate-micro-fixtures.py. Each entry is the exact module matrix segno produces for that version, level and mask.",
-  "_excluded": "Payload '1234' is deliberately absent. segno adds a spurious zero byte when the bit stream is already byte-aligned after the terminator (write_padding_bits uses 8 - length % 8 rather than (8 - length % 8) % 8), which also affects its full-QR output. ISO/IEC 18004 7.4.10 adds padding bits only when the stream does not end at a codeword boundary.",
+  "_source": "Generated with segno 1.6.6, an independent ISO/IEC 18004-conformant implementation, via the recipe in __tests__/fixtures/README.md. Each entry is the exact module matrix segno produces for that segmentation, version, level and mask.",
+  "_segments": "Every case pins its segmentation explicitly. Two encoders can both be correct and still split a string differently across modes, so comparing module matrices only means something when both are given the same segments. Our own mode selection is checked separately, by asserting it is never larger than a single-mode encoding.",
+  "_excluded": "Cases whose bit stream is already byte-aligned after the terminator are absent. segno adds a spurious zero byte there - write_padding_bits uses 8 - length % 8 rather than (8 - length % 8) % 8 - which also affects its full-QR output. ISO/IEC 18004 7.4.10, quoted in segno's own docstring for that function, adds padding bits only when the stream does not end at a codeword boundary. Detected with segno's own primitives rather than a hardcoded list; our encoder covers the same path with a round trip instead. Skipped: alphanumeric[HELLO]+numeric[123] M4-L; alphanumeric[HELLO]+numeric[123] M4-M; alphanumeric[HELLO]+numeric[123] M4-Q; numeric[12]+alphanumeric[AB] M2-L",
   "cases": [
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M1",
       "ecc": "L",
@@ -22,6 +24,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M1",
       "ecc": "L",
@@ -41,6 +44,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M1",
       "ecc": "L",
@@ -60,6 +64,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M1",
       "ecc": "L",
@@ -79,6 +84,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M2",
       "ecc": "L",
@@ -100,6 +106,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M2",
       "ecc": "L",
@@ -121,6 +128,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M2",
       "ecc": "L",
@@ -142,6 +150,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M2",
       "ecc": "L",
@@ -163,6 +172,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M2",
       "ecc": "M",
@@ -184,6 +194,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M2",
       "ecc": "M",
@@ -205,6 +216,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M2",
       "ecc": "M",
@@ -226,6 +238,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M2",
       "ecc": "M",
@@ -247,6 +260,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M3",
       "ecc": "L",
@@ -270,6 +284,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M3",
       "ecc": "L",
@@ -293,6 +308,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M3",
       "ecc": "L",
@@ -316,6 +332,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M3",
       "ecc": "L",
@@ -339,6 +356,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M3",
       "ecc": "M",
@@ -362,6 +380,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M3",
       "ecc": "M",
@@ -385,6 +404,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M3",
       "ecc": "M",
@@ -408,6 +428,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M3",
       "ecc": "M",
@@ -431,6 +452,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M4",
       "ecc": "L",
@@ -456,6 +478,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M4",
       "ecc": "L",
@@ -481,6 +504,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M4",
       "ecc": "L",
@@ -506,6 +530,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M4",
       "ecc": "L",
@@ -531,6 +556,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M4",
       "ecc": "M",
@@ -556,6 +582,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M4",
       "ecc": "M",
@@ -581,6 +608,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M4",
       "ecc": "M",
@@ -606,6 +634,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M4",
       "ecc": "M",
@@ -631,6 +660,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M4",
       "ecc": "Q",
@@ -656,6 +686,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M4",
       "ecc": "Q",
@@ -681,6 +712,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M4",
       "ecc": "Q",
@@ -706,6 +738,7 @@
       ]
     },
     {
+      "segments": [["1", "numeric"]],
       "text": "1",
       "version": "M4",
       "ecc": "Q",
@@ -731,6 +764,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M1",
       "ecc": "L",
@@ -750,6 +784,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M1",
       "ecc": "L",
@@ -769,6 +804,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M1",
       "ecc": "L",
@@ -788,6 +824,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M1",
       "ecc": "L",
@@ -807,6 +844,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M2",
       "ecc": "L",
@@ -828,6 +866,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M2",
       "ecc": "L",
@@ -849,6 +888,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M2",
       "ecc": "L",
@@ -870,6 +910,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M2",
       "ecc": "L",
@@ -891,6 +932,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M2",
       "ecc": "M",
@@ -912,6 +954,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M2",
       "ecc": "M",
@@ -933,6 +976,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M2",
       "ecc": "M",
@@ -954,6 +998,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M2",
       "ecc": "M",
@@ -975,6 +1020,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M3",
       "ecc": "L",
@@ -998,6 +1044,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M3",
       "ecc": "L",
@@ -1021,6 +1068,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M3",
       "ecc": "L",
@@ -1044,6 +1092,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M3",
       "ecc": "L",
@@ -1067,6 +1116,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M3",
       "ecc": "M",
@@ -1090,6 +1140,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M3",
       "ecc": "M",
@@ -1113,6 +1164,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M3",
       "ecc": "M",
@@ -1136,6 +1188,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M3",
       "ecc": "M",
@@ -1159,6 +1212,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M4",
       "ecc": "L",
@@ -1184,6 +1238,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M4",
       "ecc": "L",
@@ -1209,6 +1264,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M4",
       "ecc": "L",
@@ -1234,6 +1290,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M4",
       "ecc": "L",
@@ -1259,6 +1316,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M4",
       "ecc": "M",
@@ -1284,6 +1342,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M4",
       "ecc": "M",
@@ -1309,6 +1368,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M4",
       "ecc": "M",
@@ -1334,6 +1394,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M4",
       "ecc": "M",
@@ -1359,6 +1420,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M4",
       "ecc": "Q",
@@ -1384,6 +1446,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M4",
       "ecc": "Q",
@@ -1409,6 +1472,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M4",
       "ecc": "Q",
@@ -1434,6 +1498,7 @@
       ]
     },
     {
+      "segments": [["12", "numeric"]],
       "text": "12",
       "version": "M4",
       "ecc": "Q",
@@ -1459,6 +1524,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M1",
       "ecc": "L",
@@ -1478,6 +1544,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M1",
       "ecc": "L",
@@ -1497,6 +1564,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M1",
       "ecc": "L",
@@ -1516,6 +1584,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M1",
       "ecc": "L",
@@ -1535,6 +1604,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M2",
       "ecc": "L",
@@ -1556,6 +1626,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M2",
       "ecc": "L",
@@ -1577,6 +1648,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M2",
       "ecc": "L",
@@ -1598,6 +1670,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M2",
       "ecc": "L",
@@ -1619,6 +1692,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M2",
       "ecc": "M",
@@ -1640,6 +1714,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M2",
       "ecc": "M",
@@ -1661,6 +1736,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M2",
       "ecc": "M",
@@ -1682,6 +1758,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M2",
       "ecc": "M",
@@ -1703,6 +1780,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M3",
       "ecc": "L",
@@ -1726,6 +1804,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M3",
       "ecc": "L",
@@ -1749,6 +1828,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M3",
       "ecc": "L",
@@ -1772,6 +1852,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M3",
       "ecc": "L",
@@ -1795,6 +1876,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M3",
       "ecc": "M",
@@ -1818,6 +1900,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M3",
       "ecc": "M",
@@ -1841,6 +1924,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M3",
       "ecc": "M",
@@ -1864,6 +1948,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M3",
       "ecc": "M",
@@ -1887,6 +1972,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M4",
       "ecc": "L",
@@ -1912,6 +1998,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M4",
       "ecc": "L",
@@ -1937,6 +2024,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M4",
       "ecc": "L",
@@ -1962,6 +2050,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M4",
       "ecc": "L",
@@ -1987,6 +2076,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M4",
       "ecc": "M",
@@ -2012,6 +2102,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M4",
       "ecc": "M",
@@ -2037,6 +2128,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M4",
       "ecc": "M",
@@ -2062,6 +2154,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M4",
       "ecc": "M",
@@ -2087,6 +2180,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M4",
       "ecc": "Q",
@@ -2112,6 +2206,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M4",
       "ecc": "Q",
@@ -2137,6 +2232,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M4",
       "ecc": "Q",
@@ -2162,6 +2258,7 @@
       ]
     },
     {
+      "segments": [["123", "numeric"]],
       "text": "123",
       "version": "M4",
       "ecc": "Q",
@@ -2187,6 +2284,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M1",
       "ecc": "L",
@@ -2206,6 +2304,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M1",
       "ecc": "L",
@@ -2225,6 +2324,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M1",
       "ecc": "L",
@@ -2244,6 +2344,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M1",
       "ecc": "L",
@@ -2263,6 +2364,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M2",
       "ecc": "L",
@@ -2284,6 +2386,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M2",
       "ecc": "L",
@@ -2305,6 +2408,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M2",
       "ecc": "L",
@@ -2326,6 +2430,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M2",
       "ecc": "L",
@@ -2347,6 +2452,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M2",
       "ecc": "M",
@@ -2368,6 +2474,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M2",
       "ecc": "M",
@@ -2389,6 +2496,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M2",
       "ecc": "M",
@@ -2410,6 +2518,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M2",
       "ecc": "M",
@@ -2431,6 +2540,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M3",
       "ecc": "L",
@@ -2454,6 +2564,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M3",
       "ecc": "L",
@@ -2477,6 +2588,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M3",
       "ecc": "L",
@@ -2500,6 +2612,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M3",
       "ecc": "L",
@@ -2523,6 +2636,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M3",
       "ecc": "M",
@@ -2546,6 +2660,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M3",
       "ecc": "M",
@@ -2569,6 +2684,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M3",
       "ecc": "M",
@@ -2592,6 +2708,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M3",
       "ecc": "M",
@@ -2615,6 +2732,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M4",
       "ecc": "L",
@@ -2640,6 +2758,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M4",
       "ecc": "L",
@@ -2665,6 +2784,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M4",
       "ecc": "L",
@@ -2690,6 +2810,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M4",
       "ecc": "L",
@@ -2715,6 +2836,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M4",
       "ecc": "M",
@@ -2740,6 +2862,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M4",
       "ecc": "M",
@@ -2765,6 +2888,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M4",
       "ecc": "M",
@@ -2790,6 +2914,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M4",
       "ecc": "M",
@@ -2815,6 +2940,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M4",
       "ecc": "Q",
@@ -2840,6 +2966,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M4",
       "ecc": "Q",
@@ -2865,6 +2992,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M4",
       "ecc": "Q",
@@ -2890,6 +3018,7 @@
       ]
     },
     {
+      "segments": [["12345", "numeric"]],
       "text": "12345",
       "version": "M4",
       "ecc": "Q",
@@ -2915,6 +3044,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M2",
       "ecc": "L",
@@ -2936,6 +3066,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M2",
       "ecc": "L",
@@ -2957,6 +3088,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M2",
       "ecc": "L",
@@ -2978,6 +3110,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M2",
       "ecc": "L",
@@ -2999,6 +3132,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M2",
       "ecc": "M",
@@ -3020,6 +3154,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M2",
       "ecc": "M",
@@ -3041,6 +3176,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M2",
       "ecc": "M",
@@ -3062,6 +3198,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M2",
       "ecc": "M",
@@ -3083,6 +3220,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M3",
       "ecc": "L",
@@ -3106,6 +3244,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M3",
       "ecc": "L",
@@ -3129,6 +3268,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M3",
       "ecc": "L",
@@ -3152,6 +3292,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M3",
       "ecc": "L",
@@ -3175,6 +3316,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M3",
       "ecc": "M",
@@ -3198,6 +3340,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M3",
       "ecc": "M",
@@ -3221,6 +3364,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M3",
       "ecc": "M",
@@ -3244,6 +3388,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M3",
       "ecc": "M",
@@ -3267,6 +3412,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M4",
       "ecc": "L",
@@ -3292,6 +3438,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M4",
       "ecc": "L",
@@ -3317,6 +3464,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M4",
       "ecc": "L",
@@ -3342,6 +3490,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M4",
       "ecc": "L",
@@ -3367,6 +3516,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M4",
       "ecc": "M",
@@ -3392,6 +3542,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M4",
       "ecc": "M",
@@ -3417,6 +3568,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M4",
       "ecc": "M",
@@ -3442,6 +3594,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M4",
       "ecc": "M",
@@ -3467,6 +3620,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M4",
       "ecc": "Q",
@@ -3492,6 +3646,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M4",
       "ecc": "Q",
@@ -3517,6 +3672,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M4",
       "ecc": "Q",
@@ -3542,6 +3698,7 @@
       ]
     },
     {
+      "segments": [["123456", "numeric"]],
       "text": "123456",
       "version": "M4",
       "ecc": "Q",
@@ -3567,6 +3724,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M2",
       "ecc": "L",
@@ -3588,6 +3746,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M2",
       "ecc": "L",
@@ -3609,6 +3768,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M2",
       "ecc": "L",
@@ -3630,6 +3790,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M2",
       "ecc": "L",
@@ -3651,6 +3812,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M2",
       "ecc": "M",
@@ -3672,6 +3834,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M2",
       "ecc": "M",
@@ -3693,6 +3856,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M2",
       "ecc": "M",
@@ -3714,6 +3878,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M2",
       "ecc": "M",
@@ -3735,6 +3900,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M3",
       "ecc": "L",
@@ -3758,6 +3924,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M3",
       "ecc": "L",
@@ -3781,6 +3948,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M3",
       "ecc": "L",
@@ -3804,6 +3972,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M3",
       "ecc": "L",
@@ -3827,6 +3996,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M3",
       "ecc": "M",
@@ -3850,6 +4020,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M3",
       "ecc": "M",
@@ -3873,6 +4044,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M3",
       "ecc": "M",
@@ -3896,6 +4068,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M3",
       "ecc": "M",
@@ -3919,6 +4092,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M4",
       "ecc": "L",
@@ -3944,6 +4118,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M4",
       "ecc": "L",
@@ -3969,6 +4144,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M4",
       "ecc": "L",
@@ -3994,6 +4170,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M4",
       "ecc": "L",
@@ -4019,6 +4196,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M4",
       "ecc": "M",
@@ -4044,6 +4222,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M4",
       "ecc": "M",
@@ -4069,6 +4248,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M4",
       "ecc": "M",
@@ -4094,6 +4274,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M4",
       "ecc": "M",
@@ -4119,6 +4300,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M4",
       "ecc": "Q",
@@ -4144,6 +4326,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M4",
       "ecc": "Q",
@@ -4169,6 +4352,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M4",
       "ecc": "Q",
@@ -4194,6 +4378,7 @@
       ]
     },
     {
+      "segments": [["1234567", "numeric"]],
       "text": "1234567",
       "version": "M4",
       "ecc": "Q",
@@ -4219,6 +4404,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M2",
       "ecc": "L",
@@ -4240,6 +4426,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M2",
       "ecc": "L",
@@ -4261,6 +4448,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M2",
       "ecc": "L",
@@ -4282,6 +4470,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M2",
       "ecc": "L",
@@ -4303,6 +4492,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M2",
       "ecc": "M",
@@ -4324,6 +4514,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M2",
       "ecc": "M",
@@ -4345,6 +4536,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M2",
       "ecc": "M",
@@ -4366,6 +4558,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M2",
       "ecc": "M",
@@ -4387,6 +4580,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M3",
       "ecc": "L",
@@ -4410,6 +4604,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M3",
       "ecc": "L",
@@ -4433,6 +4628,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M3",
       "ecc": "L",
@@ -4456,6 +4652,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M3",
       "ecc": "L",
@@ -4479,6 +4676,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M3",
       "ecc": "M",
@@ -4502,6 +4700,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M3",
       "ecc": "M",
@@ -4525,6 +4724,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M3",
       "ecc": "M",
@@ -4548,6 +4748,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M3",
       "ecc": "M",
@@ -4571,6 +4772,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M4",
       "ecc": "L",
@@ -4596,6 +4798,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M4",
       "ecc": "L",
@@ -4621,6 +4824,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M4",
       "ecc": "L",
@@ -4646,6 +4850,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M4",
       "ecc": "L",
@@ -4671,6 +4876,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M4",
       "ecc": "M",
@@ -4696,6 +4902,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M4",
       "ecc": "M",
@@ -4721,6 +4928,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M4",
       "ecc": "M",
@@ -4746,6 +4954,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M4",
       "ecc": "M",
@@ -4771,6 +4980,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M4",
       "ecc": "Q",
@@ -4796,6 +5006,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M4",
       "ecc": "Q",
@@ -4821,6 +5032,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M4",
       "ecc": "Q",
@@ -4846,6 +5058,7 @@
       ]
     },
     {
+      "segments": [["12345678", "numeric"]],
       "text": "12345678",
       "version": "M4",
       "ecc": "Q",
@@ -4871,6 +5084,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M2",
       "ecc": "L",
@@ -4892,6 +5106,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M2",
       "ecc": "L",
@@ -4913,6 +5128,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M2",
       "ecc": "L",
@@ -4934,6 +5150,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M2",
       "ecc": "L",
@@ -4955,6 +5172,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M3",
       "ecc": "L",
@@ -4978,6 +5196,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M3",
       "ecc": "L",
@@ -5001,6 +5220,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M3",
       "ecc": "L",
@@ -5024,6 +5244,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M3",
       "ecc": "L",
@@ -5047,6 +5268,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M3",
       "ecc": "M",
@@ -5070,6 +5292,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M3",
       "ecc": "M",
@@ -5093,6 +5316,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M3",
       "ecc": "M",
@@ -5116,6 +5340,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M3",
       "ecc": "M",
@@ -5139,6 +5364,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M4",
       "ecc": "L",
@@ -5164,6 +5390,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M4",
       "ecc": "L",
@@ -5189,6 +5416,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M4",
       "ecc": "L",
@@ -5214,6 +5442,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M4",
       "ecc": "L",
@@ -5239,6 +5468,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M4",
       "ecc": "M",
@@ -5264,6 +5494,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M4",
       "ecc": "M",
@@ -5289,6 +5520,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M4",
       "ecc": "M",
@@ -5314,6 +5546,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M4",
       "ecc": "M",
@@ -5339,6 +5572,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M4",
       "ecc": "Q",
@@ -5364,6 +5598,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M4",
       "ecc": "Q",
@@ -5389,6 +5624,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M4",
       "ecc": "Q",
@@ -5414,6 +5650,7 @@
       ]
     },
     {
+      "segments": [["1234567890", "numeric"]],
       "text": "1234567890",
       "version": "M4",
       "ecc": "Q",
@@ -5439,6 +5676,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M2",
       "ecc": "L",
@@ -5460,6 +5698,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M2",
       "ecc": "L",
@@ -5481,6 +5720,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M2",
       "ecc": "L",
@@ -5502,6 +5742,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M2",
       "ecc": "L",
@@ -5523,6 +5764,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M2",
       "ecc": "M",
@@ -5544,6 +5786,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M2",
       "ecc": "M",
@@ -5565,6 +5808,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M2",
       "ecc": "M",
@@ -5586,6 +5830,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M2",
       "ecc": "M",
@@ -5607,6 +5852,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M3",
       "ecc": "L",
@@ -5630,6 +5876,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M3",
       "ecc": "L",
@@ -5653,6 +5900,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M3",
       "ecc": "L",
@@ -5676,6 +5924,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M3",
       "ecc": "L",
@@ -5699,6 +5948,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M3",
       "ecc": "M",
@@ -5722,6 +5972,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M3",
       "ecc": "M",
@@ -5745,6 +5996,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M3",
       "ecc": "M",
@@ -5768,6 +6020,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M3",
       "ecc": "M",
@@ -5791,6 +6044,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M4",
       "ecc": "L",
@@ -5816,6 +6070,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M4",
       "ecc": "L",
@@ -5841,6 +6096,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M4",
       "ecc": "L",
@@ -5866,6 +6122,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M4",
       "ecc": "L",
@@ -5891,6 +6148,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M4",
       "ecc": "M",
@@ -5916,6 +6174,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M4",
       "ecc": "M",
@@ -5941,6 +6200,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M4",
       "ecc": "M",
@@ -5966,6 +6226,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M4",
       "ecc": "M",
@@ -5991,6 +6252,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M4",
       "ecc": "Q",
@@ -6016,6 +6278,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M4",
       "ecc": "Q",
@@ -6041,6 +6304,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M4",
       "ecc": "Q",
@@ -6066,6 +6330,7 @@
       ]
     },
     {
+      "segments": [["A", "alphanumeric"]],
       "text": "A",
       "version": "M4",
       "ecc": "Q",
@@ -6091,6 +6356,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M2",
       "ecc": "L",
@@ -6112,6 +6378,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M2",
       "ecc": "L",
@@ -6133,6 +6400,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M2",
       "ecc": "L",
@@ -6154,6 +6422,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M2",
       "ecc": "L",
@@ -6175,6 +6444,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M2",
       "ecc": "M",
@@ -6196,6 +6466,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M2",
       "ecc": "M",
@@ -6217,6 +6488,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M2",
       "ecc": "M",
@@ -6238,6 +6510,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M2",
       "ecc": "M",
@@ -6259,6 +6532,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M3",
       "ecc": "L",
@@ -6282,6 +6556,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M3",
       "ecc": "L",
@@ -6305,6 +6580,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M3",
       "ecc": "L",
@@ -6328,6 +6604,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M3",
       "ecc": "L",
@@ -6351,6 +6628,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M3",
       "ecc": "M",
@@ -6374,6 +6652,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M3",
       "ecc": "M",
@@ -6397,6 +6676,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M3",
       "ecc": "M",
@@ -6420,6 +6700,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M3",
       "ecc": "M",
@@ -6443,6 +6724,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M4",
       "ecc": "L",
@@ -6468,6 +6750,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M4",
       "ecc": "L",
@@ -6493,6 +6776,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M4",
       "ecc": "L",
@@ -6518,6 +6802,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M4",
       "ecc": "L",
@@ -6543,6 +6828,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M4",
       "ecc": "M",
@@ -6568,6 +6854,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M4",
       "ecc": "M",
@@ -6593,6 +6880,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M4",
       "ecc": "M",
@@ -6618,6 +6906,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M4",
       "ecc": "M",
@@ -6643,6 +6932,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M4",
       "ecc": "Q",
@@ -6668,6 +6958,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M4",
       "ecc": "Q",
@@ -6693,6 +6984,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M4",
       "ecc": "Q",
@@ -6718,6 +7010,7 @@
       ]
     },
     {
+      "segments": [["AB", "alphanumeric"]],
       "text": "AB",
       "version": "M4",
       "ecc": "Q",
@@ -6743,6 +7036,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M2",
       "ecc": "L",
@@ -6764,6 +7058,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M2",
       "ecc": "L",
@@ -6785,6 +7080,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M2",
       "ecc": "L",
@@ -6806,6 +7102,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M2",
       "ecc": "L",
@@ -6827,6 +7124,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M2",
       "ecc": "M",
@@ -6848,6 +7146,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M2",
       "ecc": "M",
@@ -6869,6 +7168,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M2",
       "ecc": "M",
@@ -6890,6 +7190,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M2",
       "ecc": "M",
@@ -6911,6 +7212,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M3",
       "ecc": "L",
@@ -6934,6 +7236,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M3",
       "ecc": "L",
@@ -6957,6 +7260,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M3",
       "ecc": "L",
@@ -6980,6 +7284,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M3",
       "ecc": "L",
@@ -7003,6 +7308,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M3",
       "ecc": "M",
@@ -7026,6 +7332,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M3",
       "ecc": "M",
@@ -7049,6 +7356,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M3",
       "ecc": "M",
@@ -7072,6 +7380,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M3",
       "ecc": "M",
@@ -7095,6 +7404,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M4",
       "ecc": "L",
@@ -7120,6 +7430,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M4",
       "ecc": "L",
@@ -7145,6 +7456,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M4",
       "ecc": "L",
@@ -7170,6 +7482,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M4",
       "ecc": "L",
@@ -7195,6 +7508,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M4",
       "ecc": "M",
@@ -7220,6 +7534,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M4",
       "ecc": "M",
@@ -7245,6 +7560,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M4",
       "ecc": "M",
@@ -7270,6 +7586,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M4",
       "ecc": "M",
@@ -7295,6 +7612,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M4",
       "ecc": "Q",
@@ -7320,6 +7638,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M4",
       "ecc": "Q",
@@ -7345,6 +7664,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M4",
       "ecc": "Q",
@@ -7370,6 +7690,7 @@
       ]
     },
     {
+      "segments": [["HELLO", "alphanumeric"]],
       "text": "HELLO",
       "version": "M4",
       "ecc": "Q",
@@ -7395,6 +7716,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M3",
       "ecc": "L",
@@ -7418,6 +7740,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M3",
       "ecc": "L",
@@ -7441,6 +7764,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M3",
       "ecc": "L",
@@ -7464,6 +7788,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M3",
       "ecc": "L",
@@ -7487,6 +7812,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M3",
       "ecc": "M",
@@ -7510,6 +7836,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M3",
       "ecc": "M",
@@ -7533,6 +7860,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M3",
       "ecc": "M",
@@ -7556,6 +7884,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M3",
       "ecc": "M",
@@ -7579,6 +7908,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M4",
       "ecc": "L",
@@ -7604,6 +7934,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M4",
       "ecc": "L",
@@ -7629,6 +7960,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M4",
       "ecc": "L",
@@ -7654,6 +7986,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M4",
       "ecc": "L",
@@ -7679,6 +8012,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M4",
       "ecc": "M",
@@ -7704,6 +8038,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M4",
       "ecc": "M",
@@ -7729,6 +8064,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M4",
       "ecc": "M",
@@ -7754,6 +8090,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M4",
       "ecc": "M",
@@ -7779,6 +8116,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M4",
       "ecc": "Q",
@@ -7804,6 +8142,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M4",
       "ecc": "Q",
@@ -7829,6 +8168,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M4",
       "ecc": "Q",
@@ -7854,6 +8194,7 @@
       ]
     },
     {
+      "segments": [["HELLO WORLD", "alphanumeric"]],
       "text": "HELLO WORLD",
       "version": "M4",
       "ecc": "Q",
@@ -7879,6 +8220,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M2",
       "ecc": "L",
@@ -7900,6 +8242,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M2",
       "ecc": "L",
@@ -7921,6 +8264,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M2",
       "ecc": "L",
@@ -7942,6 +8286,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M2",
       "ecc": "L",
@@ -7963,6 +8308,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M2",
       "ecc": "M",
@@ -7984,6 +8330,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M2",
       "ecc": "M",
@@ -8005,6 +8352,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M2",
       "ecc": "M",
@@ -8026,6 +8374,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M2",
       "ecc": "M",
@@ -8047,6 +8396,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M3",
       "ecc": "L",
@@ -8070,6 +8420,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M3",
       "ecc": "L",
@@ -8093,6 +8444,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M3",
       "ecc": "L",
@@ -8116,6 +8468,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M3",
       "ecc": "L",
@@ -8139,6 +8492,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M3",
       "ecc": "M",
@@ -8162,6 +8516,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M3",
       "ecc": "M",
@@ -8185,6 +8540,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M3",
       "ecc": "M",
@@ -8208,6 +8564,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M3",
       "ecc": "M",
@@ -8231,6 +8588,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M4",
       "ecc": "L",
@@ -8256,6 +8614,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M4",
       "ecc": "L",
@@ -8281,6 +8640,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M4",
       "ecc": "L",
@@ -8306,6 +8666,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M4",
       "ecc": "L",
@@ -8331,6 +8692,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M4",
       "ecc": "M",
@@ -8356,6 +8718,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M4",
       "ecc": "M",
@@ -8381,6 +8744,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M4",
       "ecc": "M",
@@ -8406,6 +8770,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M4",
       "ecc": "M",
@@ -8431,6 +8796,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M4",
       "ecc": "Q",
@@ -8456,6 +8822,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M4",
       "ecc": "Q",
@@ -8481,6 +8848,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M4",
       "ecc": "Q",
@@ -8506,6 +8874,7 @@
       ]
     },
     {
+      "segments": [["AC-42", "alphanumeric"]],
       "text": "AC-42",
       "version": "M4",
       "ecc": "Q",
@@ -8531,6 +8900,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M3",
       "ecc": "L",
@@ -8554,6 +8924,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M3",
       "ecc": "L",
@@ -8577,6 +8948,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M3",
       "ecc": "L",
@@ -8600,6 +8972,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M3",
       "ecc": "L",
@@ -8623,6 +8996,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M3",
       "ecc": "M",
@@ -8646,6 +9020,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M3",
       "ecc": "M",
@@ -8669,6 +9044,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M3",
       "ecc": "M",
@@ -8692,6 +9068,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M3",
       "ecc": "M",
@@ -8715,6 +9092,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M4",
       "ecc": "L",
@@ -8740,6 +9118,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M4",
       "ecc": "L",
@@ -8765,6 +9144,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M4",
       "ecc": "L",
@@ -8790,6 +9170,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M4",
       "ecc": "L",
@@ -8815,6 +9196,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M4",
       "ecc": "M",
@@ -8840,6 +9222,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M4",
       "ecc": "M",
@@ -8865,6 +9248,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M4",
       "ecc": "M",
@@ -8890,6 +9274,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M4",
       "ecc": "M",
@@ -8915,6 +9300,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M4",
       "ecc": "Q",
@@ -8940,6 +9326,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M4",
       "ecc": "Q",
@@ -8965,6 +9352,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M4",
       "ecc": "Q",
@@ -8990,6 +9378,7 @@
       ]
     },
     {
+      "segments": [["hello", "byte"]],
       "text": "hello",
       "version": "M4",
       "ecc": "Q",
@@ -9015,6 +9404,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M3",
       "ecc": "L",
@@ -9038,6 +9428,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M3",
       "ecc": "L",
@@ -9061,6 +9452,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M3",
       "ecc": "L",
@@ -9084,6 +9476,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M3",
       "ecc": "L",
@@ -9107,6 +9500,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M4",
       "ecc": "L",
@@ -9132,6 +9526,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M4",
       "ecc": "L",
@@ -9157,6 +9552,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M4",
       "ecc": "L",
@@ -9182,6 +9578,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M4",
       "ecc": "L",
@@ -9207,6 +9604,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M4",
       "ecc": "M",
@@ -9232,6 +9630,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M4",
       "ecc": "M",
@@ -9257,6 +9656,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M4",
       "ecc": "M",
@@ -9282,6 +9682,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M4",
       "ecc": "M",
@@ -9307,6 +9708,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M4",
       "ecc": "Q",
@@ -9332,6 +9734,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M4",
       "ecc": "Q",
@@ -9357,6 +9760,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M4",
       "ecc": "Q",
@@ -9382,6 +9786,7 @@
       ]
     },
     {
+      "segments": [["Hi there!", "byte"]],
       "text": "Hi there!",
       "version": "M4",
       "ecc": "Q",
@@ -9407,6 +9812,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M3",
       "ecc": "L",
@@ -9430,6 +9836,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M3",
       "ecc": "L",
@@ -9453,6 +9860,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M3",
       "ecc": "L",
@@ -9476,6 +9884,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M3",
       "ecc": "L",
@@ -9499,6 +9908,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M4",
       "ecc": "L",
@@ -9524,6 +9934,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M4",
       "ecc": "L",
@@ -9549,6 +9960,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M4",
       "ecc": "L",
@@ -9574,6 +9986,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M4",
       "ecc": "L",
@@ -9599,6 +10012,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M4",
       "ecc": "M",
@@ -9624,6 +10038,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M4",
       "ecc": "M",
@@ -9649,6 +10064,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M4",
       "ecc": "M",
@@ -9674,6 +10090,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M4",
       "ecc": "M",
@@ -9699,6 +10116,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M4",
       "ecc": "Q",
@@ -9724,6 +10142,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M4",
       "ecc": "Q",
@@ -9749,6 +10168,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M4",
       "ecc": "Q",
@@ -9774,6 +10194,7 @@
       ]
     },
     {
+      "segments": [["abc123XYZ", "byte"]],
       "text": "abc123XYZ",
       "version": "M4",
       "ecc": "Q",
@@ -9796,6 +10217,4806 @@
         "#..##.....##.#...",
         ".#...#.#.....###.",
         "#..###.###.#####."
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#....##..",
+        "#.###.#..##.##.",
+        "#.###.#....#.#.",
+        "#.###.#.####.#.",
+        "#.....#.#......",
+        "#######.######.",
+        "........#..#.#.",
+        "####.##..#..#.#",
+        ".#.####...###..",
+        "#....#.#...#.#.",
+        ".##..##......#.",
+        "##.###...###...",
+        ".#.##..####.#..",
+        "#.#.########.#."
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#..#.##",
+        "#.###.#.###...#",
+        "#.###.#.###..#.",
+        "#.###.#.#....#.",
+        "#.....#.....###",
+        "#######..###..#",
+        "........###..#.",
+        "####..##..###.#",
+        "..####.##.##.##",
+        "###..##.#..##.#",
+        ".####.#..###.#.",
+        "##.............",
+        "..###.#..##..##",
+        "##..##...####.#"
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#....#.##",
+        "#.###.#.#######",
+        "#.###.#.#.#####",
+        "#.###.#..#.#...",
+        "#.....#.#.###..",
+        "#######..#####.",
+        "...........##.#",
+        "######...#.##..",
+        ".###.#..#..#..#",
+        "##..##....##...",
+        ".##.#.....####.",
+        "##.###...###...",
+        "..###.#..##..##",
+        "#...#.##.##..##"
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.###.#..",
+        "#.###.#...#.#.#",
+        "#.###.#..#.....",
+        "#.###.#......#.",
+        "#.....#..#...##",
+        "#######.#.#.#..",
+        ".........##..#.",
+        "#####..#....##.",
+        "....#.##.##.##.",
+        "#..##..#.##..#.",
+        "...#.#####....#",
+        "#...#..#..#..#.",
+        ".#...#.##..##..",
+        "##.####...##..#"
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#......##",
+        "#.###.#...#..#.##",
+        "#.###.#.#...##..#",
+        "#.###.#...#..#..#",
+        "#.....#.###.....#",
+        "#######.##.######",
+        ".........##..#..#",
+        "#..#.###.####.#.#",
+        "..#.##.......###.",
+        "#..#.##.#.####.##",
+        "..###.#.........#",
+        "###.#.#...##.#..#",
+        ".##.###.###.#.###",
+        "##.##....#...#.##",
+        "...#....###......",
+        "#......#.####...#"
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.....#####",
+        "#.###.#.#.#.#.###",
+        "#.###.#..#####.#.",
+        "#.###.#..#.#.#.#.",
+        "#.....#..##.###.#",
+        "#######..#.#...##",
+        "...........#.#.#.",
+        "#..#..#.....#.##.",
+        ".#..#####...#..#.",
+        "####.#.#..##..###",
+        "..#..##..###...#.",
+        "####.##..#...#.#.",
+        "....##.#.##..#.##",
+        "#.###.####..#.###",
+        "....##..#..#...##",
+        "#..###.#....#..#."
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#...#####",
+        "#.###.#.#.##.####",
+        "#.###.#...#..##..",
+        "#.###.#.#........",
+        "#.....#.##.##....",
+        "#######..#.######",
+        "........###.#.#.#",
+        "#..###.#.##.#...#",
+        ".....##.#.#.##.##",
+        "##.######..##..#.",
+        "..##.#....###....",
+        "###.#.#...##.#..#",
+        "....##.#.##..#.##",
+        "######..##.#.####",
+        "..###.#..#..#.#.#",
+        "##..#....#.###..."
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..###.....",
+        "#.###.#..##...#.#",
+        "#.###.#.##.##..##",
+        "#.###.#.##.#.#.#.",
+        "#.....#...#..####",
+        "#######.#...#.#.#",
+        "........#..#.#.#.",
+        "#..##.....####.##",
+        ".####..#.#.#..#..",
+        "#...#.#.##..##...",
+        ".#..#.####...####",
+        "#.######.##....##",
+        ".###..#.#..##.#..",
+        "#.#.#..##.....#.#",
+        ".#...#.##.##.#.#.",
+        "#..###.#....#..#."
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#........##",
+        "#.###.#...#..#.##",
+        "#.###.#.....##..#",
+        "#.###.#.#.#..#..#",
+        "#.....#..##.....#",
+        "#######..#.######",
+        ".........##..#..#",
+        "#.#..#.#.####.#.#",
+        ".##.###..#...###.",
+        "#..#.##...####.##",
+        "..#.##..........#",
+        "##....###..#.#..#",
+        ".....#.###..#.###",
+        "##..#.#......#.##",
+        ".#....##.........",
+        "#.#.#..##.###...#"
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#...#####",
+        "#.###.#.#.#.#.###",
+        "#.###.#.######.#.",
+        "#.###.#.##.#.#.#.",
+        "#.....#.###.###.#",
+        "#######.##.#...##",
+        "...........#.#.#.",
+        "#.#.........#.##.",
+        "....##.###..#..#.",
+        "####.#.##.##..###",
+        "..##.....###...#.",
+        "##.########..#.#.",
+        ".##..##..#...#.##",
+        "#.#.#..##...#.###",
+        ".#.#####.###...##",
+        "#.##.#.###..#..#."
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.....#####",
+        "#.###.#.#.##.####",
+        "#.###.#.#.#..##..",
+        "#.###.#..........",
+        "#.....#..#.##....",
+        "#######.##.######",
+        "........###.#.#.#",
+        "#.#.####.##.#...#",
+        ".#...#..###.##.##",
+        "##.#####...##..#.",
+        "..#...#...###....",
+        "##....###..#.#..#",
+        ".##..##..#...#.##",
+        "###.###.#..#.####",
+        ".##.#..##.#.#.#.#",
+        "###.....#..###..."
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.####.....",
+        "#.###.#..##...#.#",
+        "#.###.#..#.##..##",
+        "#.###.#..#.#.#.#.",
+        "#.....#.#.#..####",
+        "#######.....#.#.#",
+        "........#..#.#.#.",
+        "#.#.#.#...####.##",
+        "..###.##...#..#..",
+        "#...#.#..#..##...",
+        ".#.###.###...####",
+        "#..#.##.##.....##",
+        "...##..##.###.#..",
+        "#.###.####....#.#",
+        "...#.##..#.#.#.#.",
+        "#.##.#.###..#..#."
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#.###..##",
+        "#.###.#.#....#.##",
+        "#.###.#..##.##..#",
+        "#.###.#...#.##..#",
+        "#.....#..####...#",
+        "#######.##.#.####",
+        "........###..#..#",
+        "#.##.#..##.#..#.#",
+        ".##.....##...###.",
+        "##...#.....###.##",
+        ".##.......#.....#",
+        "###.....#..#.#..#",
+        ".........##.#.###",
+        "##..##.#.##..#.##",
+        "..##...#..#......",
+        "#...#.#..####...#"
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#...##.####",
+        "#.###.#.....#.###",
+        "#.###.#.#..###.#.",
+        "#.###.#..#.###.#.",
+        "#.....#.####.##.#",
+        "#######..#.##..##",
+        "........#..#.#.#.",
+        "#.##...##.#...##.",
+        "......##.#..#..#.",
+        "#.#..####..#..###",
+        ".#####...#.#...#.",
+        "######..###..#.#.",
+        ".##...#####..#.##",
+        "#.#.###.###.#.###",
+        "..#.##.#.#.#...##",
+        "#..#.##.....#..#."
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#.##.####",
+        "#.###.#....#.####",
+        "#.###.#.##...##..",
+        "#.###.#.#...#....",
+        "#.....#..#.......",
+        "#######..#.#.####",
+        ".........##.#.#.#",
+        "#.#####.##......#",
+        ".#..#.#..##.##.##",
+        "#...##.#..###..#.",
+        ".##.###....##....",
+        "###.....#..#.#..#",
+        ".##...#####..#.##",
+        "###.#..#####.####",
+        "...##.###...#.#.#",
+        "##....##.#.###..."
+      ]
+    },
+    {
+      "segments": [["abc", "byte"], ["123XYZ", "alphanumeric"]],
+      "text": "abc123XYZ",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..#..#....",
+        "#.###.#.##....#.#",
+        "#.###.#...###..##",
+        "#.###.#.##.###.#.",
+        "#.....#.#.#######",
+        "#######.#.....#.#",
+        "...........#.#.#.",
+        "#.###.###..#.#.##",
+        "..##.#.##..#..#..",
+        "##.##....##.##...",
+        "...#...####..####",
+        "#.##.#.###.....##",
+        "...###.....##.#..",
+        "#.####..#.#...#.#",
+        ".##..#...###.#.#.",
+        "#..#.##.....#..#."
+      ]
+    },
+    {
+      "segments": [["HELLO", "alphanumeric"], ["123", "numeric"]],
+      "text": "HELLO123",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#....#..#",
+        "#.###.#..###..#",
+        "#.###.#........",
+        "#.###.#.#####..",
+        "#.....#.#....##",
+        "#######.###.##.",
+        "........#...##.",
+        "####.##..####.#",
+        ".##..#.....##..",
+        "#.#####..##..#.",
+        ".#.###.....#.#.",
+        "#####..#.###..#",
+        ".#.###.##....#.",
+        "#...#########.#"
+      ]
+    },
+    {
+      "segments": [["HELLO", "alphanumeric"], ["123", "numeric"]],
+      "text": "HELLO123",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#..###.",
+        "#.###.#.######.",
+        "#.###.#.####...",
+        "#.###.#.#...#..",
+        "#.....#.....#..",
+        "#######..##...#",
+        "........######.",
+        "####..##....#.#",
+        ".....####..#.##",
+        "##.###.####.#.#",
+        ".#.......##..#.",
+        "###..#.#......#",
+        "..#####.....#.#",
+        "###.##...###.#."
+      ]
+    },
+    {
+      "segments": [["HELLO", "alphanumeric"], ["123", "numeric"]],
+      "text": "HELLO123",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#....###.",
+        "#.###.#.###....",
+        "#.###.#.#.#.#.#",
+        "#.###.#..#.###.",
+        "#.....#.#.#####",
+        "#######..##.##.",
+        "..............#",
+        "######...##.#..",
+        ".#..###.#.##..#",
+        "####.###.#.....",
+        ".#.#..#...#.##.",
+        "#####..#.###..#",
+        "..#####.....#.#",
+        "#.#.#.##.##.#.."
+      ]
+    },
+    {
+      "segments": [["HELLO", "alphanumeric"], ["123", "numeric"]],
+      "text": "HELLO123",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.###...#",
+        "#.###.#...##.#.",
+        "#.###.#..#.#.#.",
+        "#.###.#.....#..",
+        "#.....#..#.....",
+        "#######.#.###..",
+        ".........#####.",
+        "#####..#..####.",
+        "..##...#.#..##.",
+        "#.#...#....#.#.",
+        "..#.##.###.#..#",
+        "#.#.##....#..##",
+        ".#.....#####.#.",
+        "#######...####."
+      ]
+    },
+    {
+      "segments": [["HELLO", "alphanumeric"], ["123", "numeric"]],
+      "text": "HELLO123",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#..#.#..#",
+        "#.###.#.##.#..#",
+        "#.###.#.#.#....",
+        "#.###.#.##.##..",
+        "#.....#.##...##",
+        "#######.....##.",
+        "........#...##.",
+        "#....##.#.###.#",
+        "..#.##.#...##..",
+        "#..###.#.##..#.",
+        ".###.##.#..#.#.",
+        "#..#.###.###..#",
+        ".#..#.#.#....#.",
+        "###.##...####.#"
+      ]
+    },
+    {
+      "segments": [["HELLO", "alphanumeric"], ["123", "numeric"]],
+      "text": "HELLO123",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.##.###.",
+        "#.###.#..#.###.",
+        "#.###.#..#.#...",
+        "#.###.#.#.#.#..",
+        "#.....#..#..#..",
+        "#######.#.....#",
+        "........######.",
+        "#.....####..#.#",
+        ".#..###.#..#.##",
+        "#######.###.#.#",
+        ".##.#.#.###..#.",
+        "#...#.##......#",
+        "..#.#..#....#.#",
+        "#...########.#."
+      ]
+    },
+    {
+      "segments": [["HELLO", "alphanumeric"], ["123", "numeric"]],
+      "text": "HELLO123",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#..#.###.",
+        "#.###.#..#.....",
+        "#.###.#.....#.#",
+        "#.###.#..#####.",
+        "#.....#.#######",
+        "#######.#...##.",
+        "..............#",
+        "#...##..#.#.#..",
+        ".....####.##..#",
+        "##.#.#...#.....",
+        ".####...#.#.##.",
+        "#..#.###.###..#",
+        "..#.#..#....#.#",
+        "##..#...###.#.."
+      ]
+    },
+    {
+      "segments": [["HELLO", "alphanumeric"], ["123", "numeric"]],
+      "text": "HELLO123",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#.#...#",
+        "#.###.#.#..#.#.",
+        "#.###.#.####.#.",
+        "#.###.#...#.#..",
+        "#.....#........",
+        "#######..#.##..",
+        ".........#####.",
+        "#...#..#######.",
+        ".####....#..##.",
+        "#......#...#.#.",
+        ".....###.#.#..#",
+        "##....#...#..##",
+        ".#.#.##.####.#.",
+        "#..###.##.####."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M2",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#",
+        "#.....#.#.##.",
+        "#.###.#.##.#.",
+        "#.###.#....##",
+        "#.###.#..####",
+        "#.....#.#...#",
+        "#######....#.",
+        "..........#..",
+        "###..#####...",
+        ".###..#......",
+        "#.####....###",
+        ".##.##.#####.",
+        "##...#...####"
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M2",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#",
+        "#.....#...###",
+        "#.###.#..#.##",
+        "#.###.#.###.#",
+        "#.###.#.....#",
+        "#.....#......",
+        "#######.#..##",
+        ".........#.#.",
+        "###...#.#.##.",
+        "...#...##...#",
+        "##.######.##.",
+        ".###...##....",
+        "##.##.......#"
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M2",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#",
+        "#.....#.#.###",
+        "#.###.#..#...",
+        "#.###.#.#.##.",
+        "#.###.#.##.##",
+        "#.....#.#.##.",
+        "#######.#..#.",
+        "........#.#.#",
+        "###.##.###.#.",
+        ".#.##...#.#.#",
+        "####.#.#...##",
+        ".##...####..#",
+        "##...#...####"
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M2",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#",
+        "#.....#..#...",
+        "#.###.#.#..#.",
+        "#.###.#..#..#",
+        "#.###.#.#...#",
+        "#.....#..#..#",
+        "#######..#...",
+        "........##.#.",
+        "###.#...#....",
+        "..#..###.#.#.",
+        "#.#......#..#",
+        "...###....##.",
+        "#..#...#..#.#"
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.....##.",
+        "#.###.#..###.#.",
+        "#.###.#......##",
+        "#.###.#.#######",
+        "#.....#.#.....#",
+        "#######.#######",
+        "........#....#.",
+        "####.##..######",
+        "..###...#....##",
+        "#..#...#.######",
+        "....#####......",
+        "#.#..########.#",
+        "..######.......",
+        "#.....#########"
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#.....#",
+        "#.###.#.#####.#",
+        "#.###.#.####.##",
+        "#.###.#.#...###",
+        "#.....#.....##.",
+        "#######..###...",
+        "........####.#.",
+        "####..##....###",
+        ".#.##.##....#..",
+        "####..#.####...",
+        "...#..######...",
+        "#.###.###...#.#",
+        ".#.###..#...###",
+        "###......###..."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.......#",
+        "#.###.#.###..##",
+        "#.###.#.#.#.##.",
+        "#.###.#..#.##.#",
+        "#.....#.#.###.#",
+        "#######..######",
+        "............#.#",
+        "######...##.##.",
+        "...#..#...#.##.",
+        "##.##....#.##.#",
+        ".......##.###..",
+        "#.#..########.#",
+        ".#.###..#...###",
+        "#.#..###.##.##."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.######.",
+        "#.###.#...##..#",
+        "#.###.#..#.#..#",
+        "#.###.#.....###",
+        "#.....#..#...#.",
+        "#######.#.#.#.#",
+        ".........###.#.",
+        "#####..#..###..",
+        ".##.##.###.#..#",
+        "#...##.#....###",
+        ".######..#...##",
+        "####..#.#.#.###",
+        "..#...##.###...",
+        "####..#...###.."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#..##.##.",
+        "#.###.#.####.#.",
+        "#.###.#.#....##",
+        "#.###.#.#..####",
+        "#.....#.###...#",
+        "#######...#####",
+        "........#....#.",
+        "#....##.#######",
+        ".....####....##",
+        "#..####.#######",
+        "..#............",
+        "###...#..####.#",
+        "..####.........",
+        "###...#########"
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.###...#",
+        "#.###.#..####.#",
+        "#.###.#..###.##",
+        "#.###.#.###.###",
+        "#.....#..##.##.",
+        "#######.#.##...",
+        "........####.#.",
+        "#.....###...###",
+        ".##..#......#..",
+        "######.#.###...",
+        "..####...###...",
+        "#######.....#.#",
+        ".#.######...###",
+        "#........###..."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#..##...#",
+        "#.###.#..##..##",
+        "#.###.#...#.##.",
+        "#.###.#...###.#",
+        "#.....#.##.##.#",
+        "#######.#.#####",
+        "............#.#",
+        "#...##..###.##.",
+        "..#.##.#..#.##.",
+        "##.#.#####.##.#",
+        "..#.###...###..",
+        "###...#..####.#",
+        ".#.######...###",
+        "##...###.##.##."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#..###.",
+        "#.###.#.#.##..#",
+        "#.###.#.##.#..#",
+        "#.###.#..##.###",
+        "#.....#...#..#.",
+        "#######..##.#.#",
+        ".........###.#.",
+        "#...#..##.###..",
+        ".#.#..#.##.#..#",
+        "#.....#.#...###",
+        ".#.#...###...##",
+        "#.##.###..#.###",
+        "..#......###...",
+        "#..#..#...###.."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.####..##.",
+        "#.###.#..#.###.#.",
+        "#.###.#.####...##",
+        "#.###.#..########",
+        "#.....#.#.......#",
+        "#######.#.#..####",
+        "............#...#",
+        "#..#.###..#..####",
+        "....###.####.##..",
+        "#....#...#.###...",
+        ".#.#####.###.##..",
+        "###.....#########",
+        ".#.#.#.........#.",
+        "#.#.#.....#...###",
+        ".#..#####...#....",
+        "#....#....#...###"
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..#####.#.",
+        "#.###.#.##.#..##.",
+        "#.###.#..........",
+        "#.###.#.....###..",
+        "#.....#.....###.#",
+        "#######...#.#..##",
+        ".........####..#.",
+        "#..#..#..#.#.##..",
+        ".##.##.#.####....",
+        "###..#####.#..#..",
+        ".#....##.....####",
+        "######..#...###..",
+        "..##.####...####.",
+        "##..#.###.#.##.##",
+        ".#.#..#######..##",
+        "#..##....#.#..#.."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.######.#.",
+        "#.###.#.##..####.",
+        "#.###.#..#.##.##.",
+        "#.###.#.##.##.##.",
+        "#.....#.#.###....",
+        "#######...#..####",
+        "........#....##.#",
+        "#..###.#..##.#.##",
+        "..#..#...#.###..#",
+        "##..##.#.####...#",
+        ".#.#...#.#..###.#",
+        "###.....#########",
+        "..##.####...####.",
+        "#...##..#.##...##",
+        ".##..#.#..#...#.#",
+        "##..##.#.....###."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.......#.#",
+        "#.###.#....##.#..",
+        "#.###.#.#.#..#..#",
+        "#.###.#.#...###..",
+        "#.....#..#...####",
+        "#######.####..#.#",
+        "........#####..#.",
+        "#..##....##.....#",
+        ".#.##.###.#...##.",
+        "#..##.....#.##.##",
+        "..#.###.#.##...#.",
+        "#.##.#.##.#.#.#.#",
+        ".#..#....###....#",
+        "##.##..####..#..#",
+        "...##.#.##.###.#.",
+        "#..##....#.#..#.."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..###..##.",
+        "#.###.#..#.###.#.",
+        "#.###.#..###...##",
+        "#.###.#.#########",
+        "#.....#.........#",
+        "#######...#..####",
+        "............#...#",
+        "#.#..#.#..#..####",
+        "..##......##.##..",
+        "###..#####.###...",
+        ".##.#..#####.##..",
+        "##...#.##.#######",
+        ".###...####....#.",
+        "#...##...#....###",
+        ".#.#..#.###.#....",
+        "#.#.#..###....###"
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.######.#.",
+        "#.###.#.##.#..##.",
+        "#.###.#.#........",
+        "#.###.#.#...###..",
+        "#.....#.#...###.#",
+        "#######.#.#.#..##",
+        ".........####..#.",
+        "#.#......#.#.##..",
+        ".#.#..###.###....",
+        "#....#...#.#..#..",
+        ".###.#.##....####",
+        "##.##..###..###..",
+        "...#..#..##.####.",
+        "###.######..##.##",
+        ".#..###.#..##..##",
+        "#.##.#.##.##..#.."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..#####.#.",
+        "#.###.#.##..####.",
+        "#.###.#.##.##.##.",
+        "#.###.#..#.##.##.",
+        "#.....#...###....",
+        "#######.#.#..####",
+        "........#....##.#",
+        "#.#.####..##.#.##",
+        "...##.#.#..###..#",
+        "#.#.###.#####...#",
+        ".##..#####..###.#",
+        "##...#.##.#######",
+        "...#..#..##.####.",
+        "#.#.#...##.#...##",
+        ".####....#....#.#",
+        "###.....###..###."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#.....#.#",
+        "#.###.#....##.#..",
+        "#.###.#...#..#..#",
+        "#.###.#.....###..",
+        "#.....#.##...####",
+        "#######..###..#.#",
+        "........#####..#.",
+        "#.#.#.#..##.....#",
+        ".##..#.#.##...##.",
+        "#####.###.#.##.##",
+        "...##.....##...#.",
+        "#..#....###.#.#.#",
+        ".##.##.##..#....#",
+        "######.##....#..#",
+        ".....####.####.#.",
+        "#.##.#.##.##..#.."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.##..#.##.",
+        "#.###.#.#...##.#.",
+        "#.###.#..##....##",
+        "#.###.#....######",
+        "#.....#...#.....#",
+        "#######.#########",
+        "........##......#",
+        "#.##.#..#..######",
+        ".###..#....#.##..",
+        "#.##....#..###...",
+        ".##....#####.##..",
+        "##.##.#....######",
+        ".##.##...#.....#.",
+        "#.###...##....###",
+        "....#.......#....",
+        "###..#....#...###"
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..#...#.#.",
+        "#.###.#.......##.",
+        "#.###.#.#..#.....",
+        "#.###.#..##.###..",
+        "#.....#.#.#.###.#",
+        "#######..###...##",
+        "........#.##...#.",
+        "#.##...####.###..",
+        "...#...##..##....",
+        "##.#..##...#..#..",
+        ".#####.##....####",
+        "##...##..##.###..",
+        "....######..####.",
+        "##.##.##.#..##.##",
+        "...#.#...####..##",
+        "#####....#.#..#.."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.##...#.#.",
+        "#.###.#....#####.",
+        "#.###.#.##..#.##.",
+        "#.###.#.#.###.##.",
+        "#.....#....##....",
+        "#######..########",
+        ".........#..###.#",
+        "#.#####.#...##.##",
+        ".#.##...#.####..#",
+        "#####..##.###...#",
+        ".##.######..###.#",
+        "##.##.#....######",
+        "....######..####.",
+        "#..###...#.#...##",
+        "..#...#.#.#...#.#",
+        "#.#.##.#.....###."
+      ]
+    },
+    {
+      "segments": [["12", "numeric"], ["AB", "alphanumeric"]],
+      "text": "12AB",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#...###.#.#",
+        "#.###.#.##..#.#..",
+        "#.###.#...##.#..#",
+        "#.###.#.###.###..",
+        "#.....#.###..####",
+        "#######.#.#.#.#.#",
+        "..........##...#.",
+        "#.###.####.##...#",
+        "..#..###.#....##.",
+        "#.#.##..###.##.##",
+        "...#......##...#.",
+        "#...####.#..#.#.#",
+        ".###......##....#",
+        "##..#..#.....#..#",
+        ".#.###.#.#.###.#.",
+        "#####....#.#..#.."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M2",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#",
+        "#.....#..#..#",
+        "#.###.#.#.###",
+        "#.###.#.#.###",
+        "#.###.#.#####",
+        "#.....#.....#",
+        "#######.#####",
+        ".............",
+        "##.#.#.#####.",
+        "...##.###.#.#",
+        "##.#..####.##",
+        "..#..#..####.",
+        "####.#...###."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M2",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#",
+        "#.....#.##...",
+        "#.###.#...##.",
+        "#.###.#..#..#",
+        "#.###.#.#...#",
+        "#.....#.#....",
+        "#######..###.",
+        ".........###.",
+        "##.#....#....",
+        ".####.....#..",
+        "#.##.....#.#.",
+        "..###...#....",
+        "###.#........"
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M2",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#",
+        "#.....#..#...",
+        "#.###.#...#.#",
+        "#.###.#....#.",
+        "#.###.#..#.##",
+        "#.....#...##.",
+        "#######..####",
+        "........#...#",
+        "##.########..",
+        "..##...#.....",
+        "#..##.#.#####",
+        "..#.#.#.##..#",
+        "####.#...###."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M2",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#",
+        "#.....#.#.###",
+        "#.###.#.#####",
+        "#.###.#.###.#",
+        "#.###.#.....#",
+        "#.....#.##..#",
+        "#######.#.#.#",
+        "........####.",
+        "##.##.#.#.##.",
+        ".#..###.#####",
+        "##..#####.#.#",
+        ".#.#.#.#..##.",
+        "#.#....#..#.."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M2",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#",
+        "#.....#.##..#",
+        "#.###.#.#.###",
+        "#.###.#...###",
+        "#.###.#..####",
+        "#.....#.###.#",
+        "#######...###",
+        "..........#..",
+        "###..#######.",
+        ".#.##..#....#",
+        "##..##..#.###",
+        "..###.#....#.",
+        "###...###.##."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M2",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#",
+        "#.....#..#...",
+        "#.###.#...##.",
+        "#.###.#.##..#",
+        "#.###.#.....#",
+        "#.....#..##..",
+        "#######.#.##.",
+        ".........#.#.",
+        "###...#.#....",
+        "..###.#.#....",
+        "#.#.####..##.",
+        "..#..##..##..",
+        "##########..."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M2",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#",
+        "#.....#.##...",
+        "#.###.#...#.#",
+        "#.###.#.#..#.",
+        "#.###.#.##.##",
+        "#.....#.##.#.",
+        "#######.#.###",
+        "........#.#.#",
+        "###.##.####..",
+        ".###..###.#..",
+        "#....#.##..##",
+        "..##.#....#.#",
+        "###...###.##."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M2",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#",
+        "#.....#...###",
+        "#.###.#.#####",
+        "#.###.#..##.#",
+        "#.###.#.#...#",
+        "#.....#...#.#",
+        "#######..##.#",
+        "........##.#.",
+        "###.#...#.##.",
+        "....##...#.##",
+        "##.#....##..#",
+        ".#..#.####.#.",
+        "#.##.##.###.."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.....#..",
+        "#.###.#..##.##.",
+        "#.###.#....#..#",
+        "#.###.#.####.##",
+        "#.....#.#.....#",
+        "#######.#######",
+        "........#......",
+        "####.##..######",
+        ".....#.#......#",
+        "####..########.",
+        ".##.#..#.......",
+        "#..#..#######.#",
+        ".#.###.........",
+        "#...##.#.####.#"
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#....##",
+        "#.###.#.###...#",
+        "#.###.#.###...#",
+        "#.###.#.#....##",
+        "#.....#.....##.",
+        "#######..###...",
+        "........####...",
+        "####..##....###",
+        ".##..##.#...##.",
+        "#..#.....###..#",
+        ".###.#.#.###...",
+        "#...#####...#.#",
+        "..#######...###",
+        "###.###.####.#."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#......##",
+        "#.###.#.#######",
+        "#.###.#.#.###..",
+        "#.###.#..#.#..#",
+        "#.....#.#.###.#",
+        "#######..######",
+        "............###",
+        "######...##.##.",
+        "..#.#####.#.#..",
+        "#.###.#.##.##..",
+        ".##..###..###..",
+        "#..#..#######.#",
+        "..#######...###",
+        "#.#.#..####.#.."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#####..",
+        "#.###.#...#.#.#",
+        "#.###.#..#...##",
+        "#.###.#......##",
+        "#.....#..#...#.",
+        "#######.#.#.#.#",
+        ".........###...",
+        "#####..#..###..",
+        ".#.#.....#.#.##",
+        "###.#####...##.",
+        "...##...##...##",
+        "##...##.#.#.###",
+        ".#.......###...",
+        "######..#.####."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#..#..#..",
+        "#.###.#.#...##.",
+        "#.###.#.##.#..#",
+        "#.###.#.#..#.##",
+        "#.....#.##....#",
+        "#######..######",
+        "........#.#....",
+        "#....##.##.####",
+        "...#.##.......#",
+        "#..#..#.######.",
+        ".#.#.####......",
+        "#.#.##..#####.#",
+        ".######........",
+        "#############.#"
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.##...##",
+        "#.###.#.......#",
+        "#.###.#...#...#",
+        "#.###.#.###..##",
+        "#.....#..#..##.",
+        "#######.####...",
+        "........##.#...",
+        "#.....###.#.###",
+        ".###.#.##...##.",
+        "####...#.###..#",
+        ".#..#.######...",
+        "#.##....#...#.#",
+        "...###.##...###",
+        "#..###...###.#."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#..#...##",
+        "#.###.#....####",
+        "#.###.#..####..",
+        "#.###.#...##..#",
+        "#.....#.#####.#",
+        "#######.#######",
+        "..........#.###",
+        "#...##..##..##.",
+        "..####..#.#.#..",
+        "##.##.####.##..",
+        ".#.##..##.###..",
+        "#.#.##..#####.#",
+        "...###.##...###",
+        "##.##.##.##.#.."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#.###..",
+        "#.###.#.##..#.#",
+        "#.###.#.#....##",
+        "#.###.#..##..##",
+        "#.....#......#.",
+        "#######...#.#.#",
+        ".........#.#...",
+        "#...#..##..##..",
+        ".#....##.#.#.##",
+        "#...###.#...##.",
+        "..#..##..#...##",
+        "#####..##.#.###",
+        ".##...#..###...",
+        "#...###...####."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#........",
+        "#.###.#...#..#..#",
+        "#.###.#.#...##..#",
+        "#.###.#...#...###",
+        "#.....#.####..#.#",
+        "#######.##.######",
+        ".........###.....",
+        "#..#.###.########",
+        "...#..#..........",
+        "#..##..##.#..###.",
+        ".########...#...#",
+        "###..##.#.#..####",
+        "..####.#####.###.",
+        "#..##.##.#.###.##",
+        ".##......###.##.#",
+        "##..#.#..########"
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.....###..",
+        "#.###.#.#.#.#.#.#",
+        "#.###.#..#####.#.",
+        "#.###.#..#.#..#..",
+        "#.....#..#####..#",
+        "#######..#.#...##",
+        "...............##",
+        "#..#..#.....###..",
+        ".###...##...###..",
+        "#####.#...#.#..#.",
+        ".##...#######..#.",
+        "#####.#.##.#.##..",
+        ".#.####..####..#.",
+        "#####...##.#..###",
+        ".#####.......###.",
+        "##.#.##.....###.."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#...###..",
+        "#.###.#.#.##.##.#",
+        "#.###.#...#..##..",
+        "#.###.#.#....###.",
+        "#.....#.##..#.#..",
+        "#######..#.######",
+        "........#######..",
+        "#..###.#.##.##.##",
+        "..###...#.#.#.#.#",
+        "##.#....#.....###",
+        ".###...##.##.....",
+        "###..##.#.#..####",
+        ".#.####..####..#.",
+        "#.########..#####",
+        ".#..#.#.##.###...",
+        "#.....##.#.##.##."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..###...##",
+        "#.###.#..##...###",
+        "#.###.#.##.##..##",
+        "#.###.#.##.#..#..",
+        "#.....#...##.#.##",
+        "#######.#...#.#.#",
+        "........#......##",
+        "#..##.....###...#",
+        ".#...###.#.#.#.#.",
+        "#....#.###.#.##.#",
+        "....###..#..#####",
+        "#.##..######..#.#",
+        "..#....##....##.#",
+        "###.#.#.#..##.#.#",
+        "..##.#.#..#...###",
+        "##.#.##.....###.."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..........",
+        "#.###.#...#..#..#",
+        "#.###.#.....##..#",
+        "#.###.#.#.#...###",
+        "#.....#..###..#.#",
+        "#######..#.######",
+        ".........###.....",
+        "#.#..#.#.########",
+        ".##..............",
+        "##.....#.#...###.",
+        ".#..####.#..#...#",
+        "#..########..####",
+        "..###...#.##.###.",
+        "#.....##...###.##",
+        ".###...#..##.##.#",
+        "#.#####.#########"
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#...###..",
+        "#.###.#.#.#.#.#.#",
+        "#.###.#.######.#.",
+        "#.###.#.##.#..#..",
+        "#.....#.######..#",
+        "#######.##.#...##",
+        "...............##",
+        "#.#.........###..",
+        "......###...###..",
+        "#.#...#.##..#..#.",
+        ".#.#..##..###..#.",
+        "#.....###..#.##..",
+        ".#.##.##..###..#.",
+        "###.....#..#..###",
+        ".##.##.#.#...###.",
+        "#.#...#.#...###.."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.....###..",
+        "#.###.#.#.##.##.#",
+        "#.###.#.#.#..##..",
+        "#.###.#......###.",
+        "#.....#..#..#.#..",
+        "#######.##.######",
+        "........#######..",
+        "#.#.####.##.##.##",
+        ".#..#.#.#.#.#.#.#",
+        "#...#....##...###",
+        ".#.....#.###.....",
+        "#..########..####",
+        ".#.##.##..###..#.",
+        "#.#..####...#####",
+        ".#.##.###..###...",
+        "####.#####.##.##."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.####...##",
+        "#.###.#..##...###",
+        "#.###.#..#.##..##",
+        "#.###.#..#.#..#..",
+        "#.....#.#.##.#.##",
+        "#######.....#.#.#",
+        "........#......##",
+        "#.#.#.#...###...#",
+        "..##.#.#.#.#.#.#.",
+        "##.###.#..##.##.#",
+        "..#####.#...#####",
+        "##..#.#.#.##..#.#",
+        "..#..#..##...##.#",
+        "####..#.##.##.#.#",
+        "..#..#...##...###",
+        "#.#...#.#...###.."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#####....",
+        "#.###.#.##.#.#..#",
+        "#.###.#.....##..#",
+        "#.###.#.....#.###",
+        "#.....#..##...#.#",
+        "#######.##..#####",
+        "........###.#....",
+        "#.##.#..###..####",
+        ".##.###..........",
+        "#.#..#..###..###.",
+        ".##...#.###.#...#",
+        "#.#.######...####",
+        ".##....##..#.###.",
+        "#...#.#....###.##",
+        ".##.#..#####.##.#",
+        "#.#.#.#...#######"
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..###.##..",
+        "#.###.#..#.##.#.#",
+        "#.###.#.######.#.",
+        "#.###.#..####.#..",
+        "#.....#.###.##..#",
+        "#######..#.....##",
+        "........#..##..##",
+        "#.##...##..#.##..",
+        "....##.##...###..",
+        "##...###.##.#..#.",
+        ".######.#..##..#.",
+        "#.##..###.##.##..",
+        "......#....##..#.",
+        "###.#..##..#..###",
+        ".###.#.##....###.",
+        "#.##.##..#..###.."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.####.##..",
+        "#.###.#..#...##.#",
+        "#.###.#.#.#..##..",
+        "#.###.#.#.#.####.",
+        "#.....#..#.##.#..",
+        "#######..#..#####",
+        ".........##..##..",
+        "#.#####.####.#.##",
+        ".#...#..#.#.#.#.#",
+        "###.##.###....###",
+        ".##.##..##.#.....",
+        "#.#.######...####",
+        "......#....##..#.",
+        "#.#.###.#...#####",
+        ".#....##.#.###...",
+        "###...##...##.##."
+      ]
+    },
+    {
+      "segments": [["A", "alphanumeric"], ["1", "numeric"], ["B", "alphanumeric"]],
+      "text": "A1B",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.....#..##",
+        "#.###.#.#..#..###",
+        "#.###.#..#.##..##",
+        "#.###.#.#####.#..",
+        "#.....#.#.#..#.##",
+        "#######.#..##.#.#",
+        "...........##..##",
+        "#.###.###.#.....#",
+        "..###.##.#.#.#.#.",
+        "#.###...#..#.##.#",
+        "...#..##..#.#####",
+        "#####.#.#..#..#.#",
+        ".#####.####..##.#",
+        "#####.####.##.#.#",
+        "..####..#.#...###",
+        "#.##.##..#..###.."
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.......#",
+        "#.###.#..#####.",
+        "#.###.#.......#",
+        "#.###.#.#######",
+        "#.....#.#....#.",
+        "#######.#######",
+        "........#......",
+        "####.##..######",
+        ".#####.##.....#",
+        "###.#...#####..",
+        ".#..##.......#.",
+        "##...########.#",
+        ".#..#####......",
+        "##.###..######."
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#...##.",
+        "#.###.#.####..#",
+        "#.###.#.####..#",
+        "#.###.#.#...###",
+        "#.....#.....#.#",
+        "#######..###...",
+        "........####...",
+        "####..##....###",
+        "...####.....##.",
+        "#...#.##.###.##",
+        ".#.#.....###.#.",
+        "##.##.###...#.#",
+        "..#.##......###",
+        "#.######.###..#"
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.....##.",
+        "#.###.#.###.###",
+        "#.###.#.#.#.#..",
+        "#.###.#..#.##.#",
+        "#.....#.#.####.",
+        "#######..######",
+        "............###",
+        "######...##.##.",
+        ".#.#.###..#.#..",
+        "#.#....###.###.",
+        ".#....#...####.",
+        "##...########.#",
+        "..#.##......###",
+        "#####....##.###"
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.####..#",
+        "#.###.#...###.#",
+        "#.###.#..#.#.##",
+        "#.###.#.....###",
+        "#.....#..#....#",
+        "#######.#.#.#.#",
+        ".........###...",
+        "#####..#..###..",
+        "..#.#...##.#.##",
+        "####.#..#...#..",
+        "..####.###....#",
+        "#..#..#.#.#.###",
+        ".#.#..######...",
+        "#.#.##.#..###.#"
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#..#....#",
+        "#.###.#.#..###.",
+        "#.###.#.#.....#",
+        "#.###.#.#..####",
+        "#.....#.#....#.",
+        "#######....####",
+        "........#......",
+        "#....##.##.####",
+        ".####.#.#.....#",
+        "##.##.#.#####..",
+        "..#.#.#......#.",
+        "#.#..#..#####.#",
+        ".....#.........",
+        "#........#####."
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.##..##.",
+        "#.###.#....#..#",
+        "#.###.#..###..#",
+        "#.###.#.###.###",
+        "#.....#.....#.#",
+        "#######.#..#...",
+        "........####...",
+        "#.....###.#.###",
+        "...##..#....##.",
+        "#.###..#.###.##",
+        "..##.##..###.#.",
+        "#.###...#...#.#",
+        ".##..####...###",
+        "###...######..#"
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#..#..##.",
+        "#.###.#.....###",
+        "#.###.#...#.#..",
+        "#.###.#...###.#",
+        "#.....#.#.####.",
+        "#######.#..####",
+        "............###",
+        "#...##..##..##.",
+        ".#.#......#.#..",
+        "#..#..####.###.",
+        "..#..#....####.",
+        "#.#..#..#####.#",
+        ".##..####...###",
+        "#.#..#..###.###"
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#.##..#",
+        "#.###.#.##.##.#",
+        "#.###.#.##.#.##",
+        "#.###.#..##.###",
+        "#.....#..#....#",
+        "#######..#..#.#",
+        ".........###...",
+        "#...#..##..##..",
+        "..#.######.#.##",
+        "##...##.#...#..",
+        ".#.##.####....#",
+        "####...##.#.###",
+        "...##....###...",
+        "####...##.###.#"
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.####....#",
+        "#.###.#..#.#####.",
+        "#.###.#.####....#",
+        "#.###.#..########",
+        "#.....#.#......#.",
+        "#######.#.#..####",
+        "............#....",
+        "#..#.###..#..####",
+        "..##.#.#####.##..",
+        "##.###...#.###.#.",
+        "..#...##.###.####",
+        "#.#..#...######.#",
+        ".#.#.#.........#.",
+        "#.##.#.##.#...###",
+        ".#.######...#....",
+        "##....#...#...#.#"
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..######.#",
+        "#.###.#.##.#...#.",
+        "#.###.#........#.",
+        "#.###.#.....###..",
+        "#.....#.....####.",
+        "#######...#.#..##",
+        ".........####..##",
+        "#..#..#..#.#.##..",
+        ".#.#.##..####....",
+        "#.########.#..##.",
+        "..######.....##..",
+        "#.###.......####.",
+        "..##.####...####.",
+        "##.#.##...#.##.##",
+        ".#....#######..##",
+        "##.####..#.#..##."
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#######.#",
+        "#.###.#.##..##.#.",
+        "#.###.#..#.##.#..",
+        "#.###.#.##.##.##.",
+        "#.....#.#.###..##",
+        "#######...#..####",
+        "........#....##..",
+        "#..###.#..##.#.##",
+        "...#####.#.###..#",
+        "#..#.#.#.####..##",
+        "..#.##.#.#..####.",
+        "#.#..#...######.#",
+        "..##.####...####.",
+        "#..#...#..##...##",
+        ".###.#.#..#...#.#",
+        "#...#.##.....##.."
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#........#.",
+        "#.###.#....##....",
+        "#.###.#.#.#..#.##",
+        "#.###.#.#...###..",
+        "#.....#..#...##..",
+        "#######.####..#.#",
+        "........#####..##",
+        "#..##....##.....#",
+        ".##.....#.#...##.",
+        "##........#.##..#",
+        ".#.#..#.#.##....#",
+        "####...#..#.#.###",
+        ".#..#....###....#",
+        "##...#...##..#..#",
+        "....#.#.##.###.#.",
+        "##.####..#.#..##."
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..###....#",
+        "#.###.#..#.#####.",
+        "#.###.#..###....#",
+        "#.###.#.#########",
+        "#.....#........#.",
+        "#######...#..####",
+        "............#....",
+        "#.#..#.#..#..####",
+        "..###......#.##..",
+        "###..#.#.#####.#.",
+        ".##.....#..#.####",
+        "#..#..#..######.#",
+        "..##.####.#....#.",
+        "#.######.##...###",
+        "..#..#...##.#....",
+        "#.#...........#.#"
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#######.#",
+        "#.###.#.##.#...#.",
+        "#.###.#.#......#.",
+        "#.###.#.#...###..",
+        "#.....#.#...####.",
+        "#######.#.#.#..##",
+        ".........####..##",
+        "#.#......#.#.##..",
+        ".#.##.###..##....",
+        "#....##.####..##.",
+        ".#####..###..##..",
+        "#...###.....####.",
+        ".#.#.#....#.####.",
+        "##.###..###.##.##",
+        "..###......##..##",
+        "#.####...###..##."
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..######.#",
+        "#.###.#.##..##.#.",
+        "#.###.#.##.##.#..",
+        "#.###.#..#.##.##.",
+        "#.....#...###..##",
+        "#######.#.#..####",
+        "........#....##..",
+        "#.#.####..##.#.##",
+        "...#..#.#.####..#",
+        "#.#.##...#.##..##",
+        ".##.###.#.#.####.",
+        "#..#..#..######.#",
+        ".#.#.#....#.####.",
+        "#..##.######...##",
+        "....###.##....#.#",
+        "###.#..#..#..##.."
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#......#.",
+        "#.###.#....##....",
+        "#.###.#...#..#.##",
+        "#.###.#.....###..",
+        "#.....#.##...##..",
+        "#######..###..#.#",
+        "........#####..##",
+        "#.#.#.#..##.....#",
+        ".##.##.#.#....##.",
+        "#####..#....##..#",
+        "...#...#.#.#....#",
+        "##...###..#.#.###",
+        "..#.#.####.#....#",
+        "##..###.#.#..#..#",
+        ".###...#..####.#.",
+        "#.####...###..##."
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.##.##...#",
+        "#.###.#.#.##.###.",
+        "#.###.#..##.....#",
+        "#.###.#.....#####",
+        "#.....#..####..#.",
+        "#######.#.#######",
+        "........#.###....",
+        "#.##.#..##.######",
+        ".##.##.....#.##..",
+        "##.#.#..#..###.#.",
+        "..#.##.#.#.#.####",
+        "#...#...#######.#",
+        "...#####.#.....#.",
+        "#.#..#.###....###",
+        ".....#.##...#....",
+        "#..##.#...#...#.#"
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..#.#.##.#",
+        "#.###.#...###..#.",
+        "#.###.#.#..#...#.",
+        "#.###.#..######..",
+        "#.....#.####.###.",
+        "#######...##...##",
+        "........##..#..##",
+        "#.##...##.#.###..",
+        "....#####..##....",
+        "#.##.###...#..##.",
+        "..##...#..#..##..",
+        "#..#.#..#...####.",
+        ".#####..##..####.",
+        "##...##..#..##.##",
+        "...##..######..##",
+        "#....##..#.#..##."
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.##.#.##.#",
+        "#.###.#...#..#.#.",
+        "#.###.#.##..#.#..",
+        "#.###.#.#.#.#.##.",
+        "#.....#..#.....##",
+        "#######...#######",
+        "..........##.##..",
+        "#.#####.##..##.##",
+        ".#...##.#.####..#",
+        "#..###.##.###..##",
+        "..#...##.##.####.",
+        "#...#...#######.#",
+        ".#####..##..####.",
+        "#......#.#.#...##",
+        "..#.####..#...#.#",
+        "##.#..##.....##.."
+      ]
+    },
+    {
+      "segments": [["x", "byte"], ["42", "numeric"]],
+      "text": "x42",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#...#.#..#.",
+        "#.###.#.####.....",
+        "#.###.#...##.#.##",
+        "#.###.#.#######..",
+        "#.....#.#.#####..",
+        "#######.###.#.#.#",
+        ".........#..#..##",
+        "#.###.###..##...#",
+        "..###..#.#....##.",
+        "##..#...###.##..#",
+        ".#.###..#..#....#",
+        "##.###.##.#.#.###",
+        "......##..##....#",
+        "##.#.#.......#..#",
+        ".#.#....##.###.#.",
+        "#....##..#.#..##."
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#........",
+        "#.###.#..######",
+        "#.###.#........",
+        "#.###.#.#######",
+        "#.....#.#......",
+        "#######.#####..",
+        "........#....##",
+        "####.##..####..",
+        "..#.###........",
+        "#.#.##.######..",
+        ".##.#.#.#....#.",
+        "#.####.#.#####.",
+        ".#.##..#.......",
+        "#.....#..####.."
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#...###",
+        "#.###.#.####...",
+        "#.###.#.####...",
+        "#.###.#.#...###",
+        "#.....#.....###",
+        "#######..###.##",
+        "........####.##",
+        "####..##....#..",
+        ".#..##.##...###",
+        "##..###..###.##",
+        ".###.##.####.#.",
+        "#.#....#....##.",
+        "..###.#.#...###",
+        "###....#####.##"
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.....###",
+        "#.###.#.###.##.",
+        "#.###.#.#.#.#.#",
+        "#.###.#..#.##.#",
+        "#.....#.#.###..",
+        "#######..####..",
+        "............#..",
+        "######...##.#.#",
+        ".....#..#.#.#.#",
+        "###..#..##.###.",
+        ".##..#..#.####.",
+        "#.####.#.#####.",
+        "..###.#.#...###",
+        "#.#..##.###.#.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.####...",
+        "#.###.#...###..",
+        "#.###.#..#.#.#.",
+        "#.###.#.....###",
+        "#.....#..#...##",
+        "#######.#.#.##.",
+        ".........###.##",
+        "#####..#..#####",
+        ".####.##.#.#.#.",
+        "#.##...##...#..",
+        "...##.##.#....#",
+        "###.#.....#.#..",
+        ".#...#.#.###...",
+        "####..###.#####"
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#...#....",
+        "#.###.#.#..####",
+        "#.###.#.##.....",
+        "#.###.#.#######",
+        "#.....#.#......",
+        "#######..####..",
+        "........###..##",
+        "#....##.#####..",
+        "...###..#......",
+        "#..##.#..####..",
+        "...#.####....#.",
+        "##.#####.#####.",
+        "..##.#.#.......",
+        "#.###..#.####.."
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#.#.###",
+        "#.###.#....#...",
+        "#.###.#...##...",
+        "#.###.#.#...###",
+        "#.....#.....###",
+        "#######.####.##",
+        "........#..#.##",
+        "#.....###...#..",
+        ".#######....###",
+        "#####..#####.##",
+        "....#.######.#.",
+        "##....##....##.",
+        ".#.#.##.#...###",
+        "##.##.#.####.##"
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#...#.###",
+        "#.###.#.....##.",
+        "#.###.#..##.#.#",
+        "#.###.#..#.##.#",
+        "#.....#.#.###..",
+        "#######.#####..",
+        ".........##.#..",
+        "#...##..###.#.#",
+        "..##.##...#.#.#",
+        "##.#..##.#.###.",
+        "...##..##.####.",
+        "##.#####.#####.",
+        ".#.#.##.#...###",
+        "#..###.####.#.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.##.#...",
+        "#.###.#.##.##..",
+        "#.###.#.#..#.#.",
+        "#.###.#.....###",
+        "#.....#..#...##",
+        "#######...#.##.",
+        "...........#.##",
+        "#...#..##.#####",
+        ".#..#..###.#.#.",
+        "#....##.....#..",
+        ".##..##..#....#",
+        "#...#.#...#.#..",
+        "..#.#..#.###...",
+        "##..#...#.#####"
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.####.##..",
+        "#.###.#..#.###.##",
+        "#.###.#.####.##..",
+        "#.###.#..########",
+        "#.....#.#........",
+        "#######.#.#...###",
+        "............#..##",
+        "#..#.###..#...#..",
+        "......##.###.####",
+        "##..#.#.##.###.##",
+        ".#.#.#######.####",
+        "##.####.#######.#",
+        ".#.#..###.......#",
+        "#.#....#..#...###",
+        "....#####...#...#",
+        "#......##.#...#.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..####....",
+        "#.###.#.##.#..###",
+        "#.###.#......####",
+        "#.###.#.....###..",
+        "#.....#.....###..",
+        "#######...#.##.##",
+        ".........####....",
+        "#..#..#..#.#..###",
+        ".##.....#####..##",
+        "#.#.#..#.#.#..###",
+        ".#..#.###....##..",
+        "##....#.#...####.",
+        "..##........###.#",
+        "##....#.#.#.##.##",
+        "...#..#######..#.",
+        "#..###.###.#..##."
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#####....",
+        "#.###.#.##..#####",
+        "#.###.#..#.###..#",
+        "#.###.#.##.##.##.",
+        "#.....#.#.###...#",
+        "#######...#...###",
+        "........#....####",
+        "#..###.#..##.....",
+        "..#.#..###.###.#.",
+        "#.....#######..#.",
+        ".#.##..###..####.",
+        "##.####.#######.#",
+        "..##........###.#",
+        "#....#.##.##...##",
+        "..#..#.#..#...#..",
+        "##..#...#....##.."
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#......####",
+        "#.###.#....##.#.#",
+        "#.###.#.#.#...##.",
+        "#.###.#.#...###..",
+        "#.....#..#...###.",
+        "#######.####.##.#",
+        "........#####....",
+        "#..##....##..#.#.",
+        ".#.#.##...#...#.#",
+        "##.#.##.#.#.##...",
+        "..#..##...##....#",
+        "#...#.###.#.#.###",
+        ".#..########...#.",
+        "##.#....###..#..#",
+        ".#.##.#.##.###.##",
+        "#..###.###.#..##."
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..###.##..",
+        "#.###.#..#.###.##",
+        "#.###.#..###.##..",
+        "#.###.#.#########",
+        "#.....#..........",
+        "#######...#...###",
+        "............#..##",
+        "#.#..#.#..#...#..",
+        ".#.#.#..#.##.####",
+        "##.###.#..####.##",
+        ".#...#...###.####",
+        "#.#.#..##..####.#",
+        "...##.#.###.....#",
+        "#...##.##.....###",
+        ".####.##..#.#...#",
+        "##.#.#.##.....#.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#####....",
+        "#.###.#.##.#..###",
+        "#.###.#.#....####",
+        "#.###.#.#...###..",
+        "#.....#.#...###..",
+        "#######.#.#.##.##",
+        ".........####....",
+        "#.#......#.#..###",
+        "..##.###..###..##",
+        "#.#####.#.##..###",
+        ".#.##........##..",
+        "#.##.#.####.####.",
+        ".####..#.##.###.#",
+        "###.###.....##.##",
+        ".##..###.#.##..#.",
+        "##..#..#####..##."
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..####....",
+        "#.###.#.##..#####",
+        "#.###.#.##.###..#",
+        "#.###.#..#.##.##.",
+        "#.....#...###...#",
+        "#######.#.#...###",
+        "........#....####",
+        "#.#.####..##.....",
+        ".######....###.#.",
+        "#..#.#.....##..#.",
+        ".#..#.#..#..####.",
+        "#.#.#..##..####.#",
+        ".####..#.##.###.#",
+        "#.#.#..#...#...##",
+        ".#.#...##.....#..",
+        "#..###..#.#..##.."
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#....####",
+        "#.###.#....##.#.#",
+        "#.###.#...#...##.",
+        "#.###.#.....###..",
+        "#.....#.##...###.",
+        "#######..###.##.#",
+        "........#####....",
+        "#.#.#.#..##..#.#.",
+        ".......####...#.#",
+        "##.....#.#..##...",
+        "..##.#.##.##....#",
+        "######..##..#.###",
+        ".....##.#..#...#.",
+        "######...#...#..#",
+        "..#.###..#####.##",
+        "##..#..#####..##."
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#######..",
+        "#.###.#.##.###.##",
+        "#.###.#...#..##..",
+        "#.###.#...#.#####",
+        "#.....#..##.#....",
+        "#######.#..##.###",
+        "........###....##",
+        "#.##.#..####..#..",
+        ".#####.#..##.####",
+        "##..##.###.###.##",
+        "....##...#.#.####",
+        "#...#...##.####.#",
+        "..#.#.###.#.....#",
+        "###.###.#.....###",
+        "..##....##..#...#",
+        "#.##..#...#...#.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..###.....",
+        "#.###.#..#.#..###",
+        "#.###.#.##.#.####",
+        "#.###.#..#.####..",
+        "#.....#.###..##..",
+        "#######....#.#.##",
+        "........#..#.....",
+        "#.##...##.....###",
+        "...####.#.###..##",
+        "#.#.###..#.#..###",
+        "...#......#..##..",
+        "#..#.#..#.#.####.",
+        ".#..#.....#.###.#",
+        "#...##.#....##.##",
+        "..#.##..#.###..#.",
+        "#.#.###..#.#..##."
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.####.....",
+        "#.###.#..#..#####",
+        "#.###.#.#...##..#",
+        "#.###.#.#...#.##.",
+        "#.....#..#.#....#",
+        "#######....##.###",
+        ".........##.#####",
+        "#.#####.###......",
+        ".#.#.####..###.#.",
+        "#....#..#####..#.",
+        "......#..##.####.",
+        "#...#...##.####.#",
+        ".#..#.....#.###.#",
+        "##..#.#....#...##",
+        "...##.#..##...#..",
+        "#####.##.....##.."
+      ]
+    },
+    {
+      "segments": [["\u6f22", "kanji"]],
+      "text": "\u6f22",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.....#####",
+        "#.###.#.#..##.#.#",
+        "#.###.#..###..##.",
+        "#.###.#.##.####..",
+        "#.....#.#.#.####.",
+        "#######.##..###.#",
+        "...........#.....",
+        "#.###.###.##.#.#.",
+        "..#.#....##...#.#",
+        "##.#...##.#.##...",
+        ".#####.##..#....#",
+        "##.###.##...#.###",
+        "..##.#####.#...#.",
+        "#..#####.#...#..#",
+        ".##..#.##..###.##",
+        "#.#.###..#.#..##."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#....#.##",
+        "#.###.#..######",
+        "#.###.#........",
+        "#.###.#.#####.#",
+        "#.....#.#....#.",
+        "#######.#####..",
+        "........#....##",
+        "####.##..####..",
+        "..##.#..#......",
+        "#.....##.####..",
+        ".##....#.....#.",
+        "##.##..########",
+        "..##.##......#.",
+        "###.#########.."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#..##..",
+        "#.###.#.####...",
+        "#.###.#.####...",
+        "#.###.#.#...#.#",
+        "#.....#.....#.#",
+        "#######..###.##",
+        "........####.##",
+        "####..##....#..",
+        ".#.#.###....###",
+        "###.....####.##",
+        ".#####.#.###.#.",
+        "##...#.##...###",
+        ".#.#.#.##...#.#",
+        "#...##...###.##"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#....##..",
+        "#.###.#.###.##.",
+        "#.###.#.#.#.#.#",
+        "#.###.#..#.####",
+        "#.....#.#.####.",
+        "#######..####..",
+        "............#..",
+        "######...##.#.#",
+        "...####...#.#.#",
+        "##..#.#..#.###.",
+        ".##.####..####.",
+        "##.##..########",
+        ".#.#.#.##...#.#",
+        "##..#.##.##.#.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.###..##",
+        "#.###.#...###..",
+        "#.###.#..#.#.#.",
+        "#.###.#.....#.#",
+        "#.....#..#....#",
+        "#######.#.#.##.",
+        ".........###.##",
+        "#####..#..#####",
+        ".##....###.#.#.",
+        "#..#####....#..",
+        "...#....##....#",
+        "#...##..#.#.#.#",
+        "..#.#.#..###.#.",
+        "#..####...#####"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#...##.##",
+        "#.###.#.#.#####",
+        "#.###.#.#......",
+        "#.###.#.##.##.#",
+        "#.....#.#....#.",
+        "#######....##..",
+        "........###..##",
+        "#....##.#..##..",
+        ".#.##.###......",
+        "###..########..",
+        ".###.###.....#.",
+        "#....##.#######",
+        ".##...##.....#.",
+        "####..#.#####.."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#.###..",
+        "#.###.#...##...",
+        "#.###.#..###...",
+        "#.###.#.#.#.#.#",
+        "#.....#.....#.#",
+        "#######.#..#.##",
+        "........#..#.##",
+        "#.....#####.#..",
+        "..###.......###",
+        "#....#...###.##",
+        ".##.#.##.###.#.",
+        "#..##.#.#...###",
+        "........#...#.#",
+        "#..#...#.###.##"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#...###..",
+        "#.###.#...#.##.",
+        "#.###.#...#.#.#",
+        "#.###.#..######",
+        "#.....#.#.####.",
+        "#######.#..##..",
+        ".........##.#..",
+        "#...##..#...#.#",
+        ".###...#..#.#.#",
+        "#.#.###.##.###.",
+        ".####..#..####.",
+        "#....##.#######",
+        "........#...#.#",
+        "##.#.##..##.#.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.##...##",
+        "#.###.#.#####..",
+        "#.###.#.##.#.#.",
+        "#.###.#...#.#.#",
+        "#.....#..#....#",
+        "#######..#..##.",
+        "...........#.##",
+        "#...#..###.####",
+        "....###.##.#.#.",
+        "#####.###...#..",
+        ".....##.##....#",
+        "##.#..###.#.#.#",
+        ".#######.###.#.",
+        "#.....##..#####"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.####...#.",
+        "#.###.#..#.####..",
+        "#.###.#.####.....",
+        "#.###.#..########",
+        "#.....#.#......#.",
+        "#######.#.#..##.#",
+        "............#..##",
+        "#..#.###..#..##..",
+        ".#.#...#####.####",
+        "####...###.###.##",
+        ".##.#..#.###.####",
+        "#.#...#.#######.#",
+        "..##...#.........",
+        "###....#..#...#.#",
+        ".#######....#...#",
+        "##..##.##.#...#.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..#######.",
+        "#.###.#.##.#.....",
+        "#.###.#........##",
+        "#.###.#.....###..",
+        "#.....#.....####.",
+        "#######...#.#...#",
+        ".........####....",
+        "#..#..#..#.#.####",
+        "..##..#..####..##",
+        "#..#..#..#.#..###",
+        ".###.#.#.....##..",
+        "#.#####.#...####.",
+        ".#.#..#.#...###..",
+        "#.....#.#.#.##..#",
+        ".##...##.####..#.",
+        "##.#...###.#..##."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.########.",
+        "#.###.#.##..##...",
+        "#.###.#..#.##.#.#",
+        "#.###.#.##.##.##.",
+        "#.....#.#.###..##",
+        "#######...#..##.#",
+        "........#....####",
+        "#..###.#..##.#...",
+        ".####.##.#.###.#.",
+        "#.###...#####..#.",
+        ".##..###.#..####.",
+        "#.#...#.#######.#",
+        ".#.#..#.#...###..",
+        "##...#.##.##....#",
+        ".#.#.#.##.#...#..",
+        "#....#..#....##.."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.........#",
+        "#.###.#....##..#.",
+        "#.###.#.#.#..#.#.",
+        "#.###.#.#...###..",
+        "#.....#..#...##..",
+        "#######.####..###",
+        "........#####....",
+        "#..##....##....#.",
+        ".....#..#.#...#.#",
+        "###.##.##.#.##...",
+        "...##...#.##....#",
+        "####.####.#.#.###",
+        "..#.##.#.###...##",
+        "#..#....###..#.##",
+        "..#.#.#..#.###.##",
+        "##.#...###.#..##."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..###...#.",
+        "#.###.#..#.####..",
+        "#.###.#..###.....",
+        "#.###.#.#########",
+        "#.....#........#.",
+        "#######...#..##.#",
+        "............#..##",
+        "#.#..#.#..#..##..",
+        "..###.##.#.#.####",
+        "#.####.###.###.##",
+        "..##..#..#.#.####",
+        "##.#.###.######.#",
+        "..#.#..##........",
+        "##...###.##...#.#",
+        "....#...###.#...#",
+        "#.#.#...###...#.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.########.",
+        "#.###.#.##.#.....",
+        "#.###.#.#......##",
+        "#.###.#.#...###..",
+        "#.....#.#...####.",
+        "#######.#.#.#...#",
+        ".........####....",
+        "#.#......#.#.####",
+        ".#.##...##.##..##",
+        "##.####..#.#..###",
+        "..#.###...#..##..",
+        "##..#.##....####.",
+        ".#..#.#.....###..",
+        "#.#..#..###.##..#",
+        "...#.#..#..##..#.",
+        "#.##.#..#..#..##."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..#######.",
+        "#.###.#.##..##...",
+        "#.###.#.##.##.#.#",
+        "#.###.#..#.##.##.",
+        "#.....#...###..##",
+        "#######.#.#..##.#",
+        "........#....####",
+        "#.#.####..##.#...",
+        "...#...#######.#.",
+        "####.#..#####..#.",
+        "..####...##.####.",
+        "##.#.###.######.#",
+        ".#..#.#.....###..",
+        "###...######....#",
+        "..#...#..#....#..",
+        "###....###...##.."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#.......#",
+        "#.###.#....##..#.",
+        "#.###.#...#..#.#.",
+        "#.###.#.....###..",
+        "#.....#.##...##..",
+        "#######..###..###",
+        "........#####....",
+        "#.#.#.#..##....#.",
+        ".##.###.......#.#",
+        "#.#....##.#.##...",
+        ".#....###..#....#",
+        "#.....#...#.#.###",
+        "..##.#.#####...##",
+        "#.##.##.#.#..#.##",
+        ".#.###.##.####.##",
+        "#.##.#..#..#..##."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.###....#.",
+        "#.###.#.#.##.##..",
+        "#.###.#..#..#....",
+        "#.###.#...##.####",
+        "#.....#..####..#.",
+        "#######.#.#..##.#",
+        "........###....##",
+        "#.##.#..#..#.##..",
+        "..##...##.##.####",
+        "##..#.##.#.###.##",
+        ".#####.#.#.#.####",
+        "####.#.#..#####.#",
+        "..####.#.........",
+        "#.....##.##...#.#",
+        ".....###..#.#...#",
+        "#..#######....#.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..##.####.",
+        "#.###.#...###....",
+        "#.###.#.#.###..##",
+        "#.###.#..#...##..",
+        "#.....#.####.###.",
+        "#######...#.#...#",
+        "........#..#.....",
+        "#.##...####..####",
+        ".#.#..#...###..##",
+        "#.#.#...##.#..###",
+        ".##....#..#..##..",
+        "###.#..#.#..####.",
+        ".#.####.#...###..",
+        "###.....###.##..#",
+        "...##.##.#.##..#.",
+        "#.....###.##..##."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.###.####.",
+        "#.###.#...#..#...",
+        "#.###.#.###...#.#",
+        "#.###.#.#..#..##.",
+        "#.....#..#.....##",
+        "#######...#..##.#",
+        ".........##.#####",
+        "#.#####.#....#...",
+        "...##.##...###.#.",
+        "#.....#..####..#.",
+        ".###..##.##.####.",
+        "####.#.#..#####.#",
+        ".#.####.#...###..",
+        "#.#..#######....#",
+        "..#.##.##.....#..",
+        "##.#.##.###..##.."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"]],
+      "text": "\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#....#....#",
+        "#.###.#.####...#.",
+        "#.###.#....###.#.",
+        "#.###.#.##...##..",
+        "#.....#.#.#####..",
+        "#######.####..###",
+        "...........#.....",
+        "#.###.####.#...#.",
+        ".##..#..###...#.#",
+        "##.#.###..#.##...",
+        "....##..#..#....#",
+        "#.#......##.#.###",
+        "..#....#.###...##",
+        "####..#.#.#..#.##",
+        ".#.#..#..#####.##",
+        "#.....###.##..##."
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.......#",
+        "#.###.#..###...",
+        "#.###.#.......#",
+        "#.###.#.###.###",
+        "#.....#.#..#...",
+        "#######.#####.#",
+        "........#...#..",
+        "####.##...#.#..",
+        ".###.##.###....",
+        "#.....#..####.#",
+        "..##..#..#..#..",
+        "#.#.#..#..#.##.",
+        ".....#.##..##.#",
+        "#.......##....."
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#...##.",
+        "#.###.#.#######",
+        "#.###.#.####..#",
+        "#.###.#.#..####",
+        "#.....#....####",
+        "#######..###.#.",
+        "........#####..",
+        "####..##.#.##..",
+        "...#.#.#.##.###",
+        "###....#####.#.",
+        "..#.###...###..",
+        "#.##.#.#.#.###.",
+        ".##..##....#.#.",
+        "###...##.#..###"
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.....##.",
+        "#.###.#.###...#",
+        "#.###.#.#.#.#..",
+        "#.###.#..#..#.#",
+        "#.....#.#.#.#..",
+        "#######..####.#",
+        ".............##",
+        "######....###.#",
+        ".#.###...#..#.#",
+        "##..#.##.#.####",
+        "..####...###...",
+        "#.#.#..#..#.##.",
+        ".##..##....#.#.",
+        "#.#..#...#.#..#"
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.####..#",
+        "#.###.#...##.##",
+        "#.###.#..#.#.##",
+        "#.###.#....####",
+        "#.....#..#.#.##",
+        "#######.#.#.###",
+        ".........####..",
+        "#####..#.##.###",
+        "..#...###.##.#.",
+        "#..####.....#.#",
+        ".#....###...###",
+        "######...####..",
+        "...##..####.#.#",
+        "####...#.....##"
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#.....#..",
+        "#.###.#...#..###.",
+        "#.###.#.#...##.##",
+        "#.###.#...#...##.",
+        "#.....#.###......",
+        "#######.##.###.##",
+        ".........##..#.#.",
+        "#..#.###.########",
+        "..#..#.##......##",
+        "#.######..####.##",
+        "...###..#....#.#.",
+        "##.#.##...###..##",
+        "...#.#...###.##.#",
+        "#..#.#.###...#.#.",
+        ".#.#.#.#.##.....#",
+        "#.####...##.#.#.#"
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.....##...",
+        "#.###.#.#.#.#..#.",
+        "#.###.#..#####...",
+        "#.###.#..#.#..#.#",
+        "#.....#..##.###..",
+        "#######..#.#..###",
+        "...........#.#..#",
+        "#..#..#.....###..",
+        ".#...##.....#####",
+        "##.###..#.##..###",
+        "........####.#..#",
+        "##..#.#..#..#....",
+        ".###.########...#",
+        "####.##..#..#.##.",
+        ".#..#..#...#...#.",
+        "#.#........##.##."
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#...##...",
+        "#.###.#.#.##.#.#.",
+        "#.###.#...#..###.",
+        "#.###.#.#....####",
+        "#.....#.##.##...#",
+        "#######..#.###.##",
+        "........###.#.##.",
+        "#..###.#.##.##.##",
+        "....####..#.#.##.",
+        "####.##....##..#.",
+        "...#..#.#.####.##",
+        "##.#.##...###..##",
+        ".###.########...#",
+        "#.##...#.#.#.###.",
+        ".#########..#.#..",
+        "####.#.#.#..###.."
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..###..###",
+        "#.###.#..##......",
+        "#.###.#.##.##...#",
+        "#.###.#.##.#..#.#",
+        "#.....#...#..###.",
+        "#######.#...#...#",
+        "........#..#.#..#",
+        "#..##.....###...#",
+        ".###....##.#.#..#",
+        "#.#...##.#..##...",
+        ".##.##.#.#....#..",
+        "#.....##.##.##..#",
+        "....#........###.",
+        "###..#........#..",
+        "..........##.#.##",
+        "#.#........##.##."
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.......#..",
+        "#.###.#...#..###.",
+        "#.###.#.....##.##",
+        "#.###.#.#.#...##.",
+        "#.....#..##......",
+        "#######..#.###.##",
+        ".........##..#.#.",
+        "#.#..#.#.########",
+        "...#...#.##....##",
+        "#######....###.##",
+        "..#..###.#...#.#.",
+        "##.##.#..#.##..##",
+        ".###.#.#...#.##.#",
+        "#..##.##.##..#.#.",
+        "........###.....#",
+        "###....#.##.#.#.#"
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#...##...",
+        "#.###.#.#.#.#..#.",
+        "#.###.#.######...",
+        "#.###.#.##.#..#.#",
+        "#.....#.###.###..",
+        "#######.##.#..###",
+        "...........#.#..#",
+        "#.#.........###..",
+        ".###..#.###.#####",
+        "#..###.##..#..###",
+        "..###.##..##.#..#",
+        "##...##...#.#....",
+        "...#.##.#..##...#",
+        "#####...###.#.##.",
+        "...###..#..#...#.",
+        "######.#...##.##."
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.....##...",
+        "#.###.#.#.##.#.#.",
+        "#.###.#.#.#..###.",
+        "#.###.#......####",
+        "#.....#..#.##...#",
+        "#######.##.###.##",
+        "........###.#.##.",
+        "#.#.####.##.##.##",
+        "..###.####..#.##.",
+        "#.##.###..###..#.",
+        "..#.#..#.#####.##",
+        "##.##.#..#.##..##",
+        "...#.##.#..##...#",
+        "#.##########.###.",
+        "..#.#.#..#..#.#..",
+        "#.#.#....#..###.."
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.####..###",
+        "#.###.#..##......",
+        "#.###.#..#.##...#",
+        "#.###.#..#.#..#.#",
+        "#.....#.#.#..###.",
+        "#######.....#...#",
+        "........#..#.#..#",
+        "#.#.#.#...###...#",
+        ".#...#....##.#..#",
+        "###...#..##.##...",
+        ".#.#.##.#.....#..",
+        "#...####....##..#",
+        ".##.#..#.##..###.",
+        "###.#.#.#.#...#..",
+        ".#.#.#.##.##.#.##",
+        "######.#...##.##."
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#...#.#..",
+        "#.###.#.##..####.",
+        "#.###.#...##.#.##",
+        "#.###.#..###..##.",
+        "#.....#.....#....",
+        "#######.#..#.#.##",
+        "........##.###.#.",
+        "#.##.#..#...#####",
+        "...####..#.....##",
+        "#.#......#.###.##",
+        ".#.#.#..#.#..#.#.",
+        "###.###.#.###..##",
+        ".#.#.#..#..#.##.#",
+        "#....###.....#.#.",
+        "..#####.........#",
+        "#.######.##.#.#.#"
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#......#...",
+        "#.###.#..#.....#.",
+        "#.###.#.##...#...",
+        "#.###.#.......#.#",
+        "#.....#.#....##..",
+        "#######....##.###",
+        "........#.#.##..#",
+        "#.##...########..",
+        ".#####.###..#####",
+        "##....####.#..###",
+        ".#..#...##.#.#..#",
+        "####..#.##..#....",
+        "..##.###...##...#",
+        "###..#..#...#.##.",
+        "..#...#..###...#.",
+        "#.#...##...##.##."
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#....#...",
+        "#.###.#..#.###.#.",
+        "#.###.#.#..#####.",
+        "#.###.#.##.#.####",
+        "#.....#...##....#",
+        "#######....#.#.##",
+        ".........#.#..##.",
+        "#.#####.#..###.##",
+        "..##.#..###.#.##.",
+        "###.#..#.####..#.",
+        ".#.##.#.#..###.##",
+        "###.###.#.###..##",
+        "..##.###...##...#",
+        "#.#...###..#.###.",
+        "...#.#..#.#.#.#..",
+        "####.##..#..###.."
+      ]
+    },
+    {
+      "segments": [["\u3053\u3093\u306b\u3061\u306f", "kanji"]],
+      "text": "\u3053\u3093\u306b\u3061\u306f",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..####.###",
+        "#.###.#.#...#....",
+        "#.###.#..##.....#",
+        "#.###.#.#.....#.#",
+        "#.....#.##..####.",
+        "#######.##......#",
+        "..........#.##..#",
+        "#.###.####..#...#",
+        ".#..#.##...#.#..#",
+        "#.####....#.##...",
+        "..#..#.#.##...#..",
+        "#.###.#####.##..#",
+        ".#..#...###..###.",
+        "####.##.##....#..",
+        ".##.#.##.#.#.#.##",
+        "#.#...##...##.##."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#....#.##",
+        "#.###.#..######",
+        "#.###.#........",
+        "#.###.#.#####.#",
+        "#.....#.#..###.",
+        "#######.#####..",
+        "........#..#.##",
+        "####.##..##....",
+        ".#..#.#.#...#..",
+        "##.##.#####....",
+        "...##.#.#....#.",
+        "###.#.#.#######",
+        ".#..####.....#.",
+        "#..##..#.####.."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#..##..",
+        "#.###.#.####...",
+        "#.###.#.####...",
+        "#.###.#.#...#.#",
+        "#.....#....#..#",
+        "#######..###.##",
+        "........###..##",
+        "####..##...#...",
+        "..#.#..#.....##",
+        "#.###....##.###",
+        ".....##.####.#.",
+        "####.##.#...###",
+        "..#.##..#...#.#",
+        "#####.#.####.##"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#....##..",
+        "#.###.#.###.##.",
+        "#.###.#.#.#.#.#",
+        "#.###.#..#.####",
+        "#.....#.#.#..#.",
+        "#######..####..",
+        "...........##..",
+        "######...###..#",
+        ".##.......#...#",
+        "#..#..#.##...#.",
+        "...#.#..#.####.",
+        "###.#.#.#######",
+        "..#.##..#...#.#",
+        "#.####.####.#.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.###..##",
+        "#.###.#...###..",
+        "#.###.#..#.#.#.",
+        "#.###.#.....#.#",
+        "#.....#..#.##.#",
+        "#######.#.#.##.",
+        ".........##..##",
+        "#####..#..#..##",
+        "...#######.###.",
+        "##...####..#...",
+        ".##.#.##.#....#",
+        "#.#######.#.#.#",
+        ".#.#..##.###.#.",
+        "###.#...#.#####"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#...##.##",
+        "#.###.#.#######",
+        "#.###.#.#.#....",
+        "#.###.#.#..##.#",
+        "#.....#.######.",
+        "#######..#.##..",
+        "........####.##",
+        "#....##.###....",
+        ".#.#..##....#..",
+        "####.....##....",
+        ".########....#.",
+        "#...##...######",
+        "..#######....#.",
+        "#..##########.."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#.###..",
+        "#.###.#..###...",
+        "#.###.#..#.#...",
+        "#.###.#.###.#.#",
+        "#.....#..###..#",
+        "#######.##.#.##",
+        "........#....##",
+        "#.....###..#...",
+        "..##....#....##",
+        "#..#..#####.###",
+        ".##...######.#.",
+        "#..#........###",
+        ".#.###......#.#",
+        "######...###.##"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#...###..",
+        "#.###.#..##.##.",
+        "#.###.#.....#.#",
+        "#.###.#...#####",
+        "#.....#.##...#.",
+        "#######.##.##..",
+        ".........####..",
+        "#...##..####..#",
+        ".####..##.#...#",
+        "#.###..#.#...#.",
+        ".###...##.####.",
+        "#...##...######",
+        ".#.###......#.#",
+        "#.###.##.##.#.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.##...##",
+        "#.###.#.#.###..",
+        "#.###.#.####.#.",
+        "#.###.#..##.#.#",
+        "#.....#...###.#",
+        "#######.....##.",
+        ".............##",
+        "#...#..##.#..##",
+        ".....##..#.###.",
+        "###.##.....#...",
+        "....###..#....#",
+        "##.##..#..#.#.#",
+        "..#...######.#.",
+        "###.###...#####"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.####...#.",
+        "#.###.#..#.####..",
+        "#.###.#.####.....",
+        "#.###.#..########",
+        "#.....#.#....###.",
+        "#######.#.#..##.#",
+        "............##.##",
+        "#..#.###..#......",
+        ".##......###..###",
+        "#.##.#...#.##..##",
+        ".####.######...##",
+        "#.####.#.######.#",
+        ".##.#..##........",
+        "#.#..#..#.#..##.#",
+        "..#.#.###...#...#",
+        "#...#.#.#.#..##.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..#######.",
+        "#.###.#.##.#.....",
+        "#.###.#........##",
+        "#.###.#.....###..",
+        "#.....#.....#..#.",
+        "#######...#.#...#",
+        ".........#####...",
+        "#..#..#..#.#...##",
+        "......########.##",
+        "##.#.#####.#.####",
+        ".##..####........",
+        "#.#....#....####.",
+        "....#.#.....###..",
+        "##...###..#.#...#",
+        "..##.########..#.",
+        "#..#.##.##.#.###."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.########.",
+        "#.###.#.##..##...",
+        "#.###.#..#.##.#.#",
+        "#.###.#.##.##.##.",
+        "#.....#.#.#######",
+        "#######...#..##.#",
+        "........#.....###",
+        "#..###.#..##..#..",
+        ".#..#.#.##.##..#.",
+        "######.#.#####.#.",
+        ".###.#.###..#..#.",
+        "#.####.#.######.#",
+        "....#.#.....###..",
+        "#.........##.#..#",
+        ".......#..#...#..",
+        "##....###.....#.."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.........#",
+        "#.###.#....##..#.",
+        "#.###.#.#.#..#.#.",
+        "#.###.#.#...###..",
+        "#.....#..#.......",
+        "#######.####..###",
+        "........######...",
+        "#..##....##..###.",
+        "..##.#.#..#..##.#",
+        "#.#.#.....#.#....",
+        "....#.#...##.##.#",
+        "###.#.....#.#.###",
+        ".###.#.#####...##",
+        "##.#.#.#.##....##",
+        ".######.##.###.##",
+        "#..#.##.##.#.###."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..###...#.",
+        "#.###.#..#.####..",
+        "#.###.#..###.....",
+        "#.###.#.#########",
+        "#.....#......###.",
+        "#######...#..##.#",
+        "............##.##",
+        "#.#..#.#..#......",
+        "...###....##..###",
+        "#..##.....###..##",
+        "...#..#..#.#...##",
+        "###.....#..####.#",
+        "..#.#..##.#......",
+        "#.#####.#....##.#",
+        "..##...#..#.#...#",
+        "#..#..##..#..##.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.########.",
+        "#.###.#.##.#.....",
+        "#.###.#.#......##",
+        "#.###.#.#...###..",
+        "#.....#.#...#..#.",
+        "#######.#.#.#...#",
+        ".........#####...",
+        "#.#......#.#...##",
+        ".########.####.##",
+        "#####.###.##.####",
+        "....###...#......",
+        "######..###.####.",
+        ".#..#.#...#.###..",
+        "##.###.#....#...#",
+        "..#.##.#.#.##..#.",
+        "#...####.#.#.###."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..#######.",
+        "#.###.#.##..##...",
+        "#.###.#.##.##.#.#",
+        "#.###.#..#.##.##.",
+        "#.....#...#######",
+        "#######.#.#..##.#",
+        "........#.....###",
+        "#.#.####..##..#..",
+        "..##.##.#..##..#.",
+        "##.#...#...###.#.",
+        "...###...##.#..#.",
+        "###.....#..####.#",
+        ".#..#.#...#.###..",
+        "#..##.#....#.#..#",
+        "...##.###.....#..",
+        "##.##.#.......#.."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#.......#",
+        "#.###.#....##..#.",
+        "#.###.#...#..#.#.",
+        "#.###.#.....###..",
+        "#.....#.##.......",
+        "#######..###..###",
+        "........######...",
+        "#.#.#.#..##..###.",
+        ".#..#..#.##..##.#",
+        "#....#...#..#....",
+        ".##...###..#.##.#",
+        "#.##.#.###..#.###",
+        "..##.#.###.#...##",
+        "##..####.#.....##",
+        ".##..#...#####.##",
+        "#...####.#.#.###."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#..##..#.",
+        "#.###.#.###..##..",
+        "#.###.#....##....",
+        "#.###.#.....#####",
+        "#.....#..#...###.",
+        "#######.#..#.##.#",
+        "........######.##",
+        "#.##.#..###......",
+        "......###.##..###",
+        "#..###.##..##..##",
+        "..##.....#.#...##",
+        "#.#.#.#..#.####.#",
+        ".##..##.#........",
+        "####.#..#.#..##.#",
+        ".####.#.#.#.#...#",
+        "##...##..##..##.#"
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#....#.###.",
+        "#.###.#..##.#....",
+        "#.###.#.###.#..##",
+        "#.###.#..######..",
+        "#.....#.##..#..#.",
+        "#######....##...#",
+        "........#...##...",
+        "#.##...##..#...##",
+        ".##.......####.##",
+        "#######....#.####",
+        "..#.##....#......",
+        "#.##.##...#.####.",
+        ".....#.#....###..",
+        "#..#.###..#.#...#",
+        ".##..##.##.##..#.",
+        "##.##.#....#.###."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#..#.###.",
+        "#.###.#..###.#...",
+        "#.###.#.#.##..#.#",
+        "#.###.#.#.#.#.##.",
+        "#.....#..########",
+        "#######....#.##.#",
+        ".........###..###",
+        "#.#####.####..#..",
+        "..#.#..#...##..#.",
+        "##.#.#..#.####.#.",
+        "..#####..##.#..#.",
+        "#.#.#.#..#.####.#",
+        ".....#.#....###..",
+        "##.#......##.#..#",
+        ".#.#..........#..",
+        "#...####.#....#.."
+      ]
+    },
+    {
+      "segments": [["\u6f22\u5b57", "kanji"], ["123", "numeric"]],
+      "text": "\u6f22\u5b57123",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..##.#...#",
+        "#.###.#.#.#....#.",
+        "#.###.#..#..##.#.",
+        "#.###.#.#######..",
+        "#.....#.#........",
+        "#######.##....###",
+        "............##...",
+        "#.###.###.#..###.",
+        ".#.#.##.###..##.#",
+        "#......####.#....",
+        ".#.....##..#.##.#",
+        "########....#.###",
+        ".####.#.####...##",
+        "#....#.#.##....##",
+        "..#.##########.##",
+        "##.##.#....#.###."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#....#..#",
+        "#.###.#..##....",
+        "#.###.#....##..",
+        "#.###.#.####.#.",
+        "#.....#.#...#.#",
+        "#######.####...",
+        "........#.....#",
+        "####.##..##.#.#",
+        "...#####....#.#",
+        "###.##..####...",
+        "..##.##.#......",
+        "#....##.######.",
+        "...............",
+        "####..##.####.#"
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#..###.",
+        "#.###.#.###.###",
+        "#.###.#.###.#..",
+        "#.###.#.#....#.",
+        "#.....#......#.",
+        "#######..######",
+        "........####..#",
+        "####..##...##.#",
+        ".#####..#....#.",
+        "#...####.######",
+        "..#.#.#.####...",
+        "#..##.#.#...##.",
+        ".##...###...###",
+        "#..#....####.#."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#....###.",
+        "#.###.#.####..#",
+        "#.###.#.#.##..#",
+        "#.###.#..#.#...",
+        "#.....#.#.##..#",
+        "#######..###...",
+        "............##.",
+        "######...####..",
+        "..##.#.##.#....",
+        "#.#..#.###.#.#.",
+        "..###...#.###..",
+        "#....##.######.",
+        ".##...###...###",
+        "##.#.######.#.."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.###...#",
+        "#.###.#...#..##",
+        "#.###.#..#..##.",
+        "#.###.#......#.",
+        "#.....#..#..##.",
+        "#######.#.#..#.",
+        ".........###..#",
+        "#####..#..#.##.",
+        ".#..#.#..#.####",
+        "####....#......",
+        ".#...###.#...##",
+        "##.#..###.#.#..",
+        "...###...###...",
+        "#.....#.#.####."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#...##..#",
+        "#.###.#.#.#....",
+        "#.###.#.##.##..",
+        "#.###.#.#.##.#.",
+        "#.....#.#...#.#",
+        "#######....#...",
+        "........##....#",
+        "#....##.#.#.#.#",
+        ".#.##..#....#.#",
+        "###...#..###...",
+        "..#..#..#......",
+        "##.#...#.#####.",
+        ".#...##.#......",
+        "#.#.###..####.#"
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.#.####.",
+        "#.###.#...#.###",
+        "#.###.#...#.#..",
+        "#.###.#.##...#.",
+        "#.....#......#.",
+        "#######.#..####",
+        "........#.##..#",
+        "#.....####.##.#",
+        "..###.#.#....#.",
+        "#......########",
+        "..###...####...",
+        "##..##.#....##.",
+        "..#..#.#....###",
+        "##..##.#####.#."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#...####.",
+        "#.###.#...##..#",
+        "#.###.#..###..#",
+        "#.###.#....#...",
+        "#.....#.#.##..#",
+        "#######.#..#...",
+        ".........#..##.",
+        "#...##..#.###..",
+        ".###..###.#....",
+        "#.#.#.##.#.#.#.",
+        "..#.#.#.#.###..",
+        "##.#...#.#####.",
+        "..#..#.#....###",
+        "#...#.#.###.#.."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M3",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#",
+        "#.....#.##....#",
+        "#.###.#.###..##",
+        "#.###.#.#...##.",
+        "#.###.#..#...#.",
+        "#.....#..#..##.",
+        "#######..#...#.",
+        "..........##..#",
+        "#...#..####.##.",
+        "....##...#.####",
+        "#######........",
+        ".#.#.#.#.#...##",
+        "#....#....#.#..",
+        ".#.##.#.####...",
+        "##.######.####."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.####.#..#",
+        "#.###.#..#.##....",
+        "#.###.#.####.##..",
+        "#.###.#..#####.#.",
+        "#.....#.#.....#..",
+        "#######.#.#..#...",
+        "............#...#",
+        "#..#.###..#...##.",
+        ".#..###.####..##.",
+        "###.###..#.###.#.",
+        ".#..####.###...##",
+        "#.#...###########",
+        "..#####.........#",
+        "##..#...#.#..####",
+        ".....#..#...#...#",
+        "#....#.#..#..####"
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..####.#.#",
+        "#.###.#.##.#.##..",
+        "#.###.#......####",
+        "#.###.#.....##..#",
+        "#.....#.....##...",
+        "#######...#.#.#..",
+        ".........####..#.",
+        "#..#..#..#.#..#.#",
+        "..#.##.#.#####.#.",
+        "#...##.###.#..##.",
+        ".#.#..##.........",
+        "#.#######...###..",
+        ".#.###.##...###.#",
+        "#.#.#.##..#.#..##",
+        "...##...#####..#.",
+        "#..##..#.#.#.##.."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#####.#.#",
+        "#.###.#.##..#.#..",
+        "#.###.#..#.###..#",
+        "#.###.#.##.##..##",
+        "#.....#.#.###.#.#",
+        "#######...#..#...",
+        "........#....##.#",
+        "#..###.#..##...#.",
+        ".##..#...#.##..##",
+        "#.#..###.####..##",
+        ".#.....#.#..#..#.",
+        "#.#...###########",
+        ".#.###.##...###.#",
+        "###.##....##.#.##",
+        "..#.###...#...#..",
+        "##..##........##."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "L",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#......#.#.",
+        "#.###.#....#####.",
+        "#.###.#.#.#...##.",
+        "#.###.#.#...##..#",
+        "#.....#..#...#.#.",
+        "#######.####...#.",
+        "........#####..#.",
+        "#..##....##..#...",
+        "...##.###.#..##..",
+        "####..#...#.##..#",
+        "..#####.#.##.##.#",
+        "####.##.#.#.#.#.#",
+        "..#...#..###...#.",
+        "#.###..#.##.....#",
+        ".#.#...###.###.##",
+        "#..##..#.#.#.##.."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..###.#..#",
+        "#.###.#..#.##....",
+        "#.###.#..###.##..",
+        "#.###.#.######.#.",
+        "#.....#.......#..",
+        "#######...#..#...",
+        "............#...#",
+        "#.#..#.#..#...##.",
+        ".#....###.##..##.",
+        "##....#...####.#.",
+        "..##.##..###...##",
+        "#..##..#.########",
+        ".####.#..##.....#",
+        "##.#..#..#...####",
+        ".#.#.#...#..#...#",
+        "##..#.##.##..####"
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#####.#.#",
+        "#.###.#.##.#.##..",
+        "#.###.#.#....####",
+        "#.###.#.#...##..#",
+        "#.....#.#...##...",
+        "#######.#.#.#.#..",
+        ".........####..#.",
+        "#.#......#.#..#.#",
+        "..#.......####.#.",
+        "#.#....##.##..##.",
+        "..#.#.#..........",
+        "#....#.#....###..",
+        "...##..####.###.#",
+        "#.##...###..#..##",
+        ".#..#.....###..#.",
+        "##.#.###...#.##.."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..####.#.#",
+        "#.###.#.##..#.#..",
+        "#.###.#.##.###..#",
+        "#.###.#..#.##..##",
+        "#.....#...###.#.#",
+        "#######.#.#..#...",
+        "........#....##.#",
+        "#.#.####..##...#.",
+        ".##.#..#...##..##",
+        "#...#.##...##..##",
+        "..###....#..#..#.",
+        "#..##..#.########",
+        "...##..####.###.#",
+        "####.##.##.#.#.##",
+        ".######.###...#..",
+        "#.....#..#....##."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "M",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.#....#.#.",
+        "#.###.#....#####.",
+        "#.###.#...#...##.",
+        "#.###.#.....##..#",
+        "#.....#.##...#.#.",
+        "#######..###...#.",
+        "........#####..#.",
+        "#.#.#.#..##..#...",
+        "...#.##.###..##..",
+        "##.####..#..##..#",
+        ".#...####.##.##.#",
+        "##..##....#.#.#.#",
+        ".##..##....#...#.",
+        "#.#...###.......#",
+        ".......#...###.##",
+        "##.#.###...#.##.."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 0,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.###.##..#",
+        "#.###.#.##.##....",
+        "#.###.#....####..",
+        "#.###.#...####.#.",
+        "#.....#..#.#..#..",
+        "#######.######...",
+        "........##..#...#",
+        "#.##.#..#..##.##.",
+        "...##...#..#..##.",
+        "##.#.....#####.#.",
+        ".###.#####.#...##",
+        "##.#..#....######",
+        ".###....###.....#",
+        "####..###....####",
+        "...#..#..##.#...#",
+        "#####.#.#.#..####"
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 1,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#..##...#.#",
+        "#.###.#..#.#.##..",
+        "#.###.#.###.#####",
+        "#.###.#..#..##..#",
+        "#.....#.##.###...",
+        "#######..###..#..",
+        "........#.###..#.",
+        "#.##...####.#.#.#",
+        ".####.##...###.#.",
+        "#.##..######..##.",
+        ".##.#.###.#......",
+        "##..###..##.###..",
+        "...#..##.##.###.#",
+        "#..#........#..##",
+        "....###....##..#.",
+        "###..##.##.#.##.."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 2,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#.###...#.#",
+        "#.###.#..#..#.#..",
+        "#.###.#.#.##.#..#",
+        "#.###.#.#..##..##",
+        "#.....#..##.#.#.#",
+        "#######..#####...",
+        ".........#...##.#",
+        "#.#####.#...#..#.",
+        "..##..#...###..##",
+        "#..##..#.#.##..##",
+        ".####..####.#..#.",
+        "##.#..#....######",
+        "...#..##.##.###.#",
+        "##.#.###...#.#.##",
+        "..###...##....#..",
+        "#.##..###.....##."
+      ]
+    },
+    {
+      "segments": [["AB", "alphanumeric"], ["\u6f22\u5b57", "kanji"]],
+      "text": "AB\u6f22\u5b57",
+      "version": "M4",
+      "ecc": "Q",
+      "mask": 3,
+      "rows": [
+        "#######.#.#.#.#.#",
+        "#.....#....###.#.",
+        "#.###.#.#..#####.",
+        "#.###.#..#..#.##.",
+        "#.###.#.##..##..#",
+        "#.....#.#..#.#.#.",
+        "#######.#.#.#..#.",
+        "..........###..#.",
+        "#.###.####.###...",
+        ".#..##.###...##..",
+        "##..##......##..#",
+        ".....##....#.##.#",
+        "#....###.#..#.#.#",
+        ".##.##..#..#...#.",
+        "#.....#..#......#",
+        ".#...###..####.##",
+        "###..##.##.#.##.."
       ]
     }
   ]

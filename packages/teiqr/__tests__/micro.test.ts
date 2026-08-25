@@ -8,14 +8,31 @@ import {
   type MicroVersion,
   microDataBits,
   microFormatBits,
+  microModel,
   microSize,
   microVersionOf,
 } from '../src/core/micro.js';
-import { QrCapacityError } from '../src/core/types.js';
+import {
+  ALPHANUMERIC_CHARSET,
+  makeAlphanumericSegment,
+  makeByteSegment,
+  makeKanjiSegment,
+  makeNumericSegment,
+  planBitsWith,
+  planSegmentsWith,
+  segmentBits,
+} from '../src/core/segment.js';
+import { QrCapacityError, type QrSegment } from '../src/core/types.js';
+import { decodeMicroMatrix } from '../src/verify/decode-micro.js';
+import '../src/kanji.js';
 import { toPng } from '../src/raster/scene-raster.js';
 import { renderSvg } from '../src/render/svg.js';
 
+type FixtureMode = 'numeric' | 'alphanumeric' | 'byte' | 'kanji';
+
 interface Fixture {
+  /** The segmentation the reference was given, so both encoders write the same runs. */
+  segments: [string, FixtureMode][];
   text: string;
   version: MicroVersion;
   ecc: 'L' | 'M' | 'Q';
@@ -23,9 +40,20 @@ interface Fixture {
   rows: string[];
 }
 
-const fixtures: { _source: string; cases: Fixture[] } = JSON.parse(
+const fixtures: { _source: string; _segments: string; cases: Fixture[] } = JSON.parse(
   readFileSync(join(import.meta.dirname, 'fixtures', 'micro-qr.json'), 'utf8'),
 );
+
+const encoder = new TextEncoder();
+
+/** Build the exact segments the fixture pins, rather than letting the optimiser choose. */
+const pinned = (fixture: Fixture): QrSegment[] =>
+  fixture.segments.map(([text, mode]) => {
+    if (mode === 'numeric') return makeNumericSegment(text);
+    if (mode === 'alphanumeric') return makeAlphanumericSegment(text);
+    if (mode === 'kanji') return makeKanjiSegment(text);
+    return makeByteSegment(encoder.encode(text));
+  });
 
 /** Render a matrix as the same row strings the fixtures use. */
 const toRows = (matrix: { size: number; modules: Uint8Array }): string[] => {
@@ -50,13 +78,19 @@ describe('Micro QR conformance against an independent implementation', () => {
   // expression, whose arithmetic only works for QR's 4v+17 sizes, and once
   // from padding M1 and M3 with 0xEC/0x11 where the standard requires zeros.
   it('has a substantial fixture set', () => {
-    expect(fixtures.cases.length).toBeGreaterThan(400);
+    expect(fixtures.cases.length).toBeGreaterThan(600);
+  });
+
+  it('covers multi-segment and Kanji payloads, not only single-mode ones', () => {
+    const shapes = new Set(fixtures.cases.map((f) => f.segments.map(([, m]) => m).join('+')));
+    expect([...shapes].filter((s) => s.includes('+')).length).toBeGreaterThan(4);
+    expect([...shapes].some((s) => s.includes('kanji'))).toBe(true);
   });
 
   it('reproduces every fixture exactly', () => {
     const failures: string[] = [];
     for (const fixture of fixtures.cases) {
-      const matrix = encodeMicro(fixture.text, {
+      const matrix = encodeMicro(pinned(fixture), {
         version: fixture.version,
         ecc: fixture.ecc,
         mask: fixture.mask,
@@ -66,9 +100,8 @@ describe('Micro QR conformance against an independent implementation', () => {
       });
       const rows = toRows(matrix);
       if (rows.join('\n') !== fixture.rows.join('\n')) {
-        failures.push(
-          `${JSON.stringify(fixture.text)} ${fixture.version}-${fixture.ecc} mask=${fixture.mask}`,
-        );
+        const shape = fixture.segments.map(([t, m]) => `${m}[${t}]`).join('+');
+        failures.push(`${shape} ${fixture.version}-${fixture.ecc} mask=${fixture.mask}`);
       }
     }
     expect(failures).toEqual([]);
@@ -185,6 +218,132 @@ describe('Micro QR encoding behaviour', () => {
     // M1 is 11 modules where a version-1 QR symbol is 21 — under a third the area.
     expect(micro.size).toBe(11);
     expect(micro.size ** 2 / 21 ** 2).toBeLessThan(0.3);
+  });
+});
+
+describe('Micro QR mode selection', () => {
+  // The conformance fixtures pin their segmentation so both encoders write the
+  // same runs; these cover the choice itself, which the fixtures deliberately
+  // do not exercise.
+
+  /** Bits a payload needs if the whole string is forced into one mode. */
+  const singleModeBits = (text: string, version: MicroVersion): number => {
+    const model = microModel(version);
+    const candidates: QrSegment[][] = [];
+    if (/^[0-9]*$/.test(text)) candidates.push([makeNumericSegment(text)]);
+    if ([...text].every((c) => ALPHANUMERIC_CHARSET.includes(c))) {
+      candidates.push([makeAlphanumericSegment(text)]);
+    }
+    candidates.push([makeByteSegment(encoder.encode(text))]);
+    return Math.min(...candidates.map((segments) => segmentBits(segments, model)));
+  };
+
+  it('never chooses a segmentation larger than encoding the whole string in one mode', () => {
+    const payloads = ['abc123XYZ', 'HELLO123', '12AB', 'x42', 'AC-42', 'Hi 42!', '1234567'];
+    for (const text of payloads) {
+      for (const version of ['M3', 'M4'] as const) {
+        const model = microModel(version);
+        const plan = planSegmentsWith(text, model);
+        expect(planBitsWith(plan, model), `${text} at ${version}`).toBeLessThanOrEqual(
+          singleModeBits(text, version),
+        );
+      }
+    }
+  });
+
+  it('splits mixed content rather than falling back to byte mode for all of it', () => {
+    // 'abc' is lowercase so it must be bytes, but '123XYZ' is alphanumeric.
+    // One byte segment costs 72 payload bits against 24 + 33 for the split.
+    const model = microModel('M4');
+    const plan = planSegmentsWith('abc123XYZ', model);
+    expect(plan.segments.map((seg) => seg.mode)).toEqual(['byte', 'alphanumeric']);
+    expect(planBitsWith(plan, model)).toBeLessThan(singleModeBits('abc123XYZ', 'M4'));
+  });
+
+  it('offers only the modes each version has, without special-casing them', () => {
+    // M1 is numeric-only and M2 has no byte mode, which is why lowercase text
+    // has to grow to M3 and alphanumeric text to M2.
+    expect(microModel('M1').countBits('alphanumeric')).toBeNull();
+    expect(microModel('M2').countBits('byte')).toBeNull();
+    expect(microModel('M2').countBits('kanji')).toBeNull();
+    expect(microModel('M3').countBits('kanji')).toBe(3);
+  });
+
+  it('round trips a multi-segment payload, reporting each run', () => {
+    const result = decodeMicroMatrix(encodeMicro('abc123XYZ', { version: 'M4' }));
+    expect(result.text).toBe('abc123XYZ');
+    expect(result.segments.map((seg) => seg.mode)).toEqual(['byte', 'alphanumeric']);
+    expect(result.segments.map((seg) => seg.text)).toEqual(['abc', '123XYZ']);
+  });
+
+  it('round trips a stream that ends exactly on a codeword boundary', () => {
+    // These are the cases the segno fixtures skip, because segno appends a
+    // spurious zero byte when the terminator lands on a boundary. Covering
+    // them by round trip is what keeps that path from going untested.
+    for (const [text, version] of [
+      ['HELLO123', 'M4'],
+      ['12AB', 'M2'],
+    ] as const) {
+      const matrix = encodeMicro(text, { version, boostEcc: false });
+      expect(decodeMicroMatrix(matrix).text, `${text} at ${version}`).toBe(text);
+    }
+  });
+});
+
+describe('Micro QR Kanji mode', () => {
+  it('selects Kanji where it is available and cheaper than bytes', () => {
+    const matrix = encodeMicro('漢字', { kanji: true });
+    const result = decodeMicroMatrix(matrix);
+    expect(result.segments.map((seg) => seg.mode)).toEqual(['kanji']);
+    expect(result.text).toBe('漢字');
+  });
+
+  it('fits text in a smaller symbol than byte mode would', () => {
+    // 13 bits a character against 24 for the same character as UTF-8 bytes.
+    // Five characters is 65 bits against 120, which is M3 rather than M4.
+    const text = 'こんにちは';
+    const withKanji = encodeMicro(text, { kanji: true, boostEcc: false });
+    const withoutKanji = encodeMicro(text, { kanji: false, boostEcc: false });
+    expect(microVersionOf(withKanji)).toBe('M3');
+    expect(microVersionOf(withoutKanji)).toBe('M4');
+    expect(decodeMicroMatrix(withKanji).text).toBe(text);
+    expect(decodeMicroMatrix(withoutKanji).text).toBe(text);
+  });
+
+  it('still refuses text no Micro QR version can hold', () => {
+    // Ten characters is 130 bits in Kanji mode, plus a 3-bit mode indicator
+    // and a 4-bit count, against M4-L's 128. Kanji buys room, not unlimited
+    // room, and running out is a normal outcome for a symbology this small.
+    const text = 'こんにちは世界です。';
+    expect([...text]).toHaveLength(10);
+    expect(() => encodeMicro(text, { kanji: true })).toThrow(QrCapacityError);
+  });
+
+  it('mixes Kanji with other modes in one symbol', () => {
+    const result = decodeMicroMatrix(encodeMicro('漢字123', { kanji: true, version: 'M4' }));
+    expect(result.text).toBe('漢字123');
+    expect(result.segments.map((seg) => seg.mode)).toEqual(['kanji', 'numeric']);
+  });
+
+  it('ignores Kanji at versions that cannot carry it', () => {
+    // M1 and M2 have no Kanji mode, so the encoder must grow rather than emit
+    // a segment the symbol cannot describe.
+    expect(
+      MICRO_VERSIONS.indexOf(microVersionOf(encodeMicro('漢', { kanji: true }))),
+    ).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('Micro QR binary payloads', () => {
+  it('encodes raw bytes, not only text', () => {
+    const bytes = Uint8Array.from([0x00, 0xff, 0x7f, 0x80, 0x01]);
+    const result = decodeMicroMatrix(encodeMicro(bytes, { version: 'M4' }));
+    expect(Array.from(result.bytes)).toEqual(Array.from(bytes));
+    expect(result.mode).toBe('byte');
+  });
+
+  it('refuses binary at versions with no byte mode', () => {
+    expect(() => encodeMicro(Uint8Array.from([1, 2]), { version: 'M2' })).toThrow(QrCapacityError);
   });
 });
 
