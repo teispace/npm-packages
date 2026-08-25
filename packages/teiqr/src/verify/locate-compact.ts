@@ -45,6 +45,29 @@ import type { ScanResult } from './scan.js';
  *
  * Returns `null` when the outline does not behave like a finder's.
  */
+/**
+ * The ray sweep's trigonometry, which depends only on the step index.
+ *
+ * Four transcendental calls per ray times 360 rays, rebuilt for every finder
+ * candidate in every image — and every value is a constant of the sweep, not
+ * of the image. Tabulated once at module load instead.
+ */
+const SWEEP_STEPS = 360;
+const SWEEP = (() => {
+  const cos = new Float64Array(SWEEP_STEPS);
+  const sin = new Float64Array(SWEEP_STEPS);
+  const cos4 = new Float64Array(SWEEP_STEPS);
+  const sin4 = new Float64Array(SWEEP_STEPS);
+  for (let i = 0; i < SWEEP_STEPS; i++) {
+    const theta = (i * 2 * Math.PI) / SWEEP_STEPS;
+    cos[i] = Math.cos(theta);
+    sin[i] = Math.sin(theta);
+    cos4[i] = Math.cos(4 * theta);
+    sin4[i] = Math.sin(4 * theta);
+  }
+  return { cos, sin, cos4, sin4 };
+})();
+
 export const finderAngle = (
   dark: Uint8Array,
   width: number,
@@ -69,7 +92,7 @@ export const finderAngle = (
   // robustness: one degree of error is a third of a module across a Micro QR
   // symbol and nearly three across the widest rMQR, which is the difference
   // between reading it and not.
-  const steps = 360;
+  const steps = SWEEP_STEPS;
   const reach = size * 6;
   let real = 0;
   let imaginary = 0;
@@ -77,22 +100,21 @@ export const finderAngle = (
   let furthest = 0;
 
   for (let i = 0; i < steps; i++) {
-    const theta = (i * 2 * Math.PI) / steps;
     const distance = runLengthTowards(
       dark,
       width,
       height,
       cx,
       cy,
-      cx + Math.cos(theta) * reach,
-      cy + Math.sin(theta) * reach,
+      cx + SWEEP.cos[i] * reach,
+      cy + SWEEP.sin[i] * reach,
     );
     if (!Number.isFinite(distance)) continue;
     // Anything past the ring's own corner belongs to something else.
     if (distance > size * 5.2) continue;
     if (distance > furthest) furthest = distance;
-    real += distance * Math.cos(4 * theta);
-    imaginary += distance * Math.sin(4 * theta);
+    real += distance * SWEEP.cos4[i];
+    imaginary += distance * SWEEP.sin4[i];
     samples++;
   }
 
@@ -156,8 +178,10 @@ export const readMicroAt = (
   width: number,
   height: number,
   finder: Candidate,
+  measuredAngle?: number | null,
 ): ScanResult | null => {
-  const base = finderAngle(dark, width, height, finder);
+  const base =
+    measuredAngle === undefined ? finderAngle(dark, width, height, finder) : measuredAngle;
   if (base === null) return null;
 
   for (const angle of quarterTurns(base)) {
@@ -245,14 +269,11 @@ export const readRmqrAt = (
   width: number,
   height: number,
   finder: Candidate,
+  measuredAngle?: number | null,
 ): ScanResult | null => {
-  const base = finderAngle(dark, width, height, finder);
+  const base =
+    measuredAngle === undefined ? finderAngle(dark, width, height, finder) : measuredAngle;
   if (base === null) return null;
-
-  const bySizeDescending = [...RMQR_VERSIONS].sort(
-    (a, b) =>
-      RMQR_SPECS[b].width * RMQR_SPECS[b].height - RMQR_SPECS[a].width * RMQR_SPECS[a].height,
-  );
 
   const finderGrid = { x: 3.5, y: 3.5 };
   const finderImage = { x: finder.x, y: finder.y };
@@ -260,7 +281,7 @@ export const readRmqrAt = (
   for (const angle of quarterTurns(base)) {
     const coarse = gridTransform(finder.x, finder.y, finder.size, angle);
 
-    for (const version of bySizeDescending) {
+    for (const version of RMQR_BY_SIZE_DESCENDING) {
       const spec = RMQR_SPECS[version];
       // The sub-finder's own dark centre module sits three in from each far
       // edge, so its grid centre is (width - 2.5, height - 2.5).
@@ -309,6 +330,18 @@ export const readRmqrAt = (
 };
 
 /**
+ * rMQR sizes largest-first, so a wide symbol is not mistaken for the narrow
+ * one nested inside its own top-left corner.
+ *
+ * Sorted once at module scope rather than on every call: it is a property of
+ * the format, and this function runs for every leftover finder candidate in
+ * every image that fails to decode.
+ */
+const RMQR_BY_SIZE_DESCENDING = [...RMQR_VERSIONS].sort(
+  (a, b) => RMQR_SPECS[b].width * RMQR_SPECS[b].height - RMQR_SPECS[a].width * RMQR_SPECS[a].height,
+);
+
+/**
  * Read whichever compact symbology a finder heads, if either.
  *
  * rMQR is tried first. Its format information is 18 bits written twice, which
@@ -321,7 +354,15 @@ export const readCompactAt = (
   width: number,
   height: number,
   finder: Candidate,
-): ScanResult | null =>
-  readRmqrAt(dark, width, height, finder) ?? readMicroAt(dark, width, height, finder);
+): ScanResult | null => {
+  // Both readers need the finder's orientation, and measuring it is a ray
+  // sweep around the pattern — a quarter of the whole compact sweep's cost.
+  // Doing it once here rather than once inside each of them halves that.
+  const base = finderAngle(dark, width, height, finder);
+  if (base === null) return null;
+  return (
+    readRmqrAt(dark, width, height, finder, base) ?? readMicroAt(dark, width, height, finder, base)
+  );
+};
 
 export type { MicroVersion, RmqrVersion };

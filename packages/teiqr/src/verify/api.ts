@@ -7,9 +7,10 @@
  */
 
 import type { QrMatrix } from '../core/types.js';
+import { toGray } from './binarize.js';
 import { type DecodeResult, decodeMatrix } from './decode-matrix.js';
 import { type ImageInput, toPixels, toPixelsAsync } from './input.js';
-import { NotFoundError, type ScanResult, scanAllPixels, scanPixels } from './scan.js';
+import { NotFoundError, type ScanResult, scanAllGray, scanGray } from './scan.js';
 
 /** Anything {@link scan} accepts: an image in any supported form, or a symbol already decoded. */
 export type ScanInput = ImageInput | QrMatrix;
@@ -38,15 +39,23 @@ const isMatrix = (input: unknown): input is QrMatrix =>
   'kinds' in input &&
   'size' in input;
 
-/** Flip every channel, leaving alpha alone. */
-const invertPixels = (pixels: Uint8Array): Uint8Array => {
-  const out = new Uint8Array(pixels.length);
-  for (let i = 0; i < pixels.length; i += 4) {
-    out[i] = 255 - pixels[i];
-    out[i + 1] = 255 - pixels[i + 1];
-    out[i + 2] = 255 - pixels[i + 2];
-    out[i + 3] = pixels[i + 3];
-  }
+/**
+ * Flip the image, in luminance.
+ *
+ * Inverting the colour channels and converting the result to luminance gives
+ * the same answer as inverting the luminance directly — the conversion is a
+ * weighted sum whose weights total one, so `255 - (wr*r + wg*g + wb*b)` is
+ * `wr*(255-r) + wg*(255-g) + wb*(255-b)`. Doing it this way is a quarter of
+ * the memory traffic and skips a second full conversion, which matters
+ * because the inverted pass runs on every frame that fails — and behind a
+ * camera, that is most of them.
+ *
+ * Alpha needs no handling here: the composite over white happened during the
+ * original conversion, so what is left is opaque luminance.
+ */
+const invertGray = (gray: Uint8Array): Uint8Array => {
+  const out = new Uint8Array(gray.length);
+  for (let i = 0; i < gray.length; i++) out[i] = 255 - gray[i];
   return out;
 };
 
@@ -56,12 +65,13 @@ const attempt = (
   height: number,
   tryInverted: boolean,
 ): ScanResult => {
+  const gray = toGray(pixels, width, height);
   try {
-    return scanPixels(pixels, width, height);
+    return scanGray(gray, width, height);
   } catch (error) {
     if (!tryInverted) throw error;
     try {
-      return scanPixels(invertPixels(pixels), width, height);
+      return scanGray(invertGray(gray), width, height);
     } catch {
       // Report the original failure: it describes the image as given, which is
       // what the caller can act on.
@@ -147,9 +157,10 @@ export const scanAll = (
   if (isMatrix(input)) return [scan(input, options)];
 
   const { pixels, width, height } = toPixels(input);
-  let found = scanAllPixels(pixels, width, height);
+  const gray = toGray(pixels, width, height);
+  let found = scanAllGray(gray, width, height);
   if (found.length === 0 && (options.tryInverted ?? true)) {
-    found = scanAllPixels(invertPixels(pixels), width, height);
+    found = scanAllGray(invertGray(gray), width, height);
   }
 
   const limit = options.maxSymbols;
