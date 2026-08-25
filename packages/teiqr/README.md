@@ -1280,16 +1280,13 @@ Stated plainly, because a library that hides these wastes your afternoon:
   provides the four correspondences perspective needs — a wide rMQR symbol photographed at a
   real angle will not read, and returns nothing rather than a wrong payload. Full QR does get
   perspective correction.
-- **A real photograph can still defeat the scanner.** Uneven lighting, defocus,
-  sensor noise and low contrast are simulated and handled. A photograph is harder, and the
-  suite now contains one: a phone shot of a code on a laptop screen, slightly tilted, that this
-  scanner cannot read although the symbol is sound and readable. It is located correctly, and
-  the finders and format information sample perfectly; the grid then drifts by about a module
-  toward the far corner, which the timing patterns cannot detect because they sit beside the
-  two edges that are already right. Closing it needs sampling that survives lens and screen
-  curvature, not just a flat perspective transform. Tracked as `knownUnread` in
-  `__tests__/fixtures/photos/manifest.json`, so the day it starts working is a failing test
-  rather than silence.
+- **Photographs are read, but not every one.** Uneven lighting, defocus, sensor noise and low
+  contrast are simulated and handled, and the suite includes a real photograph — a phone shot
+  of a code on a laptop screen, tilted, with screen dust and moiré. Measured against 91
+  photographs of codes in the wild the scanner reads 46%, up from 31% before the finder
+  scoring and retry passes described below. Most remaining failures are symbols located
+  correctly whose sampling grid drifts by about a module toward the far corner. More
+  photographs, especially of *printed* codes, are the most useful contribution here.
 - **Raster output cannot draw frame label text**, and can only embed **PNG** data-URI logos.
   Both are reported in `rasterize().omitted`. SVG handles both fully.
 - **WebP and AVIF need `createImageBitmap`** (so, `scanAsync` in a browser, Worker or Deno).

@@ -15,7 +15,12 @@
  */
 
 import { functionPatternKinds } from '../core/matrix.js';
-import { MAX_VERSION, MIN_VERSION, sizeForVersion } from '../core/version.js';
+import {
+  alignmentPatternPositions,
+  MAX_VERSION,
+  MIN_VERSION,
+  sizeForVersion,
+} from '../core/version.js';
 import { binarize } from './binarize.js';
 import { type DecodeResult, decodeMatrix } from './decode-matrix.js';
 import { type Candidate, findFinders, findRingCentres, pitchBetween } from './finder.js';
@@ -211,6 +216,53 @@ const timingScore = (modules: Uint8Array, size: number): number => {
 };
 
 /**
+ * How well a sampled grid reproduces the alignment patterns it must contain.
+ *
+ * This exists because the timing score cannot see the failure that matters
+ * most. Timing runs along row and column six — hard against the two edges
+ * pinned by the top-left, top-right and bottom-left finders, which are the
+ * parts of the fit that are already right. A grid that drifts toward the far
+ * corner still scores a perfect one on timing, and then samples the data
+ * region a module out.
+ *
+ * Alignment patterns sit where nothing else is pinned, the last one only three
+ * modules from the far corner, so they measure exactly what timing cannot. Each
+ * is a 5x5 ring: dark border, light inside it, one dark module at the centre.
+ *
+ * Found on a photograph whose finders and format information sampled perfectly
+ * and whose timing matched 100%, while the alignment pattern landed a module
+ * out and Reed-Solomon had no chance.
+ */
+const alignmentScore = (modules: Uint8Array, size: number, version: number): number => {
+  const centres = alignmentPatternPositions(version);
+  if (centres.length === 0) return 1;
+
+  let correct = 0;
+  let total = 0;
+  for (const cy of centres) {
+    for (const cx of centres) {
+      // The three corners carry finders instead, and are already scored.
+      const atFinder =
+        (cx === 6 && cy === 6) || (cx === 6 && cy === size - 7) || (cx === size - 7 && cy === 6);
+      if (atFinder) continue;
+
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const x = cx + dx;
+          const y = cy + dy;
+          if (x < 0 || y < 0 || x >= size || y >= size) continue;
+          const ring = Math.max(Math.abs(dx), Math.abs(dy));
+          const expected = ring === 1 ? 0 : 1;
+          if (modules[y * size + x] === expected) correct++;
+          total++;
+        }
+      }
+    }
+  }
+  return total === 0 ? 1 : correct / total;
+};
+
+/**
  * Sample and decode one located symbol out of a binarised image.
  *
  * The grid is read through a fitted perspective transform rather than a fixed
@@ -294,7 +346,11 @@ export const decodeLocation = (
   for (const fit of fits) {
     const grid = sampleGrid(dark, width, height, size, size, fit);
     if (!grid) continue;
-    const score = timingScore(grid, size);
+    // Timing pins the two edges the finders already fix; alignment pins the
+    // far corner they do not. A fit has to satisfy both to be trusted, so the
+    // weaker of the two decides — averaging would let a perfect timing score
+    // paper over a hopeless corner, which is the exact failure this is for.
+    const score = Math.min(timingScore(grid, size), alignmentScore(grid, size, version));
     if (score > bestScore) {
       bestScore = score;
       modules = grid;
@@ -381,17 +437,62 @@ export const scanAllPixels = (pixels: Uint8Array, width: number, height: number)
  * @throws {NotFoundError} when no symbol can be located.
  * @throws {UncorrectableError} when a symbol is found but too damaged to read.
  */
-export const scanPixels = (pixels: Uint8Array, width: number, height: number): ScanResult => {
-  const dark = binarize(pixels, width, height);
+/**
+ * Below this, halving costs more detail than the noise it removes.
+ *
+ * A symbol needs a few pixels per module to survive thresholding at all, so
+ * shrinking an image that is already small turns a readable code unreadable.
+ */
+const MIN_HALVING_SIZE = 320;
+
+/** Average each 2x2 block into one pixel. */
+const halve = (
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+): { pixels: Uint8Array; width: number; height: number } => {
+  const w = width >> 1;
+  const h = height >> 1;
+  const out = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    const top = (y * 2 * width) << 2;
+    const bottom = ((y * 2 + 1) * width) << 2;
+    for (let x = 0; x < w; x++) {
+      const a = top + (x << 3);
+      const b = bottom + (x << 3);
+      const d = (y * w + x) << 2;
+      for (let c = 0; c < 3; c++) {
+        out[d + c] = (pixels[a + c] + pixels[a + 4 + c] + pixels[b + c] + pixels[b + 4 + c]) >> 2;
+      }
+      out[d + 3] = 255;
+    }
+  }
+  return { pixels: out, width: w, height: h };
+};
+
+/** The outcome of one pass, plus how much of a symbol it saw. */
+interface Attempt {
+  readonly result: ScanResult | null;
+  readonly error: Error | null;
+  /** Finder patterns seen. Zero means there is very likely nothing in frame. */
+  readonly finders: number;
+}
+
+/** One decoding attempt over an already-binarised image. */
+const attempt = (dark: Uint8Array, width: number, height: number): Attempt => {
   const finders = findFinders(dark, width, height);
   if (finders.length === 0) {
-    throw new NotFoundError('Found no finder patterns');
+    return { result: null, error: new NotFoundError('Found no finder patterns'), finders: 0 };
   }
 
   let lastError: unknown = null;
   for (const location of groupFinders(finders)) {
     try {
-      return decodeLocation(dark, width, height, location);
+      return {
+        result: decodeLocation(dark, width, height, location),
+        error: null,
+        finders: finders.length,
+      };
     } catch (error) {
       lastError = error;
     }
@@ -400,15 +501,59 @@ export const scanPixels = (pixels: Uint8Array, width: number, height: number): S
   // No QR symbol; a lone finder may still head a Micro QR or rMQR symbol.
   for (const finder of finders) {
     const compact = readCompactAt(dark, width, height, finder);
-    if (compact) return compact;
+    if (compact) return { result: compact, error: null, finders: finders.length };
   }
 
-  throw (
-    lastError ??
+  const error =
+    (lastError instanceof Error ? lastError : null) ??
     new NotFoundError(
       `Found ${finders.length} finder pattern${finders.length === 1 ? '' : 's'}, but none form a readable symbol`,
-    )
-  );
+    );
+  return { result: null, error, finders: finders.length };
+};
+
+export const scanPixels = (pixels: Uint8Array, width: number, height: number): ScanResult => {
+  // The local threshold first: it is strictly better on a photograph, which is
+  // the hard case, and no worse on rendered output.
+  const local = attempt(binarize(pixels, width, height), width, height);
+  if (local.result) return local.result;
+
+  // Then once globally, and only ever on failure.
+  //
+  // Neither threshold dominates the other on real images. A local one follows
+  // a lighting gradient that a global one flattens into a solid block; a
+  // global one ignores a specular highlight or a shadow edge that a local one
+  // treats as a genuine boundary and thresholds right through the middle of.
+  // Measured across a corpus of photographs, each rescues symbols the other
+  // loses, and the retry is free on everything that already worked.
+  const global =
+    local.finders > 0
+      ? attempt(binarize(pixels, width, height, { global: true }), width, height)
+      : { result: null, error: null, finders: 0 };
+  if (global.result) return global.result;
+
+  // Last resort: halve the image and try again.
+  //
+  // Counter-intuitive, since detail is what a decoder wants, but a photograph
+  // carries detail the symbol does not have — sensor noise, JPEG ringing, the
+  // moire of a camera pointed at a screen, the paper texture under printed
+  // ink. Averaging four pixels into one removes exactly that and leaves the
+  // modules, which are far larger than any of it. A code that resists every
+  // threshold at full resolution frequently reads at half.
+  //
+  // Only reached when both thresholds have already failed, so the cost lands
+  // on images that were about to return nothing anyway.
+  if (width >= MIN_HALVING_SIZE && height >= MIN_HALVING_SIZE) {
+    const half = halve(pixels, width, height);
+    const smaller = attempt(
+      binarize(half.pixels, half.width, half.height),
+      half.width,
+      half.height,
+    );
+    if (smaller.result) return smaller.result;
+  }
+
+  throw local.error ?? new NotFoundError('Found no readable symbol');
 };
 
 export { type BinarizeOptions, binarize } from './binarize.js';
