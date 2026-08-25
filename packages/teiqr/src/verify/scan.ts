@@ -92,8 +92,23 @@ export const groupFinders = (finders: Candidate[]): SymbolLocation[] => {
           const expected = ((legA + legB) / 2) * Math.SQRT2;
           if (Math.abs(hyp - expected) > expected * SHAPE_TOLERANCE) continue;
 
+          // Shape alone is not enough to rank a triple, and a real photograph
+          // is what proves it. Data areas throw up finder-shaped false
+          // positives, and one of them can sit in a *more* perfect right angle
+          // than the true corner does — the true one having been nudged by
+          // perspective. Scored on geometry only, the impostor wins, claims
+          // the finders greedily, and the genuine triple can never form.
+          //
+          // Measured on a photo of a code on a laptop screen: the false triple
+          // scored 0.036 against the true triple's 0.058 and took it. Their
+          // module sizes were 21.7/33.4/21.1 against 21.1/21.7/19.6, which is
+          // the tell — three finders of one symbol are near enough the same
+          // size, and the 2x gate above is far too loose to express that.
+          const spread = (Math.max(...sizes) - Math.min(...sizes)) / Math.max(...sizes);
           const score =
-            Math.abs(legA - legB) / Math.max(legA, legB) + Math.abs(hyp - expected) / expected;
+            Math.abs(legA - legB) / Math.max(legA, legB) +
+            Math.abs(hyp - expected) / expected +
+            spread;
           triples.push({ score, corner, a, b });
         }
       }
