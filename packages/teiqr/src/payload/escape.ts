@@ -103,15 +103,22 @@ export const toICalDate = (value: string, allDay = false): string => {
 // Inverses, for reading an existing code back into fields
 // ---------------------------------------------------------------------------
 
-/** Inverse of {@link escapeWifi}. */
-export const unescapeWifi = (value: string): string => value.replace(/\\([;,:"])/g, '$1');
+/**
+ * Inverse of {@link escapeWifi}.
+ *
+ * The backslash has to be in this set, and was missing: `escapeWifi` escapes
+ * it — it is the escape character, so it must — and leaving it out here meant a
+ * value containing one came back with the backslash doubled. Every other
+ * reserved character round-tripped, which is exactly why it went unnoticed.
+ */
+export const unescapeWifi = (value: string): string => value.replace(/\\([\\;,:"])/g, '$1');
 
 /** Inverse of {@link escapeVCard}. */
 export const unescapeVCard = (value: string): string =>
   value.replace(/\\n/gi, '\n').replace(/\\([\\,;])/g, '$1');
 
-/** Inverse of {@link escapeMeCard}. */
-export const unescapeMeCard = (value: string): string => value.replace(/\\([;:,])/g, '$1');
+/** Inverse of {@link escapeMeCard}. Includes the backslash, for the reason above. */
+export const unescapeMeCard = (value: string): string => value.replace(/\\([\\;:,])/g, '$1');
 
 /**
  * Undo RFC 6350 line folding, then split into content lines.

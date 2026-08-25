@@ -171,7 +171,16 @@ export const clone = (
   // Editing goes through the payload serialiser so escaping stays correct;
   // an untouched clone reuses the original string so it is preserved exactly,
   // even for a format no parser recognises.
-  const text = fields ? serializePayload(payload.type, fields) : source.text;
+  //
+  // `fields` is an overlay, not a replacement. Passing only the fields being
+  // changed is the whole point of the API — "scan this WiFi code and change
+  // the password" — and serialising `fields` alone silently dropped the SSID
+  // and every other field the caller did not happen to repeat. An explicit
+  // `undefined` still clears a field, which is why the values are spread
+  // rather than merged more defensively.
+  const text = fields
+    ? serializePayload(payload.type, { ...payload.values, ...fields })
+    : source.text;
 
   // Carry the original error correction level across unless the caller says
   // otherwise: a code that was level H was probably printed for a reason.

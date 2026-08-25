@@ -6680,7 +6680,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"teiqr@workspace:packages/teiqr":
+"teiqr-examples@workspace:examples/teiqr":
+  version: 0.0.0-use.local
+  resolution: "teiqr-examples@workspace:examples/teiqr"
+  dependencies:
+    teiqr: "workspace:*"
+  languageName: unknown
+  linkType: soft
+
+"teiqr@workspace:*, teiqr@workspace:packages/teiqr":
   version: 0.0.0-use.local
   resolution: "teiqr@workspace:packages/teiqr"
   dependencies:

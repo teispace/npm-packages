@@ -1025,17 +1025,17 @@ gzipped, by `scripts/measure-bundles.mjs` — run it yourself after `yarn build`
 
 | Entry             | Gzipped | What it is                                |
 | ----------------- | ------: | ----------------------------------------- |
-| `teiqr`           | 43.4 kB | everything                                |
+| `teiqr`           | 43.9 kB | everything                                |
 | `teiqr/core`      | 11.6 kB | encoding, all three symbologies           |
 | `teiqr/render`    |  4.5 kB | scene + SVG                               |
 | `teiqr/validate`  |  4.6 kB | scannability analysis                     |
 | `teiqr/payload`   |  8.3 kB | 32 typed builders + parsers               |
-| `teiqr/export`    | 20.8 kB | PDF, EPS, ZIP, CSV batch                  |
-| `teiqr/raster`    |  9.1 kB | DEFLATE + PNG + rasteriser                |
-| `teiqr/verify`    | 16.1 kB | decoder + scanner, all three symbologies  |
+| `teiqr/export`    | 21.3 kB | PDF, EPS, ZIP, CSV batch                  |
+| `teiqr/raster`    |  9.6 kB | DEFLATE + PNG + rasteriser                |
+| `teiqr/verify`    | 16.3 kB | decoder + scanner, all three symbologies  |
 | `teiqr/terminal`  |  0.4 kB | text output                               |
 | `teiqr/kanji`     | 10.8 kB | Shift-JIS table (opt-in)                  |
-| `teiqr/react`     | 27.2 kB | components + hooks (`react` external)     |
+| `teiqr/react`     | 27.6 kB | components + hooks (`react` external)     |
 
 `core` and `verify` carry the rMQR tables — 32 fixed sizes with no closed form, so they have
 to be listed. Importing `encode` alone is 5.5 kB, because a symbol you never build is a symbol
@@ -1048,14 +1048,14 @@ should have excluded:
 | Import | Gzipped | Unrelated code pulled in |
 | --- | ---: | --- |
 | `encode` | 5.5 kB | none |
-| `toPng` | 9.0 kB | none |
-| `scan` | 15.1 kB | none |
+| `toPng` | 9.5 kB | none |
+| `scan` | 15.4 kB | none |
 | `toTerminal` | 0.4 kB | none |
 | `parsePayload` | 7.8 kB | none |
 | `<QrCode>` | 9.5 kB | none — the camera scanner is not included |
-| `useQrScanner` | 16.2 kB | none — the renderer is not included |
+| `useQrScanner` | 16.5 kB | none — the renderer is not included |
 
-Importing `toTerminal` costs 0.4 kB out of a 43.4 kB whole.
+Importing `toTerminal` costs 0.4 kB out of a 43.9 kB whole.
 
 Both ESM and CJS are published, with bundled `.d.ts` for each entry point.
 
@@ -1175,7 +1175,7 @@ order are not), and the wording of error messages.
 
 ## Conformance and testing
 
-**148 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
+**478 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
 
 - **Round trip across the whole parameter space** — all 40 versions, all 4 error correction
   levels, all 8 masks, binary payloads to 2 kB, astral-plane emoji, ECI, hand-built segments.
@@ -1190,6 +1190,17 @@ order are not), and the wording of error messages.
 - **Rasteriser fidelity** — pixel-exact square modules, provably clear quiet zone.
 - **Cross-runtime** — the full pipeline with `Buffer`, `document` and `window` throwing.
 - **Payload round trips** — `serialize(parse(serialize(v))) === serialize(v)` for every type.
+- **Conformance against independent implementations** — 612 Micro QR and 507 rMQR symbols
+  produced by other ISO-conformant encoders, compared module for module, each pinning its own
+  segmentation so the comparison is about bit layout rather than mode choice.
+- **Degraded input** — uneven light, veiling glare, defocus, sensor noise and low contrast,
+  each asserted to be a case a single global threshold genuinely fails.
+- **Malformed input** — truncations, single-byte corruptions, a decompression bomb and pure
+  noise, because a decoder reads bytes someone else wrote. A nightly job fuzzes the same
+  surface for cases nobody wrote a test for.
+- **The public API surface** — every export from every entry point snapshotted, so a change to
+  it has to be deliberate.
+- **The examples** — all twelve run on every build, and assert what they demonstrate.
 
 Rendered output is additionally validated with an independent decoder, so "it scans" does not
 rest on our own decoder agreeing with our own encoder.

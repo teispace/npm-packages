@@ -81,51 +81,99 @@ const filterScanlines = (
   const candidate = new Uint8Array(stride);
   const best = new Uint8Array(stride);
 
+  /** Sum of residual magnitudes, treating bytes as signed: 255 is -1, not 255. */
+  const score = (buffer: Uint8Array): number => {
+    let total = 0;
+    for (let i = 0; i < stride; i++) {
+      const value = buffer[i];
+      total += value < 128 ? value : 256 - value;
+    }
+    return total;
+  };
+
   for (let y = 0; y < height; y++) {
     const row = y * stride;
     const prevRow = row - stride;
+    const outRow = y * (stride + 1);
+
+    // A row identical to the one above filters to all zeros under Up, and
+    // nothing can beat a score of zero. That is not a rare case here: at any
+    // scale above 1 a QR image repeats each module row `scale` times, so seven
+    // rows in eight are duplicates at the default scale of 8. Taking them
+    // without evaluating five filters across the whole row is most of the win.
+    if (y > 0) {
+      let identical = true;
+      for (let i = 0; i < stride; i++) {
+        if (pixels[row + i] !== pixels[prevRow + i]) {
+          identical = false;
+          break;
+        }
+      }
+      if (identical) {
+        // One subtlety, and it is the difference between identical output and
+        // merely equivalent output: an all-zero row scores zero under None as
+        // well, and the loop below breaks ties towards the lower filter type.
+        // Choosing Up there would still encode the same image, but it would
+        // change the bytes, and byte-for-byte stability across a refactor is
+        // worth more than the branch costs.
+        let allZero = true;
+        for (let i = 0; i < stride; i++) {
+          if (pixels[row + i] !== 0) {
+            allZero = false;
+            break;
+          }
+        }
+        // `out` is zero-filled, and both filters emit zeros here, so only the
+        // type byte needs writing.
+        out[outRow] = allZero ? 0 : 2;
+        continue;
+      }
+    }
+
     let bestScore = Number.POSITIVE_INFINITY;
     let bestType = 0;
 
+    // One loop per filter rather than a switch inside a loop over every byte.
+    // The switch was re-evaluated `stride * 5` times per row for a value that
+    // is constant across the whole pass.
     for (let type = 0; type < 5; type++) {
-      let score = 0;
-      for (let i = 0; i < stride; i++) {
-        const raw = pixels[row + i];
-        const left = i >= channels ? pixels[row + i - channels] : 0;
-        const up = y > 0 ? pixels[prevRow + i] : 0;
-        const upLeft = y > 0 && i >= channels ? pixels[prevRow + i - channels] : 0;
-
-        let value: number;
-        switch (type) {
-          case 1:
-            value = raw - left;
-            break;
-          case 2:
-            value = raw - up;
-            break;
-          case 3:
-            value = raw - ((left + up) >> 1);
-            break;
-          case 4:
-            value = raw - paeth(left, up, upLeft);
-            break;
-          default:
-            value = raw;
+      if (type === 0) {
+        for (let i = 0; i < stride; i++) candidate[i] = pixels[row + i];
+      } else if (type === 1) {
+        for (let i = 0; i < channels; i++) candidate[i] = pixels[row + i] & 0xff;
+        for (let i = channels; i < stride; i++) {
+          candidate[i] = (pixels[row + i] - pixels[row + i - channels]) & 0xff;
         }
-        value &= 0xff;
-        candidate[i] = value;
-        // Treat bytes as signed when scoring: 255 is a residual of -1, not 255.
-        score += value < 128 ? value : 256 - value;
+      } else if (type === 2) {
+        if (y === 0) for (let i = 0; i < stride; i++) candidate[i] = pixels[row + i];
+        else
+          for (let i = 0; i < stride; i++)
+            candidate[i] = (pixels[row + i] - pixels[prevRow + i]) & 0xff;
+      } else if (type === 3) {
+        for (let i = 0; i < stride; i++) {
+          const left = i >= channels ? pixels[row + i - channels] : 0;
+          const up = y > 0 ? pixels[prevRow + i] : 0;
+          candidate[i] = (pixels[row + i] - ((left + up) >> 1)) & 0xff;
+        }
+      } else {
+        for (let i = 0; i < stride; i++) {
+          const left = i >= channels ? pixels[row + i - channels] : 0;
+          const up = y > 0 ? pixels[prevRow + i] : 0;
+          const upLeft = y > 0 && i >= channels ? pixels[prevRow + i - channels] : 0;
+          candidate[i] = (pixels[row + i] - paeth(left, up, upLeft)) & 0xff;
+        }
       }
-      if (score < bestScore) {
-        bestScore = score;
+
+      const total = score(candidate);
+      if (total < bestScore) {
+        bestScore = total;
         bestType = type;
         best.set(candidate);
       }
     }
 
-    out[y * (stride + 1)] = bestType;
-    out.set(best, y * (stride + 1) + 1);
+    out[outRow] = bestType;
+    out.set(best, outRow + 1);
   }
 
   return out;

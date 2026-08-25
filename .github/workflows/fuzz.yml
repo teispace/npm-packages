@@ -1,0 +1,46 @@
+name: Fuzz
+
+# Nightly rather than per-push. Fuzzing is open-ended by nature — it looks for
+# the failures nobody wrote a case for, which is exactly why it does not belong
+# on the critical path of a pull request, where a slow or occasionally-flaky
+# job gets muted rather than investigated.
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: How long to fuzz, in seconds
+        required: false
+        default: '300'
+
+concurrency:
+  group: fuzz
+  cancel-in-progress: true
+
+jobs:
+  fuzz:
+    name: Fuzz decoders
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install
+        run: yarn install --immutable
+
+      - name: Build
+        run: yarn workspace teiqr run build
+
+      - name: Fuzz decoders
+        # A failure here is a hang or an uncaught crash in a decoder reading
+        # input it did not produce. The seed of the failing batch is printed,
+        # so it reproduces with `--seed N --only`.
+        run: node packages/teiqr/scripts/fuzz.mjs --seconds ${{ github.event.inputs.seconds || 300 }}
