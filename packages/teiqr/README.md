@@ -1018,6 +1018,8 @@ import { useQrScanner } from 'teiqr/react';
 function Scanner() {
   const { ref, result, error, scanning, start, stop } = useQrScanner({
     onResult: (r) => console.log(r.text),
+    onError: (e) => console.warn(e.message),
+    autoStart: true,             // camera starts when the element attaches — the default
     facingMode: 'environment',   // rear camera
     fps: 10,                     // frames analysed per second
     repeatDelayMs: 1500,         // before the same payload fires again
@@ -1028,6 +1030,11 @@ function Scanner() {
   return <video ref={ref} playsInline muted />;
 }
 ```
+
+**The camera starts on its own.** `autoStart` defaults to `true`, so attaching the `ref`
+requests camera access — `start()` is for restarting after `stop()`. Pass `autoStart: false`
+when the camera should wait for something, which is usually what you want behind a button or
+a consent step.
 
 Handles the parts that are easy to get wrong: frames are throttled and downscaled before
 decoding (a 1080p frame is far more detail than a decoder needs), the same payload does not
@@ -1214,7 +1221,7 @@ order are not), and the wording of error messages.
 
 ## Conformance and testing
 
-**598 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
+**602 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
 
 - **Round trip across the whole parameter space** — all 40 versions, all 4 error correction
   levels, all 8 masks, binary payloads to 2 kB, astral-plane emoji, ECI, hand-built segments.

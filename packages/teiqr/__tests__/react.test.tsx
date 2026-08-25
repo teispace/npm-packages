@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { cleanup, render } from '@testing-library/react';
+import { act, cleanup, render } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { encode } from '../src/core/encode.js';
+import { rasterize } from '../src/raster/scene-raster.js';
 import { QrCanvas, QrCode, useQrCode } from '../src/react.js';
 import { renderSvg } from '../src/render/svg.js';
 import { scan } from '../src/verify/api.js';
@@ -231,6 +232,9 @@ describe('<QrCanvas>', () => {
   });
 });
 
+/** Payload used by the camera tests, kept distinct so a stray match is obvious. */
+const SCANNER_PAYLOAD = 'https://example.com/camera-frame';
+
 describe('useQrScanner', () => {
   it('reports a clear error when there is no camera API', async () => {
     const { useQrScanner } = await import('../src/react/use-qr-scanner.js');
@@ -245,6 +249,169 @@ describe('useQrScanner', () => {
     expect(onError).toHaveBeenCalled();
     expect(onError.mock.calls[0][0].message).toMatch(/camera/i);
   });
+
+  /**
+   * A fake camera: a stream, a video element reporting a size, and a canvas
+   * that hands back the pixels of a real rendered symbol.
+   *
+   * jsdom has no canvas, so `getContext` returns null and the frame loop
+   * bails before it decodes anything. Stubbing it is what makes the loop's
+   * documented behaviour — throttling, downscaling, not firing the same
+   * payload repeatedly — testable at all.
+   */
+  const fakeCamera = (options: { videoWidth?: number; videoHeight?: number } = {}) => {
+    const frame = rasterize(encode(SCANNER_PAYLOAD), {}, { scale: 4 });
+    const videoWidth = options.videoWidth ?? frame.width;
+    const videoHeight = options.videoHeight ?? frame.height;
+
+    const track = { stop: vi.fn() };
+    const stream = { getTracks: () => [track] } as unknown as MediaStream;
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: vi.fn().mockResolvedValue(stream) },
+    });
+
+    const sized: { width: number; height: number }[] = [];
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function getContext(this: HTMLCanvasElement) {
+      return {
+        drawImage: () => {
+          sized.push({ width: this.width, height: this.height });
+        },
+        // The hook passes its own width/height to the decoder, so the buffer
+        // handed back here only decodes when the two agree — which is exactly
+        // the scaling arithmetic under test.
+        getImageData: (_x: number, _y: number, width: number, height: number) => ({
+          data:
+            width === frame.width && height === frame.height
+              ? frame.pixels
+              : new Uint8Array(width * height * 4).fill(255),
+          width,
+          height,
+        }),
+      } as unknown as CanvasRenderingContext2D;
+    } as typeof HTMLCanvasElement.prototype.getContext;
+
+    /**
+     * Make the video element look like one with a frame ready.
+     *
+     * Three properties, and all three matter: the loop bails on
+     * `readyState < 2`, which jsdom reports as 0 forever, so without it the
+     * frame grabber never runs and every assertion below would pass by
+     * measuring nothing.
+     */
+    const attachVideoSize = () => {
+      const video = document.querySelector('video');
+      if (!video) return;
+      Object.defineProperty(video, 'videoWidth', { configurable: true, value: videoWidth });
+      Object.defineProperty(video, 'videoHeight', { configurable: true, value: videoHeight });
+      // HAVE_CURRENT_DATA: a frame is available to draw.
+      Object.defineProperty(video, 'readyState', { configurable: true, value: 2 });
+    };
+
+    const restore = () => {
+      HTMLCanvasElement.prototype.getContext = originalGetContext;
+      Reflect.deleteProperty(navigator, 'mediaDevices');
+    };
+
+    return { attachVideoSize, restore, sized, track };
+  };
+
+  it('starts the camera on its own, because autoStart defaults to true', async () => {
+    const { useQrScanner } = await import('../src/react/use-qr-scanner.js');
+    const camera = fakeCamera();
+    const Probe = () => {
+      const { ref } = useQrScanner();
+      // biome-ignore lint/a11y/useMediaCaption: nothing to caption on a viewfinder
+      return <video ref={ref} />;
+    };
+
+    render(<Probe />);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Nobody called start(). The camera came on anyway, which is the
+    // documented default and worth pinning precisely because it is the one
+    // behaviour a reader would want to know about before shipping.
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalled();
+    camera.restore();
+  });
+
+  it('stays off until start() when autoStart is false', async () => {
+    const { useQrScanner } = await import('../src/react/use-qr-scanner.js');
+    const camera = fakeCamera();
+    let api: { start: () => void } | null = null;
+    const Probe = () => {
+      const scanner = useQrScanner({ autoStart: false });
+      api = scanner;
+      // biome-ignore lint/a11y/useMediaCaption: nothing to caption on a viewfinder
+      return <video ref={scanner.ref} />;
+    };
+
+    render(<Probe />);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
+
+    act(() => {
+      (api as unknown as { start: () => void }).start();
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalled();
+    camera.restore();
+  });
+
+  it('does not report the same payload on every frame', async () => {
+    // The README's claim: "the same payload does not fire sixty times a
+    // second". A camera holds a code in view for seconds at a time, so
+    // without suppression a single scan becomes hundreds of callbacks.
+    const { useQrScanner } = await import('../src/react/use-qr-scanner.js');
+    const camera = fakeCamera();
+    const onResult = vi.fn();
+
+    const Probe = () => {
+      const { ref } = useQrScanner({ onResult, fps: 20, repeatDelayMs: 5000 });
+      // biome-ignore lint/a11y/useMediaCaption: nothing to caption on a viewfinder
+      return <video ref={ref} />;
+    };
+
+    render(<Probe />);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    camera.attachVideoSize();
+
+    // A second of footage at 20 fps, with the code in view throughout.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    });
+
+    expect(onResult.mock.calls.length).toBeGreaterThan(0);
+    expect(onResult).toHaveBeenCalledTimes(1);
+    expect(onResult.mock.calls[0][0].text).toBe(SCANNER_PAYLOAD);
+    camera.restore();
+  }, 15000);
+
+  it('downscales a large frame before decoding it', async () => {
+    // A 1080p frame is far more detail than the decoder needs, and decoding
+    // one every 100 ms is what drops frames on a phone.
+    const { useQrScanner } = await import('../src/react/use-qr-scanner.js');
+    const camera = fakeCamera({ videoWidth: 1920, videoHeight: 1080 });
+
+    const Probe = () => {
+      const { ref } = useQrScanner({ maxSize: 640, fps: 20 });
+      // biome-ignore lint/a11y/useMediaCaption: nothing to caption on a viewfinder
+      return <video ref={ref} />;
+    };
+
+    render(<Probe />);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    camera.attachVideoSize();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    });
+
+    expect(camera.sized.length).toBeGreaterThan(0);
+    // 1920x1080 scaled so the longest edge is maxSize.
+    expect(camera.sized[0]).toEqual({ width: 640, height: 360 });
+    camera.restore();
+  }, 15000);
 
   it('stops media tracks on unmount, releasing the camera', async () => {
     const { useQrScanner } = await import('../src/react/use-qr-scanner.js');
