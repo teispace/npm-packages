@@ -39,7 +39,9 @@
   ],
   "sideEffects": [
     "./dist/kanji.js",
-    "./dist/kanji.cjs"
+    "./dist/kanji.cjs",
+    "./dist/jpeg.js",
+    "./dist/jpeg.cjs"
   ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -143,6 +145,16 @@
       "require": {
         "types": "./dist/kanji.d.cts",
         "default": "./dist/kanji.cjs"
+      }
+    },
+    "./jpeg": {
+      "import": {
+        "types": "./dist/jpeg.d.ts",
+        "default": "./dist/jpeg.js"
+      },
+      "require": {
+        "types": "./dist/jpeg.d.cts",
+        "default": "./dist/jpeg.cjs"
       }
     },
     "./react": {

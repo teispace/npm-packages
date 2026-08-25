@@ -41,7 +41,7 @@ That is not theoretical. Writing these found three real bugs in the package:
 | `02-styling` | shapes, eyes, gradients, frames, and which are measurably safe |
 | `03-formats` | SVG, PNG, PDF and EPS at a real physical size |
 | `04-validation` | `validate()` vs `verify()`, and honest logo damage figures |
-| `05-scanning` | every input shape, codes other tools wrote, damage repair |
+| `05-scanning` | every input shape, PNG and JPEG other tools wrote, damage repair |
 | `06-cloning` | read an old code into fields, edit one, restyle it |
 | `07-payloads` | all 32 types, escaping, what can and cannot be read back |
 | `08-symbologies` | Micro QR and rMQR, encoded, rendered and scanned |

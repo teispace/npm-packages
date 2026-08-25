@@ -14,6 +14,7 @@
  */
 
 import { decodePng } from '../raster/png.js';
+import { decodeRegistered } from './image-registry.js';
 
 /** The shape a canvas `getImageData()` returns. */
 export interface ImageDataLike {
@@ -97,12 +98,16 @@ const base64ToBytes = (base64: string): Uint8Array => {
 };
 
 /**
- * Decode encoded image bytes through a canvas, for formats this package does
- * not implement natively (JPEG, WebP, AVIF).
+ * Decode encoded image bytes through a canvas, for formats with no native
+ * reader here: WebP, AVIF, and progressive JPEG.
  *
- * Returns null outside a browser-like environment. Writing a JPEG decoder
- * would add more code than the entire rest of the library for a format the
- * host almost always already supports.
+ * Returns null outside a browser-like environment.
+ *
+ * This once said that writing a JPEG decoder would cost more code than the
+ * rest of the library. That turned out to be wrong by an order of magnitude —
+ * baseline JPEG is 2.9 kB gzipped in `teiqr/jpeg` — so the claim is gone and
+ * the format is decoded. What remains here is genuinely better delegated: the
+ * newer codecs are large, and the host already has them.
  */
 const decodeViaCanvas = (bytes: Uint8Array): NormalizedImage | null => {
   const g = globalThis as Record<string, unknown>;
@@ -207,11 +212,19 @@ export const toPixels = (input: ImageInput): NormalizedImage => {
       const { pixels, width, height } = decodePng(bytes);
       return { pixels, width, height };
     }
+    // Formats added by a side-effect import, such as `teiqr/jpeg`. Tried
+    // before the canvas so a registered decoder wins over a host API: it is
+    // synchronous, and it behaves identically on every runtime.
+    const registered = decodeRegistered(bytes);
+    if (registered) {
+      return { pixels: registered.pixels, width: registered.width, height: registered.height };
+    }
     const viaCanvas = decodeViaCanvas(bytes);
     if (viaCanvas) return viaCanvas;
     throw new TypeError(
-      'Unsupported image format. PNG is decoded natively; for JPEG, WebP or AVIF either ' +
-        'use scanAsync(), or decode to pixels yourself and pass { data, width, height }.',
+      "Unsupported image format. PNG is decoded natively; for JPEG add `import 'teiqr/jpeg'`. " +
+        'For WebP or AVIF either use scanAsync(), or decode to pixels yourself and pass ' +
+        '{ data, width, height }.',
     );
   }
 

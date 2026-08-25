@@ -29,6 +29,8 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = `file://${join(dirname(here), 'dist')}`;
 
+const fixtures = join(dirname(here), '__tests__', 'fixtures', 'jpeg');
+
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {
   const at = args.indexOf(`--${name}`);
@@ -49,6 +51,8 @@ const { decodePng, zlibDeflate } = await import('${dist}/raster.js');
 const { tryScan, decodeMatrix, decodeMicroMatrix, decodeRmqrMatrix } = await import('${dist}/verify.js');
 const { parsePayload } = await import('${dist}/payload.js');
 const { qr } = await import('${dist}/index.js');
+const { decodeJpeg } = await import('${dist}/jpeg.js');
+const { readFileSync } = await import('node:fs');
 
 let state = Number(process.argv[2]) >>> 0 || 1;
 const rand = () => {
@@ -143,6 +147,20 @@ const corpus = VARIANTS.map(([d, c, i]) => {
 });
 const pick = () => corpus[int(corpus.length)];
 
+// JPEG is a second entropy-coded format reached from the same public entry,
+// and its Huffman walk is exactly the shape that hung the PNG inflater: a loop
+// consuming bits that a reader running past the end could feed forever. The
+// fixtures are real files from an independent encoder, so mutating them reaches
+// header fields and entropy data no synthetic buffer would.
+const JPEGS = ['qr-444.jpg', 'qr-420.jpg', 'qr-low.jpg', 'qr-gray.jpg'];
+const jpegCorpus = JPEGS.map((name) => {
+  const bytes = new Uint8Array(readFileSync('${fixtures}/' + name));
+  const image = decodeJpeg(bytes);
+  if (!image.width || !image.height) throw new Error('fuzz JPEG corpus ' + name + ' decoded empty');
+  return bytes;
+});
+const pickJpeg = () => jpegCorpus[int(jpegCorpus.length)];
+
 const mutate = (bytes) => {
   const copy = Uint8Array.from(bytes);
   const edits = 1 + int(8);
@@ -184,6 +202,11 @@ for (let round = 0; round < 250; round++) {
   attempt(() => tryScan(truncate(seed)));
   attempt(() => tryScan(mutate(pick())));
   attempt(() => tryScan(signed()));
+  attempt(() => decodeJpeg(mutate(pickJpeg())));
+  attempt(() => decodeJpeg(truncate(pickJpeg())));
+  attempt(() => decodeJpeg(truncate(mutate(pickJpeg()))));
+  attempt(() => decodeJpeg(garbage()));
+  attempt(() => tryScan(mutate(pickJpeg())));
   attempt(() => parsePayload(text()));
   const size = [11, 13, 15, 17, 21, 25, 29][int(7)];
   attempt(() => decodeMatrix({ size, version: (size - 17) / 4 || 1, modules: matrix(size), kinds: new Uint8Array(size * size) }));

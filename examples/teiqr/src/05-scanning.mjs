@@ -4,10 +4,14 @@
  * The decoder ships alongside the encoder, so this is the same code that
  * `verify()` uses to prove a styled symbol still scans.
  */
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { qr } from 'teiqr';
 import { encode } from 'teiqr/core';
 import { crc32, decodePng, toPng, zlibDeflate } from 'teiqr/raster';
 import { scan, scanAll, tryScan } from 'teiqr/verify';
+import 'teiqr/jpeg';
 import { check, section } from './_shared.mjs';
 
 const url = 'https://example.com/scanning';
@@ -106,3 +110,21 @@ console.log(`    1-bit palette PNG is ${palette.length} bytes vs ${png.length} f
 console.log(`    scanned -> ${scan(palette).text}`);
 check(scan(palette).text === url, 'a 1-bit palette PNG should scan');
 check(palette.length < png.length, 'the palette encoding should be the smaller one');
+
+section('A photograph, not a render: baseline JPEG');
+// A camera never produces a PNG. `import 'teiqr/jpeg'` registers a baseline
+// decoder so scan() reads JPEG synchronously, on any runtime, with no canvas
+// and no await — the same call, just more formats.
+//
+// It is a separate entry point on purpose: a code you generated is never a
+// JPEG, so the Huffman tables and inverse DCT stay out of everyone else's
+// bundle. Importing it costs 2.9 kB gzipped, and nothing at all if you do not.
+const assets = join(dirname(dirname(fileURLToPath(import.meta.url))), 'assets');
+const photo = new Uint8Array(readFileSync(join(assets, 'photographed.jpg')));
+console.log(`    a 4:2:0 JPEG (${photo.length.toLocaleString()} bytes) -> ${scan(photo).text}`);
+check(scan(photo).text === 'https://example.com/photographed', 'the JPEG should scan');
+
+// Same bytes, same call, no format argument anywhere: whatever the image is,
+// scan() works it out. Without the teiqr/jpeg import these bytes are refused
+// with a message naming the import rather than a bare failure.
+console.log('    no format argument, and no await — scan() sorts it out');
