@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.0.6](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.5...teiqr-v0.0.6) (2026-08-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **teiqr:** decode the whole PNG colour model, not just what we emit ([#121](https://github.com/teispace/npm-packages/issues/121))
+
+### Features
+
+* **teiqr:** decode the whole PNG colour model, not just what we emit ([#121](https://github.com/teispace/npm-packages/issues/121)) ([daa4f8d](https://github.com/teispace/npm-packages/commit/daa4f8df90fbb279526a8279fb5c26570d93bbb4))
+
+
+### Miscellaneous Chores
+
+* **teiqr:** pin the next release to 0.0.6 ([863e200](https://github.com/teispace/npm-packages/commit/863e200eedc422fd8215b1da726b09f556368949))
+
 ## [0.0.5](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.4...teiqr-v0.0.5) (2026-08-25)
 
 
