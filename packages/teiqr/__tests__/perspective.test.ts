@@ -279,3 +279,85 @@ describe('locating Micro QR and rMQR in an image', () => {
     expect(tryScan(turned)?.text).toBe('12345');
   });
 });
+
+describe('compact symbologies under rotation and tilt', () => {
+  /** Rotate a quarter turn clockwise, swapping the canvas dimensions with it. */
+  const quarterTurn = (source: { data: Uint8Array; width: number; height: number }) =>
+    warp(source, [
+      [source.height, 0],
+      [source.height, source.width],
+      [0, source.width],
+      [0, 0],
+    ]);
+
+  it('reads a rotated rMQR symbol', () => {
+    // Worth stating why the corners look like that: a rectangular symbol
+    // turned a quarter turn needs a canvas whose dimensions are swapped too.
+    // Reusing the square-image corners squashes it back to the original aspect
+    // ratio, which is a rotation *and* an anisotropic scale — something no
+    // similarity transform can represent, and a test failure that says nothing
+    // about the code.
+    const flat = pixelsOf(encodeRmqr('SERIAL-4417'));
+    expect(tryScan(quarterTurn(flat))?.text).toBe('SERIAL-4417');
+  });
+
+  it('reads a rotated Micro QR symbol at every version', () => {
+    for (const [payload, version] of [
+      ['12345', 'M1'],
+      ['HELLO', 'M2'],
+      ['hello', 'M3'],
+      ['hello world', 'M4'],
+    ] as const) {
+      const flat = pixelsOf(encodeMicro(payload, { version }));
+      expect(tryScan(quarterTurn(flat))?.text, version).toBe(payload);
+    }
+  });
+
+  it('reads a tilted rMQR symbol, using its sub-finder as a second point', () => {
+    // The finder alone gives position and scale measured across seven modules.
+    // Pairing it with the sub-finder in the opposite corner measures both over
+    // the symbol's whole diagonal, which is what makes a tilt survivable.
+    const flat = pixelsOf(encodeRmqr('SERIAL-4417'));
+    const { width: w, height: h } = flat;
+    const tilted = warp(flat, [
+      [w * 0.06, h * 0.1],
+      [w * 0.94, h * 0.1],
+      [w, h],
+      [0, h],
+    ]);
+    expect(tryScan(tilted)?.text).toBe('SERIAL-4417');
+  });
+
+  it('reads a tilted Micro QR symbol', () => {
+    const flat = pixelsOf(encodeMicro('HELLO'));
+    const { width: w, height: h } = flat;
+    const tilted = warp(flat, [
+      [w * 0.06, h * 0.1],
+      [w * 0.94, h * 0.1],
+      [w, h],
+      [0, h],
+    ]);
+    expect(tryScan(tilted)?.text).toBe('HELLO');
+  });
+
+  it('does not pretend to read a wide rMQR symbol under real perspective', () => {
+    // The honest boundary. Two points fix position, scale and rotation, and
+    // that is a similarity transform — it cannot express foreshortening. On a
+    // 99-module-wide symbol the mismatch accumulates past a module long before
+    // the far end. Reading it would need four correspondences, and rMQR's
+    // remaining landmarks are a handful of modules in the other two corners,
+    // too small to locate reliably. Returning nothing is the right answer;
+    // returning a wrong payload would not be.
+    const payload = 'HELLO WORLD 123';
+    const flat = pixelsOf(encodeRmqr(payload, { version: 'R13x99' }));
+    const { width: w, height: h } = flat;
+    const tilted = warp(flat, [
+      [w * 0.06, h * 0.1],
+      [w * 0.94, h * 0.1],
+      [w, h],
+      [0, h],
+    ]);
+    const result = tryScan(tilted);
+    expect(result === null || result.text === payload).toBe(true);
+  });
+});

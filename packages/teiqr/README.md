@@ -7,10 +7,11 @@ synchronous API, identical output in Node, browsers, Cloudflare Workers, Deno an
 npm install teiqr
 ```
 
-> **Status: 0.0.x — early, but not experimental.** Everything documented here is implemented
-> and tested; the version is low because the API has not yet been through real-world use and
-> may still change. Pin an exact version if that matters to you. What is here is verified to
-> the standard described under [Conformance and testing](#conformance-and-testing), not to a
+> **Status: 0.0.x — early, but not experimental.** Everything documented here is implemented,
+> tested, and now covered by a [stability policy](#stability). The version stays low while the
+> API settles under real use; a patch release may still make a breaking change, but only
+> deliberately and only with the reason in the changelog. What is here is verified to the
+> standard described under [Conformance and testing](#conformance-and-testing), not to a
 > "we'll fix it later" standard.
 
 ```ts
@@ -66,7 +67,7 @@ regression test, and none diverge.
 - [Payloads](#payloads) · [Extensibility](#extensibility)
 - [Kanji, ECI, binary](#kanji-eci-and-binary) · [Structured Append](#structured-append) · [Terminal](#terminal-output)
 - [Command line](#command-line) · [React](#react) · [Entry points & bundle size](#entry-points-and-bundle-size)
-- [Runtime support](#runtime-support)
+- [Runtime support](#runtime-support) · [Stability](#stability)
 - [API reference](#api-reference) · [Conformance & testing](#conformance-and-testing)
 
 ---
@@ -1024,17 +1025,17 @@ gzipped, by `scripts/measure-bundles.mjs` — run it yourself after `yarn build`
 
 | Entry             | Gzipped | What it is                                |
 | ----------------- | ------: | ----------------------------------------- |
-| `teiqr`           | 42.8 kB | everything                                |
+| `teiqr`           | 43.4 kB | everything                                |
 | `teiqr/core`      | 11.6 kB | encoding, all three symbologies           |
 | `teiqr/render`    |  4.5 kB | scene + SVG                               |
 | `teiqr/validate`  |  4.6 kB | scannability analysis                     |
 | `teiqr/payload`   |  8.3 kB | 32 typed builders + parsers               |
 | `teiqr/export`    | 20.8 kB | PDF, EPS, ZIP, CSV batch                  |
 | `teiqr/raster`    |  9.1 kB | DEFLATE + PNG + rasteriser                |
-| `teiqr/verify`    | 15.4 kB | decoder + scanner, all three symbologies  |
+| `teiqr/verify`    | 16.1 kB | decoder + scanner, all three symbologies  |
 | `teiqr/terminal`  |  0.4 kB | text output                               |
 | `teiqr/kanji`     | 10.8 kB | Shift-JIS table (opt-in)                  |
-| `teiqr/react`     | 26.6 kB | components + hooks (`react` external)     |
+| `teiqr/react`     | 27.2 kB | components + hooks (`react` external)     |
 
 `core` and `verify` carry the rMQR tables — 32 fixed sizes with no closed form, so they have
 to be listed. Importing `encode` alone is 5.5 kB, because a symbol you never build is a symbol
@@ -1048,13 +1049,13 @@ should have excluded:
 | --- | ---: | --- |
 | `encode` | 5.5 kB | none |
 | `toPng` | 9.0 kB | none |
-| `scan` | 14.5 kB | none |
+| `scan` | 15.1 kB | none |
 | `toTerminal` | 0.4 kB | none |
 | `parsePayload` | 7.8 kB | none |
 | `<QrCode>` | 9.5 kB | none — the camera scanner is not included |
-| `useQrScanner` | 15.6 kB | none — the renderer is not included |
+| `useQrScanner` | 16.2 kB | none — the renderer is not included |
 
-Importing `toTerminal` costs 0.4 kB out of a 42.8 kB whole.
+Importing `toTerminal` costs 0.4 kB out of a 43.4 kB whole.
 
 Both ESM and CJS are published, with bundled `.d.ts` for each entry point.
 
@@ -1141,6 +1142,37 @@ modules a logo may safely cover, and the decoder knows which cells carry data.
 
 ---
 
+## Stability
+
+The package exports a lot of names — the encoder's Galois-field arithmetic and the PNG codec's
+CRC are both reachable, from `teiqr/core` and `teiqr/raster`. That is deliberate: this is a
+toolkit, and someone building on top of it should not have to vendor a copy of
+`computeRemainder` because it was hidden. But it does mean "what is the API" needs an answer,
+so here is one.
+
+**Stable.** Everything this README documents. Pre-1.0, semver puts breaking changes in the
+patch position, so pin an exact version if that matters — but nothing documented here changes
+without the reason appearing in the changelog. That covers `qr()`,
+`encode` / `encodeMicro` / `encodeRmqr`, `scan` and its variants, `clone`, `validate`,
+`renderSvg`, `toPng`, `exportQr`, the payload builders and parsers, the React components and
+hooks, the CLI, and the types those use — `QrMatrix`, `QrStyle`, `ScanResult`, `Validation`
+and their fields.
+
+**Exposed internals.** Everything else. Use them — they are tested to the same standard, and
+they are exported because hiding them would be worse — but they can change in a minor release
+if the implementation needs it. If you depend on one, pin the version and open an issue;
+things people actually use get promoted.
+
+Both tiers are frozen by `__tests__/api-surface.test.ts`, which snapshots every export from
+every entry point. Adding a name means updating that file in the same commit; removing one
+fails the build until it is done deliberately. A policy that nothing checks is a wish.
+
+**Not API at all:** anything under `src/` that no entry point re-exports, the exact bytes of
+rendered output (module *placement* is spec-defined and fixed, path rounding and attribute
+order are not), and the wording of error messages.
+
+---
+
 ## Conformance and testing
 
 **148 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
@@ -1166,13 +1198,16 @@ rest on our own decoder agreeing with our own encoder.
 
 Stated plainly, because a library that hides these wastes your afternoon:
 
-- **Binarisation is a single global threshold.** Otsu's method over the whole image, which is
-  exact for rendered output and holds for a reasonably lit photograph — but a hard shadow
-  across one corner will defeat it where a local threshold would not.
-- **Micro QR and rMQR are located under rotation and scale, not perspective.** A lone 7x7
-  finder is rotationally symmetric and rMQR's sub-finder is a different shape, so neither
-  supplies the four correspondences a homography needs. Both read when rotated; a strongly
-  tilted capture of either will not. Full QR gets perspective correction.
+- **Micro QR and rMQR are located under a similarity transform**, not a homography. rMQR pairs
+  its finder with the sub-finder in the opposite corner, so scale and rotation are measured
+  across the whole diagonal and a moderate tilt reads; Micro QR has one finder and no second
+  landmark at all, so it gets position, scale and rotation and nothing more. Neither symbology
+  provides the four correspondences perspective needs — a wide rMQR symbol photographed at a
+  real angle will not read, and returns nothing rather than a wrong payload. Full QR does get
+  perspective correction.
+- **Motion blur, moiré and non-flat paper are not simulated.** Uneven lighting, defocus, sensor
+  noise and low contrast are, and the scanner is tested against all four; the rest is honest
+  guesswork until someone points a real camera at it.
 - **Raster output cannot draw frame label text**, and can only embed **PNG** data-URI logos.
   Both are reported in `rasterize().omitted`. SVG handles both fully.
 - **JPEG/WebP/AVIF decoding needs `createImageBitmap`** (so, `scanAsync` in a browser, Worker

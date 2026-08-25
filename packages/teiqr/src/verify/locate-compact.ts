@@ -32,7 +32,7 @@ import { MICRO_VERSIONS, type MicroVersion, microSize } from '../core/micro.js';
 import { RMQR_SPECS, RMQR_VERSIONS, type RmqrVersion } from '../core/rmqr.js';
 import { decodeMicroMatrix } from './decode-micro.js';
 import { decodeRmqrMatrix } from './decode-rmqr.js';
-import { type Candidate, runLengthTowards } from './finder.js';
+import { type Candidate, findRingCentres, runLengthTowards } from './finder.js';
 import { type PerspectiveTransform, sampleGrid, transformPoint } from './perspective.js';
 import type { ScanResult } from './scan.js';
 
@@ -187,10 +187,56 @@ export const readMicroAt = (
 };
 
 /**
+ * A transform pinned to two known points rather than one point and an angle.
+ *
+ * `from`/`to` are grid coordinates and `a`/`b` the image points they land on.
+ * Scale and rotation both fall out of the vector between them, which is the
+ * reason to bother: an angle measured across a 7-module finder and applied to
+ * a 139-module symbol multiplies its own error by twenty, whereas the same
+ * quantities measured end to end across the symbol do not.
+ */
+const twoPointTransform = (
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+): PerspectiveTransform => {
+  const gridX = to.x - from.x;
+  const gridY = to.y - from.y;
+  const imageX = b.x - a.x;
+  const imageY = b.y - a.y;
+
+  const gridLength = Math.hypot(gridX, gridY);
+  const pitch = Math.hypot(imageX, imageY) / gridLength;
+  const angle = Math.atan2(imageY, imageX) - Math.atan2(gridY, gridX);
+
+  const ax = Math.cos(angle) * pitch;
+  const ay = Math.sin(angle) * pitch;
+  return {
+    a11: ax,
+    a12: ay,
+    a13: 0,
+    a21: -ay,
+    a22: ax,
+    a23: 0,
+    a31: a.x - from.x * ax + from.y * ay,
+    a32: a.y - from.x * ay - from.y * ax,
+    a33: 1,
+  };
+};
+
+/**
  * Try to read an rMQR symbol whose 7x7 finder is the given candidate.
  *
+ * Two passes per size. The first places the grid from the finder alone, which
+ * is enough to predict roughly where the 5x5 sub-finder in the opposite corner
+ * should be. If that sub-finder is actually there, the grid is rebuilt from
+ * the two of them — and *that* is the fit worth having, because the two points
+ * sit at opposite ends of the symbol, so scale and rotation are measured over
+ * its full diagonal instead of across seven modules of finder.
+ *
  * Sizes are tried largest-first so a wide symbol is not mistaken for the
- * narrow one nested inside its own top-left corner — a grid that samples only
+ * narrow one nested inside its own top-left corner: a grid that samples only
  * part of a symbol can still satisfy its own format information if the
  * fragment happens to line up, and the first plausible answer wins.
  */
@@ -208,24 +254,54 @@ export const readRmqrAt = (
       RMQR_SPECS[b].width * RMQR_SPECS[b].height - RMQR_SPECS[a].width * RMQR_SPECS[a].height,
   );
 
+  const finderGrid = { x: 3.5, y: 3.5 };
+  const finderImage = { x: finder.x, y: finder.y };
+
   for (const angle of quarterTurns(base)) {
-    const transform = gridTransform(finder.x, finder.y, finder.size, angle);
+    const coarse = gridTransform(finder.x, finder.y, finder.size, angle);
+
     for (const version of bySizeDescending) {
       const spec = RMQR_SPECS[version];
-      const modules = sampleGrid(dark, width, height, spec.width, spec.height, transform);
-      if (!modules) continue;
-      try {
-        const result = decodeRmqrMatrix({ modules, width: spec.width, height: spec.height });
-        return {
-          ...result,
-          version: RMQR_VERSIONS.indexOf(result.version) + 1,
-          ecc: result.ecc,
-          mask: 0,
-          moduleSize: finder.size,
-          origin: transformPoint(transform, 0, 0),
-        };
-      } catch {
-        // Wrong size or wrong quarter turn; keep trying.
+      // The sub-finder's own dark centre module sits three in from each far
+      // edge, so its grid centre is (width - 2.5, height - 2.5).
+      const subGrid = { x: spec.width - 2.5, y: spec.height - 2.5 };
+      const predicted = transformPoint(coarse, subGrid.x, subGrid.y);
+
+      const fits: PerspectiveTransform[] = [];
+      if (predicted.x >= 0 && predicted.y >= 0 && predicted.x < width && predicted.y < height) {
+        // The sub-finder reads light-dark-light through its middle, exactly
+        // like an alignment pattern, so the same detector finds it.
+        for (const centre of findRingCentres(
+          dark,
+          width,
+          height,
+          predicted.x,
+          predicted.y,
+          finder.size,
+        )) {
+          fits.push(twoPointTransform(finderGrid, subGrid, finderImage, centre));
+        }
+      }
+      // The finder-only fit stays as the fallback, so a symbol whose
+      // sub-finder is damaged or obscured still reads.
+      fits.push(coarse);
+
+      for (const transform of fits) {
+        const modules = sampleGrid(dark, width, height, spec.width, spec.height, transform);
+        if (!modules) continue;
+        try {
+          const result = decodeRmqrMatrix({ modules, width: spec.width, height: spec.height });
+          return {
+            ...result,
+            version: RMQR_VERSIONS.indexOf(result.version) + 1,
+            ecc: result.ecc,
+            mask: 0,
+            moduleSize: finder.size,
+            origin: transformPoint(transform, 0, 0),
+          };
+        } catch {
+          // Wrong size, wrong quarter turn, or a sub-finder that was not one.
+        }
       }
     }
   }

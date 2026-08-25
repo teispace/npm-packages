@@ -248,3 +248,163 @@ export const pitchBetween = (
   if (usable.length === 0) return (a.size + b.size) / 2;
   return usable.reduce((sum, value) => sum + value, 0) / (usable.length * 7);
 };
+
+/**
+ * Look for the bottom-right alignment pattern near where the geometry says it
+ * should be.
+ *
+ * This is the fourth point correspondence, and it is what makes perspective
+ * correction possible rather than merely affine: three finder centres fix a
+ * parallelogram, and only a fourth point can express the fact that the far
+ * edge of a tilted symbol is shorter than the near one.
+ *
+ * Version 1 has no alignment pattern, so its caller falls back to
+ * extrapolating the fourth corner — exact when the symbol is flat, and close
+ * enough at version 1's small size when it is not.
+ *
+ * Returns `null` rather than throwing when nothing is found: an unreadable
+ * alignment pattern is a reason to fall back, not to abandon the symbol.
+ */
+const findRingCentresInRegion = (
+  dark: Uint8Array,
+  width: number,
+  height: number,
+  centreX: number,
+  centreY: number,
+  moduleSize: number,
+  radius: number,
+  limit: number,
+): { x: number; y: number }[] => {
+  const left = Math.max(0, Math.floor(centreX - radius));
+  const right = Math.min(width - 1, Math.ceil(centreX + radius));
+  const top = Math.max(0, Math.floor(centreY - radius));
+  const bottom = Math.min(height - 1, Math.ceil(centreY + radius));
+  if (right <= left || bottom <= top) return [];
+
+  // Match light, dark, light — the light ring, the single dark centre module,
+  // and the light ring again — rather than the pattern's full five runs.
+  //
+  // This matters more than it looks. The outer dark ring is one module wide in
+  // isolation, but it sits directly against the data region, so any adjacent
+  // dark data module merges with it and the run measures two modules. Keying
+  // on the outer ring therefore fails on exactly the symbols where it is
+  // needed. The light ring has no such problem: it is bounded by the dark
+  // centre on one side and the dark outer ring on the other, so it is always
+  // exactly one module wide whatever surrounds the pattern.
+  const tolerance = moduleSize / 2;
+  const near = (run: number) => run > 0 && Math.abs(run - moduleSize) <= tolerance;
+
+  const found: { x: number; y: number; error: number }[] = [];
+
+  for (let y = top; y <= bottom; y++) {
+    const runs: { start: number; length: number; dark: boolean }[] = [];
+    let x = left;
+    while (x <= right) {
+      const isDark = dark[y * width + x] === 1;
+      const start = x;
+      while (x <= right && (dark[y * width + x] === 1) === isDark) x++;
+      runs.push({ start, length: x - start, dark: isDark });
+    }
+
+    for (let i = 0; i + 2 < runs.length; i++) {
+      const [before, centre, after] = runs.slice(i, i + 3);
+      if (before.dark || !centre.dark) continue;
+      if (!near(before.length) || !near(centre.length) || !near(after.length)) continue;
+
+      const hitX = centre.start + centre.length / 2;
+      const column = Math.round(hitX);
+      if (column < 0 || column >= width) continue;
+      if (!verifyRingColumn(dark, width, height, column, y, moduleSize)) continue;
+
+      found.push({ x: hitX, y, error: Math.hypot(hitX - centreX, y - centreY) });
+    }
+  }
+
+  // Nearest the estimate first, and merged so one pattern hit on several rows
+  // counts once rather than crowding out the alternatives.
+  found.sort((a, b) => a.error - b.error);
+  const merged: { x: number; y: number }[] = [];
+  for (const candidate of found) {
+    if (merged.some((m) => Math.hypot(m.x - candidate.x, m.y - candidate.y) < moduleSize * 2)) {
+      continue;
+    }
+    merged.push({ x: candidate.x, y: candidate.y });
+    if (merged.length >= limit) break;
+  }
+  return merged;
+};
+
+/**
+ * Alignment-pattern candidates near the estimate, nearest first.
+ *
+ * Plural on purpose. The estimate comes from extrapolating the fourth corner
+ * of a parallelogram, which is precisely the assumption perspective breaks, so
+ * on a large tilted symbol it can be several modules out — far enough that a
+ * chance light-dark-light run in the data region sits closer to it than the
+ * real pattern does. Returning one "best" candidate picks that impostor and
+ * corrupts the whole grid. Returning several lets the caller decide by fit.
+ *
+ * The window is deliberately generous rather than escalating on failure. Once
+ * the caller arbitrates by fit instead of by proximity, extra candidates cost
+ * one grid sample each and cannot mislead — whereas a window too small to
+ * reach the real pattern is unrecoverable.
+ */
+export const findRingCentres = (
+  dark: Uint8Array,
+  width: number,
+  height: number,
+  centreX: number,
+  centreY: number,
+  moduleSize: number,
+): { x: number; y: number }[] =>
+  findRingCentresInRegion(
+    dark,
+    width,
+    height,
+    centreX,
+    centreY,
+    moduleSize,
+    Math.max(4, Math.ceil(moduleSize * 12)),
+    8,
+  );
+
+/**
+ * The vertical half of the alignment check: light, dark, light down a column
+ * through the candidate centre, for the same reason the horizontal pass uses
+ * those three runs.
+ */
+const verifyRingColumn = (
+  dark: Uint8Array,
+  width: number,
+  height: number,
+  cx: number,
+  cy: number,
+  moduleSize: number,
+): boolean => {
+  const tolerance = moduleSize / 2;
+  const near = (run: number) => run > 0 && Math.abs(run - moduleSize) <= tolerance;
+
+  if (!dark[cy * width + cx]) return false;
+
+  /** Walk out from the centre: the rest of the dark run, then the light ring. */
+  const walk = (step: number): { centre: number; light: number } | null => {
+    let y = cy + step;
+    let centre = 0;
+    while (y >= 0 && y < height && dark[y * width + cx]) {
+      centre++;
+      y += step;
+    }
+    let light = 0;
+    while (y >= 0 && y < height && !dark[y * width + cx]) {
+      light++;
+      y += step;
+    }
+    return near(light) ? { centre, light } : null;
+  };
+
+  const up = walk(-1);
+  const down = walk(1);
+  if (!up || !down) return false;
+  // Both halves of the centre module, plus the pixel it was found on.
+  return near(up.centre + down.centre + 1);
+};

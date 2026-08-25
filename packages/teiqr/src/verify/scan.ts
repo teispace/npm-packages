@@ -10,16 +10,15 @@
  * ### Scope
  * The grid is read through a fitted perspective transform, so a rotated or
  * off-axis capture decodes rather than drifting off the modules partway
- * across. What is still assumed is even lighting: binarisation is a single
- * global Otsu threshold, which is exact for rendered output and holds for a
- * reasonably lit photograph, but a hard shadow across one corner will defeat
- * it where a local threshold would not.
+ * across, and thresholding is local rather than global, so uneven lighting
+ * does not take half the symbol with it. See `binarize.ts` for the latter.
  */
 
 import { functionPatternKinds } from '../core/matrix.js';
 import { MAX_VERSION, MIN_VERSION, sizeForVersion } from '../core/version.js';
+import { binarize } from './binarize.js';
 import { type DecodeResult, decodeMatrix } from './decode-matrix.js';
-import { type Candidate, findFinders, pitchBetween } from './finder.js';
+import { type Candidate, findFinders, findRingCentres, pitchBetween } from './finder.js';
 import { readCompactAt } from './locate-compact.js';
 import { quadrilateralToQuadrilateral, sampleGrid, transformPoint } from './perspective.js';
 import { UncorrectableError } from './reed-solomon.js';
@@ -31,60 +30,6 @@ export class NotFoundError extends Error {
     this.name = 'NotFoundError';
   }
 }
-
-/**
- * Otsu's method: choose the threshold that minimises intra-class variance.
- *
- * A fixed mid-grey threshold breaks on the low-contrast and inverted styles
- * this library deliberately allows, so the threshold is derived from the
- * image's own histogram instead.
- */
-const otsuThreshold = (gray: Uint8Array): number => {
-  const histogram = new Int32Array(256);
-  for (const value of gray) histogram[value]++;
-
-  const total = gray.length;
-  let sum = 0;
-  for (let i = 0; i < 256; i++) sum += i * histogram[i];
-
-  let sumBackground = 0;
-  let weightBackground = 0;
-  let best = 0;
-  let bestVariance = -1;
-
-  for (let t = 0; t < 256; t++) {
-    weightBackground += histogram[t];
-    if (weightBackground === 0) continue;
-    const weightForeground = total - weightBackground;
-    if (weightForeground === 0) break;
-
-    sumBackground += t * histogram[t];
-    const meanBackground = sumBackground / weightBackground;
-    const meanForeground = (sum - sumBackground) / weightForeground;
-    const variance = weightBackground * weightForeground * (meanBackground - meanForeground) ** 2;
-
-    if (variance > bestVariance) {
-      bestVariance = variance;
-      best = t;
-    }
-  }
-  return best;
-};
-
-/** Composite RGBA over white, then convert to luminance. */
-const toGray = (pixels: Uint8Array, width: number, height: number): Uint8Array => {
-  const gray = new Uint8Array(width * height);
-  for (let i = 0, p = 0; i < gray.length; i++, p += 4) {
-    const alpha = pixels[p + 3] / 255;
-    // Transparent regions are assumed to sit on white, which is what a printed
-    // or on-screen code effectively does.
-    const r = pixels[p] * alpha + 255 * (1 - alpha);
-    const g = pixels[p + 1] * alpha + 255 * (1 - alpha);
-    const b = pixels[p + 2] * alpha + 255 * (1 - alpha);
-    gray[i] = (0.299 * r + 0.587 * g + 0.114 * b) | 0;
-  }
-  return gray;
-};
 
 /** Three finder patterns that together describe one symbol. */
 export interface SymbolLocation {
@@ -186,15 +131,6 @@ export interface ScanResult extends DecodeResult {
   readonly origin: { x: number; y: number };
 }
 
-/** Binarise an image once, so multi-symbol scanning does not repeat the work. */
-export const binarize = (pixels: Uint8Array, width: number, height: number): Uint8Array => {
-  const gray = toGray(pixels, width, height);
-  const threshold = otsuThreshold(gray);
-  const dark = new Uint8Array(gray.length);
-  for (let i = 0; i < gray.length; i++) dark[i] = gray[i] <= threshold ? 1 : 0;
-  return dark;
-};
-
 /**
  * Modules across, derived from how many module widths separate the finder
  * centres.
@@ -235,166 +171,6 @@ const computeDimension = (
       throw new NotFoundError(`Derived an implausible symbol size: ${dimension} modules`);
   }
   return { dimension, pitch: (pitchTop + pitchLeft) / 2 };
-};
-
-/**
- * Look for the bottom-right alignment pattern near where the geometry says it
- * should be.
- *
- * This is the fourth point correspondence, and it is what makes perspective
- * correction possible rather than merely affine: three finder centres fix a
- * parallelogram, and only a fourth point can express the fact that the far
- * edge of a tilted symbol is shorter than the near one.
- *
- * Version 1 has no alignment pattern, so its caller falls back to
- * extrapolating the fourth corner — exact when the symbol is flat, and close
- * enough at version 1's small size when it is not.
- *
- * Returns `null` rather than throwing when nothing is found: an unreadable
- * alignment pattern is a reason to fall back, not to abandon the symbol.
- */
-const findAlignmentInRegion = (
-  dark: Uint8Array,
-  width: number,
-  height: number,
-  centreX: number,
-  centreY: number,
-  moduleSize: number,
-  radius: number,
-  limit: number,
-): { x: number; y: number }[] => {
-  const left = Math.max(0, Math.floor(centreX - radius));
-  const right = Math.min(width - 1, Math.ceil(centreX + radius));
-  const top = Math.max(0, Math.floor(centreY - radius));
-  const bottom = Math.min(height - 1, Math.ceil(centreY + radius));
-  if (right <= left || bottom <= top) return [];
-
-  // Match light, dark, light — the light ring, the single dark centre module,
-  // and the light ring again — rather than the pattern's full five runs.
-  //
-  // This matters more than it looks. The outer dark ring is one module wide in
-  // isolation, but it sits directly against the data region, so any adjacent
-  // dark data module merges with it and the run measures two modules. Keying
-  // on the outer ring therefore fails on exactly the symbols where it is
-  // needed. The light ring has no such problem: it is bounded by the dark
-  // centre on one side and the dark outer ring on the other, so it is always
-  // exactly one module wide whatever surrounds the pattern.
-  const tolerance = moduleSize / 2;
-  const near = (run: number) => run > 0 && Math.abs(run - moduleSize) <= tolerance;
-
-  const found: { x: number; y: number; error: number }[] = [];
-
-  for (let y = top; y <= bottom; y++) {
-    const runs: { start: number; length: number; dark: boolean }[] = [];
-    let x = left;
-    while (x <= right) {
-      const isDark = dark[y * width + x] === 1;
-      const start = x;
-      while (x <= right && (dark[y * width + x] === 1) === isDark) x++;
-      runs.push({ start, length: x - start, dark: isDark });
-    }
-
-    for (let i = 0; i + 2 < runs.length; i++) {
-      const [before, centre, after] = runs.slice(i, i + 3);
-      if (before.dark || !centre.dark) continue;
-      if (!near(before.length) || !near(centre.length) || !near(after.length)) continue;
-
-      const hitX = centre.start + centre.length / 2;
-      const column = Math.round(hitX);
-      if (column < 0 || column >= width) continue;
-      if (!verifyAlignmentColumn(dark, width, height, column, y, moduleSize)) continue;
-
-      found.push({ x: hitX, y, error: Math.hypot(hitX - centreX, y - centreY) });
-    }
-  }
-
-  // Nearest the estimate first, and merged so one pattern hit on several rows
-  // counts once rather than crowding out the alternatives.
-  found.sort((a, b) => a.error - b.error);
-  const merged: { x: number; y: number }[] = [];
-  for (const candidate of found) {
-    if (merged.some((m) => Math.hypot(m.x - candidate.x, m.y - candidate.y) < moduleSize * 2)) {
-      continue;
-    }
-    merged.push({ x: candidate.x, y: candidate.y });
-    if (merged.length >= limit) break;
-  }
-  return merged;
-};
-
-/**
- * Alignment-pattern candidates near the estimate, nearest first.
- *
- * Plural on purpose. The estimate comes from extrapolating the fourth corner
- * of a parallelogram, which is precisely the assumption perspective breaks, so
- * on a large tilted symbol it can be several modules out — far enough that a
- * chance light-dark-light run in the data region sits closer to it than the
- * real pattern does. Returning one "best" candidate picks that impostor and
- * corrupts the whole grid. Returning several lets the caller decide by fit.
- *
- * The window is deliberately generous rather than escalating on failure. Once
- * the caller arbitrates by fit instead of by proximity, extra candidates cost
- * one grid sample each and cannot mislead — whereas a window too small to
- * reach the real pattern is unrecoverable.
- */
-const findAlignmentCandidates = (
-  dark: Uint8Array,
-  width: number,
-  height: number,
-  centreX: number,
-  centreY: number,
-  moduleSize: number,
-): { x: number; y: number }[] =>
-  findAlignmentInRegion(
-    dark,
-    width,
-    height,
-    centreX,
-    centreY,
-    moduleSize,
-    Math.max(4, Math.ceil(moduleSize * 12)),
-    8,
-  );
-
-/**
- * The vertical half of the alignment check: light, dark, light down a column
- * through the candidate centre, for the same reason the horizontal pass uses
- * those three runs.
- */
-const verifyAlignmentColumn = (
-  dark: Uint8Array,
-  width: number,
-  height: number,
-  cx: number,
-  cy: number,
-  moduleSize: number,
-): boolean => {
-  const tolerance = moduleSize / 2;
-  const near = (run: number) => run > 0 && Math.abs(run - moduleSize) <= tolerance;
-
-  if (!dark[cy * width + cx]) return false;
-
-  /** Walk out from the centre: the rest of the dark run, then the light ring. */
-  const walk = (step: number): { centre: number; light: number } | null => {
-    let y = cy + step;
-    let centre = 0;
-    while (y >= 0 && y < height && dark[y * width + cx]) {
-      centre++;
-      y += step;
-    }
-    let light = 0;
-    while (y >= 0 && y < height && !dark[y * width + cx]) {
-      light++;
-      y += step;
-    }
-    return near(light) ? { centre, light } : null;
-  };
-
-  const up = walk(-1);
-  const down = walk(1);
-  if (!up || !down) return false;
-  // Both halves of the centre module, plus the pixel it was found on.
-  return near(up.centre + down.centre + 1);
 };
 
 /**
@@ -476,7 +252,7 @@ export const decodeLocation = (
   if (version >= 2) {
     // The alignment centre sits three modules in from the extrapolated corner.
     const pull = 1 - 3 / (dimension - 7);
-    for (const candidate of findAlignmentCandidates(
+    for (const candidate of findRingCentres(
       dark,
       width,
       height,
@@ -620,5 +396,6 @@ export const scanPixels = (pixels: Uint8Array, width: number, height: number): S
   );
 };
 
+export { type BinarizeOptions, binarize } from './binarize.js';
 export { type Candidate, findFinders } from './finder.js';
 export { UncorrectableError };
