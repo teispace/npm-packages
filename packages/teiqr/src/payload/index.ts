@@ -101,9 +101,53 @@ export const PAYLOAD_GROUPS: { group: PayloadGroup; types: PayloadType[] }[] = (
   }));
 })();
 
-/** Serialize by type id. Returns an empty string for an unknown id. */
-export const serializePayload = (typeId: string, values: PayloadValues): string =>
-  getPayloadType(typeId)?.serialize(values) ?? '';
+/**
+ * Serialize by type id.
+ *
+ * Refuses a type it does not know, and refuses to build a payload whose
+ * required fields are absent — because what it produced instead was worse than
+ * an error. `serializePayload('url', {})` returned the empty string, which
+ * encodes as a QR code carrying nothing; `'review'` returned a Google review
+ * link with no place attached; `'vcard'` returned a contact card with no name;
+ * `'wifi'` a network with no SSID. All of them scannable, all of them useless,
+ * and none of them complaining. Thirty-one of the thirty-two built-in types
+ * behaved this way.
+ *
+ * The field metadata has always said which fields are required, and
+ * {@link isPayloadComplete} has always been able to check it. Only this
+ * function never asked. `planBatch` did, which is why a CSV row missing a
+ * column is reported rather than silently turned into a code pointing at
+ * nothing — this brings the direct call in line with the batch one.
+ *
+ * @throws {TypeError} when the type is unknown, or a required field is absent
+ * or empty.
+ */
+export const serializePayload = (typeId: string, values: PayloadValues): string => {
+  const type = getPayloadType(typeId);
+  if (!type) {
+    throw new TypeError(
+      `Unknown payload type: ${typeId}. Expected one of ${PAYLOAD_TYPES.map((t) => t.id).join(', ')}.`,
+    );
+  }
+
+  const missing = type.fields
+    .filter((field) => field.required && val(values, field.name).length === 0)
+    .map((field) => field.name);
+  if (missing.length > 0) {
+    // No advice about how to fix it beyond naming the fields. This message
+    // surfaces verbatim from the CLI, where a suggestion phrased in library
+    // terms — "use planBatch's missing[]" — is something the reader cannot
+    // act on. Naming the field is useful everywhere; the rest belongs in the
+    // documentation.
+    throw new TypeError(
+      `Cannot build a ${type.id} payload: ${missing.join(', ')} ${
+        missing.length === 1 ? 'is' : 'are'
+      } required.`,
+    );
+  }
+
+  return type.serialize(values);
+};
 
 /** True when every field marked required has a non-empty value. */
 export const isPayloadComplete = (typeId: string, values: PayloadValues): boolean => {
