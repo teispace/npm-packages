@@ -23,7 +23,11 @@ export default defineConfig({
     // branches that used to be unreachable from Node — OffscreenCanvas,
     // document.createElement, createImageBitmap — are now covered by stubbing
     // the globals, which is what they were always missing.
-    // Current: 94.2 lines / 83.0 branches / 95.2 functions / 92.5 statements.
-    coverage: withThresholds({ lines: 94, branches: 82, functions: 95, statements: 92 }),
+    // Raised a third time when the PNG decoder grew to the full colour model:
+    // every colour type, bit depth, interlacing and `tRNS` is exercised by
+    // hand-built fixtures, which moved branch coverage further than any change
+    // since the symbologies were unified.
+    // Current: 94.9 lines / 84.4 branches / 95.3 functions / 93.3 statements.
+    coverage: withThresholds({ lines: 94, branches: 84, functions: 95, statements: 93 }),
   },
 });

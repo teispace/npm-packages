@@ -6,8 +6,7 @@
  */
 import { qr } from 'teiqr';
 import { encode } from 'teiqr/core';
-import { toPng } from 'teiqr/raster';
-import { decodePng } from 'teiqr/raster';
+import { crc32, decodePng, toPng, zlibDeflate } from 'teiqr/raster';
 import { scan, scanAll, tryScan } from 'teiqr/verify';
 import { check, section } from './_shared.mjs';
 
@@ -65,3 +64,45 @@ const damaged = Uint8Array.from(png);
 for (let i = 200; i < Math.min(260, damaged.length); i += 7) damaged[i] ^= 0x0f;
 const repaired = tryScan(damaged);
 console.log(`    ${repaired ? `read "${repaired.text}" after repairing ${repaired.corrected} codeword(s)` : 'too damaged to read, reported honestly'}`);
+
+section('PNGs other tools wrote, in formats this package never emits');
+// A QR code is a two-colour image, so almost nothing stores it as 8-bit RGBA.
+// Encoders and optimisers reach for 1-bit palette or greyscale, which is eight
+// pixels to the byte. The bundled decoder reads the whole PNG colour model for
+// exactly this reason — greyscale, palette and both alpha variants, at every
+// depth each allows, interlaced or not.
+//
+// Built here with the package's own CRC and deflate, so the example needs
+// nothing from Node beyond what teiqr already exports.
+const be32 = (n) => [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
+const chunk = (type, data) => {
+  const body = [...type].map((c) => c.charCodeAt(0)).concat(Array.from(data));
+  return [...be32(body.length - 4), ...body, ...be32(crc32(Uint8Array.from(body)))];
+};
+
+/** Re-encode a decoded image as 1-bit palette, the densest PNG there is. */
+const asOneBitPalette = ({ pixels, width, height }) => {
+  const bytesPerRow = Math.ceil(width / 8);
+  const raw = [];
+  for (let y = 0; y < height; y++) {
+    const row = new Uint8Array(bytesPerRow);
+    for (let x = 0; x < width; x++) {
+      // Bit set = palette entry 1 = white; clear = entry 0 = black.
+      if (pixels[(y * width + x) * 4] > 127) row[x >> 3] |= 0x80 >> (x & 7);
+    }
+    raw.push(0, ...row); // filter 0: none
+  }
+  return Uint8Array.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ...chunk('IHDR', [...be32(width), ...be32(height), 1, 3, 0, 0, 0]),
+    ...chunk('PLTE', [0, 0, 0, 255, 255, 255]),
+    ...chunk('IDAT', zlibDeflate(Uint8Array.from(raw))),
+    ...chunk('IEND', []),
+  ]);
+};
+
+const palette = asOneBitPalette(decodePng(png));
+console.log(`    1-bit palette PNG is ${palette.length} bytes vs ${png.length} for RGBA`);
+console.log(`    scanned -> ${scan(palette).text}`);
+check(scan(palette).text === url, 'a 1-bit palette PNG should scan');
+check(palette.length < png.length, 'the palette encoding should be the smaller one');
