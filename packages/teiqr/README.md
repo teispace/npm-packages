@@ -373,6 +373,9 @@ scan(await readFile('photo.jpg')).text;
 It is a separate entry for the same reason the Shift-JIS table is: a code you generated
 is never a JPEG, so the Huffman tables and inverse DCT stay out of the default bundle.
 
+The **CLI needs no such import** — it registers the decoder itself, because "add
+`import 'teiqr/jpeg'`" is not advice anyone can act on at a shell prompt.
+
 All three Huffman structures are read — baseline, extended sequential and **progressive** —
 in greyscale or colour, at every chroma subsampling, with restart intervals and `tRNS`-style
 Adobe colour transforms. Progressive matters more than its share of cameras suggests: it is
@@ -895,6 +898,7 @@ teiqr -t vcard firstName=Ada lastName=Lovelace email=ada@example.com -o card.svg
 
 ```bash
 teiqr scan ticket.png                # prints the payload
+teiqr scan photo.jpg                 # JPEG too, baseline or progressive
 teiqr scan sheet.png --all           # every code in the image
 teiqr scan wifi.png --parse          # decomposed into fields
 teiqr scan ticket.png --json         # full result, including version and ecc
@@ -1202,7 +1206,7 @@ order are not), and the wording of error messages.
 
 ## Conformance and testing
 
-**572 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
+**575 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
 
 - **Round trip across the whole parameter space** — all 40 versions, all 4 error correction
   levels, all 8 masks, binary payloads to 2 kB, astral-plane emoji, ECI, hand-built segments.

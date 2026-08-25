@@ -243,6 +243,31 @@ describe('teiqr scan', () => {
     expect(await run(['scan', 'nope.png'], h.io)).toBe(1);
     expect(h.err).toContain('ENOENT');
   });
+
+  /**
+   * JPEG is opt-in for library consumers and unconditional here.
+   *
+   * The library's error tells the caller to add `import 'teiqr/jpeg'`, which is
+   * advice a person at a shell prompt cannot act on — there is no module of
+   * theirs to add it to. So the CLI registers the decoder itself, and it does
+   * so in `cli/run.ts` rather than the `cli.ts` shim: these tests drive `run`
+   * directly and never load the shim, so a registration there would make this
+   * test pass while proving nothing about the binary.
+   */
+  it.each(['qr-420.jpg', 'qr-progressive.jpg', 'qr-gray.jpg'])(
+    'scans %s without the caller importing anything',
+    async (name) => {
+      const { readFileSync } = await import('node:fs');
+      const { join, dirname } = await import('node:path');
+      const { fileURLToPath } = await import('node:url');
+      const bytes = new Uint8Array(
+        readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'jpeg', name)),
+      );
+      const h = harness({ 'photo.jpg': bytes });
+      expect(await run(['scan', 'photo.jpg'], h.io)).toBe(0);
+      expect(h.out.trim()).toBe('teiqr jpeg fixture');
+    },
+  );
 });
 
 describe('teiqr batch', () => {
