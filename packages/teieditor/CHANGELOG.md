@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.6](https://github.com/teispace/npm-packages/compare/teieditor-v4.0.0...teieditor-v0.0.6) (2026-08-25)
+
+
+### Miscellaneous Chores
+
+* release main ([#122](https://github.com/teispace/npm-packages/issues/122)) ([3cca039](https://github.com/teispace/npm-packages/commit/3cca039de47832c18000d3a67ff39a9566753dbe))
+* **teiqr:** pin the next release to 0.0.6 ([863e200](https://github.com/teispace/npm-packages/commit/863e200eedc422fd8215b1da726b09f556368949))
+* undo an accidental version reset across every package ([1254fcc](https://github.com/teispace/npm-packages/commit/1254fccbc3bc051df18fa0e1abf4b411d5871056))
+
 ## [4.0.0](https://github.com/teispace/npm-packages/compare/teieditor-v3.0.1...teieditor-v4.0.0) (2026-08-21)
 
 

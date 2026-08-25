@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.6](https://github.com/teispace/npm-packages/compare/env-v1.0.0...env-v0.0.6) (2026-08-25)
+
+
+### Miscellaneous Chores
+
+* release main ([#122](https://github.com/teispace/npm-packages/issues/122)) ([3cca039](https://github.com/teispace/npm-packages/commit/3cca039de47832c18000d3a67ff39a9566753dbe))
+* **teiqr:** pin the next release to 0.0.6 ([863e200](https://github.com/teispace/npm-packages/commit/863e200eedc422fd8215b1da726b09f556368949))
+* undo an accidental version reset across every package ([1254fcc](https://github.com/teispace/npm-packages/commit/1254fccbc3bc051df18fa0e1abf4b411d5871056))
+
 ## [1.0.0](https://github.com/teispace/npm-packages/compare/env-v0.2.4...env-v1.0.0) (2026-08-21)
 
 
