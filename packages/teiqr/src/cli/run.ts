@@ -7,6 +7,21 @@
  * `process.exit`.
  */
 
+// Register the JPEG decoder for every command that reads an image.
+//
+// It is opt-in for library consumers, because a bundle should not carry a
+// decoder for a format the caller may never meet. That reasoning does not
+// apply to an executable: nobody installs a CLI to save three kilobytes, and
+// telling someone at a shell prompt to "add `import 'teiqr/jpeg'`" is advice
+// they cannot act on — there is no module of theirs to add it to.
+// `teiqr scan photo.jpg` should simply work.
+//
+// This sits here rather than in the `cli.ts` shim on purpose. The shim exists
+// only to supply Node's filesystem and streams; everything that decides what
+// the commands can *do* belongs to the surface the tests drive in-process.
+// Registering in the shim would make any test of it vacuous, since the tests
+// never load the shim.
+import '../jpeg.js';
 import { planBatch } from '../batch/batch.js';
 import { parseCsv } from '../batch/csv.js';
 import { encode } from '../core/encode.js';
