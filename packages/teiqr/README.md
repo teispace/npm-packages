@@ -7,6 +7,12 @@ synchronous API, identical output in Node, browsers, Cloudflare Workers, Deno an
 npm install teiqr
 ```
 
+> **Status: 0.0.x — early, but not experimental.** Everything documented here is implemented
+> and tested; the version is low because the API has not yet been through real-world use and
+> may still change. Pin an exact version if that matters to you. What is here is verified to
+> the standard described under [Conformance and testing](#conformance-and-testing), not to a
+> "we'll fix it later" standard.
+
 ```ts
 import { qr, scan } from 'teiqr';
 
