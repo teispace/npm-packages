@@ -231,9 +231,19 @@ const applyLocal = (
   blocksDown: number,
   thresholds: Float32Array,
   known: Uint8Array,
-  fallback: number,
+  fallback: () => number,
 ): Uint8Array => {
   const dark = new Uint8Array(gray.length);
+
+  // Deferred, and computed at most once. The fallback is only reached by a
+  // block with no contrasted neighbour inside either radius, which most images
+  // never have — and computing it eagerly meant a full 256-bin histogram over
+  // every pixel on every pass, for a number that was usually discarded.
+  let fallbackValue = -1;
+  const globalThreshold = () => {
+    if (fallbackValue < 0) fallbackValue = fallback();
+    return fallbackValue;
+  };
 
   for (let by = 0; by < blocksDown; by++) {
     const top = Math.min(by << BLOCK_SHIFT, height - BLOCK);
@@ -246,7 +256,7 @@ const applyLocal = (
       const threshold =
         nearbyMean(thresholds, known, blocksAcross, blocksDown, bx, by, 2) ??
         nearbyMean(thresholds, known, blocksAcross, blocksDown, bx, by, 5) ??
-        fallback;
+        globalThreshold();
 
       for (let y = 0; y < BLOCK; y++) {
         const row = (top + y) * width;
@@ -284,9 +294,22 @@ export const binarize = (
   width: number,
   height: number,
   options: BinarizeOptions = {},
-): Uint8Array => {
-  const gray = toGray(pixels, width, height);
+): Uint8Array => binarizeGray(toGray(pixels, width, height), width, height, options);
 
+/**
+ * Binarise an image whose luminance has already been computed.
+ *
+ * The scanner thresholds the same frame both locally and globally before it
+ * gives up, and converting to luminance is identical work both times — a full
+ * pass over every pixel, doing an alpha composite and a weighted sum, to
+ * produce a buffer it already had.
+ */
+export const binarizeGray = (
+  gray: Uint8Array,
+  width: number,
+  height: number,
+  options: BinarizeOptions = {},
+): Uint8Array => {
   if (options.global || width < MIN_LOCAL_SIZE || height < MIN_LOCAL_SIZE) {
     return applyGlobal(gray, otsuThreshold(gray));
   }
@@ -310,14 +333,7 @@ export const binarize = (
   // The global threshold is still passed in as the last resort for a block
   // that has no contrasted neighbour within either radius — an isolated blank
   // region in an image that does have content elsewhere.
-  return applyLocal(
-    gray,
-    width,
-    height,
-    blocksAcross,
-    blocksDown,
-    thresholds,
-    known,
+  return applyLocal(gray, width, height, blocksAcross, blocksDown, thresholds, known, () =>
     otsuThreshold(gray),
   );
 };

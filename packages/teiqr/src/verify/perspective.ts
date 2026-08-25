@@ -188,6 +188,26 @@ export const sampleGrid = (
   gridHeight: number,
   transform: PerspectiveTransform,
 ): Uint8Array | null => {
+  // The four extreme module centres decide it for almost every rejected fit,
+  // and they are points the loop below would sample anyway — so testing them
+  // first cannot change the answer, only reach it sooner. It matters because
+  // rejection is the common case: locating a symbol tries many candidate fits
+  // and most of them run off the edge of the image. Without this, each one
+  // costs a full grid of transforms before saying so, up to 177x177 for a
+  // version 40 symbol and repeated across every orientation and size the
+  // compact symbologies try.
+  for (const [cx, cy] of [
+    [0.5, 0.5],
+    [gridWidth - 0.5, 0.5],
+    [gridWidth - 0.5, gridHeight - 0.5],
+    [0.5, gridHeight - 0.5],
+  ]) {
+    const corner = transformPoint(transform, cx, cy);
+    const px = Math.floor(corner.x);
+    const py = Math.floor(corner.y);
+    if (px < 0 || py < 0 || px >= width || py >= height) return null;
+  }
+
   const modules = new Uint8Array(gridWidth * gridHeight);
   for (let y = 0; y < gridHeight; y++) {
     for (let x = 0; x < gridWidth; x++) {
