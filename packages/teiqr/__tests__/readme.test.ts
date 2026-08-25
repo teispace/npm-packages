@@ -344,12 +344,28 @@ describe('README numbers match reality', () => {
     expect(claimed).toBe(6953);
   });
 
-  it('quotes the real N4 conformance figures', () => {
-    // 477,360 = sum over versions 1..40 of (size^2 + 1) pairs.
+  it('quotes the real N4 conformance figure', () => {
+    // 477,360 = sum over versions 1..40 of (size^2 + 1) pairs, which is what
+    // the conformance test actually brute-forces.
     let total = 0;
     for (let v = 1; v <= 40; v++) total += (v * 4 + 17) ** 2 + 1;
     expect(README).toContain(total.toLocaleString('en-US'));
-    expect(README).toMatch(/238,736/);
+  });
+
+  it('does not name other packages', () => {
+    // The README is about this package. Comparisons and competitor references
+    // were removed deliberately, and this keeps them from creeping back.
+    //
+    // The npm-name check is case-sensitive on purpose: `qrcode` is a package,
+    // `QrCode` is our own component, and a case-insensitive match would flag
+    // every code sample on the page.
+    const lowercasePackages = /\b(qrcode|qr-code-styling|qrious|qr-image|uqr|segno|rmqrcode)\b/g;
+    const namedProjects = /\b(jsQR|paulmillr|ZXing)\b/gi;
+    const hits = [
+      ...[...README.matchAll(lowercasePackages)].map((m) => m[0]),
+      ...[...README.matchAll(namedProjects)].map((m) => m[0]),
+    ];
+    expect(hits, `README names: ${[...new Set(hits)].join(', ')}`).toEqual([]);
   });
 
   it('documents every entry point the package actually exports', () => {

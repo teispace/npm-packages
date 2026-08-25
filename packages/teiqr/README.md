@@ -23,82 +23,38 @@ scan(pngBytes).text;                              // → 'https://example.com'
 
 ---
 
-## Why this exists
+## What it does
 
-The most-downloaded QR library on npm was last published in **August 2024**, is CJS-only,
-ships no TypeScript types of its own, and has 86 open issues. The most popular *styling*
-library is also CJS-only and needs a native `node-canvas` build to work on a server. One
-widely-used alternative is GPL-3.0, which quietly rules it out of most commercial work.
+One MIT-licensed package covering the whole job, with no runtime dependencies:
 
-None of them can scan. All of them make you install a second library to do it.
+- **Encode** QR (versions 1-40), Micro QR (M1-M4) and rMQR (32 rectangular sizes). Full QR
+  additionally does optimal multi-mode segmentation, ECI, Kanji, binary payloads and
+  Structured Append; the two compact symbologies encode a single mode per symbol.
+- **Style** with 10 module shapes, 6 eye frames, 5 eye balls, gradients, logos and frames.
+- **Validate** whether a code will actually scan — contrast, quiet zone, shape risk, print
+  size, and exactly how much of the error correction budget a logo consumes.
+- **Decode** from a matrix or an image, with full Reed-Solomon recovery.
+- **Export** to SVG, PNG, PDF, EPS and ZIP, all synchronously and without a canvas.
+- **Build payloads** for 32 typed formats — and parse them back into fields.
 
-`teiqr` is one MIT-licensed package that does the whole job:
+It runs identically in Node, browsers, Cloudflare Workers, Deno and Bun, ships React
+components and a CLI, and every registry it exposes is open to extension.
 
-|                                 | teiqr | `qrcode` | `qr-code-styling` | `qrcode.react` | `uqr` | `@paulmillr/qr` |
-| ------------------------------- | :---: | :------: | :---------------: | :------------: | :---: | :-------------: |
-| Generate                        |  ✅   |    ✅    |        ✅         |       ✅       |  ✅   |       ✅        |
-| Decode / scan                   |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |       ✅        |
-| Camera scanning from a photo    |  ❌   |    ❌    |        ❌         |       ❌       |  ❌   |       ✅        |
-| Styled modules & eyes           |  ✅   |    ❌    |        ✅         |       ❌       |  ❌   |       ❌        |
-| PNG without a canvas            |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |       ✅        |
-| PDF / EPS vector export         |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |       ❌        |
-| Scannability validation         |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |       ❌        |
-| Payload builders **and parsers**|  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |       ❌        |
-| ECI                             |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |       ❌        |
-| Kanji                           |  ✅   |    ✅    |        ❌         |       ❌       |  ❌   |       ✅        |
-| Structured Append               |  ✅   |    ❌    |        ❌         |       ❌       |  ❌   |       ❌        |
-| React components                |  ✅   |    ❌    |        ❌         |       ✅       |  ❌   |       ❌        |
-| ESM + CJS + bundled types       |  ✅   |    ❌    |        ❌         |       ✅       |  ✅   |       ✅        |
-| Runtime dependencies            | **0** |    7     |         1         |       0        |   0   |      **0**      |
-| License                         |  MIT  |   MIT    |        MIT        |      ISC       |  MIT  |  Apache-2.0/MIT |
+### Three things worth knowing
 
-<sub>Registry data checked August 2026. `qrious` (GPL-3.0) and `qr-image` (last published 2016) omitted.</sub>
+**It tells you the truth about logos.** The usual advice — "keep a logo under 30% at level H"
+— is wrong in both directions. Error correction is applied per Reed-Solomon block, not across
+the symbol, so damage concentrated in one block can kill a code covering far less than 30%,
+while evenly spread damage survives much more. `teiqr` walks the real module placement order
+and the real interleave map and gives you the exact number.
 
-**Credit where it is due:** [`@paulmillr/qr`](https://github.com/paulmillr/qr) is the closest
-thing to a peer here — zero dependencies, it decodes, and it does something this library does
-not: **perspective correction**, so it reads codes from photographs taken at an angle. If
-decoding camera photos is your main need, use it. `teiqr` decodes rendered images rather than
-photographs; the trade is that it adds styling, validation, vector export, payload parsing,
-ECI and Structured Append on top.
-
-### Long-standing requests in other libraries that work here
-
-Every row links to a real open issue somewhere else:
-
-| Asked for | Where | In `teiqr` |
-| --- | --- | --- |
-| ESM instead of CommonJS | [qrcode#236](https://github.com/soldair/node-qrcode/issues/236) | ESM + CJS, with types per entry |
-| A logo in the centre | [qrcode#240](https://github.com/soldair/node-qrcode/issues/240) | `logo`, with exact damage analysis |
-| Custom module shapes | [qrcode#237](https://github.com/soldair/node-qrcode/issues/237) | 10 shapes, 6 eye frames, 5 eye balls |
-| A synchronous data-URL method | [qrcode#186](https://github.com/soldair/node-qrcode/issues/186) | every output is synchronous |
-| Works on Cloudflare Workers | [qrcode#349](https://github.com/soldair/node-qrcode/issues/349) | no canvas anywhere; Workers tested |
-| `global is not defined` | [qrcode#217](https://github.com/soldair/node-qrcode/issues/217) | no Node globals in the bundle |
-| Mask pattern selection | [qrcode-generator#111](https://github.com/kazuhikoarase/qrcode-generator/issues) | `mask: 0-7`, or spec-conformant auto |
-| TypeScript types exported | [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator/issues) | fully typed, types bundled |
-| UTF-8 / umlaut handling | [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator/issues) | UTF-8 throughout, plus explicit ECI |
-| Encoding non-text data | [qrcode.react](https://github.com/zpao/qrcode.react) — "supports encoding text only" | `Uint8Array` and raw segments |
-
-### Three things no other JavaScript QR library does
-
-**1. It tells you the truth about logos.** The usual advice — "keep a logo under 30% at level
-H" — is wrong in both directions. Error correction is applied *per Reed-Solomon block*, not
-across the symbol, so damage concentrated in one block can kill a code covering far less than
-30%, while evenly spread damage survives much more. `teiqr` walks the real module placement
-order and the real interleave map and gives you the exact number.
-
-**2. It can prove a code scans.** Because the decoder ships in the same package, a styled,
+**It can prove a code scans.** Because the decoder ships alongside the encoder, a styled,
 logo-bearing symbol can be rasterised and read back in-process. `verify()` is not an estimate.
 
-**3. Its mask selection is spec-conformant.** ISO/IEC 18004 Table 11 feature 4 scores the
-deviation of dark modules from 50% in *complete 5% steps, symmetrically*. Brute-forcing all
-477,360 `(dark, total)` pairs across all 40 versions:
-
-```
-node-qrcode disagrees with the spec on : 238,736 / 477,360  (50.0%)
-teiqr      disagrees with the spec on : 0        / 477,360  ( 0.0%)
-```
-
-Both still scan — but only one follows the standard. This is pinned by a regression test.
+**Its mask selection is spec-conformant.** ISO/IEC 18004 Table 11 feature 4 scores the
+deviation of dark modules from 50% in complete 5% steps, symmetrically. All 477,360
+`(dark, total)` pairs across all 40 versions are brute-forced against the spec text by a
+regression test, and none diverge.
 
 ---
 
@@ -232,13 +188,13 @@ qr('https://example.com', {
 
 ### Shapes cost detection margin — and we measured how much
 
-ZXing-family decoders verify a finder pattern by checking its 1:1:3:1:1 ratio horizontally,
+Many scanners verify a finder pattern by checking its 1:1:3:1:1 ratio horizontally,
 vertically **and diagonally**. A circular eye core measures 3.0 across its diagonal where a
 square measures 4.24, so the diagonal check fails. Modern phone cameras use ML detection and
 tolerate it; older and cheaper hardware does not.
 
-Rather than guess, every variant was rendered and decoded with jsQR (a ZXing-derived decoder)
-across 3 payloads × 4 error correction levels × 6 module scales — **72 decode attempts each**:
+Rather than guess, every variant was rendered and decoded with an independent decoder across
+3 payloads × 4 error correction levels × 6 module scales — **72 decode attempts each**:
 
 | Module shape    | Pass rate | Tier      |     | Eye frame | Pass rate | Tier      |     | Eye ball  | Pass rate | Tier      |
 | --------------- | --------- | --------- | --- | --------- | --------- | --------- | --- | --------- | --------- | --------- |
@@ -711,14 +667,13 @@ that, use a full QR symbol.
 > mask, narrower count fields, and a four-bit final data codeword in M1 and M3.
 > A single wrong table value produces a symbol that round-trips through our own
 > decoder perfectly and is rejected by every real scanner. So every version,
-> level and mask is compared **module-for-module against `segno`**, an
-> independent ISO-conformant implementation — 420 fixtures, checked on every
-> test run. That caught two real bugs during development: QR's column-direction
+> level and mask is compared **module-for-module against an independent
+> ISO-conformant implementation** — 420 fixtures, checked on every test run. That caught two real bugs during development: QR's column-direction
 > expression, whose arithmetic only holds for QR's 4v+17 sizes, and padding M1
 > and M3 with `0xEC`/`0x11` where the standard requires zeros.
 >
-> Decoding is implemented too, and verified the same way: the decoder reads all 420 of segno's
-> own symbols back to their exact payloads. Round-tripping our own encoder would only prove the
+> Decoding is implemented too, and verified the same way: the decoder reads all 420 of those
+> independently-produced symbols back to their exact payloads. Round-tripping our own encoder would only prove the
 > two halves agree with each other.
 >
 > M1 is the one asymmetry, and it is the standard's: it carries error *detection* only, so a
@@ -753,8 +708,7 @@ bottom-right, corner patterns at the other two corners, alignment patterns along
 edges, **one** mask pattern rather than eight, and error correction at M or H only.
 
 > **How this is verified, and two bugs it found in the reference.** Every version is compared
-> module-for-module against [`rmqrcode`](https://github.com/tomtsuruhara/rmqrcode), an
-> independent implementation — 224 fixtures. Where the reference is correct, we match it
+> module-for-module against an independent implementation — 224 fixtures. Where the reference is correct, we match it
 > exactly. Two categories are excluded because it is wrong there, not us:
 >
 > - **Mixed block sizes.** Its interleaver uses `break` where the standard skips an exhausted
@@ -957,8 +911,7 @@ Prefer `<QrCode>` unless you are compositing into other canvas content or need `
 the element. When you do need a canvas, this one is **sharp on retina displays by default** —
 the backing store is sized in device pixels and the CSS size set separately. Canvas-based QR
 components commonly size the bitmap in CSS pixels, so the browser upscales a 256×256 bitmap
-onto 512 physical pixels and the module edges smear; `qrcode.react` documents this and asks you
-to manage sizing yourself.
+onto 512 physical pixels and the module edges smear.
 
 Pixels come from this package's own rasteriser via `putImageData`, so canvas output is
 identical to PNG output rather than a second, subtly different drawing path.
@@ -1145,8 +1098,8 @@ modules a logo may safely cover, and the decoder knows which cells carry data.
 - **Cross-runtime** — the full pipeline with `Buffer`, `document` and `window` throwing.
 - **Payload round trips** — `serialize(parse(serialize(v))) === serialize(v)` for every type.
 
-The rendered output is additionally validated with **jsQR**, an independent ZXing-derived
-decoder, so "it scans" does not rest on our own decoder agreeing with our own encoder.
+Rendered output is additionally validated with an independent decoder, so "it scans" does not
+rest on our own decoder agreeing with our own encoder.
 
 ### Known limitations
 
@@ -1155,8 +1108,7 @@ Stated plainly, because a library that hides these wastes your afternoon:
 - **The decoder has no perspective correction.** It assumes the symbol is axis-aligned and
   unskewed, which is true of rendered output and of a code held flat to a camera, and untrue of
   a photograph taken at an angle. `useQrScanner` works well for the former; for reading
-  arbitrary photos, [`@paulmillr/qr`](https://github.com/paulmillr/qr) does perspective
-  correction and is the better tool.
+  arbitrary photos, use a decoder built for that — perspective correction is out of scope here.
 - **Raster output cannot draw frame label text**, and can only embed **PNG** data-URI logos.
   Both are reported in `rasterize().omitted`. SVG handles both fully.
 - **JPEG/WebP/AVIF decoding needs `createImageBitmap`** (so, `scanAsync` in a browser, Worker
