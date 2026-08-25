@@ -1,12 +1,34 @@
 import { circlePath, roundedRect, superellipsePath } from './shapes.js';
 import type { EyeBallShape, EyeFrameShape } from './types.js';
 
-/** Top-left origin of each finder pattern, in module coordinates. */
-export const eyeOrigins = (size: number): [number, number][] => [
-  [0, 0],
-  [size - 7, 0],
-  [0, size - 7],
-];
+/**
+ * Top-left origin of each 7x7 finder pattern, in module coordinates.
+ *
+ * How many there are is a property of the symbology, not of the size:
+ *
+ * - **QR** has three, one at each corner but the bottom-right.
+ * - **Micro QR** has one, top-left. Its symbol is as small as 11 modules
+ *   across, so the QR positions would overlap each other and paint over the
+ *   data.
+ * - **rMQR** has a 7x7 finder and a 5x5 sub-finder, neither of which the eye
+ *   shapes describe, so it has none here and draws them as body modules
+ *   instead.
+ *
+ * Getting this wrong does not look wrong — it produces a symbol that renders
+ * cleanly and cannot be scanned.
+ */
+export const eyeOrigins = (
+  size: number,
+  variant: 'qr' | 'micro' | 'rmqr' = 'qr',
+): [number, number][] => {
+  if (variant === 'rmqr') return [];
+  if (variant === 'micro') return [[0, 0]];
+  return [
+    [0, 0],
+    [size - 7, 0],
+    [0, size - 7],
+  ];
+};
 
 /**
  * The finder frame is a 7x7 ring one module thick. It is drawn as an outer

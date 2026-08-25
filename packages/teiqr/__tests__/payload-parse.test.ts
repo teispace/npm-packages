@@ -17,15 +17,97 @@ describe('payload parsing round trips its own serialisers', () => {
     expect(covered.length).toBeGreaterThanOrEqual(20);
   });
 
+  /**
+   * Field values to round trip instead of a type's own sample.
+   *
+   * Only `app` needs one, and the reason is inherent rather than incidental: a
+   * static QR code cannot branch on the scanning device, so the type
+   * serialises to a single plain URL. Its sample is a generic fallback link,
+   * which is genuinely indistinguishable from an ordinary `url` payload and is
+   * correctly parsed as one — see the test below. A store link is
+   * distinguishable, and that is what is exercised here.
+   */
+  const OVERRIDES: Record<string, Record<string, string>> = {
+    app: { ios: 'https://apps.apple.com/app/id123456789' },
+  };
+
   for (const type of PAYLOAD_TYPES) {
     if (!parseable.has(type.id)) continue;
     it(`round trips ${type.id}`, () => {
-      const original = serializePayload(type.id, type.sample);
+      const original = serializePayload(type.id, OVERRIDES[type.id] ?? type.sample);
       const parsed = parsePayload(original);
       expect(parsed.type, `identified ${type.id} as ${parsed.type}`).toBe(type.id);
       expect(serializePayload(parsed.type, parsed.values)).toBe(original);
     });
   }
+
+  it('leaves a generic app fallback link typed as a url, and still lossless', () => {
+    // The honest outcome. `clone()` reproduces the payload byte for byte
+    // either way; it simply cannot claim a plain link is an app download.
+    const original = serializePayload('app', { fallback: 'https://example.com/app' });
+    const parsed = parsePayload(original);
+    expect(parsed.type).toBe('url');
+    expect(serializePayload(parsed.type, parsed.values)).toBe(original);
+  });
+});
+
+describe('social profile parsing', () => {
+  it('reads a profile back from the canonical URL its serialiser writes', () => {
+    for (const [id, handle] of [
+      ['instagram', 'someone'],
+      ['facebook', 'somepage'],
+      ['x', 'someone'],
+      ['linkedin', 'some-person'],
+      ['tiktok', 'someone'],
+      ['github', 'someone'],
+    ] as const) {
+      const original = serializePayload(id, { handle });
+      const parsed = parsePayload(original);
+      expect(parsed.type, original).toBe(id);
+      expect(parsed.values.handle, original).toBe(handle);
+      expect(serializePayload(parsed.type, parsed.values)).toBe(original);
+    }
+  });
+
+  it('recognises the hosts people actually paste, not only the canonical one', () => {
+    // A parser that only reads back what its own serialiser writes is close to
+    // useless for cloning: the input comes from someone's address bar.
+    const cases: [string, string, string][] = [
+      ['https://twitter.com/someone', 'x', 'someone'],
+      ['https://www.instagram.com/someone', 'instagram', 'someone'],
+      ['https://m.facebook.com/somepage', 'facebook', 'somepage'],
+      ['https://fb.com/somepage', 'facebook', 'somepage'],
+      ['https://www.linkedin.com/in/some-person/', 'linkedin', 'some-person'],
+      ['https://www.tiktok.com/@someone', 'tiktok', 'someone'],
+      ['https://github.com/someone?tab=repositories', 'github', 'someone'],
+    ];
+    for (const [url, type, handle] of cases) {
+      const parsed = parsePayload(url);
+      expect(parsed.type, url).toBe(type);
+      expect(parsed.values.handle, url).toBe(handle);
+    }
+  });
+
+  it('does not mistake a site’s own pages for profiles', () => {
+    for (const url of [
+      'https://github.com/about',
+      'https://x.com/settings',
+      'https://instagram.com/explore',
+    ]) {
+      expect(parsePayload(url).type, url).toBe('url');
+    }
+  });
+
+  it('leaves deeper paths as plain urls', () => {
+    // A repository or a post is not a profile, and typing it as one would make
+    // a clone drop everything after the handle.
+    for (const url of [
+      'https://github.com/someone/some-repo',
+      'https://www.tiktok.com/@someone/video/123',
+    ]) {
+      expect(parsePayload(url).type, url).toBe('url');
+    }
+  });
 });
 
 describe('parsePayload extracts usable fields', () => {

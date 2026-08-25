@@ -354,15 +354,27 @@ Raw pixel buffers may be RGBA, RGB or 8-bit grayscale — pass `channels: 3` or 
 
 ### What can be read, and from where
 
-| Symbology | Encode | Decode from a matrix | Locate in an image |
-| --- | :---: | :---: | :---: |
-| QR (versions 1-40) | ✅ | ✅ | ✅ |
-| Micro QR (M1-M4) | ✅ | ✅ | ❌ |
-| rMQR (32 sizes) | ✅ | ✅ | ❌ |
+| Symbology | Encode | Decode from a matrix | Locate in an image | Off-axis capture |
+| --- | :---: | :---: | :---: | :---: |
+| QR (versions 1-40) | ✅ | ✅ | ✅ | ✅ perspective |
+| Micro QR (M1-M4) | ✅ | ✅ | ✅ | rotation only |
+| rMQR (32 sizes) | ✅ | ✅ | ✅ | rotation only |
 
-`decodeMatrix()` and `scan()` read all three when handed a `QrMatrix`. Finding a symbol *in a
-photograph* is QR-only: the locator hunts for three finder patterns, and Micro QR has one while
-rMQR has a finder plus a smaller sub-finder.
+`decodeMatrix()` and `scan()` read all three, from a `QrMatrix` or from pixels.
+
+QR is located through a fitted **perspective transform**, so a symbol photographed at an angle
+samples correctly across its whole width instead of drifting off the modules partway. Three
+finder centres plus the bottom-right alignment pattern give the four correspondences a
+homography needs, and candidate fits are scored against the timing patterns — known in advance
+for every symbol — so a misdetected alignment pattern is rejected rather than believed.
+
+The compact symbologies have fewer landmarks: Micro QR has one finder, rMQR has a finder plus a
+5x5 sub-finder, and a lone 7x7 finder is rotationally symmetric — it fixes position and scale
+and says nothing about which way up the symbol is. Their orientation is recovered from the
+fourth angular harmonic of the finder's own outline, which pins it to within a hundredth of a
+degree but only modulo a quarter turn; the four candidates are then tried against every size
+the symbology defines and validated by format information and Reed-Solomon. So they are located
+under a **similarity transform** — rotation and scale, not perspective.
 
 ```ts
 import { decodeMatrix } from 'teiqr/verify';
@@ -458,6 +470,18 @@ Every built-in type round-trips: `serialize(parse(serialize(v))) === serialize(v
 by test for all of them, including folded vCard lines and escaped WiFi delimiters.
 `confidence` is `'exact'` for unambiguous schemes and `'heuristic'` when the type was inferred
 from a URL's shape.
+
+Social profiles are read back from the hosts people actually paste, not only the canonical one
+the serialiser writes — `twitter.com` for X, `m.facebook.com` from a phone, a trailing slash or
+a `?tab=` query. A site's own pages are not mistaken for profiles: `github.com/about` stays a
+`url`, and so does anything deeper than a handle, because typing `github.com/someone/a-repo` as
+a profile would make a clone of it point at the user instead of the repository.
+
+One type cannot be fully recovered, and the reason is inherent. `app` exists to send iOS to the
+App Store and Android to Play, but a static QR code cannot branch on the scanning device — only
+a server can — so it serialises to a single plain URL. A store link is recognised and carries
+which platform it is for; a generic fallback link is indistinguishable from an ordinary `url`
+and is reported as one. `clone()` reproduces the payload byte for byte either way.
 
 ---
 
@@ -1000,17 +1024,17 @@ gzipped, by `scripts/measure-bundles.mjs` — run it yourself after `yarn build`
 
 | Entry             | Gzipped | What it is                                |
 | ----------------- | ------: | ----------------------------------------- |
-| `teiqr`           | 40.2 kB | everything                                |
+| `teiqr`           | 42.8 kB | everything                                |
 | `teiqr/core`      | 11.6 kB | encoding, all three symbologies           |
 | `teiqr/render`    |  4.5 kB | scene + SVG                               |
 | `teiqr/validate`  |  4.6 kB | scannability analysis                     |
-| `teiqr/payload`   |  8.0 kB | 32 typed builders + parsers               |
+| `teiqr/payload`   |  8.3 kB | 32 typed builders + parsers               |
 | `teiqr/export`    | 20.8 kB | PDF, EPS, ZIP, CSV batch                  |
-| `teiqr/raster`    |  9.2 kB | DEFLATE + PNG + rasteriser                |
-| `teiqr/verify`    | 13.2 kB | decoder + scanner, all three symbologies  |
+| `teiqr/raster`    |  9.1 kB | DEFLATE + PNG + rasteriser                |
+| `teiqr/verify`    | 15.4 kB | decoder + scanner, all three symbologies  |
 | `teiqr/terminal`  |  0.4 kB | text output                               |
 | `teiqr/kanji`     | 10.8 kB | Shift-JIS table (opt-in)                  |
-| `teiqr/react`     | 24.5 kB | components + hooks (`react` external)     |
+| `teiqr/react`     | 26.6 kB | components + hooks (`react` external)     |
 
 `core` and `verify` carry the rMQR tables — 32 fixed sizes with no closed form, so they have
 to be listed. Importing `encode` alone is 5.5 kB, because a symbol you never build is a symbol
@@ -1023,14 +1047,14 @@ should have excluded:
 | Import | Gzipped | Unrelated code pulled in |
 | --- | ---: | --- |
 | `encode` | 5.5 kB | none |
-| `toPng` | 9.1 kB | none |
-| `scan` | 12.4 kB | none |
+| `toPng` | 9.0 kB | none |
+| `scan` | 14.5 kB | none |
 | `toTerminal` | 0.4 kB | none |
-| `parsePayload` | 7.5 kB | none |
+| `parsePayload` | 7.8 kB | none |
 | `<QrCode>` | 9.5 kB | none — the camera scanner is not included |
-| `useQrScanner` | 13.5 kB | none — the renderer is not included |
+| `useQrScanner` | 15.6 kB | none — the renderer is not included |
 
-Importing `toTerminal` costs 0.4 kB out of a 40.2 kB whole.
+Importing `toTerminal` costs 0.4 kB out of a 42.8 kB whole.
 
 Both ESM and CJS are published, with bundled `.d.ts` for each entry point.
 
@@ -1142,16 +1166,17 @@ rest on our own decoder agreeing with our own encoder.
 
 Stated plainly, because a library that hides these wastes your afternoon:
 
-- **The decoder has no perspective correction.** It assumes the symbol is axis-aligned and
-  unskewed, which is true of rendered output and of a code held flat to a camera, and untrue of
-  a photograph taken at an angle. `useQrScanner` works well for the former; for reading
-  arbitrary photos, use a decoder built for that — perspective correction is out of scope here.
+- **Binarisation is a single global threshold.** Otsu's method over the whole image, which is
+  exact for rendered output and holds for a reasonably lit photograph — but a hard shadow
+  across one corner will defeat it where a local threshold would not.
+- **Micro QR and rMQR are located under rotation and scale, not perspective.** A lone 7x7
+  finder is rotationally symmetric and rMQR's sub-finder is a different shape, so neither
+  supplies the four correspondences a homography needs. Both read when rotated; a strongly
+  tilted capture of either will not. Full QR gets perspective correction.
 - **Raster output cannot draw frame label text**, and can only embed **PNG** data-URI logos.
   Both are reported in `rasterize().omitted`. SVG handles both fully.
 - **JPEG/WebP/AVIF decoding needs `createImageBitmap`** (so, `scanAsync` in a browser, Worker
   or Deno). PNG is decoded natively everywhere.
-- **Locating a symbol in an image is QR-only.** All three symbologies decode from a
-  `QrMatrix`, but the pixel locator looks for three finder patterns, which only QR has.
 
 ---
 

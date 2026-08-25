@@ -17,13 +17,13 @@ export default defineConfig({
     // when coverage improves.
     //
     // Re-baselined downward once, when the export, React, CLI and Micro QR
-    // layers landed together. Those added roughly 2,500 lines, a slice of
-    // which is genuinely hard to reach from Node — the canvas paths in
-    // <QrCanvas>, the createImageBitmap fallbacks, and error branches that
-    // need a failing filesystem. Raised again when Micro QR and rMQR gained
-    // multi-segment and Kanji encoding, which replaced three copies of the
-    // segment reader with one. Current: 89.7 lines / 76.3 branches /
-    // 92.4 functions / 87.9 statements.
-    coverage: withThresholds({ lines: 89, branches: 76, functions: 92, statements: 87 }),
+    // layers landed together, and raised twice since: once when the three
+    // symbologies were unified behind one segmenter, and again when the
+    // vector-export and image-input paths gained real unit tests. The host-API
+    // branches that used to be unreachable from Node — OffscreenCanvas,
+    // document.createElement, createImageBitmap — are now covered by stubbing
+    // the globals, which is what they were always missing.
+    // Current: 94.0 lines / 82.5 branches / 95.1 functions / 92.2 statements.
+    coverage: withThresholds({ lines: 93, branches: 82, functions: 94, statements: 91 }),
   },
 });
