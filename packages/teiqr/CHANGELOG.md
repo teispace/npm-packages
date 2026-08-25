@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.2...teiqr-v0.0.3) (2026-08-25)
+
+
+### Bug Fixes
+
+* **teiqr:** scan all three symbologies from pixels, off-axis included ([#116](https://github.com/teispace/npm-packages/issues/116)) ([16ac2b2](https://github.com/teispace/npm-packages/commit/16ac2b213f0067fd48877c9a656b8fef414dea79))
+* **teiqr:** unify segmentation across QR, Micro QR and rMQR ([#114](https://github.com/teispace/npm-packages/issues/114)) ([6b8ed34](https://github.com/teispace/npm-packages/commit/6b8ed346cf740a7a7c524149488fecc842c792fd))
+
 ## [0.0.2](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.1...teiqr-v0.0.2) (2026-08-25)
 
 
