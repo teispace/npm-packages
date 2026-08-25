@@ -25,7 +25,12 @@ export interface ScanOptions {
   tryInverted?: boolean;
 }
 
-/** A matrix, rather than an image, was handed in. */
+/**
+ * A matrix, rather than an image, was handed in.
+ *
+ * Covers all three symbologies: QR and Micro QR are square and carry `size`,
+ * rMQR is rectangular and carries `width` and `height` as well.
+ */
 const isMatrix = (input: unknown): input is QrMatrix =>
   typeof input === 'object' &&
   input !== null &&
@@ -83,6 +88,9 @@ const attempt = (
  */
 export const scan = (input: ScanInput, options: ScanOptions = {}): ScanResult => {
   if (isMatrix(input)) {
+    // A matrix needs no locating, so this path covers Micro QR and rMQR too;
+    // it is only the pixel scanner that is QR-only, because it hunts for three
+    // finder patterns and those symbologies have one apiece.
     const decoded = decodeMatrix(input);
     return { ...decoded, moduleSize: 1, origin: { x: 0, y: 0 } };
   }

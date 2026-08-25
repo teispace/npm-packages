@@ -27,6 +27,16 @@ export {
   UncorrectableError,
 } from './verify/decode-matrix.js';
 export {
+  decodeMicroMatrix,
+  type MicroDecodeResult,
+  readMicroFormat,
+} from './verify/decode-micro.js';
+export {
+  decodeRmqrMatrix,
+  type RmqrDecodeResult,
+  readRmqrFormat,
+} from './verify/decode-rmqr.js';
+export {
   type ImageDataLike,
   type ImageInput,
   type NormalizedImage,

@@ -64,7 +64,7 @@ export const microSize = (version: MicroVersion): number =>
  * Symbol number, §7.9.1 Table 13. This is what the format information encodes,
  * combining version and level into one five-bit field.
  */
-const SYMBOL_NUMBER: Readonly<Record<string, number>> = {
+export const MICRO_SYMBOL_NUMBER: Readonly<Record<string, number>> = {
   'M1-L': 0,
   'M2-L': 1,
   'M2-M': 2,
@@ -88,7 +88,7 @@ const DATA_BITS: Readonly<Record<string, number>> = {
 };
 
 /** Total and error correction codewords per version and level. */
-const CODEWORDS: Readonly<Record<string, { total: number; ecc: number }>> = {
+export const MICRO_CODEWORDS: Readonly<Record<string, { total: number; ecc: number }>> = {
   'M1-L': { total: 5, ecc: 2 },
   'M2-L': { total: 10, ecc: 5 },
   'M2-M': { total: 10, ecc: 6 },
@@ -103,9 +103,9 @@ const CODEWORDS: Readonly<Record<string, { total: number; ecc: number }>> = {
 export const microModeBits = (version: MicroVersion): number => MICRO_VERSIONS.indexOf(version);
 
 /** Micro QR mode indicator values. Kanji is 3 but is not encoded here. */
-const MICRO_MODE_INDICATOR = { numeric: 0, alphanumeric: 1, byte: 2, kanji: 3 } as const;
+export const MICRO_MODE_INDICATOR = { numeric: 0, alphanumeric: 1, byte: 2, kanji: 3 } as const;
 
-type MicroMode = keyof typeof MICRO_MODE_INDICATOR;
+export type MicroMode = keyof typeof MICRO_MODE_INDICATOR;
 
 /**
  * Character-count field widths, §7.4.1 Table 3.
@@ -113,13 +113,14 @@ type MicroMode = keyof typeof MICRO_MODE_INDICATOR;
  * A blank entry means the mode is unavailable at that version: M1 is
  * numeric-only, and M2 adds alphanumeric but still cannot carry bytes.
  */
-const COUNT_BITS: Readonly<Record<MicroMode, Readonly<Record<MicroVersion, number | undefined>>>> =
-  {
-    numeric: { M1: 3, M2: 4, M3: 5, M4: 6 },
-    alphanumeric: { M1: undefined, M2: 3, M3: 4, M4: 5 },
-    byte: { M1: undefined, M2: undefined, M3: 4, M4: 5 },
-    kanji: { M1: undefined, M2: undefined, M3: 3, M4: 4 },
-  };
+export const MICRO_COUNT_BITS: Readonly<
+  Record<MicroMode, Readonly<Record<MicroVersion, number | undefined>>>
+> = {
+  numeric: { M1: 3, M2: 4, M3: 5, M4: 6 },
+  alphanumeric: { M1: undefined, M2: 3, M3: 4, M4: 5 },
+  byte: { M1: undefined, M2: undefined, M3: 4, M4: 5 },
+  kanji: { M1: undefined, M2: undefined, M3: 3, M4: 4 },
+};
 
 /** Terminator length, §7.4.9: 3 bits in M1, 5 in M2, 7 in M3, 9 in M4. */
 const terminatorBits = (version: MicroVersion): number => 3 + 2 * MICRO_VERSIONS.indexOf(version);
@@ -226,6 +227,31 @@ const drawFormat = (g: Grid, symbolNumber: number, mask: number): void => {
  * Simpler than QR's walk because there is no vertical timing column to step
  * over mid-symbol — the timing sits on the outer edges instead.
  */
+/**
+ * Rebuild a version's function-pattern layout, with no data placed.
+ *
+ * The decoder needs this: having read a grid of light and dark modules out of
+ * an image, it knows nothing about which cells are finder, timing or format
+ * patterns, and {@link microDataSequence} cannot run without that. Function
+ * patterns depend on nothing but the version, so regenerating them is exact.
+ *
+ * Sharing one layout builder between the encoder and the decoder is also what
+ * stops the two drifting apart — the class of bug that makes an encoder and
+ * its own decoder agree with each other and with nothing else.
+ */
+export const microLayout = (version: MicroVersion): { size: number; kinds: Uint8Array } => {
+  const size = microSize(version);
+  const g: Grid = {
+    size,
+    modules: new Uint8Array(size * size),
+    kinds: new Uint8Array(size * size),
+  };
+  drawFunctionPatterns(g);
+  // Values are irrelevant here; only the cells the format occupies matter.
+  drawFormat(g, 0, 0);
+  return { size, kinds: g.kinds };
+};
+
 export const microDataSequence = (size: number, kinds: Uint8Array): Int32Array => {
   const order = new Int32Array(size * size);
   let count = 0;
@@ -311,7 +337,7 @@ const buildDataCodewords = (
   const modeBits = microModeBits(version);
   if (modeBits > 0) w.pushBits(MICRO_MODE_INDICATOR[mode], modeBits);
 
-  const countBits = COUNT_BITS[mode][version];
+  const countBits = MICRO_COUNT_BITS[mode][version];
   if (countBits === undefined) {
     throw new RangeError(`Micro QR ${version} cannot encode ${mode} data`);
   }
@@ -400,7 +426,7 @@ export const encodeMicro = (text: string, options: MicroEncodeOptions = {}): QrM
   let chosen: { version: MicroVersion; ecc: EccLevel } | null = null;
 
   for (const version of candidates) {
-    if (COUNT_BITS[mode][version] === undefined) continue;
+    if (MICRO_COUNT_BITS[mode][version] === undefined) continue;
     // Prefer the strongest level this version offers that still fits, so a
     // small payload gets the most protection available at no size cost.
     const available = MICRO_LEVELS[version];
@@ -431,10 +457,10 @@ export const encodeMicro = (text: string, options: MicroEncodeOptions = {}): QrM
 
   const { version, ecc } = chosen;
   const size = microSize(version);
-  const symbolNumber = SYMBOL_NUMBER[key(version, ecc)];
+  const symbolNumber = MICRO_SYMBOL_NUMBER[key(version, ecc)];
 
   const data = buildDataCodewords(text, mode, version, ecc);
-  const { ecc: eccCount } = CODEWORDS[key(version, ecc)];
+  const { ecc: eccCount } = MICRO_CODEWORDS[key(version, ecc)];
   // Reed-Solomon operates on whole bytes, so the short final codeword of M1
   // and M3 participates as a byte whose low nibble is zero.
   const parity = computeRemainder(data, computeDivisor(eccCount));

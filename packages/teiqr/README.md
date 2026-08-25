@@ -386,6 +386,29 @@ scan(matrix).text;                            // a QrMatrix, no pixels involved
 
 Raw pixel buffers may be RGBA, RGB or 8-bit grayscale — pass `channels: 3` or `channels: 1`.
 
+### What can be read, and from where
+
+| Symbology | Encode | Decode from a matrix | Locate in an image |
+| --- | :---: | :---: | :---: |
+| QR (versions 1-40) | ✅ | ✅ | ✅ |
+| Micro QR (M1-M4) | ✅ | ✅ | ❌ |
+| rMQR (32 sizes) | ✅ | ✅ | ❌ |
+
+`decodeMatrix()` and `scan()` read all three when handed a `QrMatrix`. Finding a symbol *in a
+photograph* is QR-only: the locator hunts for three finder patterns, and Micro QR has one while
+rMQR has a finder plus a smaller sub-finder.
+
+```ts
+import { decodeMatrix } from 'teiqr/verify';
+import { encodeMicro, encodeRmqr } from 'teiqr/core';
+
+decodeMatrix(encodeMicro('12345')).text;   // '12345'
+decodeMatrix(encodeRmqr('HELLO')).text;    // 'HELLO'
+```
+
+`decodeMicroMatrix` and `decodeRmqrMatrix` are also exported directly when you want the
+symbology-specific result, which carries the version label (`'M3'`, `'R13x99'`) and the mode.
+
 ```ts
 tryScan(frame);            // → ScanResult | null, for camera loops where most frames are empty
 scanAll(sheetOfTickets);   // → ScanResult[], every code in one image, in reading order
@@ -688,7 +711,12 @@ that, use a full QR symbol.
 > expression, whose arithmetic only holds for QR's 4v+17 sizes, and padding M1
 > and M3 with `0xEC`/`0x11` where the standard requires zeros.
 >
-> Micro QR **encoding** is implemented; decoding Micro QR symbols is not yet.
+> Decoding is implemented too, and verified the same way: the decoder reads all 420 of segno's
+> own symbols back to their exact payloads. Round-tripping our own encoder would only prove the
+> two halves agree with each other.
+>
+> M1 is the one asymmetry, and it is the standard's: it carries error *detection* only, so a
+> damaged M1 symbol is reported as unreadable rather than repaired.
 
 ---
 
@@ -732,7 +760,9 @@ edges, **one** mask pattern rather than eight, and error correction at M or H on
 >   correction codewords has no generator polynomial in its own table — which is why it raises
 >   `KeyError: 21` on that version. We use 61, giving 22.
 >
-> Encoding only; decoding rMQR symbols is not implemented.
+> Decoding is implemented too, and reads all 224 of the reference's own symbols correctly. A
+> test covers the mixed-block-size versions specifically, since that is where the reference
+> loses data, along with R17x43-M, which it cannot produce at all.
 
 ---
 
@@ -1125,7 +1155,8 @@ Stated plainly, because a library that hides these wastes your afternoon:
   Both are reported in `rasterize().omitted`. SVG handles both fully.
 - **JPEG/WebP/AVIF decoding needs `createImageBitmap`** (so, `scanAsync` in a browser, Worker
   or Deno). PNG is decoded natively everywhere.
-- **Micro QR and rMQR encode but do not decode.** `scan()` reads full QR symbols only.
+- **Locating a symbol in an image is QR-only.** All three symbologies decode from a
+  `QrMatrix`, but the pixel locator looks for three finder patterns, which only QR has.
 
 ---
 

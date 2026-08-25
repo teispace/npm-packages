@@ -17,6 +17,8 @@ import { dataModuleSequence, formatBits, MASK_FUNCTIONS } from '../core/matrix.j
 import { ALPHANUMERIC_CHARSET as ALPHANUMERIC, countBits } from '../core/segment.js';
 import { type EccLevel, MODULE, type QrMatrix, type QrMode } from '../core/types.js';
 import { eccCodewordsPerBlock, numEccBlocks, numRawDataModules } from '../core/version.js';
+import { decodeMicroMatrix } from './decode-micro.js';
+import { decodeRmqrMatrix } from './decode-rmqr.js';
 import { correct, UncorrectableError } from './reed-solomon.js';
 
 const MODE_BY_INDICATOR: Readonly<Record<number, QrMode>> = {
@@ -274,9 +276,36 @@ const readSegments = (
  */
 export const decodeMatrix = (
   matrix: Pick<QrMatrix, 'size' | 'version' | 'modules' | 'kinds'> &
-    Partial<Pick<QrMatrix, 'ecc' | 'mask'>>,
+    Partial<Pick<QrMatrix, 'ecc' | 'mask' | 'variant' | 'width' | 'height'>>,
   options: { trustHeader?: boolean } = {},
 ): DecodeResult => {
+  // Micro QR and rMQR share Reed-Solomon with QR and almost nothing else, so
+  // they route to their own readers rather than being special-cased here.
+  if (matrix.variant === 'micro') {
+    const result = decodeMicroMatrix(matrix);
+    return {
+      text: result.text,
+      bytes: result.bytes,
+      version: matrix.version,
+      ecc: result.ecc,
+      mask: result.mask,
+      segments: [{ mode: result.mode, text: result.text, bytes: result.bytes }],
+      corrected: result.corrected,
+    };
+  }
+  if (matrix.variant === 'rmqr') {
+    const result = decodeRmqrMatrix(matrix);
+    return {
+      text: result.text,
+      bytes: result.bytes,
+      version: matrix.version,
+      ecc: result.ecc as EccLevel,
+      mask: 0,
+      segments: [{ mode: result.mode, text: result.text, bytes: result.bytes }],
+      corrected: result.corrected,
+    };
+  }
+
   const { size, version, modules, kinds } = matrix;
   const trust = options.trustHeader ?? (matrix.ecc !== undefined && matrix.mask !== undefined);
 

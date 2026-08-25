@@ -46,8 +46,8 @@ export type { RmqrLevel, RmqrVersion };
 export { RMQR_SPECS, RMQR_VERSIONS };
 
 /** Mode indicators, §7.4.1. Three bits, unlike QR's four. */
-const MODE_INDICATOR = { numeric: 1, alphanumeric: 2, byte: 3, kanji: 4 } as const;
-type RmqrMode = keyof typeof MODE_INDICATOR;
+export const RMQR_MODE_INDICATOR = { numeric: 1, alphanumeric: 2, byte: 3, kanji: 4 } as const;
+export type RmqrMode = keyof typeof RMQR_MODE_INDICATOR;
 
 /**
  * The single mask pattern, §7.8.
@@ -280,6 +280,39 @@ const addEccAndInterleave = (
   return Uint8Array.from(out);
 };
 
+/**
+ * Rebuild a version's function-pattern layout, with no data placed.
+ *
+ * Returns the module-role map and the traversal order together, because for
+ * rMQR the order depends on which cells the function patterns claimed — the
+ * walk skips filled cells rather than testing coordinates. The decoder reuses
+ * this so encoder and decoder cannot disagree about the layout.
+ */
+export const rmqrLayout = (
+  version: RmqrVersion,
+): { width: number; height: number; kinds: Uint8Array; order: number[] } => {
+  const spec = RMQR_SPECS[version];
+  const g: Grid = {
+    width: spec.width,
+    height: spec.height,
+    modules: new Uint8Array(spec.width * spec.height),
+    kinds: new Uint8Array(spec.width * spec.height),
+    filled: new Uint8Array(spec.width * spec.height),
+  };
+
+  drawFinder(g);
+  drawSubFinder(g);
+  drawCornerFinders(g);
+  drawAlignment(g);
+  drawTiming(g);
+  // Values are irrelevant; only the cells the format occupies matter.
+  drawFormat(g, spec.indicator, 'M');
+
+  const order = rmqrDataSequence(g);
+  for (const index of order) g.kinds[index] = MODULE.DATA;
+  return { width: spec.width, height: spec.height, kinds: g.kinds, order };
+};
+
 export interface RmqrEncodeOptions {
   /** Error correction level. rMQR offers M and H only; defaults to M. */
   ecc?: RmqrLevel;
@@ -362,7 +395,7 @@ export const encodeRmqr = (text: string, options: RmqrEncodeOptions = {}): QrMat
   const dataCodewords = groups.reduce((total, g) => total + g.num * g.k, 0);
 
   const w = new BitWriter(dataCodewords);
-  w.pushBits(MODE_INDICATOR[mode], 3);
+  w.pushBits(RMQR_MODE_INDICATOR[mode], 3);
   const segment =
     mode === 'numeric'
       ? makeNumericSegment(text)
