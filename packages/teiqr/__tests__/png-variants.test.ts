@@ -77,6 +77,8 @@ interface Variant {
   readonly interlace?: boolean;
   readonly palette?: readonly number[];
   readonly trns?: readonly number[];
+  /** Split the compressed data across IDAT chunks of this size, as real encoders do. */
+  readonly idatChunkSize?: number;
   /** Samples for one pixel, at the variant's own bit depth. */
   readonly sample: (x: number, y: number) => readonly number[];
 }
@@ -90,7 +92,7 @@ interface Variant {
  * fixture readable enough to check by eye.
  */
 const buildPng = (variant: Variant): Uint8Array => {
-  const { depth, colour, interlace = false, palette, trns, sample } = variant;
+  const { depth, colour, interlace = false, palette, trns, idatChunkSize, sample } = variant;
   const { width, height } = reference;
   const channels = CHANNELS[colour];
   const passes = interlace ? ADAM7 : ([[0, 0, 1, 1]] as const);
@@ -124,12 +126,19 @@ const buildPng = (variant: Variant): Uint8Array => {
     }
   }
 
+  const compressed = deflateSync(Buffer.from(raw));
+  const idat: number[] = [];
+  const piece = idatChunkSize ?? compressed.length;
+  for (let at = 0; at < compressed.length; at += piece) {
+    idat.push(...chunk('IDAT', compressed.subarray(at, at + piece)));
+  }
+
   return Uint8Array.from([
     ...SIGNATURE,
     ...chunk('IHDR', [...uint32(width), ...uint32(height), depth, colour, 0, 0, interlace ? 1 : 0]),
     ...(palette ? chunk('PLTE', palette) : []),
     ...(trns ? chunk('tRNS', trns) : []),
-    ...chunk('IDAT', deflateSync(Buffer.from(raw))),
+    ...idat,
     ...chunk('IEND', []),
   ]);
 };
@@ -446,5 +455,48 @@ describe('malformed ancillary chunks', () => {
     for (let i = 3; i < pixels.length; i += 4) alphas.add(pixels[i]);
     expect(alphas).toEqual(new Set([255]));
     expect(scan(png).text).toBe(PAYLOAD);
+  });
+});
+
+describe('image data split across IDAT chunks', () => {
+  /**
+   * Real encoders never write one IDAT. They flush at 8 KB or 32 KB, so a file
+   * from anywhere else arrives as a sequence of chunks whose boundaries fall
+   * wherever the encoder's buffer happened to end — mid-symbol, mid-scanline,
+   * anywhere. The zlib stream only exists once they are concatenated.
+   *
+   * Every other fixture in this file uses a single IDAT, which is exactly the
+   * shape no other encoder produces, so this pins the property directly. One
+   * byte per chunk is not a realistic file; it is the smallest split there is,
+   * and it fails immediately if the reader treats any chunk as self-contained.
+   */
+  it.each([1, 2, 7, 64, 4096])('reassembles data split into %i-byte chunks', (size) => {
+    const png = buildPng({
+      depth: 1,
+      colour: 3,
+      palette: [0, 0, 0, 255, 255, 255],
+      idatChunkSize: size,
+      sample: (x, y) => [isLight(x, y) ? 1 : 0],
+    });
+
+    expect(decodePng(png).pixels).toEqual(reference.pixels);
+    expect(scan(png).text).toBe(PAYLOAD);
+  });
+
+  it('actually produces the split it claims to test', () => {
+    // Without this the suite above could be passing because every case
+    // silently built one chunk, which is the version that was already covered.
+    const count = (png: Uint8Array): number => {
+      let found = 0;
+      for (let i = 0; i + 8 <= png.length; i++) {
+        if (String.fromCharCode(png[i], png[i + 1], png[i + 2], png[i + 3]) === 'IDAT') found++;
+      }
+      return found;
+    };
+    const sample = (x: number, y: number) => [isLight(x, y) ? 1 : 0];
+    const base = { depth: 1, colour: 3, palette: [0, 0, 0, 255, 255, 255], sample };
+
+    expect(count(buildPng(base))).toBe(1);
+    expect(count(buildPng({ ...base, idatChunkSize: 1 }))).toBeGreaterThan(100);
   });
 });
