@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.4](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.3...teiqr-v0.0.4) (2026-08-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **teiqr:** binarize() takes a fourth options argument and now thresholds locally by default. Pass { global: true } for the previous behaviour.
+
+### Bug Fixes
+
+* **teiqr:** stop decodePng hanging on malformed input, threshold locally ([#117](https://github.com/teispace/npm-packages/issues/117)) ([8c849d7](https://github.com/teispace/npm-packages/commit/8c849d75a9cee8d0f7fa7f41eba1b9faab40d019))
+
 ## [0.0.3](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.2...teiqr-v0.0.3) (2026-08-25)
 
 
