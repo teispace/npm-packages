@@ -1280,9 +1280,16 @@ Stated plainly, because a library that hides these wastes your afternoon:
   provides the four correspondences perspective needs — a wide rMQR symbol photographed at a
   real angle will not read, and returns nothing rather than a wrong payload. Full QR does get
   perspective correction.
-- **Motion blur, moiré and non-flat paper are not simulated.** Uneven lighting, defocus, sensor
-  noise and low contrast are, and the scanner is tested against all four; the rest is honest
-  guesswork until someone points a real camera at it.
+- **A real photograph can still defeat the scanner.** Uneven lighting, defocus,
+  sensor noise and low contrast are simulated and handled. A photograph is harder, and the
+  suite now contains one: a phone shot of a code on a laptop screen, slightly tilted, that this
+  scanner cannot read although the symbol is sound and readable. It is located correctly, and
+  the finders and format information sample perfectly; the grid then drifts by about a module
+  toward the far corner, which the timing patterns cannot detect because they sit beside the
+  two edges that are already right. Closing it needs sampling that survives lens and screen
+  curvature, not just a flat perspective transform. Tracked as `knownUnread` in
+  `__tests__/fixtures/photos/manifest.json`, so the day it starts working is a failing test
+  rather than silence.
 - **Raster output cannot draw frame label text**, and can only embed **PNG** data-URI logos.
   Both are reported in `rasterize().omitted`. SVG handles both fully.
 - **WebP and AVIF need `createImageBitmap`** (so, `scanAsync` in a browser, Worker or Deno).

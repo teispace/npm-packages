@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+// The photographs are JPEG, because that is what a camera writes.
+import '../src/jpeg.js';
 import { tryScan } from '../src/verify/api.js';
 
 /**
@@ -13,10 +15,15 @@ import { tryScan } from '../src/verify/api.js';
  * rolling-shutter skew, JPEG ringing, moiré against a screen, specular
  * highlights, paper that is not flat.
  *
- * So this suite exists and is empty, and says so out loud rather than leaving
- * the gap implicit. Drop PNGs into `fixtures/photos`, list them in
- * `manifest.json`, and they run. See the README there for what is worth
- * photographing.
+ * Drop images into `fixtures/photos`, list them in `manifest.json`, and they
+ * run. See the README there for what is worth photographing, and
+ * `ATTRIBUTION.md` for the licence terms of anything not shot by hand.
+ *
+ * An entry may also be marked `knownUnread`, meaning: this is a real symbol,
+ * a real decoder reads it, and this one does not — yet. Such a case asserts
+ * the *current* behaviour and fails the moment it changes, so improving the
+ * scanner shows up as a red test asking to be reclassified rather than as
+ * silence. A limitation nobody is reminded of is a limitation nobody fixes.
  */
 
 interface Photo {
@@ -26,6 +33,12 @@ interface Photo {
   text: string | null;
   /** How it was taken — lighting, angle, surface. Shown when it fails. */
   note?: string;
+  /**
+   * A symbol this scanner cannot currently read, though the image is sound and
+   * another decoder manages it. Pins today's behaviour so the day it improves
+   * is impossible to miss.
+   */
+  knownUnread?: boolean;
 }
 
 const directory = join(import.meta.dirname, 'fixtures', 'photos');
@@ -37,7 +50,7 @@ describe('real photographs', () => {
     // A photo nobody listed is a photo nobody tests, and a manifest entry with
     // no file is a test that silently never runs. Both fail here.
     const present = readdirSync(directory)
-      .filter((name) => name.toLowerCase().endsWith('.png'))
+      .filter((name) => /\.(png|jpe?g)$/i.test(name))
       .sort();
     const listed = manifest.map((photo) => photo.file).sort();
     expect(listed).toEqual(present);
@@ -54,6 +67,17 @@ describe('real photographs', () => {
     it(`reads ${label}`, () => {
       const bytes = readFileSync(join(directory, photo.file));
       const result = tryScan(new Uint8Array(bytes));
+
+      if (photo.knownUnread) {
+        // Deliberately asserting a failure. If this starts passing, the
+        // scanner got better and the manifest entry should lose its
+        // `knownUnread` flag — the test failure is the notification.
+        expect(
+          result,
+          `${photo.file} now decodes. The scanner improved: drop knownUnread from the manifest and set text to the payload.`,
+        ).toBeNull();
+        return;
+      }
 
       if (photo.text === null) {
         // A photo listed with a null payload is one that must *not* decode.
