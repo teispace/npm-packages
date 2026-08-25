@@ -12,6 +12,7 @@ export default defineConfig({
     verify: 'src/verify.ts',
     terminal: 'src/terminal.ts',
     kanji: 'src/kanji.ts',
+    jpeg: 'src/jpeg.ts',
     react: 'src/react.tsx',
     cli: 'src/cli.ts',
   },

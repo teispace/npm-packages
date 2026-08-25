@@ -26,8 +26,11 @@ export default defineConfig({
     // Raised a third time when the PNG decoder grew to the full colour model:
     // every colour type, bit depth, interlacing and `tRNS` is exercised by
     // hand-built fixtures, which moved branch coverage further than any change
-    // since the symbologies were unified.
-    // Current: 94.9 lines / 84.4 branches / 95.3 functions / 93.3 statements.
+    // since the symbologies were unified. The baseline JPEG decoder that
+    // followed briefly pushed branches back under the floor, since a decoder is
+    // mostly error paths no real file reaches; covering them by rewriting
+    // headers by hand restored it rather than the floor being lowered to suit.
+    // Current: 95.0 lines / 84.6 branches / 95.3 functions / 93.4 statements.
     coverage: withThresholds({ lines: 94, branches: 84, functions: 95, statements: 93 }),
   },
 });

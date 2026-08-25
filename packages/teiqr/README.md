@@ -34,7 +34,8 @@ One MIT-licensed package covering the whole job, with no runtime dependencies:
 - **Style** with 10 module shapes, 6 eye frames, 5 eye balls, gradients, logos and frames.
 - **Validate** whether a code will actually scan — contrast, quiet zone, shape risk, print
   size, and exactly how much of the error correction budget a logo consumes.
-- **Decode** from a matrix or an image, with full Reed-Solomon recovery.
+- **Decode** from a matrix or an image, with full Reed-Solomon recovery. PNG is read
+  natively in every shape the format allows; baseline JPEG too, opt-in.
 - **Export** to SVG, PNG, PDF, EPS and ZIP, all synchronously and without a canvas.
 - **Build payloads** for 32 typed formats — and parse them back into fields.
 
@@ -358,6 +359,22 @@ greyscale, truecolour, palette and both alpha variants, at every bit depth each 
 interlaced or not, honouring `tRNS` transparency. That breadth earns its place — a QR code
 is a two-colour image, so it is exactly what encoders and optimisers store as 1-bit palette
 or greyscale. A decoder that handled only 8-bit RGBA would reject most QR PNGs in existence.
+
+A camera, though, produces JPEG. One side-effect import decodes that natively too —
+synchronously, on every runtime, with no canvas:
+
+```ts
+import { scan } from 'teiqr/verify';
+import 'teiqr/jpeg';                          // baseline JPEG, +2.9 kB
+
+scan(await readFile('photo.jpg')).text;
+```
+
+It is a separate entry for the same reason the Shift-JIS table is: a code you generated
+is never a JPEG, so the Huffman tables and inverse DCT stay out of the default bundle.
+Baseline and extended sequential, greyscale and colour, every chroma subsampling, and
+restart intervals. Progressive JPEG is named as unsupported rather than decoded into a
+smear — `scanAsync()` still handles it wherever the host has `createImageBitmap`.
 
 ### What can be read, and from where
 
@@ -1031,17 +1048,18 @@ gzipped, by `scripts/measure-bundles.mjs` — run it yourself after `yarn build`
 
 | Entry             | Gzipped | What it is                                |
 | ----------------- | ------: | ----------------------------------------- |
-| `teiqr`           | 44.6 kB | everything                                |
+| `teiqr`           | 44.7 kB | everything                                |
 | `teiqr/core`      | 11.6 kB | encoding, all three symbologies           |
 | `teiqr/render`    |  4.5 kB | scene + SVG                               |
 | `teiqr/validate`  |  4.6 kB | scannability analysis                     |
 | `teiqr/payload`   |  8.3 kB | 32 typed builders + parsers               |
 | `teiqr/export`    | 22.1 kB | PDF, EPS, ZIP, CSV batch                  |
-| `teiqr/raster`    | 10.3 kB | DEFLATE + PNG + rasteriser                |
-| `teiqr/verify`    | 17.1 kB | decoder + scanner, all three symbologies  |
+| `teiqr/raster`    | 10.4 kB | DEFLATE + PNG + rasteriser                |
+| `teiqr/verify`    | 17.2 kB | decoder + scanner, all three symbologies  |
 | `teiqr/terminal`  |  0.4 kB | text output                               |
 | `teiqr/kanji`     | 10.8 kB | Shift-JIS table (opt-in)                  |
-| `teiqr/react`     | 28.3 kB | components + hooks (`react` external)     |
+| `teiqr/jpeg`      |  2.9 kB | baseline JPEG decoder (opt-in)            |
+| `teiqr/react`     | 28.4 kB | components + hooks (`react` external)     |
 
 `core` and `verify` carry the rMQR tables — 32 fixed sizes with no closed form, so they have
 to be listed. Importing `encode` alone is 5.5 kB, because a symbol you never build is a symbol
@@ -1054,14 +1072,14 @@ should have excluded:
 | Import | Gzipped | Unrelated code pulled in |
 | --- | ---: | --- |
 | `encode` | 5.5 kB | none |
-| `toPng` | 10.2 kB | none |
-| `scan` | 16.1 kB | none |
+| `toPng` | 10.3 kB | none |
+| `scan` | 16.2 kB | none |
 | `toTerminal` | 0.4 kB | none |
 | `parsePayload` | 7.8 kB | none |
 | `<QrCode>` | 9.5 kB | none — the camera scanner is not included |
-| `useQrScanner` | 17.2 kB | none — the renderer is not included |
+| `useQrScanner` | 17.3 kB | none — the renderer is not included |
 
-Importing `toTerminal` costs 0.4 kB out of a 44.6 kB whole.
+Importing `toTerminal` costs 0.4 kB out of a 44.7 kB whole.
 
 Both ESM and CJS are published, with bundled `.d.ts` for each entry point.
 
@@ -1181,7 +1199,7 @@ order are not), and the wording of error messages.
 
 ## Conformance and testing
 
-**518 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
+**561 tests.** Beyond ordinary unit coverage, the suite pins the claims this README makes:
 
 - **Round trip across the whole parameter space** — all 40 versions, all 4 error correction
   levels, all 8 masks, binary payloads to 2 kB, astral-plane emoji, ECI, hand-built segments.
@@ -1201,6 +1219,9 @@ order are not), and the wording of error messages.
   segmentation so the comparison is about bit layout rather than mode choice.
 - **Degraded input** — uneven light, veiling glare, defocus, sensor noise and low contrast,
   each asserted to be a case a single global threshold genuinely fails.
+- **Baseline JPEG** — 4:4:4, 4:2:0, greyscale and low-quality fixtures encoded by a
+  different tool entirely, decoded and compared against the exact pixels they were made
+  from. A code that merely *scans* proves little; a mis-scaled inverse DCT still scans.
 - **PNG in every shape the format allows** — greyscale, truecolour, palette and both alpha
   variants, at every bit depth each permits, interlaced and not, with `tRNS` transparency.
   Every fixture is built by hand from the spec's tables and compressed with Node's zlib, so
@@ -1231,8 +1252,9 @@ Stated plainly, because a library that hides these wastes your afternoon:
   guesswork until someone points a real camera at it.
 - **Raster output cannot draw frame label text**, and can only embed **PNG** data-URI logos.
   Both are reported in `rasterize().omitted`. SVG handles both fully.
-- **JPEG/WebP/AVIF decoding needs `createImageBitmap`** (so, `scanAsync` in a browser, Worker
-  or Deno). PNG is decoded natively everywhere.
+- **Progressive JPEG, WebP and AVIF need `createImageBitmap`** (so, `scanAsync` in a browser,
+  Worker or Deno). PNG is decoded natively everywhere; baseline JPEG is too, with
+  `import 'teiqr/jpeg'`.
 
 ---
 

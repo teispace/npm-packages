@@ -7,9 +7,12 @@
  * useless to the overwhelming majority of users.
  *
  * So the core ships the hook, not the table. `import 'teiqr/kanji'` registers
- * it as a side effect, and the batteries-included `teiqr` entry does that for
- * you. Without a registration Kanji mode is simply never selected, and text
- * encodes as UTF-8 bytes — correct, just larger.
+ * it as a side effect. **No entry point does this for you**, the top-level
+ * `teiqr` included — the import is always the user's to make. Without a
+ * registration Kanji mode is simply never selected and text encodes as UTF-8
+ * bytes: correct, just larger. `こんにちは世界` is version 1 with the table
+ * registered and version 2 without, with no error either way, which is exactly
+ * why this is worth being precise about.
  */
 
 /** Maps a Unicode code point to its Shift-JIS double-byte value, or undefined. */
