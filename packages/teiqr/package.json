@@ -1,0 +1,203 @@
+{
+  "name": "teiqr",
+  "version": "0.0.0",
+  "description": "The complete QR toolkit: spec-conformant encoder, styled rendering, provable scannability, and zero-dependency PNG/SVG/PDF/EPS export that runs identically in Node, browsers, Workers, Deno and Bun.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Teispace",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teispace/npm-packages.git",
+    "directory": "packages/teiqr"
+  },
+  "homepage": "https://github.com/teispace/npm-packages/tree/main/packages/teiqr#readme",
+  "bugs": {
+    "url": "https://github.com/teispace/npm-packages/issues"
+  },
+  "keywords": [
+    "qr",
+    "qrcode",
+    "qr-code",
+    "qr-code-generator",
+    "barcode",
+    "svg",
+    "png",
+    "pdf",
+    "eps",
+    "canvas",
+    "styling",
+    "logo",
+    "vcard",
+    "wifi",
+    "typescript",
+    "isomorphic",
+    "zero-dependency",
+    "cloudflare-workers",
+    "deno",
+    "bun",
+    "react"
+  ],
+  "sideEffects": [
+    "./dist/kanji.js",
+    "./dist/kanji.cjs"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./core": {
+      "import": {
+        "types": "./dist/core.d.ts",
+        "default": "./dist/core.js"
+      },
+      "require": {
+        "types": "./dist/core.d.cts",
+        "default": "./dist/core.cjs"
+      }
+    },
+    "./render": {
+      "import": {
+        "types": "./dist/render.d.ts",
+        "default": "./dist/render.js"
+      },
+      "require": {
+        "types": "./dist/render.d.cts",
+        "default": "./dist/render.cjs"
+      }
+    },
+    "./validate": {
+      "import": {
+        "types": "./dist/validate.d.ts",
+        "default": "./dist/validate.js"
+      },
+      "require": {
+        "types": "./dist/validate.d.cts",
+        "default": "./dist/validate.cjs"
+      }
+    },
+    "./payload": {
+      "import": {
+        "types": "./dist/payload.d.ts",
+        "default": "./dist/payload.js"
+      },
+      "require": {
+        "types": "./dist/payload.d.cts",
+        "default": "./dist/payload.cjs"
+      }
+    },
+    "./export": {
+      "import": {
+        "types": "./dist/export.d.ts",
+        "default": "./dist/export.js"
+      },
+      "require": {
+        "types": "./dist/export.d.cts",
+        "default": "./dist/export.cjs"
+      }
+    },
+    "./raster": {
+      "import": {
+        "types": "./dist/raster.d.ts",
+        "default": "./dist/raster.js"
+      },
+      "require": {
+        "types": "./dist/raster.d.cts",
+        "default": "./dist/raster.cjs"
+      }
+    },
+    "./verify": {
+      "import": {
+        "types": "./dist/verify.d.ts",
+        "default": "./dist/verify.js"
+      },
+      "require": {
+        "types": "./dist/verify.d.cts",
+        "default": "./dist/verify.cjs"
+      }
+    },
+    "./terminal": {
+      "import": {
+        "types": "./dist/terminal.d.ts",
+        "default": "./dist/terminal.js"
+      },
+      "require": {
+        "types": "./dist/terminal.d.cts",
+        "default": "./dist/terminal.cjs"
+      }
+    },
+    "./kanji": {
+      "import": {
+        "types": "./dist/kanji.d.ts",
+        "default": "./dist/kanji.js"
+      },
+      "require": {
+        "types": "./dist/kanji.d.cts",
+        "default": "./dist/kanji.cjs"
+      }
+    },
+    "./react": {
+      "import": {
+        "types": "./dist/react.d.ts",
+        "default": "./dist/react.js"
+      },
+      "require": {
+        "types": "./dist/react.d.cts",
+        "default": "./dist/react.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup && node scripts/preserve-directives.mjs",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage",
+    "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.react.json",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "yarn clean && yarn build"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "jsdom": "^30.0.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "bin": "./dist/cli.js"
+}

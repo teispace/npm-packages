@@ -18,6 +18,10 @@
     "packages/env": {
       "component": "env",
       "release-type": "node"
+    },
+    "packages/teiqr": {
+      "component": "teiqr",
+      "release-type": "node"
     }
   },
   "changelog-sections": [

@@ -1,0 +1,19 @@
+{
+  // The React layer is the one part of this package that genuinely needs the
+  // DOM, so it type-checks against its own config.
+  //
+  // The main tsconfig deliberately omits the DOM lib: that is what guarantees
+  // the core, render, validate, payload and export paths compile — and run —
+  // with no browser globals, which is what makes them usable from Node,
+  // Workers, Deno and Bun. Widening the main config to satisfy these four files
+  // would silently drop that guarantee for the other fifty.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "noEmit": true
+  },
+  // Override the base exclude, which deliberately keeps these files out of the
+  // DOM-free config.
+  "exclude": ["node_modules", "dist"],
+  "include": ["src/react.tsx", "src/react/**/*"]
+}
