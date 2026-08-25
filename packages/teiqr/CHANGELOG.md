@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/teispace/npm-packages/compare/teiqr-v0.1.0...teiqr-v0.2.0) (2026-08-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **teiqr:** refuse NaN and Infinity instead of writing them into output files ([#138](https://github.com/teispace/npm-packages/issues/138))
+
+### Bug Fixes
+
+* **teiqr:** refuse NaN and Infinity instead of writing them into output files ([#138](https://github.com/teispace/npm-packages/issues/138)) ([6656530](https://github.com/teispace/npm-packages/commit/6656530eb52596d65b4a24eb43d2abf2dfec5309))
+
 ## [0.1.0](https://github.com/teispace/npm-packages/compare/teiqr-v0.0.12...teiqr-v0.1.0) (2026-08-25)
 
 
