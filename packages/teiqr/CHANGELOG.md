@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.4](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.3...teiqr-v0.3.4) (2026-08-25)
+
+
+### Performance Improvements
+
+* **teiqr:** derive luminance once per frame, and stop measuring the same angle twice ([#148](https://github.com/teispace/npm-packages/issues/148)) ([b152ad8](https://github.com/teispace/npm-packages/commit/b152ad814a56e476ffbd26a52d75ba2abef6d635))
+
 ## [0.3.3](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.2...teiqr-v0.3.3) (2026-08-25)
 
 
