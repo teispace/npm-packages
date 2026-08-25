@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.2...teiqr-v0.3.3) (2026-08-25)
+
+
+### Features
+
+* **teiqr:** read a fifth more photographs by enlarging what is too small ([#146](https://github.com/teispace/npm-packages/issues/146)) ([96aa982](https://github.com/teispace/npm-packages/commit/96aa98247c7bc952fb9499ef1e274d97fc38ccca))
+
 ## [0.3.2](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.1...teiqr-v0.3.2) (2026-08-25)
 
 
