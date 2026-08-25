@@ -1,0 +1,145 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>teiqr in the browser</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+
+<!--
+  No build step, no bundler, no framework.
+
+  teiqr is plain ESM with no dependencies, so an import map is enough to load it
+  straight from `dist/`. That is worth demonstrating rather than hiding behind a
+  toolchain: if it needs Vite to run in a browser, it is not really dependency
+  free.
+
+  Serve this directory (`yarn serve`) rather than opening the file directly —
+  ES modules will not load over `file://`.
+-->
+<script type="importmap">
+  {
+    "imports": {
+      "teiqr": "../../../packages/teiqr/dist/index.js",
+      "teiqr/": "../../../packages/teiqr/dist/"
+    }
+  }
+</script>
+
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font: 15px/1.6 system-ui, sans-serif;
+    max-width: 46rem;
+    margin: 2rem auto;
+    padding: 0 1rem;
+  }
+  h1 { font-size: 1.4rem; }
+  h2 { font-size: 1rem; margin-top: 2rem; }
+  label { display: block; margin: 0.5rem 0 0.2rem; font-size: 0.85rem; opacity: 0.75; }
+  input, select, button {
+    font: inherit;
+    padding: 0.4rem 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  #out svg { max-width: 320px; height: auto; display: block; margin: 1rem 0; }
+  #report { font-size: 0.85rem; white-space: pre-wrap; opacity: 0.85; }
+  video { width: 100%; max-width: 320px; background: #000; border-radius: 6px; }
+  code { background: color-mix(in srgb, currentColor 10%, transparent); padding: 0 0.2em; }
+</style>
+
+<h1>teiqr in the browser</h1>
+<p>Loaded straight from <code>dist/</code> with an import map. No bundler involved.</p>
+
+<h2>Generate</h2>
+<label for="text">Text</label>
+<input id="text" value="https://example.com" />
+<div class="row">
+  <div>
+    <label for="shape">Module shape</label>
+    <select id="shape">
+      <option>square</option>
+      <option selected>rounded</option>
+      <option>extra-rounded</option>
+      <option>dot</option>
+      <option>classy</option>
+      <option>fluid</option>
+    </select>
+  </div>
+  <div>
+    <label for="ecc">Error correction</label>
+    <select id="ecc">
+      <option>L</option>
+      <option selected>M</option>
+      <option>Q</option>
+      <option>H</option>
+    </select>
+  </div>
+</div>
+<div id="out"></div>
+<div id="report"></div>
+
+<h2>Scan with the camera</h2>
+<p>Needs HTTPS or localhost — browsers refuse camera access otherwise.</p>
+<button id="start">Start camera</button>
+<video id="video" playsinline muted></video>
+<div id="scanned"></div>
+
+<script type="module">
+  import { qr } from 'teiqr';
+  import { tryScan } from 'teiqr/verify.js';
+
+  const $ = (id) => document.getElementById(id);
+
+  const render = () => {
+    const code = qr($('text').value || ' ', {
+      moduleShape: $('shape').value,
+      ecc: $('ecc').value,
+    });
+
+    $('out').innerHTML = code.svg();
+
+    // The same validation the Node examples use, in the browser, synchronously.
+    const report = code.validate({ scanDistanceMm: 300, dpi: 300 });
+    $('report').textContent = [
+      `version ${code.matrix.version}  ·  ${code.matrix.size} modules  ·  level ${code.matrix.ecc}`,
+      `score ${report.score}/100  ·  contrast ${report.contrast.toFixed(1)}:1`,
+      `print at least ${report.print.recommendedSideMm} mm`,
+      ...report.issues.map((i) => `[${i.level}] ${i.title}`),
+    ].join('\n');
+  };
+
+  for (const id of ['text', 'shape', 'ecc']) $(id).addEventListener('input', render);
+  render();
+
+  // --- camera ------------------------------------------------------------
+  // Deliberately hand-rolled rather than using the React hook, so this page
+  // stays framework-free. `useQrScanner` from `teiqr/react` does the same
+  // thing, plus teardown and throttling.
+  $('start').addEventListener('click', async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const video = $('video');
+      video.srcObject = stream;
+      await video.play();
+
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+
+      setInterval(() => {
+        if (video.readyState < 2) return;
+        // Downscale before decoding: a 1080p frame is far more detail than the
+        // decoder needs and costs several times more to scan.
+        const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
+        canvas.width = Math.round(video.videoWidth * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const image = context.getImageData(0, 0, canvas.width, canvas.height);
+        const found = tryScan({ data: image.data, width: canvas.width, height: canvas.height });
+        if (found) $('scanned').textContent = `Scanned: ${found.text}`;
+      }, 100);
+    } catch (error) {
+      $('scanned').textContent = `Camera unavailable: ${error.message}`;
+    }
+  });
+</script>

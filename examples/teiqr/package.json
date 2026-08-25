@@ -1,0 +1,15 @@
+{
+  "name": "teiqr-examples",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Runnable examples for teiqr, covering every part of the API.",
+  "scripts": {
+    "start": "node run-all.mjs",
+    "serve": "node browser/serve.mjs",
+    "clean": "rm -rf out"
+  },
+  "dependencies": {
+    "teiqr": "workspace:*"
+  }
+}

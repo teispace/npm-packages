@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { encode } from '../src/core/encode.js';
+import { clone, qr } from '../src/index.js';
+import { serializePayload } from '../src/payload/index.js';
+import { parsePayload } from '../src/payload/parse.js';
 import { decodePng } from '../src/raster/png.js';
 import { rasterize, toPng } from '../src/raster/scene-raster.js';
 import type { EyeBallShape, EyeFrameShape, ModuleShape } from '../src/render/types.js';
+import { scan } from '../src/verify/api.js';
 import { NotFoundError, scanPixels } from '../src/verify/scan.js';
 
 /** Render to PNG, decode the PNG, then scan it as a reader would. */
@@ -193,5 +197,66 @@ describe('rasteriser fidelity', () => {
     const { pixels } = rasterize(encode('transparent'), { background: null }, { scale: 6 });
     // The very first pixel is quiet zone, so it must be fully transparent.
     expect(pixels[3]).toBe(0);
+  });
+});
+
+describe('clone() edits fields without discarding the rest', () => {
+  // The API is "scan this and change one thing". Serialising only the fields
+  // the caller passed silently emptied every other field, so cloning a WiFi
+  // code to change its password produced a code with no SSID — which then no
+  // longer even parsed as WiFi, because the parser requires one.
+  const wifi = () =>
+    qr(
+      serializePayload('wifi', {
+        ssid: 'Pokhara Cafe',
+        password: 'himalaya2026',
+        encryption: 'WPA',
+      }),
+    ).png({ scale: 6 });
+
+  it('keeps the fields it was not asked to change', () => {
+    const updated = clone(wifi(), {}, { password: 'new-password' });
+    const parsed = parsePayload(updated.verify().text);
+
+    expect(parsed.type).toBe('wifi');
+    expect(parsed.values.ssid).toBe('Pokhara Cafe');
+    expect(parsed.values.encryption).toBe('WPA');
+    expect(parsed.values.password).toBe('new-password');
+  });
+
+  it('clears a field when one is explicitly set to undefined', () => {
+    // Distinguishing "leave this alone" from "remove this" is the reason the
+    // overlay is spread rather than filtered.
+    const updated = clone(wifi(), {}, { password: undefined });
+    const parsed = parsePayload(updated.verify().text);
+    expect(parsed.values.ssid).toBe('Pokhara Cafe');
+    expect(parsed.values.password).toBeUndefined();
+  });
+
+  it('leaves the payload byte-identical when no fields are given', () => {
+    const source = wifi();
+    const original = scan(source).text;
+    expect(clone(source, { moduleShape: 'dot' }).verify().text).toBe(original);
+  });
+
+  it('preserves every field of a larger payload through an edit', () => {
+    const card = qr(
+      serializePayload('vcard', {
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        org: 'Analytical Engines',
+        title: 'Mathematician',
+        email: 'ada@example.com',
+        phone: '+441234567890',
+      }),
+    ).png({ scale: 6 });
+
+    const parsed = parsePayload(clone(card, {}, { title: 'Programmer' }).verify().text);
+    expect(parsed.values.firstName).toBe('Ada');
+    expect(parsed.values.lastName).toBe('Lovelace');
+    expect(parsed.values.org).toBe('Analytical Engines');
+    expect(parsed.values.email).toBe('ada@example.com');
+    expect(parsed.values.phone).toBe('+441234567890');
+    expect(parsed.values.title).toBe('Programmer');
   });
 });

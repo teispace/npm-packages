@@ -268,3 +268,50 @@ describe('clone(): read an old code and rebuild it', () => {
     expect(cloned.verify().text).toBe(odd);
   });
 });
+
+describe('the escape character survives a round trip', () => {
+  // Every reserved character was reversible except the backslash itself:
+  // `escapeWifi` escaped it, because it has to, and `unescapeWifi` did not
+  // reverse it, so a value containing one came back with it doubled. A WiFi
+  // password with a backslash in it was silently corrupted by clone().
+  //
+  // Round-tripping only the "interesting" delimiters is what hid it — the
+  // escape character is the one nobody thinks to include in that list.
+  const AWKWARD = [
+    'back\\slash',
+    'two\\\\backslashes',
+    'trailing\\',
+    '\\leading',
+    'mixed;semi',
+    'all;of:them,"here"',
+    'C:\\Users\\guest',
+  ];
+
+  it('round trips WiFi values containing backslashes', () => {
+    for (const ssid of AWKWARD) {
+      const wire = serializePayload('wifi', { ssid, password: ssid, encryption: 'WPA' });
+      const parsed = parsePayload(wire);
+      expect(parsed.type, wire).toBe('wifi');
+      expect(parsed.values.ssid, wire).toBe(ssid);
+      expect(parsed.values.password, wire).toBe(ssid);
+      // And the whole payload re-serialises to exactly what was scanned.
+      expect(serializePayload('wifi', parsed.values)).toBe(wire);
+    }
+  });
+
+  it('round trips MeCard values containing backslashes', () => {
+    for (const name of AWKWARD) {
+      const wire = serializePayload('mecard', { lastName: name, phone: '+1234' });
+      const parsed = parsePayload(wire);
+      expect(parsed.values.lastName, wire).toBe(name);
+      expect(serializePayload('mecard', parsed.values)).toBe(wire);
+    }
+  });
+
+  it('round trips vCard values containing backslashes', () => {
+    for (const org of AWKWARD) {
+      const wire = serializePayload('vcard', { firstName: 'A', lastName: 'B', org });
+      expect(parsePayload(wire).values.org, wire).toBe(org);
+    }
+  });
+});

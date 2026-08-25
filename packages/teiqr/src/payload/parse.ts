@@ -230,9 +230,14 @@ const mecardParser: PayloadParser = {
       const colon = field.indexOf(':');
       if (colon === -1) continue;
       const key = field.slice(0, colon).toUpperCase();
-      const value = unescapeMeCard(field.slice(colon + 1));
+      // Compound fields split on the *raw* text and unescape each part once.
+      // Unescaping first and splitting after runs the values through
+      // `unescapeMeCard` twice, which was invisible while it ignored
+      // backslashes and turns `\\` into nothing once it stops.
+      const raw = field.slice(colon + 1);
+      const value = unescapeMeCard(raw);
       if (key === 'N') {
-        const [last, first] = splitUnescaped(value, ',').map(unescapeMeCard);
+        const [last, first] = splitUnescaped(raw, ',').map(unescapeMeCard);
         if (last) values.lastName = last;
         if (first) values.firstName = first;
       } else if (key === 'TEL') {
@@ -245,7 +250,7 @@ const mecardParser: PayloadParser = {
       else if (key === 'URL') values.url = value;
       else if (key === 'NOTE') values.note = value;
       else if (key === 'ADR') {
-        const [street, city, country] = splitUnescaped(value, ',').map(unescapeMeCard);
+        const [street, city, country] = splitUnescaped(raw, ',').map(unescapeMeCard);
         if (street) values.street = street;
         if (city) values.city = city;
         if (country) values.country = country;

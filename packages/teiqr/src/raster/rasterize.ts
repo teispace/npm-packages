@@ -301,6 +301,25 @@ export class Raster {
     const crossings: { x: number; winding: number }[] = [];
     const weight = 1 / SUBSAMPLES;
 
+    /**
+     * Edges sorted by the first scanline they touch, plus an active set.
+     *
+     * Without this every edge was tested against every sub-scanline, and
+     * almost all of those tests were immediate rejections: a version-11 symbol
+     * at scale 8 is 520 rows of 4 sub-samples against roughly 3,200 edges, so
+     * 6.7 million comparisons to find the hundred or so that matter. Since
+     * `sampleY` only ever increases, edges can be admitted once as the scan
+     * reaches them and dropped once it passes them.
+     */
+    const sorted = [...edges].sort((a, b) => Math.min(a.y0, a.y1) - Math.min(b.y0, b.y1));
+    const bounds = sorted.map((e) => ({
+      edge: e,
+      lo: Math.min(e.y0, e.y1),
+      hi: Math.max(e.y0, e.y1),
+    }));
+    let admitted = 0;
+    let active: { edge: Edge; lo: number; hi: number }[] = [];
+
     for (let y = yStart; y <= yEnd; y++) {
       coverage.fill(0);
       let touched = false;
@@ -309,11 +328,18 @@ export class Raster {
         const sampleY = y + (s + 0.5) / SUBSAMPLES;
         crossings.length = 0;
 
-        for (const e of edges) {
-          const lo = Math.min(e.y0, e.y1);
-          const hi = Math.max(e.y0, e.y1);
+        // Admit every edge that has come into range, then drop the ones the
+        // scan has passed. Both are cheap because `sampleY` is monotonic.
+        while (admitted < bounds.length && bounds[admitted].lo <= sampleY) {
+          active.push(bounds[admitted++]);
+        }
+        if (active.some((a) => a.hi <= sampleY)) {
+          active = active.filter((a) => a.hi > sampleY);
+        }
+
+        for (const { edge: e, lo } of active) {
           // Half-open in y so a vertex shared by two edges counts exactly once.
-          if (sampleY < lo || sampleY >= hi) continue;
+          if (sampleY < lo) continue;
           const t = (sampleY - e.y0) / (e.y1 - e.y0);
           crossings.push({ x: e.x0 + t * (e.x1 - e.x0), winding: e.winding });
         }
