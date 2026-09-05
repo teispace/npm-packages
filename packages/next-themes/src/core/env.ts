@@ -45,6 +45,11 @@ export function hasMatchMedia(): boolean {
  * exposes the binding but not the methods; this probe rejects it.
  */
 export function hasLocalStorage(): boolean {
+  // Node 22+ defines a `localStorage` getter on globalThis that prints an
+  // ExperimentalWarning when touched without `--localstorage-file`. Web
+  // Storage only exists alongside a document, so probe that first and never
+  // read the global on a server.
+  if (!isDom()) return false;
   try {
     const ls = (globalThis as { localStorage?: Storage }).localStorage;
     return (
@@ -59,6 +64,7 @@ export function hasLocalStorage(): boolean {
 
 /** As above, for sessionStorage. */
 export function hasSessionStorage(): boolean {
+  if (!isDom()) return false;
   try {
     const ss = (globalThis as { sessionStorage?: Storage }).sessionStorage;
     return (
