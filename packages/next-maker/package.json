@@ -1,6 +1,6 @@
 {
   "name": "@teispace/next-maker",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "Create and grow Next.js 16 applications from the Teispace starter: composable init, feature-aware setup and doctor, and generators for the server-first data layer.",
   "keywords": [
     "nextjs",
