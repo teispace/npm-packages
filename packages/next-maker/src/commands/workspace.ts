@@ -221,13 +221,9 @@ const createWorkspace = async (name: string, options: WorkspaceCommandOptions): 
     // Per-app artefacts that belong to the root in a workspace.
     for (const app of apps) {
       const appPath = path.join(rootPath, 'apps', app);
-      for (const file of [
-        'pnpm-workspace.yaml',
-        'pnpm-lock.yaml',
-        '.npmrc',
-        '.nvmrc',
-        '.gitignore',
-      ]) {
+      // Each app keeps its `.gitignore`: Biome resolves `vcs.useIgnoreFile`
+      // against the app directory and errors without one.
+      for (const file of ['pnpm-workspace.yaml', 'pnpm-lock.yaml', '.npmrc', '.nvmrc']) {
         await rm(path.join(appPath, file), { force: true });
       }
       const appPkgFile = path.join(appPath, 'package.json');
