@@ -24,10 +24,16 @@ import {
   type ScaffoldPlan,
 } from '../services/init/scaffold.service';
 import {
+  appDockerfile,
+  applyCatalog,
+  catalogFor,
+  catalogYaml,
   pnpmWorkspaceYaml,
   rootBiomeJson,
   rootCiYaml,
   rootCommitlint,
+  rootDockerCompose,
+  rootDockerignore,
   rootGitignore,
   rootHusky,
   rootLintStaged,
@@ -47,6 +53,8 @@ interface WorkspaceCommandOptions {
   git?: boolean;
   ci?: boolean;
   hooks?: boolean;
+  docker?: boolean;
+  catalog?: boolean;
 }
 
 const collect = (value: string, previous: string[] = []): string[] => [...previous, value];
@@ -64,7 +72,8 @@ const ROOT_OWNED: Record<string, unknown> = {
 /**
  * `workspace <name>`: a pnpm + Turborepo monorepo with one starter app per
  * `--apps` entry. Every app is composed with the same answers; git hooks,
- * commit linting, CI, and the lockfile live at the root.
+ * commit linting, CI, Docker, the lockfile, and shared dependency ranges
+ * (the pnpm catalog) live at the root.
  */
 export const registerWorkspaceCommand = (program: Command) => {
   program
@@ -76,6 +85,8 @@ export const registerWorkspaceCommand = (program: Command) => {
     .option('--preset <name>', `Preset for the apps (${presetNames().join(', ')})`)
     .option('--set <key=value>', 'Starter option applied to every app (repeatable)', collect)
     .option('--starter-path <dir>', 'Compose from a local starter checkout')
+    .option('--docker', 'Per-app Dockerfiles (turbo prune) and a root docker-compose.yml')
+    .option('--no-catalog', 'Keep dependency ranges in each app instead of the pnpm catalog')
     .option('--no-install', 'Skip dependency installation')
     .option('--no-git', 'Skip git init')
     .option('--no-ci', 'Skip the root GitHub Actions workflow')
@@ -182,8 +193,9 @@ const createWorkspace = async (name: string, options: WorkspaceCommandOptions): 
     );
     const borrow: Record<string, string> = {};
     for (const file of ['.nvmrc', '.npmrc', '.editorconfig']) {
-      if (fileExists(path.join(firstPath, file)))
+      if (fileExists(path.join(firstPath, file))) {
         borrow[file] = await readFile(path.join(firstPath, file), 'utf-8');
+      }
     }
 
     const identityFor = (app: string): ProjectIdentity =>
@@ -218,19 +230,31 @@ const createWorkspace = async (name: string, options: WorkspaceCommandOptions): 
       );
     }
 
-    // Per-app artefacts that belong to the root in a workspace.
+    // Per-app artefacts that belong to the root in a workspace. Each app
+    // keeps its `.gitignore`: Biome resolves `vcs.useIgnoreFile` against the
+    // app directory and errors without one.
+    const appPkgs: Record<string, unknown>[] = [];
     for (const app of apps) {
       const appPath = path.join(rootPath, 'apps', app);
-      // Each app keeps its `.gitignore`: Biome resolves `vcs.useIgnoreFile`
-      // against the app directory and errors without one.
       for (const file of ['pnpm-workspace.yaml', 'pnpm-lock.yaml', '.npmrc', '.nvmrc']) {
         await rm(path.join(appPath, file), { force: true });
       }
-      const appPkgFile = path.join(appPath, 'package.json');
-      const appPkg = JSON.parse(await readFile(appPkgFile, 'utf-8'));
+      const appPkg = JSON.parse(await readFile(path.join(appPath, 'package.json'), 'utf-8'));
       delete appPkg.packageManager;
       delete appPkg.engines;
-      await writeFile(appPkgFile, `${JSON.stringify(appPkg, null, 2)}\n`);
+      appPkgs.push(appPkg);
+    }
+    // Shared ranges move to the pnpm catalog so one line bumps them everywhere.
+    const catalog = options.catalog === false ? {} : catalogFor(appPkgs);
+    for (const [i, app] of apps.entries()) {
+      const pkg = applyCatalog(appPkgs[i], catalog);
+      await writeFile(
+        path.join(rootPath, 'apps', app, 'package.json'),
+        `${JSON.stringify(pkg, null, 2)}\n`,
+      );
+      if (options.docker) {
+        await writeFile(path.join(rootPath, 'apps', app, 'Dockerfile'), appDockerfile(app));
+      }
     }
 
     await withStepSpinner(
@@ -256,7 +280,7 @@ const createWorkspace = async (name: string, options: WorkspaceCommandOptions): 
         await writeFile(path.join(rootPath, 'package.json'), rootPackageJson(params));
         await writeFile(
           path.join(rootPath, 'pnpm-workspace.yaml'),
-          pnpmWorkspaceYaml(starterWorkspaceYaml),
+          pnpmWorkspaceYaml(starterWorkspaceYaml) + catalogYaml(catalog),
         );
         await writeFile(path.join(rootPath, 'turbo.json'), turboJson());
         await writeFile(path.join(rootPath, 'biome.json'), rootBiomeJson(params.biomeVersion));
@@ -266,8 +290,13 @@ const createWorkspace = async (name: string, options: WorkspaceCommandOptions): 
           rootReadme(params, scaffold.manifest.starter.version),
         );
         await writeFile(path.join(rootPath, 'packages', '.gitkeep'), '');
-        for (const [file, content] of Object.entries(borrow))
+        for (const [file, content] of Object.entries(borrow)) {
           await writeFile(path.join(rootPath, file), content);
+        }
+        if (options.docker) {
+          await writeFile(path.join(rootPath, 'docker-compose.yml'), rootDockerCompose(apps));
+          await writeFile(path.join(rootPath, '.dockerignore'), rootDockerignore());
+        }
         if (options.ci !== false) {
           await mkdir(path.join(rootPath, '.github', 'workflows'), { recursive: true });
           await writeFile(path.join(rootPath, '.github', 'workflows', 'ci.yml'), rootCiYaml());
@@ -284,7 +313,18 @@ const createWorkspace = async (name: string, options: WorkspaceCommandOptions): 
         }
         await writeFile(
           path.join(rootPath, '.next-maker.json'),
-          `${JSON.stringify({ workspace: true, apps, starter: scaffold.manifest.starter, answers: scaffold.answers }, null, 2)}\n`,
+          `${JSON.stringify(
+            {
+              workspace: true,
+              apps,
+              starter: scaffold.manifest.starter,
+              answers: scaffold.answers,
+              docker: !!options.docker,
+              catalog: options.catalog !== false,
+            },
+            null,
+            2,
+          )}\n`,
         );
       },
       active,
