@@ -122,7 +122,20 @@ export const loadStarterManifest = async (starterDir: string): Promise<StarterMa
       `The starter at ${starterDir} has no ${MANIFEST_FILE}. This CLI needs a starter that ships a composition manifest (nextjs-starter 2.x or later).`,
     );
   }
-  return validateManifest(JSON.parse(content));
+  const manifest = validateManifest(JSON.parse(content));
+  // The starter's package.json is the version of record; the manifest's copy
+  // is a fallback so a tag whose manifest was not bumped still reports right.
+  try {
+    const pkg = JSON.parse(await readFile(path.join(starterDir, 'package.json'), 'utf-8')) as {
+      version?: unknown;
+    };
+    if (typeof pkg.version === 'string' && pkg.version) {
+      manifest.starter = { ...manifest.starter, version: pkg.version };
+    }
+  } catch {
+    // No package.json next to the manifest; keep the manifest version.
+  }
+  return manifest;
 };
 
 const includesValue = (haystack: OptionValue[], value: OptionValue): boolean =>
