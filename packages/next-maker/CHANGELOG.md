@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.1](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.0...next-maker-v5.0.1) (2026-09-05)
+
+
+### Bug Fixes
+
+* **next-maker:** merge same-line edits by token and format generated files ([#162](https://github.com/teispace/npm-packages/issues/162)) ([54a7619](https://github.com/teispace/npm-packages/commit/54a76195807bf84622b6beffa1b3e77343b652ab))
+
 ## [5.0.0](https://github.com/teispace/npm-packages/compare/next-maker-v4.0.2...next-maker-v5.0.0) (2026-09-05)
 
 
