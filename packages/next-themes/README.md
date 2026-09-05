@@ -1372,3 +1372,5 @@ See [`examples/next-themes/`](../../examples/next-themes). Each route maps to a 
 ## License
 
 MIT © Teispace
+
+> Server runtimes: the storage adapters only probe `localStorage` when a `document` exists, so Node 22+ prints no `--localstorage-file` warning during server renders or builds.
