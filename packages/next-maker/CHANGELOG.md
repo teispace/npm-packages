@@ -1,5 +1,16 @@
 # Changelog
 
+## [5.0.0](https://github.com/teispace/npm-packages/compare/next-maker-v4.0.2...next-maker-v5.0.0) (2026-09-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **next-maker:** compose projects from the starter manifest (next-maker 5) ([#156](https://github.com/teispace/npm-packages/issues/156))
+
+### Features
+
+* **next-maker:** compose projects from the starter manifest (next-maker 5) ([#156](https://github.com/teispace/npm-packages/issues/156)) ([8a279c3](https://github.com/teispace/npm-packages/commit/8a279c3693740ed6860de9c37873fbcb9a0d30b7))
+
 ## [4.0.2](https://github.com/teispace/npm-packages/compare/next-maker-v4.0.1...next-maker-v4.0.2) (2026-09-05)
 
 
