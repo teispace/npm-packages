@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.0.1](https://github.com/teispace/npm-packages/compare/next-maker-v4.0.0...next-maker-v4.0.1) (2026-09-05)
+
+
+### Bug Fixes
+
+* **next-maker:** remove orphaned test files on init and pin the starter to v1.1.0 ([#155](https://github.com/teispace/npm-packages/issues/155)) ([fc07097](https://github.com/teispace/npm-packages/commit/fc07097244d534fd2040ac45cdf94369d5ac40b1))
+
 ## [4.0.0](https://github.com/teispace/npm-packages/compare/next-maker-v3.0.6...next-maker-v4.0.0) (2026-08-21)
 
 
