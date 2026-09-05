@@ -1,6 +1,10 @@
-import { cp, stat } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { cp, mkdir, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import degit from 'degit';
+
+const execFileAsync = promisify(execFile);
 
 /**
  * The starter template every `init`, `setup`, and repair composes from.
@@ -55,10 +59,7 @@ export const cloneStarter = async (
     } catch {
       throw new Error(`Starter path ${source.location} is not a directory`);
     }
-    await cp(source.location, dest, {
-      recursive: true,
-      filter: (src) => !LOCAL_COPY_SKIP.has(path.basename(src)),
-    });
+    await copyLocalStarter(source.location, dest);
     return source;
   }
   const emitter = degit(source.location, {
@@ -68,4 +69,40 @@ export const cloneStarter = async (
   });
   await emitter.clone(dest);
   return source;
+};
+
+/**
+ * Copy a local checkout the way `degit` would export it: tracked and
+ * untracked-but-not-ignored files only, so build output, `node_modules`,
+ * `.husky/_`, and `.env` never leak into a project. Falls back to a filtered
+ * copy when the directory is not a git repository.
+ */
+export const copyLocalStarter = async (from: string, dest: string): Promise<void> => {
+  let files: string[] | null = null;
+  try {
+    const { stdout } = await execFileAsync(
+      'git',
+      ['-C', from, 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
+      { maxBuffer: 64 * 1024 * 1024 },
+    );
+    files = stdout.split('\0').filter(Boolean);
+  } catch {
+    files = null;
+  }
+  if (files === null) {
+    await cp(from, dest, {
+      recursive: true,
+      filter: (src) => !LOCAL_COPY_SKIP.has(path.basename(src)),
+    });
+    return;
+  }
+  for (const file of files) {
+    const target = path.join(dest, file);
+    await mkdir(path.dirname(target), { recursive: true });
+    try {
+      await cp(path.join(from, file), target);
+    } catch {
+      // A file listed by git but gone from disk (deleted, not yet committed) is simply not copied.
+    }
+  }
 };

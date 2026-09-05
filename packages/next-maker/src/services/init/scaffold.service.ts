@@ -84,6 +84,15 @@ export const composeProject = async (
     },
     packageManager,
     answers,
+    identity: {
+      projectName: identity.projectName,
+      description: identity.description,
+      author: identity.author,
+      version: identity.version,
+      email: identity.email,
+      gitRemote: identity.gitRemote,
+      readme: identity.readme,
+    },
   });
   return report;
 };

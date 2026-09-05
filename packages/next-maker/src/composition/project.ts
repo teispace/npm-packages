@@ -24,6 +24,16 @@ export interface ProjectRecord {
   starter: { name: string; version: string; source: string };
   packageManager: PackageManager;
   answers: Answers;
+  /** Identity fields used to compose reference trees for `setup` and `upgrade`. */
+  identity?: {
+    projectName: string;
+    description: string;
+    author: string;
+    version: string;
+    email: string;
+    gitRemote: string;
+    readme: boolean;
+  };
 }
 
 export const writeProjectRecord = async (

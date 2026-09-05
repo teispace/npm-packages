@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  appDockerfile,
+  applyCatalog,
+  catalogFor,
+  catalogYaml,
   pnpmWorkspaceYaml,
+  rootDockerCompose,
   rootPackageJson,
   turboJson,
 } from '../../src/services/workspace/templates';
@@ -58,5 +63,34 @@ describe('workspace templates', () => {
     expect(turbo.globalPassThroughEnv).toContain('NEXT_PUBLIC_*');
     expect(turbo.tasks.build.outputs).toEqual(['.next/**', '!.next/cache/**']);
     expect(turbo.tasks.dev.persistent).toBe(true);
+  });
+
+  it('catalogs ranges shared by every app and rewrites them to catalog:', () => {
+    const web = {
+      dependencies: { next: '^16', react: '^19', 'web-only': '1' },
+      devDependencies: { vitest: '^5' },
+    };
+    const admin = {
+      dependencies: { next: '^16', react: '^18' },
+      devDependencies: { vitest: '^5' },
+    };
+    const catalog = catalogFor([web, admin]);
+    expect(catalog).toEqual({ next: '^16', vitest: '^5' });
+    expect(applyCatalog(web, catalog)).toEqual({
+      dependencies: { next: 'catalog:', react: '^19', 'web-only': '1' },
+      devDependencies: { vitest: 'catalog:' },
+    });
+    expect(catalogYaml(catalog)).toBe("\ncatalog:\n  'next': '^16'\n  'vitest': '^5'\n");
+    expect(catalogYaml({})).toBe('');
+  });
+
+  it('app Dockerfile prunes the workspace and compose exposes one port per app', () => {
+    const dockerfile = appDockerfile('web');
+    expect(dockerfile).toContain('RUN turbo prune web --docker');
+    expect(dockerfile).toContain('pnpm turbo run build --filter=web');
+    expect(dockerfile).toContain('CMD ["node", "apps/web/server.js"]');
+    const compose = rootDockerCompose(['web', 'admin']);
+    expect(compose).toContain('dockerfile: apps/admin/Dockerfile');
+    expect(compose).toContain('"3001:3000"');
   });
 });

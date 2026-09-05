@@ -222,12 +222,16 @@ Git hooks, CI, and Docker live at the workspace root; apps keep their own tests,
 
 ## Docker
 
-Build one app with Turborepo's pruned context so the image only contains that app and its workspace dependencies:
+\`apps/<app>/Dockerfile\` (generated with \`--docker\`; add later by copying one) builds from the workspace root with \`turbo prune\`, so an image contains only that app and its workspace dependencies:
 
 \`\`\`bash
-pnpm turbo prune ${p.apps[0]} --docker
-# then build from ./out with a Dockerfile that installs from out/json and copies out/full
+docker build -f apps/${p.apps[0]}/Dockerfile -t ${p.apps[0]} .
+docker compose up --build
 \`\`\`
+
+## Dependencies
+
+Ranges shared by every app live in the \`catalog:\` section of \`pnpm-workspace.yaml\`; apps reference them as \`"next": "catalog:"\`. Bump a shared version there once. Add an app-specific dependency the normal way (\`pnpm --filter ${p.apps[0]} add <pkg>\`).
 
 ## Maintenance
 
@@ -307,3 +311,139 @@ pnpm exec commitlint --edit "$1"
 pnpm ci:check && pnpm type-check && pnpm check:deprecated && pnpm test
 `,
 });
+
+/**
+ * A Dockerfile for one workspace app, built from a `turbo prune --docker`
+ * output so the image contains only that app and its workspace
+ * dependencies. Build context is the workspace root.
+ */
+export const appDockerfile = (
+  app: string,
+  nodeMajor = '24',
+): string => `# syntax=docker.io/docker/dockerfile:1
+# Build from the workspace root:
+#   docker build -f apps/${app}/Dockerfile -t ${app} .
+
+FROM node:${nodeMajor}-alpine AS base
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+RUN corepack enable && apk add --no-cache libc6-compat
+
+# Prune the workspace down to this app and its dependencies.
+FROM base AS pruner
+WORKDIR /app
+RUN pnpm add -g turbo@2
+COPY . .
+RUN turbo prune ${app} --docker
+
+# Install with only the pruned lockfile so dependency layers cache well.
+FROM base AS installer
+WORKDIR /app
+COPY --from=pruner /app/out/json/ ./
+COPY --from=pruner /app/pnpm-workspace.yaml ./
+COPY --from=pruner /app/.npmrc ./
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+
+# Build with the full pruned source.
+FROM base AS builder
+WORKDIR /app
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV TURBO_TELEMETRY_DISABLED=1
+ENV BUILD_STANDALONE=true
+COPY --from=installer /app/ ./
+COPY --from=pruner /app/out/full/ ./
+RUN pnpm turbo run build --filter=${app}
+
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+COPY --from=builder --chown=nextjs:nodejs /app/apps/${app}/public ./apps/${app}/public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/${app}/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/${app}/.next/static ./apps/${app}/.next/static
+USER nextjs
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \\
+  CMD wget -qO- http://127.0.0.1:3000/robots.txt >/dev/null || exit 1
+CMD ["node", "apps/${app}/server.js"]
+`;
+
+export const rootDockerCompose = (apps: string[]): string => {
+  const services = apps
+    .map(
+      (app, i) => `  ${app}:
+    build:
+      context: .
+      dockerfile: apps/${app}/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: \${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_APP_URL: \${${app.toUpperCase().replace(/-/g, '_')}_URL:-http://localhost:${3000 + i}}
+    restart: unless-stopped
+    ports:
+      - "${3000 + i}:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: \${NEXT_PUBLIC_API_URL}
+      API_INTERNAL_URL: \${API_INTERNAL_URL}`,
+    )
+    .join('\n\n');
+  return `services:\n${services}\n`;
+};
+
+export const rootDockerignore = (): string => `node_modules
+**/node_modules
+.git
+.turbo
+**/.next
+**/coverage
+**/playwright-report
+**/test-results
+**/.env
+**/.env.*
+`;
+
+/**
+ * Shared dependency versions for every app. Every dependency that appears
+ * in all apps with the same range moves to the pnpm catalog so one line
+ * bumps it everywhere.
+ */
+export const catalogFor = (packageJsons: Record<string, unknown>[]): Record<string, string> => {
+  if (packageJsons.length === 0) return {};
+  const ranges = (pkg: Record<string, unknown>): Record<string, string> => ({
+    ...((pkg.dependencies as Record<string, string>) ?? {}),
+    ...((pkg.devDependencies as Record<string, string>) ?? {}),
+  });
+  const first = ranges(packageJsons[0]);
+  const catalog: Record<string, string> = {};
+  for (const [name, range] of Object.entries(first)) {
+    if (packageJsons.every((pkg) => ranges(pkg)[name] === range)) catalog[name] = range;
+  }
+  return Object.fromEntries(Object.entries(catalog).sort(([a], [b]) => a.localeCompare(b)));
+};
+
+export const applyCatalog = (
+  pkg: Record<string, unknown>,
+  catalog: Record<string, string>,
+): Record<string, unknown> => {
+  const out = structuredClone(pkg);
+  for (const section of ['dependencies', 'devDependencies'] as const) {
+    const deps = out[section] as Record<string, string> | undefined;
+    if (!deps) continue;
+    for (const name of Object.keys(deps)) if (catalog[name] === deps[name]) deps[name] = 'catalog:';
+  }
+  return out;
+};
+
+export const catalogYaml = (catalog: Record<string, string>): string =>
+  Object.keys(catalog).length
+    ? `\ncatalog:\n${Object.entries(catalog)
+        .map(([name, range]) => `  '${name}': '${range}'`)
+        .join('\n')}\n`
+    : '';

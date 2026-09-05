@@ -18,6 +18,7 @@ Requires Node 24+. The CLI is pinned to one starter tag (see `src/config/starter
 | `setup --set k=v`               | Turn features on or off in an existing project.                                    |
 | `remove <feature>`              | Shorthand for `setup --set <feature>=false`.                                        |
 | `doctor [--fix] [--compile]`    | Compare the project with the starter footprint; restore what is missing.           |
+| `upgrade [--to <ref>]`          | Three-way merge a newer starter into the project.                                  |
 | `feature <name>`                | Feature module: `api/`, components, optional slice, `index.ts` and `server.ts`.     |
 | `api <name>` (alias `service`)  | `api/{schema,keys,server,queries,actions}.ts` for a resource.                       |
 | `slice <name>`                  | Redux or Zustand slice, registered in the store.                                   |
@@ -51,6 +52,7 @@ The starter declares its options in `next-maker.json`; the CLI asks those questi
 | `packageManager`  | `pnpm`, `npm`, `yarn`, `bun`    | `pnpm`   |
 | `state`           | `redux`, `zustand`, `none`      | `redux`  |
 | `http`            | `fetch`, `axios`, `both`        | `fetch`  |
+| `bff`             | boolean (same-origin API proxy) | `false`  |
 | `ws`              | boolean (requires `state=redux`)| `false`  |
 | `i18n`            | boolean                         | `true`   |
 | `darkMode`        | boolean                         | `true`   |
@@ -74,6 +76,7 @@ Every generated project passes the starter's own gates (`lint`, `type-check`, `c
 ```bash
 npx @teispace/next-maker workspace acme --apps web,admin
 npx @teispace/next-maker workspace acme --apps web,admin,docs --yes --set state=zustand
+npx @teispace/next-maker workspace acme --apps web,admin --docker   # per-app Dockerfiles + compose
 ```
 
 Creates:
@@ -84,7 +87,7 @@ acme/
   apps/admin/
   packages/            shared libraries you add
   package.json         turbo run dev | build | lint | type-check | test | validate
-  pnpm-workspace.yaml  apps/*, packages/*, the starter's install policy
+  pnpm-workspace.yaml  apps/*, packages/*, the starter's install policy, a catalog of shared ranges
   turbo.json           task graph, cached build output, NEXT_PUBLIC_* pass-through
   biome.json           root config for root files (apps keep their own)
   .husky/, commitlint.config.mjs, .lintstagedrc.mjs   (--no-hooks to skip)
@@ -93,9 +96,9 @@ acme/
 
 Git hooks, CI, Docker, community files, and the lockfile are root concerns, so those options are forced off inside the apps. The generated root README explains how to add a shared package (`pnpm add @acme/ui --workspace`), add another app, and build one app's Docker image with `turbo prune`. Only pnpm is supported for workspaces.
 
-## setup, remove, doctor
+## setup, remove, doctor, upgrade
 
-These read `.next-maker.json` (written by `init`) and a pristine checkout of the starter.
+These read `.next-maker.json` (written by `init`) and compose reference trees from the starter.
 
 ```bash
 npx @teispace/next-maker options                  # what can change
@@ -103,9 +106,13 @@ npx @teispace/next-maker setup --set ws=true      # add the WebSocket layer
 npx @teispace/next-maker setup --set state=zustand --dry-run
 npx @teispace/next-maker remove docker
 npx @teispace/next-maker doctor --fix --compile
+npx @teispace/next-maker upgrade --dry-run        # to the starter tag this CLI is pinned to
+npx @teispace/next-maker upgrade --to v2.1.0
 ```
 
-`setup` copies the feature's files from the starter, adds or removes packages and scripts, and unwraps provider chains. Code that the starter marks with anchor comments in shared files (a reducer registration, an import in `RootProvider`) cannot be re-injected into a generated project, so `setup` prints those exact lines as manual steps and `doctor --compile` confirms the result.
+`setup` and `upgrade` share one engine: the starter is composed twice (old answers and new answers, or old tag and new tag) with the project's identity, formatted with the project's Biome, and the project is three-way merged against the two trees. Lines the project never touched follow the starter, files a feature adds appear, files it owns disappear, anchored lines in shared files (a reducer registration, a provider import) merge in place, and `package.json` merges key by key. Only lines the project itself changed can conflict; those get `<<<<<<<` markers and are listed. `--dry-run` shows the file-by-file outcome first.
+
+`doctor` compares the project with the footprint of every feature its record says is on (files, packages, scripts), `--fix` restores what is missing from a pristine starter checkout, and `--compile` runs the project's type-check, which is the only honest signal that the pieces still fit.
 
 ## Generators
 
@@ -151,7 +158,7 @@ NEXT_MAKER_STARTER_PATH=../../../starters/nextjs-starter yarn workspace @teispac
 yarn workspace @teispace/next-maker build
 ```
 
-`smoke` accepts case names (`default`, `minimal`, `full`, `zustand`, `spa`, `no-i18n`, `no-dark`, `no-state-i18n`, `zustand-no-i18n-axios`, `npm`); set `SMOKE_KEEP=1` to keep the generated projects.
+`smoke` accepts case names (`default`, `minimal`, `full`, `zustand`, `spa`, `no-i18n`, `no-dark`, `no-state-i18n`, `zustand-no-i18n-axios`, `npm`, `bff`); set `SMOKE_KEEP=1` to keep the generated projects and `SMOKE_E2E=1` to run the default case's Playwright suite (browsers must be installed).
 
 ### Layers
 

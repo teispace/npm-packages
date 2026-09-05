@@ -24,7 +24,11 @@ const CASES: Record<string, string[]> = {
   'no-state-i18n': ['--yes', '--set', 'state=none', '--set', 'i18n=false'],
   'zustand-no-i18n-axios': ['--yes', '--set', 'state=zustand', '--set', 'i18n=false', '--set', 'http=axios'],
   npm: ['--yes', '--package-manager', 'npm', '--set', 'docker=true', '--set', 'ci=true'],
+  bff: ['--yes', '--set', 'bff=true', '--set', 'e2e=false'],
 };
+
+/** Cases whose Playwright suite runs when SMOKE_E2E=1 (browsers must be installed). */
+const E2E_CASES = new Set(['default']);
 
 const cli = path.resolve(import.meta.dirname, '../src/index.ts');
 const tsx = path.resolve(import.meta.dirname, '../../../node_modules/.bin/tsx');
@@ -87,6 +91,9 @@ for (const name of names) {
     ['test', () => runScript(pm, 'test', cwd)],
     ['build', () => runScript(pm, 'build', cwd, { NEXT_PUBLIC_APP_URL: 'https://ci.example.com' })],
   ];
+  if (process.env.SMOKE_E2E && E2E_CASES.has(name)) {
+    steps.push(['test:e2e', () => run(pm, pm === 'npm' || pm === 'bun' ? ['run', 'test:e2e', '--', '--project=chromium'] : ['test:e2e', '--project=chromium'], cwd, { CI: 'true' })]);
+  }
   let failed = false;
   for (const [label, step] of steps) {
     if (!scripts[label]) continue;

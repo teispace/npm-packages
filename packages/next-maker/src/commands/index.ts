@@ -16,6 +16,7 @@ import { registerServiceCommand } from './service';
 import { registerSetupCommand } from './setup';
 import { registerSliceCommand } from './slice';
 import { registerTestCommand } from './test';
+import { registerUpgradeCommand } from './upgrade';
 import { registerWorkspaceCommand } from './workspace';
 
 export const registerCommands = (program: Command) => {
@@ -23,6 +24,7 @@ export const registerCommands = (program: Command) => {
   registerWorkspaceCommand(program);
   registerSetupCommand(program);
   registerOptionsCommand(program);
+  registerUpgradeCommand(program);
   registerFeatureCommand(program);
   registerSliceCommand(program);
   registerServiceCommand(program);
