@@ -1,935 +1,147 @@
 # @teispace/next-maker
 
-A CLI that scaffolds Next.js 16+ applications (TypeScript, Tailwind v4, Biome, Pino, Zod, Redux Toolkit, next-intl, Vitest) and co-generates feature-based architecture — pages, layouts, components, hooks, Redux slices, API services, locales, providers, env vars, and tests. Ships a manifest-driven `doctor` and `remove` for ongoing maintenance.
-
-## Installation
-
-### Using npx (Recommended)
+Create and grow Next.js 16 applications from the [Teispace starter](https://github.com/teispace/nextjs-starter). `init` composes a project from the starter's own manifest with exactly the pieces you choose; `setup`, `doctor`, and `remove` keep it aligned with the starter later; the generators add features, pages, slices, and API layers in the starter's server-first shape.
 
 ```bash
-npx @teispace/next-maker <command> [args] [options]
-```
-
-### Global Installation
-
-```bash
-npm install -g @teispace/next-maker
-next-maker <command> [args] [options]
-```
-
----
-
-## Commands at a glance
-
-| Category | Command | Purpose |
-| --- | --- | --- |
-| Lifecycle | `init [name]` | Create a new Next.js application |
-| Lifecycle | `setup [options]` | Add features to an existing project (retrofit) |
-| Lifecycle | `doctor [options]` | Diagnose drift against known feature manifests |
-| Lifecycle | `remove <feature>` | Reverse a feature install (uses the manifest) |
-| Routing | `page <name>` | Generate a page/route |
-| Routing | `layout <segment>` | Generate a nested layout.tsx |
-| UI | `component <name>` | Shared component with auto-wired barrel exports |
-| State | `feature <name>` | Full feature module (DDD) |
-| State | `slice <name>` | Redux Toolkit slice (auto-registers in rootReducer) |
-| State | `service <name>` | API service (axios/fetch, optional CRUD) |
-| State | `provider <name>` | Context provider with RootProvider auto-wiring |
-| Config | `env <NAME>` | Add an env var (schema + .env.example + .env) |
-| Config | `locale [code]` | Add a new language/locale |
-| Code | `hook <name>` | Custom React hook |
-| Code | `test <file>` | Sibling test stub for a component/hook/slice |
-| Assets | `favicon` | Generate `favicon.ico` (and optionally PWA / OG / Apple icons) from a source image |
-
-Run `npx @teispace/next-maker <command> --help` for the full option list of any command.
-
----
-
-## Lifecycle commands
-
-### `init` — Create a New App
-
-```bash
-npx @teispace/next-maker init [project-name] [options]
-```
-
-| Flag | Effect |
-| --- | --- |
-| `-y, --yes` | Skip every prompt and bootstrap with the recommended production defaults (see below) |
-| `--package-manager <pm>` | Override the package manager (`npm` \| `yarn` \| `pnpm` \| `bun`). Works with or without `--yes`. |
-
-```bash
-# Interactive (default)
 npx @teispace/next-maker init my-app
-
-# One-shot opinionated install
-npx @teispace/next-maker init my-app --yes
-
-# One-shot with a different package manager
-npx @teispace/next-maker init my-app -y --package-manager pnpm
 ```
 
-**`--yes` defaults** — every architecture feature on, heavyweight integrations off:
+Requires Node 24+. The CLI is pinned to one starter tag (see `src/config/starter.ts`); each major version of the CLI tracks one major line of the starter.
 
-| | |
-| --- | --- |
-| package manager | `yarn` |
-| HTTP client | `fetch` |
-| dark mode, redux, i18n, tests, react-compiler | ✅ on |
-| pre-commit hooks, commitizen, copy `.env` | ✅ on |
-| WebSocket (requires Redux), docker, GitHub Actions, bundle-analyzer, community files (CODE_OF_CONDUCT etc.) | ⏭ off |
+## Commands
 
-Anything you don't want? `next-maker remove <feature>` after init.
+| Command                         | Purpose                                                                            |
+| :------------------------------ | :--------------------------------------------------------------------------------- |
+| `init [name]`                   | Create a project. Interactive, or `--yes`, `--preset`, `--config`, `--set`.         |
+| `options`                       | List the starter's options with the project's current values.                      |
+| `setup --set k=v`               | Turn features on or off in an existing project.                                    |
+| `remove <feature>`              | Shorthand for `setup --set <feature>=false`.                                        |
+| `doctor [--fix] [--compile]`    | Compare the project with the starter footprint; restore what is missing.           |
+| `feature <name>`                | Feature module: `api/`, components, optional slice, `index.ts` and `server.ts`.     |
+| `api <name>` (alias `service`)  | `api/{schema,keys,server,queries,actions}.ts` for a resource.                       |
+| `slice <name>`                  | Redux or Zustand slice, registered in the store.                                   |
+| `page <name>`                   | Page with SEO metadata, optional route group, dynamic segment, loading and error.  |
+| `layout <segment>`              | Nested layout.                                                                     |
+| `component <name>`              | Shared or feature component with barrel exports.                                   |
+| `hook <name>`                   | Custom hook.                                                                       |
+| `provider <name>`               | Context provider wired into `RootProvider`.                                        |
+| `env <NAME>`                    | Environment variable across `src/lib/env/index.ts`, `.env.example`, and `.env`.    |
+| `locale <code>`                 | New locale: translations, `SUPPORTED_LOCALES`, `appLocales`.                       |
+| `test <file>`                   | Sibling test for a component, hook, or slice.                                      |
+| `favicon`                       | Icons from a source image.                                                         |
 
-The starter at [`teispace/nextjs-starter`](https://github.com/teispace/nextjs-starter) is cloned via `degit` and trimmed to match your prompt answers. The `cleanup` step strips opted-out features so the generated project compiles end-to-end on first install.
+Run any command with `--help` for its flags.
 
-**Interactive prompts:**
-
-| Section | Prompts |
-| --- | --- |
-| Identity | project name, description, author, version, support email, package manager, GitHub repo / issues / homepage |
-| Architecture | HTTP client (axios / fetch / both / none), dark mode, Redux Toolkit, WebSocket (requires Redux), i18n, testing, React Compiler, Bundle Analyzer |
-| Tooling | community files (CODE_OF_CONDUCT, CONTRIBUTING, SECURITY), README, Docker, CI/CD, pre-commit hooks (Husky/Commitlint/Lint-staged), Commitizen, copy `.env.example` → `.env` |
-| Templates | keep GitHub issue/PR templates? include `react-secure-storage`? |
-
-**Always shipped:**
-
-- Next.js 16+ with App Router
-- TypeScript (strict mode)
-- Tailwind CSS v4
-- Biome (single-tool lint + format)
-- Pino structured logger with redaction
-- Zod-validated env schema in `src/lib/env/`
-- Feature-based DDD architecture
-- Dual HTTP clients (`fetchClient` + `axiosClient`) on a shared foundation: two entry points (`@/lib/utils/http` universal, `@/lib/utils/http/server` for Server Components), automatic `X-Request-Id` correlation, single `parseApiError` pipeline, cookie-mode auth by default, typed query params via `{ params }`. A build-time `__bundle-sentinel__` rejects future regressions of the universal/server split.
-- WebSocket transport — **opt-in via the `ws` prompt** (requires Redux): typed `socket.io-client` wrapper, lazy singleton, `useWsEvent` / `useWsEmit` / `useWsStatus` hooks, Redux bridge into a dedicated (non-persisted) `wsReducer`. Cookie-mode auth by default; browser-only (SSR throws).
-- Hardened security headers in `next.config.ts`
-- `scripts/sync-env.ts` and `scripts/check-deprecated.ts` (used by the `validate` chain)
-
----
-
-### `setup` — Retrofit a feature
-
-Add a feature to an existing project (one that wasn't generated by `init`, or one created before a feature existed).
+## init
 
 ```bash
-npx @teispace/next-maker setup [options]
+npx @teispace/next-maker init my-app                 # interactive
+npx @teispace/next-maker init my-app --yes           # starter defaults
+npx @teispace/next-maker init my-app --preset full   # everything on
+npx @teispace/next-maker init my-app --yes --set state=zustand --set i18n=false --package-manager npm
+npx @teispace/next-maker init --config my-app.json   # repeatable, non-interactive
+npx @teispace/next-maker init my-app --yes --dry-run # print the plan, create nothing
 ```
 
-| Flag | What it does |
-| --- | --- |
-| `--http-client` | Adds the axios and/or fetch Result-based clients under `src/lib/utils/http/` |
-| `--dark-theme` | Installs `@teispace/next-themes` and adds `CustomThemeProvider` |
-| `--redux` | Redux Toolkit + `react-redux` + `redux-persist`, `StoreProvider`, `src/store` |
-| `--ws` | WebSocket transport — `socket.io-client@^4.8.3`, `src/lib/utils/ws/` subtree, non-persisted `wsReducer`, `attachWsBridge` mount in `StoreProvider`. Requires `--redux` to be installed first. |
-| `--i18n` | `next-intl` + `[locale]` routing + `proxy.ts` + `RootProvider` wiring |
-| `--tests` | Vitest + React Testing Library + jsdom + `test/test-utils.tsx` |
-| `--react-compiler` | `reactCompiler: true` in `next.config.ts` + `babel-plugin-react-compiler` |
-| `--bundle-analyzer` | Wraps the default export with `withBundleAnalyzer` and adds the `analyze` script |
-| `--security-headers` | Injects the hardened headers block into `next.config.ts` (DNS prefetch, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, X-XSS-Protection) |
-| `--validate-scripts` | Drops in `scripts/sync-env.ts` + `scripts/check-deprecated.ts` and wires `env:sync`, `check:deprecated`, `type-check`, and the `validate` chain (PM-aware) |
-| `--commitizen` | Writes `.czrc`, adds `commit` script, installs `commitizen` + `cz-conventional-changelog` |
+The starter declares its options in `next-maker.json`; the CLI asks those questions and nothing else. Current options (starter 2.x):
 
-Run `setup` without flags for an interactive picker.
+| Option            | Values                          | Default  |
+| :---------------- | :------------------------------ | :------- |
+| `packageManager`  | `pnpm`, `npm`, `yarn`, `bun`    | `pnpm`   |
+| `state`           | `redux`, `zustand`, `none`      | `redux`  |
+| `http`            | `fetch`, `axios`, `both`        | `fetch`  |
+| `ws`              | boolean (requires `state=redux`)| `false`  |
+| `i18n`            | boolean                         | `true`   |
+| `darkMode`        | boolean                         | `true`   |
+| `tests`           | boolean                         | `true`   |
+| `e2e`             | boolean (requires `tests`)      | `true`   |
+| `docker`, `ci`    | boolean                         | `false`  |
+| `hooks`, `commitizen` | boolean                     | `true`   |
+| `analyzer`, `openapi` | boolean                     | `false`  |
+| `reactCompiler`   | boolean                         | `true`   |
+| `communityFiles`  | `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md` | none |
+| `githubTemplates`, `agentRules` | boolean           | `false`, `true` |
+
+Presets: `default`, `minimal`, `full`, `zustand`, `spa`. A `--config` file holds identity fields (`name`, `description`, `author`, `version`, `email`, `gitRemote`) plus `packageManager`, `preset`, and `options`.
+
+What `init` does, in order: fetch the pinned starter (or `--starter-path` / `NEXT_MAKER_STARTER_PATH`), read its manifest, resolve answers (constraints such as `ws` needing Redux are enforced), apply the package-manager overlay, delete the files of features that are off, copy overlays for chosen variants, strip anchor comments and unwrap provider wrappers, prune `package.json` and `.env.example`, rewrite package-manager commands, stamp the identity, write `README.md` and `.next-maker.json`, install, format, copy `.env`, and initialise git.
+
+Every generated project passes the starter's own gates (`lint`, `type-check`, `check:deprecated`, `test`, `build`); the `smoke` script composes a matrix of option combinations and runs them.
+
+## setup, remove, doctor
+
+These read `.next-maker.json` (written by `init`) and a pristine checkout of the starter.
 
 ```bash
-# Interactive
-npx @teispace/next-maker setup
-
-# Specific feature
-npx @teispace/next-maker setup --redux
-npx @teispace/next-maker setup --ws            # adds WebSocket layer (run after --redux)
-npx @teispace/next-maker setup --security-headers
-npx @teispace/next-maker setup --validate-scripts
+npx @teispace/next-maker options                  # what can change
+npx @teispace/next-maker setup --set ws=true      # add the WebSocket layer
+npx @teispace/next-maker setup --set state=zustand --dry-run
+npx @teispace/next-maker remove docker
+npx @teispace/next-maker doctor --fix --compile
 ```
 
-Every `setup` operation is **idempotent** — re-running is a no-op on already-installed parts and a fix-up on missing parts.
+`setup` copies the feature's files from the starter, adds or removes packages and scripts, and unwraps provider chains. Code that the starter marks with anchor comments in shared files (a reducer registration, an import in `RootProvider`) cannot be re-injected into a generated project, so `setup` prints those exact lines as manual steps and `doctor --compile` confirms the result.
 
----
-
-### `doctor` — Drift detection
-
-`doctor` walks every feature manifest, asks "is this installed?" and (if yes) "are all of its parts present?". Drift is reported per feature.
+## Generators
 
 ```bash
-npx @teispace/next-maker doctor [options]
-```
-
-| Flag | Behaviour |
-| --- | --- |
-| `--fix` | Runs each drifted feature's **repair** path, then re-checks and reports FIXED / STILL DRIFTED / NO AUTOMATIC FIX AVAILABLE per feature |
-| `--feature <id>` | Only check one manifest (e.g. `redux`, `security-headers`) |
-| `--json` | Machine-readable output for CI |
-
-Exit code is `0` on a clean report and `1` when drift is found — `next-maker doctor --json` makes a useful CI gate. With `--fix`, the exit code reflects the state **after** the repair: `0` only when every feature re-checks clean, `1` when anything is still drifted.
-
-```bash
-# Human report
-npx @teispace/next-maker doctor
-
-# Fix everything that drifted
-npx @teispace/next-maker doctor --fix
-
-# CI
-npx @teispace/next-maker doctor --json > health.json
-```
-
-**Sample output:**
-
-```
-🩺 Project Doctor
-
-  ✓ Security Headers
-  ! Validation Scripts (2 issues)
-      • missing file: scripts/sync-env.ts
-      • missing script: validate
-  — Redux Toolkit (not installed)
-  ✓ Internationalization
-
-1 clean, 1 drifted, 1 not installed
-
-Run with --fix to re-apply drifted features.
-```
-
-**Sample `--fix` output:**
-
-```
-🔧 Applying fixes...
-
-  ✓ Validation Scripts FIXED
-  ✗ Internationalization STILL DRIFTED
-      • missing file: src/app/[locale]
-
-1 fixed, 1 still drifted
-```
-
-`--fix` never claims success it can't back up: every feature is re-checked after its repair runs, and only a clean re-check counts as FIXED.
-
-Manifests live under `src/manifests/`; each one declares the files, packages, scripts, and code blocks the feature consists of. Adding a manifest for a new feature is a single file — `doctor` and `remove` automatically pick it up.
-
----
-
-### `remove` — Reverse an install
-
-Symmetric to `setup`. Uses the feature manifest to compute the reversal: deletes generated files, strips code blocks (when a `removePattern` is recorded), removes scripts, uninstalls packages.
-
-```bash
-npx @teispace/next-maker remove <feature> [options]
-```
-
-| Flag | Behaviour |
-| --- | --- |
-| `--dry-run` | Print the planned changes without writing |
-| `-y, --yes` | Skip the confirmation prompt |
-
-**Auto-removed when possible:** provider chain unwraps (`<NextIntlClientProvider>`, `<StoreProvider>`, `<CustomThemeProvider>`), the `withNextIntl(...)` and `bundleAnalyzer(...)` wraps in `next.config.ts`, and their orphan import statements. The transforms are conservative — if the file shape has drifted from the canonical pattern (e.g. a multi-line opening tag, no matching close at the same indent), the runner bails out and surfaces it as manual cleanup rather than corrupting your code.
-
-`remove` will **never recursively delete a directory that may hold user-authored content** — `src/app/[locale]/` (your pages), `src/i18n/` (your translations), `src/store/` (your slices), `src/lib/utils/http/` (your service code), and `test/` (your helpers) are flagged in the manifest with `containsUserContent: true` and surface as manual-cleanup with a hint. Move what you want to keep, then `rm -rf` the rest by hand.
-
-```bash
-# Preview the effect
-npx @teispace/next-maker remove redux --dry-run
-
-# Apply with confirmation
-npx @teispace/next-maker remove security-headers
-
-# Non-interactive
-npx @teispace/next-maker remove validate-scripts --yes
-```
-
-**Sample plan:**
-
-```
-🗑  Remove Validation Scripts
-
-Planned changes:
-  - delete file: scripts/sync-env.ts
-  - delete file: scripts/check-deprecated.ts
-  - remove script: env:sync
-  - remove script: check:deprecated
-  - remove script: validate
-  - uninstall: tsx
-```
-
----
-
-## Code generators
-
-### `page` — Generate a page/route
-
-```bash
-npx @teispace/next-maker page <name> [options]
-```
-
-| Flag | Effect |
-| --- | --- |
-| `--dynamic <param>` | Dynamic segment (e.g. `--dynamic id` produces `[id]/page.tsx`) |
-| `--loading` | Generate `loading.tsx` |
-| `--error` | Generate `error.tsx` |
-
-**What it does:**
-
-- Writes `page.tsx` under `src/app/[locale]/<name>/` (i18n) or `src/app/<name>/`
-- When i18n is detected: `generateMetadata`, `setRequestLocale`, `getTranslations`
-- Registers route in `src/lib/config/app-paths.ts`
-- Adds translation namespace to `en.json`
-
-```bash
-npx @teispace/next-maker page about
-npx @teispace/next-maker page dashboard --loading --error
-npx @teispace/next-maker page products --dynamic id --loading --error
-```
-
----
-
-### `layout` — Generate a nested layout
-
-```bash
-npx @teispace/next-maker layout <segment> [options]
-```
-
-| Flag | Effect |
-| --- | --- |
-| `--group` | Wraps the segment in parens for a route group, e.g. `(marketing)` |
-| `--at <path>` | Places the layout under a nested path (kebab-case, slash-separated) |
-| `--no-locale` | Skip the locale wrapper even when i18n is detected |
-
-When i18n is detected the generated layout consumes `params: Promise<{ locale: string }>` and calls `setRequestLocale`. Otherwise it's a plain `({ children }) => <>{children}</>` shell.
-
-```bash
-# /[locale]/dashboard/layout.tsx
-npx @teispace/next-maker layout dashboard
-
-# Route group: /[locale]/(marketing)/layout.tsx
-npx @teispace/next-maker layout marketing --group
-
-# Nested: /[locale]/dashboard/settings/preferences/layout.tsx
-npx @teispace/next-maker layout preferences --at dashboard/settings
-```
-
-Refuses to overwrite an existing `layout.tsx` — explicit error rather than silent loss.
-
----
-
-### `component` — Shared component
-
-```bash
-npx @teispace/next-maker component <name> [options]
-```
-
-| Flag | Effect |
-| --- | --- |
-| `--client` | Adds `'use client'` directive |
-| `--i18n` | Imports `useTranslations` |
-| `--feature <path>` | Generate inside a feature directory |
-| `--test` / `--no-test` | Co-generate a sibling `*.test.tsx` (default: on when Vitest is installed) |
-
-**Generated structure:**
-
-```
-src/components/common/MyButton/
-├── MyButton.tsx
-└── index.ts
-```
-
-Auto-updates `src/components/common/index.ts` and `src/components/index.ts`.
-
-```bash
-npx @teispace/next-maker component data-table --client
-npx @teispace/next-maker component nav-bar --client --i18n
-npx @teispace/next-maker component user-card --client --feature src/features/auth
-```
-
----
-
-### `feature` — Full feature module
-
-```bash
-npx @teispace/next-maker feature <name> [options]
-```
-
-| Flag | Effect |
-| --- | --- |
-| `--store <type>` | Generate Redux store: `persist` or `no-persist` |
-| `--skip-store` | Skip Redux store |
-| `--service <client>` | API service: `axios` or `fetch` |
-| `--skip-service` | Skip API service |
-| `--path <path>` | Custom path (default `src/features`) |
-
-**Generated structure:**
-
-```
-src/features/user-dashboard/
-├── components/UserDashboard.tsx
-├── hooks/useUserDashboard.ts
-├── types/user-dashboard.types.ts
-├── store/                  (optional)
-├── services/               (optional)
-└── index.ts
-```
-
-```bash
-npx @teispace/next-maker feature user-profile --store persist --service axios
-npx @teispace/next-maker feature shopping-cart --store no-persist --skip-service
-npx @teispace/next-maker feature auth --store persist --service fetch --path src/modules
-```
-
----
-
-### `slice` — Redux slice
-
-```bash
-npx @teispace/next-maker slice <name> [options]
-```
-
-| Flag | Effect |
-| --- | --- |
-| `--persist` / `--no-persist` | Toggle redux-persist for this slice |
-| `--path <path>` | Custom path (default: new feature) |
-| `--test` / `--no-test` | Co-generate `*.slice.test.ts` (default: on when Vitest is installed) |
-
-Auto-registers in `rootReducer` with correct imports and persist config.
-
-```bash
-npx @teispace/next-maker slice auth --persist
-npx @teispace/next-maker slice user-settings --path features/auth/store
-```
-
----
-
-### `service` — API service
-
-```bash
-npx @teispace/next-maker service <name> [options]
-```
-
-| Flag | Effect |
-| --- | --- |
-| `--axios` / `--fetch` | Pick the HTTP client |
-| `--crud` | Generate full CRUD (`getAll`, `getById`, `create`, `update`, `delete`) |
-| `--path <path>` | Custom path |
-
-CRUD mode also generates `<Name>Summary` (list view) and `<Name>Detail` (detail view) types, `Create<Name>Dto`, `Update<Name>Dto`, and registers the endpoints in `app-apis.ts`.
-
-Endpoints are emitted as **bare paths** (e.g. `'/users'`, `` `/users/${id}` ``) — the `/api/v{n}` prefix is owned by `getApiBaseUrl()` in `src/lib/config/api-url.ts` and applied at request time. Don't add `${API_PREFIX}` interpolation in `app-apis.ts`; the base URL composer handles it.
-
-```bash
-npx @teispace/next-maker service payment --axios
-npx @teispace/next-maker service users --fetch --crud
-npx @teispace/next-maker service orders --axios --crud --path features/products/services
-```
-
----
-
-### `provider` — Context provider
-
-```bash
-npx @teispace/next-maker provider <name>
-```
-
-Generates `src/providers/<Name>Provider.tsx` with:
-
-- `'use client'` directive
-- `createContext` + typed context value
-- `useX()` hook with non-null guard
-- `<XProvider>` component memoising the value with `useMemo`
-
-Then **two-tier auto-wiring**:
-
-1. Locates `RootProvider.tsx` — canonical path first (`src/providers/RootProvider.tsx`), heuristic scan as fallback (looks for the deepest `{children}` chain in `src/providers/*.tsx`).
-2. Wraps `{children}` with `<XProvider>` inside that chain, preserving indentation.
-3. Updates `src/providers/index.ts` barrel (re-exports kept sorted).
-
-If no candidate is found, the generator prints the snippet to wire manually rather than failing silently.
-
-```bash
-npx @teispace/next-maker provider auth        # → AuthProvider, useAuth
-npx @teispace/next-maker provider session     # → SessionProvider, useSession
-npx @teispace/next-maker provider analytics-provider   # already-suffixed names work
-```
-
-The wrap is **idempotent** — running twice is a no-op.
-
----
-
-### `env` — Declare an env var
-
-Adds a new variable across the four files the starter keeps in sync, atomically and idempotently:
-
-1. `src/lib/env/schema.ts` — Zod entry with the right wrapper (`preprocess(emptyStringToUndefined, …)` for non-enum types)
-2. `.env.example` — `KEY=` placeholder with optional description comment and `# -public` marker
-3. `.env` — `KEY=<default>` line when the file exists
-
-```bash
-npx @teispace/next-maker env <NAME> [options]
-```
-
-| Flag | Effect |
-| --- | --- |
-| `--type <type>` | `string` (default), `url`, `number`, `boolean`, `enum` |
-| `--required` | Skips `.optional()` and `.default()` |
-| `--default <value>` | Adds `.default(value)` (mutually exclusive with `--required`) |
-| `--public` | Auto-prefixes `NEXT_PUBLIC_` if missing and tags `.env.example` with `# -public` |
-| `--describe <text>` | Adds `.describe()` and a comment line in `.env.example` |
-| `--enum <list>` | Comma-separated values, required when `--type=enum` |
-
-```bash
-# Optional URL
+npx @teispace/next-maker feature invoice --api --store --persist
+npx @teispace/next-maker api order --no-actions
+npx @teispace/next-maker slice cart --persist
+npx @teispace/next-maker page reports --group app --loading --error
+npx @teispace/next-maker page post --dynamic slug
+npx @teispace/next-maker layout dashboard --group
+npx @teispace/next-maker component badge --client --i18n
+npx @teispace/next-maker provider feature-flags
 npx @teispace/next-maker env SENTRY_DSN --type url --describe "Sentry endpoint"
-
-# Public default
-npx @teispace/next-maker env API_URL --type url --public --default "http://localhost:3000"
-
-# Required string (no default, no .optional)
-npx @teispace/next-maker env DATABASE_URL --type url --required
-
-# Enum
-npx @teispace/next-maker env LOG_LEVEL --type enum --enum debug,info,warn,error --default info
-
-# Coerced number
-npx @teispace/next-maker env PORT --type number --default 3000
+npx @teispace/next-maker locale es --name Spanish --country Spain --flag 🇪🇸
 ```
 
-The generator quote-escapes defaults and descriptions, mirrors the starter's house style, and is fully covered by tests against the `schema.ts`/`.env.example`/`.env` shapes.
-
----
-
-### `locale` — Add a locale
-
-```bash
-npx @teispace/next-maker locale [code] [options]
-```
-
-| Flag | Effect |
-| --- | --- |
-| `--copy-translations` | Copy English translations as the starting point |
-
-Creates `src/i18n/translations/<code>.json`, updates `SupportedLocale`, and adds the entry to `src/lib/config/app-locales.ts` (name, flag, country).
-
-```bash
-npx @teispace/next-maker locale es
-npx @teispace/next-maker locale fr --copy-translations
-```
-
----
-
-### `hook` — Custom React hook
-
-```bash
-npx @teispace/next-maker hook <name> [options]
-```
-
-| Flag | Effect |
-| --- | --- |
-| `--client` | Add `'use client'` directive (default true) |
-| `--feature <path>` | Generate inside a feature directory |
-| `--test` / `--no-test` | Co-generate `*.test.ts` |
-
-```bash
-npx @teispace/next-maker hook auth-session
-npx @teispace/next-maker hook user-profile --feature src/features/auth
-```
-
----
-
-### `test` — Retrofit a sibling test
-
-Adds a `*.test.{ts,tsx}` next to existing code that pre-dates the `--test` flag.
-
-```bash
-npx @teispace/next-maker test <file> [options]
-```
-
-| Flag | Effect |
-| --- | --- |
-| `--kind <kind>` | Override inferred kind: `component` / `hook` / `slice` |
-| `--force` | Overwrite an existing test file |
-
-Inference rules:
-
-- `*.slice.ts` → reducer test
-- `use*.ts` (or content starting with `export function useX`) → hook test (`renderHook`)
-- `*.tsx` → component test (`renderWithProviders`)
-
-```bash
-npx @teispace/next-maker test src/features/auth/components/LoginForm.tsx
-npx @teispace/next-maker test src/features/auth/store/auth.slice.ts
-npx @teispace/next-maker test src/hooks/use-debounce.ts --kind hook --force
-```
-
-Requires `setup --tests` first.
-
----
-
-### `favicon` — Generate icons from a source image
-
-Generates `favicon.ico` (multi-size) into the App Router root, with optional `icon.png`, `apple-icon.png`, `opengraph-image.png`, `twitter-image.png`, and PWA manifest icons. Source can be PNG, JPG, JPEG, WebP, SVG, or AVIF.
-
-```bash
-npx @teispace/next-maker favicon [options]
-```
-
-| Flag | Effect |
-| --- | --- |
-| `--path <file>` | Source image. If omitted, you'll be prompted. |
-| `--out <dir>` | Output directory (default: auto-detected `src/app` or `app`) |
-| `--icon` | Also emit `icon.png` (512×512) |
-| `--apple` | Also emit `apple-icon.png` (180×180) |
-| `--og` | Also emit `opengraph-image.png` (1200×630) |
-| `--og-source <file>` | Use a separate image for the OG/Twitter card |
-| `--twitter` | Also emit `twitter-image.png` (1200×600) |
-| `--all` | Shorthand for `--icon --apple --og` |
-| `--pwa` | Detect PWA setup and emit manifest icons (192/512); errors if not detected |
-| `--pwa-init` | Bootstrap `public/manifest.webmanifest` with icons |
-| `--shape <shape>` | `square` \| `rounded` \| `circle` \| `squircle` (default: `square`) |
-| `--radius <percent>` | Corner radius % when `--shape=rounded` (0–50, default: 20) |
-| `--bg <color>` | Background: `transparent`, hex (`#0f172a`), CSS name, or `rgb()`/`rgba()`/`hsl()`/`hsla()` (default: `transparent`) |
-| `--padding <percent>` | Padding around source content (0–30, default: 0) |
-| `--fit <fit>` | `contain` \| `cover` \| `clip` (default: `contain`) |
-| `--sizes <list>` | Comma-separated ICO sizes (default: `16,32,48`) |
-| `--quality <n>` | PNG compression 1–100 (higher = smaller; PNG is lossless, default: 90) |
-| `--force` | Overwrite existing files without prompt |
-| `--dry-run` | Show what would be written without writing |
-
-```bash
-# Minimal: just favicon.ico from a source PNG
-npx @teispace/next-maker favicon --path ./brand/logo.png
-
-# Full set: favicon + icon + apple-icon + OG image, rounded with brand background
-npx @teispace/next-maker favicon \
-  --path ./brand/logo.svg \
-  --all \
-  --shape rounded --radius 24 \
-  --bg "#0f172a" \
-  --padding 8
-
-# PWA: emit manifest icons and bootstrap public/manifest.webmanifest
-npx @teispace/next-maker favicon --path ./brand/logo.png --pwa-init
-
-# Separate OG art
-npx @teispace/next-maker favicon \
-  --path ./brand/logo.png \
-  --og --og-source ./brand/social-card.png
-
-# Preview without writing
-npx @teispace/next-maker favicon --path ./brand/logo.png --all --dry-run
-```
-
-Outputs land in your App Router root (`src/app/` or `app/`) so Next.js auto-resolves them via the file conventions for [`favicon.ico`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons), [`opengraph-image`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/opengraph-image), and [`apple-icon`](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons) — no `<head>` wiring required.
-
----
-
-## End-to-end examples
-
-### Quick start
-
-```bash
-npx @teispace/next-maker init my-project
-cd my-project
-
-# Routes & layouts
-npx @teispace/next-maker page dashboard --loading --error
-npx @teispace/next-maker layout dashboard
-npx @teispace/next-maker page products --dynamic id --loading --error
-
-# State + data
-npx @teispace/next-maker feature users --store persist --service fetch
-npx @teispace/next-maker service users --fetch --crud --path features/users/services
-
-# Providers & env
-npx @teispace/next-maker provider auth
-npx @teispace/next-maker env SENTRY_DSN --type url --describe "Sentry endpoint"
-
-# i18n
-npx @teispace/next-maker locale es
-
-# Health check before commit
-npx @teispace/next-maker doctor
-
-npm run dev
-```
-
-### Feature-driven workflow
-
-```bash
-npx @teispace/next-maker feature products --store persist --service axios
-npx @teispace/next-maker service products --axios --crud --path features/products/services
-npx @teispace/next-maker page products --dynamic id --loading --error
-npx @teispace/next-maker component product-card --client --feature src/features/products
-npx @teispace/next-maker layout products
-
-npx @teispace/next-maker feature cart --store persist --skip-service
-npx @teispace/next-maker page checkout --loading --error
-```
-
-### Maintenance — re-applying drifted features
-
-```bash
-# What's drifted?
-npx @teispace/next-maker doctor
-
-# Fix in place
-npx @teispace/next-maker doctor --fix
-
-# Pull a feature out cleanly
-npx @teispace/next-maker remove i18n --dry-run
-npx @teispace/next-maker remove i18n
-```
-
----
-
-## Architecture
-
-### Layers
+A generated feature:
 
 ```
-src/
-├── commands/        # Commander definitions (one file per CLI command)
-├── prompts/         # Enquirer flows (one per command needing interactivity)
-├── generators/      # generate<X>(): writes files for a single artifact
-│   └── templates/   # Pure string-template functions (testable in isolation)
-├── modifiers/       # Pure functions that surgically edit existing files
-├── pipelines/       # PipelineStep[] composers for multi-step generators
-├── services/setup/  # Retrofit installers, one per feature
-├── manifests/       # Declarative feature footprints (drives doctor + remove)
-├── detection/       # "Is feature X installed?" detectors
-├── core/            # File I/O + package-manager helpers (yarn/npm/pnpm/bun)
-└── config/          # PROJECT_PATHS, PACKAGES, spinner, output, error handlers
+src/features/invoice/
+  api/
+    schema.ts      zod contracts, inferred types
+    keys.ts        TanStack Query keys
+    server.ts      DAL over serverHttp ('server-only')
+    actions.ts     create/update/delete with authActionClient ('use server')
+    queries.ts     queryOptions + useSuspenseQuery hooks
+  components/InvoiceList.tsx (+ .test.tsx when tests are on)
+  store/         slice, selectors, persistence entry (Redux) or slice creator (Zustand)
+  types/invoice.types.ts
+  index.ts       client-safe barrel
+  server.ts      server-only barrel
 ```
 
-### The manifest pattern
-
-Each feature has a manifest in `src/manifests/<feature>.manifest.ts` describing:
-
-- **detect** — high-level "is this installed?"
-- **files** — paths the feature owns (with `generated: true/false` to control deletion safety)
-- **packages** — runtime/dev dependencies
-- **scripts** — `package.json` script entries (with optional exact-value match)
-- **injections** — code blocks in shared files (with `presence`, optional `removePattern`, and optional `alternativeFiles` when the block's home depends on the project shape — e.g. `[locale]/layout.tsx` *or* `src/app/layout.tsx`; the block only has to be in one of the candidates that exist)
-- **apply** — `withRepair(setup<X>, repair<X>)`. Called with no drift it installs from scratch (`setup`); called with a drift array it takes the repair path (`doctor --fix`), fixing exactly the reported findings without consulting the installer's "already set up?" guard
-- **remove** — optional custom remover (defaults to the generic reverser)
-
-The manifest registry is consumed by:
-
-- `setup` — calls `apply()` directly
-- `doctor` — walks every manifest, reports drift via `checkManifest`
-- `remove` — runs `reverseManifest` (or a custom `remove`) and prints the plan
-
-Adding a manifest for a new feature is a single file. The CLI commands don't need to know about it.
-
-### Modifier conventions
-
-- **Pure transformation modules** (e.g. `headers.ts`, `package-modifier.ts`, `env-var.modifier.ts`) take strings or JSON and return strings or JSON. No filesystem.
-- **Thin async wrappers** (`index.ts` per setup service, the modifier orchestrators) handle I/O and spinners.
-- **Idempotency** is required: re-running anything is a no-op when the target state is already reached. This is what makes `doctor --fix` safe.
-
----
-
-## Project structure (generated app)
-
-The full shape of a scaffolded app (branches marked `(opt)` are stripped when the matching prompt is declined during `init`):
-
-```
-my-project/
-├── src/
-│   ├── app/                           # Next.js App Router
-│   │   ├── [locale]/                  # (opt, i18n) locale-aware routes
-│   │   │   ├── layout.tsx
-│   │   │   ├── page.tsx
-│   │   │   ├── error.tsx
-│   │   │   └── not-found.tsx
-│   │   ├── global-error.tsx
-│   │   ├── not-found.tsx
-│   │   ├── robots.ts
-│   │   ├── sitemap.ts
-│   │   ├── favicon.ico                # `favicon` command
-│   │   ├── icon.png                   # (opt, `favicon --icon`/`--all`) 512×512
-│   │   ├── apple-icon.png             # (opt, `favicon --apple`/`--all`) 180×180
-│   │   ├── opengraph-image.png        # (opt, `favicon --og`/`--all`) 1200×630
-│   │   └── twitter-image.png          # (opt, `favicon --twitter`) 1200×600
-│   ├── proxy.ts                       # (opt, i18n) Next 16 middleware replacement
-│   ├── features/                      # Feature modules (feature-first DDD)
-│   │   └── counter/                   # (opt, redux) example feature
-│   │       ├── components/
-│   │       │   ├── Counter.tsx
-│   │       │   └── Counter.test.tsx   # (opt, tests)
-│   │       ├── hooks/useCounter.ts
-│   │       ├── store/                 # slice + selectors + persist + barrel
-│   │       └── types/counter.types.ts
-│   ├── components/
-│   │   ├── common/                    # Shared UI (auto-wired barrel exports)
-│   │   └── index.ts
-│   ├── providers/
-│   │   ├── RootProvider.tsx           # Composes Store → Theme → Intl → custom
-│   │   ├── StoreProvider.tsx          # (opt, redux) useRef + PersistGate
-│   │   ├── CustomThemeProvider.tsx    # (opt, dark-mode) @teispace/next-themes
-│   │   └── index.ts                   # Barrel — `next-maker provider <name>` keeps it sorted
-│   ├── store/                         # (opt, redux) makeStore, rootReducer, typed hooks
-│   │   └── slices/ws.slice.ts         # (opt, ws) non-persisted connection state slice
-│   ├── services/
-│   │   ├── api/                       # API service barrel
-│   │   └── storage/                   # react-secure-storage wrapper
-│   ├── lib/
-│   │   ├── config/                    # seo, app-apis, app-paths, app-locales, constants, api-url (getApiBaseUrl)
-│   │   ├── env/                       # Zod-validated env schema (schema.ts, validate.ts)
-│   │   ├── logger/                    # Pino logger with auto-redaction
-│   │   ├── errors/                    # ApiException (carries requestId), catchError
-│   │   ├── enums/
-│   │   └── utils/
-│   │       ├── http/                  # (opt, http-client)
-│   │       │   ├── shared/            # runtime guards, request-id, parseApiError, toSearchParams
-│   │       │   ├── axios-client/      # interceptors, token refresh, Result-based
-│   │       │   ├── fetch-client/      # same Result pattern on native fetch, typed `params`
-│   │       │   ├── __bundle-sentinel__/  # build-time regression gate ('use client' check)
-│   │       │   ├── client-utils.ts
-│   │       │   ├── token-store.ts    # inert in cookie-mode (the default)
-│   │       │   ├── index.ts          # universal entry — safe in client/server/edge
-│   │       │   └── server.ts         # server-only entry — forwards next/headers cookies
-│   │       ├── ws/                    # (opt, ws) socket.io-client wrapper, hooks, Redux bridge
-│   │       │   ├── client/            # WsClient + lazy `wsClient` singleton (Proxy)
-│   │       │   ├── hooks/             # useWsStatus, useWsEvent, useWsEmit
-│   │       │   ├── redux/             # bridge (the only WS dispatcher) + selectors
-│   │       │   ├── shared/            # SSR guard, auth carrier, URL composer
-│   │       │   ├── types/             # ClientToServerEvents/ServerToClientEvents, payloads
-│   │       │   ├── constants.ts       # namespace, heartbeat, reconnection bounds
-│   │       │   └── index.ts           # public barrel
-│   │       └── validations/
-│   ├── i18n/                          # (opt, i18n) routing, request, navigation, translations/
-│   ├── styles/globals.css             # Tailwind v4 directives
-│   └── types/                         # common/, utility/ (Result, Either), i18n.ts
-├── test/                              # (opt, tests)
-│   ├── setup.ts                       # testing-library + jsdom setup
-│   └── test-utils.tsx                 # renderWithProviders, TestProviders
-├── scripts/
-│   ├── sync-env.ts                    # .env.example ← .env (respects `-public` markers)
-│   └── check-deprecated.ts            # fails build if @deprecated APIs are referenced
-├── public/
-├── biome.json                         # single-tool lint + format
-├── next.config.ts                     # security headers, reactCompiler (opt), bundleAnalyzer (opt), withNextIntl (opt, i18n)
-├── vitest.config.ts                   # (opt, tests)
-├── postcss.config.mjs                 # @tailwindcss/postcss
-├── tsconfig.json
-├── .env.example
-├── .czrc                              # (opt, commitizen)
-├── .husky/                            # (opt, pre-commit hooks)
-├── .lintstagedrc.mjs                  # (opt, pre-commit hooks) runs `biome check --write`
-├── commitlint.config.mjs              # (opt, pre-commit hooks)
-├── Dockerfile                         # (opt, docker) multi-stage, standalone mode
-├── docker-compose.yml                 # (opt, docker)
-├── AGENTS.md                          # Agent coding rules (referenced from CLAUDE.md)
-├── CLAUDE.md
-└── package.json
-```
-
-Features that have first-class opt-in/opt-out prompts during `init`: `httpClient`, `darkMode`, `redux`, `ws` (opt-in, requires `redux`), `i18n`, `tests`, `reactCompiler`, `bundleAnalyzer`, `docker`, `ci`, `preCommitHooks`, `commitizen`, `communityFiles`, `readme`, `copyEnv`. Each opt-out has a matching `setup --<feature>` to re-add later. `doctor` and `remove` cover the whole installed footprint via manifests.
-
----
-
-## Tech Stack
-
-**CLI:** TypeScript, esbuild, Commander.js, Enquirer, Vitest, degit.
-
-**Generated apps:** Next.js 16+, TypeScript, Tailwind CSS v4, Biome, Pino, Zod, Redux Toolkit, `@teispace/next-themes`, next-intl, Fetch / Axios HTTP clients (shared foundation), `socket.io-client` (opt-in via `ws` prompt), Vitest + RTL, React Compiler.
-
----
-
-## Recent changes
-
-Behaviour added in **v2.1.0** beyond the headline features. None of these change the user-facing CLI surface — they harden parts of the generated app that previously needed manual cleanup.
-
-- **HTTP sentinel + server entry auto-align.** The template ships `src/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel.tsx` and `src/lib/utils/http/server.ts` with imports of **both** axios and fetch client modules. When you pick a single client (at `init` or via `setup --http-client`), the inactive variant's directory is removed — and the two files would normally still reference it, breaking `yarn build`. Both are now rewritten in place to mention only the active client(s). Idempotent: re-running `setup --http-client` against the same configuration is a no-op.
-- **`remove ws` strips cleanly without manual intervention.** The WS manifest's reducer-registration and bridge-mount injections now carry `removePattern` functions, so `next-maker remove ws` deletes the `wsReducer` import, the `ws: wsReducer` entry, the unwrapped-on-purpose JSDoc, and the `attachWsBridge` `useEffect` block — without any "manual cleanup" messages. The init-time `cleanupWs` and the `remove ws` flow share the same pure helpers, so the byte-level output is identical.
-- **`useEffect` import auto-pruned.** When the WS bridge effect is stripped (init opt-out or `remove ws`), the `useEffect` import is dropped from `StoreProvider.tsx`'s React import line if no other `useEffect(` calls remain — avoiding the unused-import lint warning.
-- **Wording-tolerant strip helpers.** The `stripBundleSentinel`, `stripBridgeMount`, and `stripWsReducerRegistration` helpers now anchor on stable code tokens (import paths, function names, the `ws` + `persistReducer` keywords inside JSDoc) rather than literal comment text. Upstream template comment rewording can't silently break cleanup.
-- **`doctor` reports sentinel mount drift — and only real drift.** The HTTP manifest tracks the `<HttpClientBundleSentinel />` mount as a single code injection with two possible homes (`alternativeFiles`): `[locale]/layout.tsx` when i18n is installed, `src/app/layout.tsx` otherwise. Only the layout that actually exists is checked, so a healthy project reports clean; if you delete the mount manually, `doctor` reports it, `doctor --fix` re-mounts it, and `remove http-client` strips it.
-
----
-
-## Known issues
-
-- **`setup --redux` post-init when `ws` was opted out.** The template's `StoreProvider.tsx` ships with the WS bridge mount inline. `next-maker setup --redux` copies the template's `StoreProvider.tsx` wholesale into the project — so running it on a project where `ws` is **not** wanted leaves `import { attachWsBridge, wsClient } from '@/lib/utils/ws'` in place, and `yarn build` fails because that module doesn't exist. Workaround until a fix lands: also run `next-maker setup --ws` to install the WS layer, then `next-maker remove ws` if you don't actually want it (clean removal handles both layers). Tracked separately; out of scope for v2.1.0.
-- **`doctor --fix` can't recreate `src/app/[locale]/`.** Producing that directory means running the i18n migration, which *moves* app-router pages. Doing that unattended to a project that has since lost the segment could relocate user code with no way back, so the i18n repair skips it and doctor reports it as STILL DRIFTED with guidance. Every other part of the i18n footprint is repaired.
-- **Repairs that need starter assets need network.** `doctor --fix` re-copies deleted files (`src/i18n/`, `test/setup.ts`, `CustomThemeProvider.tsx`, …) from the starter repo via `degit`. Offline, those repairs fail and are reported as STILL DRIFTED rather than silently skipped. Package-only and code-block-only repairs work offline.
-
----
+Endpoints are registered in `src/lib/config/app-apis.ts`, Redux slices in `combineSlices` and the persistence `entries`, translation namespaces in `en.json`. Zustand slices print the one manual step (compose the creator into `AppState`).
 
 ## Development
 
-### Setup
-
 ```bash
-git clone <repository-url>
-cd npm-packages/packages/next-maker
 yarn install
+yarn workspace @teispace/next-maker test
+yarn workspace @teispace/next-maker type-check
+NEXT_MAKER_STARTER_PATH=../../../starters/nextjs-starter yarn workspace @teispace/next-maker smoke
+yarn workspace @teispace/next-maker build
 ```
 
-### Build
+`smoke` accepts case names (`default`, `minimal`, `full`, `zustand`, `spa`, `no-i18n`, `no-dark`, `no-state-i18n`, `zustand-no-i18n-axios`, `npm`); set `SMOKE_KEEP=1` to keep the generated projects.
 
-```bash
-yarn build      # esbuild bundle + tsc --emitDeclarationOnly
-```
+### Layers
 
-### Test
+- `src/composition/`: manifest loading and answer resolution, literal-path globs, anchor stripping and unwrapping, the composition planner and applier, package-manager rewrites, presets, config files, and the project record used by `setup`/`doctor`.
+- `src/commands/`: one file per command; commands parse flags, prompt, and call generators or the composition engine.
+- `src/generators/` and `src/modifiers/`: file templates and the small, idempotent edits to shared files (`rootReducer.ts`, `app-apis.ts`, `RootProvider.tsx`, `env/index.ts`, `i18n.ts`).
+- `src/config/starter.ts`: the pinned starter tag and the local-path override.
 
-```bash
-yarn test           # one-shot
-yarn test:watch
-```
+### Bumping the starter
 
-The test suite covers every modifier, generator template, and manifest runner with deterministic string/JSON inputs. Generators that touch the filesystem are tested against `os.tmpdir()` directories.
-
-### Smoke-test the built CLI
-
-```bash
-node dist/index.js init test-project
-cd test-project
-
-# Generators
-node ../dist/index.js page dashboard --loading --error
-node ../dist/index.js layout dashboard
-node ../dist/index.js component sidebar --client
-node ../dist/index.js hook debounce
-node ../dist/index.js provider auth
-node ../dist/index.js slice filters --persist
-node ../dist/index.js feature users --store persist --service axios
-node ../dist/index.js service users --fetch --crud
-node ../dist/index.js env SENTRY_DSN --type url --describe "Sentry"
-node ../dist/index.js locale es
-node ../dist/index.js test src/hooks/useDebounce.ts --force
-
-# Maintenance
-node ../dist/index.js doctor
-node ../dist/index.js setup --ws            # add WebSocket layer (project must already have --redux)
-node ../dist/index.js remove redux --dry-run
-```
-
-### Adding a new feature manifest
-
-1. Drop a file under `src/manifests/<feature>.manifest.ts` exporting a `FeatureManifest`.
-2. Append it to the `MANIFESTS` array in `src/manifests/index.ts`.
-3. (Optional) Add a `setup --<feature>` flag if you want a flag-based retrofit.
-
-`doctor` and `remove` will pick it up automatically.
-
----
+1. Tag the starter.
+2. Set `STARTER_REF` in `src/config/starter.ts`.
+3. Run `smoke` against the tag; every case must pass.
+4. Release the CLI.
 
 ## License
 
 MIT
-
----
-
-## Contributing
-
-Contributions are welcome. Please open a PR.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## Support
-
-For issues and questions, please visit our [GitHub Issues](https://github.com/teispace/npm-packages/issues).

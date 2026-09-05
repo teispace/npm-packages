@@ -39,10 +39,10 @@ describe('detectProjectSetup — ws', () => {
     await rm(project, { recursive: true, force: true });
   });
 
-  it("returns 'present' when socket.io-client + src/lib/utils/ws/ both exist", async () => {
+  it("returns 'present' when socket.io-client + src/lib/ws/ both exist", async () => {
     await seedProject(project, {
       deps: { 'socket.io-client': '^4.8.3' },
-      dirs: ['src/lib/utils/ws'],
+      dirs: ['src/lib/ws'],
     });
     const result = await detectProjectSetup(project);
     expect(result.ws).toBe('present');
@@ -62,7 +62,7 @@ describe('detectProjectSetup — ws', () => {
     // The directory check is gated behind the dep check, so this is `none`
     // even if the user happens to have left ws/ lying around.
     await seedProject(project, {
-      dirs: ['src/lib/utils/ws'],
+      dirs: ['src/lib/ws'],
     });
     const result = await detectProjectSetup(project);
     expect(result.ws).toBe('none');
@@ -79,7 +79,7 @@ describe('detectProjectSetup — ws', () => {
     // doctor uses it independently of the others.
     await seedProject(project, {
       deps: { 'socket.io-client': '^4.8.3' },
-      dirs: ['src/lib/utils/ws'],
+      dirs: ['src/lib/ws'],
     });
     const result = await detectProjectSetup(project);
     expect(result.ws).toBe('present');

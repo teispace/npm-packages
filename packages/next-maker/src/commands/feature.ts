@@ -3,141 +3,150 @@ import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
 import { assertSafeRelativePath, assertSafeSegment, resolveInside } from '../config/path-safety';
-import { directoryExists } from '../detection';
-import { createFeaturePipelineSteps, executePipeline } from '../pipelines';
+import { kebabToPascal } from '../config/utils';
+import { detectProjectSetup, directoryExists } from '../detection';
+import { generateFeature } from '../generators';
+import { addTranslationNamespace, registerApiEndpoints, registerInRootReducer } from '../modifiers';
 import { promptForFeatureDetails } from '../prompts/feature.prompt';
 
 interface FeatureCommandOptions {
-  skipStore?: boolean;
-  store?: 'persist' | 'no-persist';
-  skipService?: boolean;
-  service?: 'axios' | 'fetch';
+  api?: boolean;
+  store?: boolean;
+  persist?: boolean;
   path?: string;
 }
 
 export const registerFeatureCommand = (program: Command) => {
   program
     .command('feature [name]')
-    .description('Generate a new feature module')
-    .option('--skip-store', 'Skip Redux store generation')
-    .option('--store <type>', 'Generate Redux store with persistence option (persist|no-persist)')
-    .option('--skip-service', 'Skip API service generation')
-    .option('--service <client>', 'Generate API service with specific HTTP client (axios|fetch)')
-    .option('--path <path>', 'Custom path for feature generation (default: src/features)')
+    .description('Generate a feature module (api/, components/, store/, index.ts, server.ts)')
+    .option('--api', 'Generate the api/ layer: schema, DAL, Server Actions, queries')
+    .option('--no-api', 'Skip the api/ layer')
+    .option(
+      '--store',
+      'Generate a client-state slice (Redux or Zustand, whichever the project uses)',
+    )
+    .option('--no-store', 'Skip the slice')
+    .option('--persist', 'Persist the Redux slice across reloads')
+    .option('--no-persist', 'Do not persist the slice')
+    .option('--path <path>', 'Base directory (default: src/features)')
     .action(async (name: string | undefined, options: FeatureCommandOptions) => {
       try {
         const projectPath = process.cwd();
-
-        validateFeatureOptions(options);
-
         log(pc.cyan('\n🎯 Feature Generator\n'));
 
-        // Detect & prompt
-        const steps = createFeaturePipelineSteps();
         spinner.start('Detecting project setup...');
-        const { detectProjectSetup } = await import('../detection');
         const detection = await detectProjectSetup(projectPath);
         spinner.succeed('Project setup detected');
-
-        log(pc.dim(`  Redux: ${detection.hasRedux ? '✓' : '✗'}`));
-        log(pc.dim(`  HTTP Client: ${detection.httpClient}`));
-        log(pc.dim(`  i18n: ${detection.hasI18n ? '✓' : '✗'}\n`));
-
-        const featureOptions = await promptForFeatureDetails(
-          name,
-          detection.hasRedux,
-          detection.httpClient,
-          options.skipStore,
-          options.store,
-          options.skipService,
-          options.service,
+        log(
+          pc.dim(
+            `  state: ${detection.state}   i18n: ${detection.hasI18n ? '✓' : '✗'}   tests: ${detection.hasTests ? '✓' : '✗'}\n`,
+          ),
         );
 
-        assertSafeSegment(featureOptions.featureName, 'feature name');
+        const feature = await promptForFeatureDetails(name, detection.state, {
+          api: options.api,
+          store: options.store,
+          persist: options.persist,
+        });
+
+        assertSafeSegment(feature.featureName, 'feature name');
         if (options.path) assertSafeRelativePath(options.path, 'path');
-
         const basePath = options.path || path.join('src', 'features');
-        const featurePath = resolveInside(projectPath, basePath, featureOptions.featureName);
+        const featurePath = resolveInside(projectPath, basePath, feature.featureName);
 
-        const exists = await directoryExists(projectPath, featureOptions.featureName, basePath);
-        if (exists) {
-          logError(`Feature '${featureOptions.featureName}' already exists at ${basePath}!`);
+        if (await directoryExists(projectPath, feature.featureName, basePath)) {
+          logError(`Feature '${feature.featureName}' already exists at ${basePath}.`);
           process.exit(1);
         }
 
-        // Execute generation pipeline (generate → register API → register reducer)
-        await executePipeline(steps.slice(1), {
-          projectPath,
-          spinner,
-          featureName: featureOptions.featureName,
-          basePath,
-          featurePath,
-          createStore: featureOptions.createStore,
-          persistStore: featureOptions.persistStore,
-          createService: featureOptions.createService,
-          httpClient: featureOptions.selectedHttpClient,
-          detection,
+        spinner.start('Generating feature files...');
+        await generateFeature({
+          name: feature.featureName,
+          outputPath: featurePath,
+          createStore: feature.createStore,
+          persistStore: feature.persistStore,
+          createApi: feature.createApi,
+          state: detection.state,
+          hasI18n: detection.hasI18n,
+          hasTests: detection.hasTests,
         });
+        spinner.succeed('Feature files generated');
 
-        printFeatureSuccess(featureOptions, basePath);
+        if (detection.hasI18n) {
+          await addTranslationNamespace(projectPath, kebabToPascal(feature.featureName));
+        }
+
+        if (feature.createApi) {
+          spinner.start('Registering API endpoints...');
+          await registerApiEndpoints({ serviceName: feature.featureName, projectPath });
+          spinner.succeed('API endpoints registered');
+        }
+
+        if (feature.createStore && detection.state === 'redux') {
+          spinner.start('Registering slice in the store...');
+          await registerInRootReducer({
+            projectPath,
+            name: feature.featureName,
+            persist: feature.persistStore,
+            importPath: path.join(basePath, feature.featureName, 'store'),
+          });
+          spinner.succeed('Slice registered');
+        }
+
+        printFeatureSuccess(feature, basePath, detection.state);
       } catch (error) {
         spinner.fail('Feature generation failed');
-        logError(`${error}`);
+        logError(`${error instanceof Error ? error.message : error}`);
         process.exit(1);
       }
     });
 };
 
-const validateFeatureOptions = (options: FeatureCommandOptions) => {
-  if (options.store && !['persist', 'no-persist'].includes(options.store)) {
-    logError('Invalid --store option. Use: persist or no-persist');
-    process.exit(1);
-  }
-  if (options.service && !['axios', 'fetch'].includes(options.service)) {
-    logError('Invalid --service option. Use: axios or fetch');
-    process.exit(1);
-  }
-  if (options.skipStore && options.store) {
-    logError('Cannot use --skip-store and --store together');
-    process.exit(1);
-  }
-  if (options.skipService && options.service) {
-    logError('Cannot use --skip-service and --service together');
-    process.exit(1);
-  }
-};
-
 const printFeatureSuccess = (
-  featureOptions: { featureName: string; createStore: boolean; createService: boolean },
+  feature: { featureName: string; createStore: boolean; createApi: boolean },
   basePath: string,
+  state: string,
 ) => {
-  const displayPath = path.join(basePath, featureOptions.featureName);
-  log(pc.green(`\n✨ Feature '${featureOptions.featureName}' created successfully!\n`));
-  log(pc.dim('Generated files:'));
-  log(pc.dim(`  📂 ${displayPath}/`));
-  log(pc.dim(`     ├── components/`));
-  log(pc.dim(`     ├── hooks/`));
-  log(pc.dim(`     ├── types/`));
-  if (featureOptions.createStore) log(pc.dim(`     ├── store/`));
-  if (featureOptions.createService) log(pc.dim(`     ├── services/`));
-  log(pc.dim(`     └── index.ts\n`));
-
-  log(pc.cyan('Next steps:'));
-  const importPath = basePath.replace(/^src\//, '@/');
-  log(
-    pc.dim(
-      `  1. Import and use the feature: import { ${featureOptions.featureName} } from '${importPath}/${featureOptions.featureName}'`,
-    ),
-  );
-  if (featureOptions.createStore) {
-    log(pc.dim(`  2. Customize your Redux slice in: ${displayPath}/store/`));
-  }
-  if (featureOptions.createService) {
+  const displayPath = path.join(basePath, feature.featureName);
+  log(pc.green(`\n✨ Feature '${feature.featureName}' created.\n`));
+  log(pc.dim(`  ${displayPath}/`));
+  if (feature.createApi)
+    log(pc.dim('    api/            schema, keys, server (DAL), actions, queries'));
+  log(pc.dim('    components/'));
+  if (!feature.createApi) log(pc.dim('    hooks/'));
+  if (feature.createStore) log(pc.dim('    store/'));
+  log(pc.dim('    types/'));
+  log(pc.dim('    index.ts        client-safe barrel'));
+  if (feature.createApi) log(pc.dim('    server.ts       server-only barrel'));
+  log('');
+  log(pc.cyan('Next:'));
+  if (feature.createApi) {
     log(
       pc.dim(
-        `  3. Add API methods in: ${displayPath}/services/${featureOptions.featureName}.service.ts`,
+        `  1. Adjust the contracts in ${displayPath}/api/schema.ts and the paths in src/lib/config/app-apis.ts`,
+      ),
+    );
+    log(
+      pc.dim(
+        `  2. Read in a Server Component: import { list${pascal(feature.featureName)}s } from '@/features/${feature.featureName}/server'`,
+      ),
+    );
+    log(
+      pc.dim(
+        `  3. Prefetch + hydrate for the client list: prefetchQuery(${camel(feature.featureName)}ListQuery())`,
+      ),
+    );
+  }
+  if (feature.createStore && state === 'zustand') {
+    log(
+      pc.yellow(
+        `  ! Compose create${pascal(feature.featureName)}Slice into AppState in src/store/index.ts`,
       ),
     );
   }
   log('');
 };
+
+const camel = (kebab: string): string => kebab.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+const pascal = kebabToPascal;

@@ -5,33 +5,31 @@ export const sliceTemplate = (params: {
 }): string => {
   const { componentName, camelName, typesImportPath } = params;
   return `import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+
 import type { ${componentName}State } from '${typesImportPath}';
 
 const initialState: ${componentName}State = {
-  loading: false,
+  status: 'idle',
   error: null,
-  // Add your initial state here
 };
 
 export const ${camelName}Slice = createSlice({
   name: '${camelName}',
   initialState,
   reducers: {
-    setLoading: (state, action: PayloadAction<boolean>) => {
-      state.loading = action.payload;
-    },
-    setError: (state, action: PayloadAction<string | null>) => {
-      state.error = action.payload;
-    },
-    resetState: (state) => {
-      state.loading = false;
+    started: (state) => {
+      state.status = 'loading';
       state.error = null;
     },
+    failed: (state, action: PayloadAction<string>) => {
+      state.status = 'error';
+      state.error = action.payload;
+    },
+    reset: () => initialState,
   },
 });
 
-export const { setLoading, setError, resetState } = ${camelName}Slice.actions;
-
+export const { started, failed, reset } = ${camelName}Slice.actions;
 export const ${camelName}Reducer = ${camelName}Slice.reducer;
 `;
 };

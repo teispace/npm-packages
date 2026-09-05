@@ -1,79 +1,66 @@
 import { describe, expect, it } from 'vitest';
 import {
-  dynamicPageTemplate,
   errorTemplate,
   loadingTemplate,
   pageTemplate,
 } from '../../../src/generators/templates/page.template';
 
 describe('pageTemplate', () => {
-  it('emits a non-i18n page with metadata', () => {
+  it('emits a non-i18n page with SEO metadata', () => {
     const result = pageTemplate({
       componentName: 'Dashboard',
       routePath: '/dashboard',
       hasI18n: false,
     });
-    expect(result).toContain('export default function DashboardPage');
+    expect(result).toContain('export default function DashboardPage()');
     expect(result).toContain("title: 'Dashboard'");
+    expect(result).toContain("path: '/dashboard'");
     expect(result).not.toContain('next-intl');
   });
 
-  it('emits a locale-aware page when hasI18n is true', () => {
+  it('emits a locale-aware page that reads the locale from root params', () => {
     const result = pageTemplate({
       componentName: 'Dashboard',
       routePath: '/dashboard',
       hasI18n: true,
     });
-    expect(result).toContain(
-      "import { getTranslations, setRequestLocale } from 'next-intl/server';",
-    );
-    expect(result).toContain('setRequestLocale(locale)');
-    expect(result).toContain("namespace: 'Dashboard'");
+    expect(result).toContain("import { getLocale, getTranslations } from 'next-intl/server';");
+    expect(result).toContain("getTranslations('Dashboard')");
+    expect(result).not.toContain('setRequestLocale');
+    expect(result).not.toContain('params: Promise<{ locale');
   });
-});
 
-describe('dynamicPageTemplate', () => {
-  it('emits a non-i18n dynamic page consuming params', () => {
-    const result = dynamicPageTemplate({
+  it('types dynamic routes with PageProps', () => {
+    const plain = pageTemplate({
       componentName: 'Product',
       routePath: '/products',
-      paramName: 'id',
       hasI18n: false,
+      paramName: 'id',
     });
-    expect(result).toContain('params: Promise<{ id: string }>');
-    expect(result).toContain('const { id } = await props.params');
-  });
-
-  it('emits a locale-aware dynamic page', () => {
-    const result = dynamicPageTemplate({
+    expect(plain).toContain("PageProps<'/products/[id]'>");
+    expect(plain).toContain('const { id } = await params;');
+    const intl = pageTemplate({
       componentName: 'Product',
       routePath: '/products',
-      paramName: 'id',
       hasI18n: true,
+      paramName: 'id',
     });
-    expect(result).toContain('params: Promise<{ locale: string; id: string }>');
-    expect(result).toContain('setRequestLocale(locale)');
+    expect(intl).toContain("PageProps<'/[locale]/products/[id]'>");
   });
 });
 
-describe('loadingTemplate', () => {
-  it('emits a static loading component', () => {
-    const result = loadingTemplate({ componentName: 'Dashboard' });
-    expect(result).toContain('export default function DashboardLoading');
-    expect(result).toContain('Loading...');
+describe('loading and error templates', () => {
+  it('emits a loading boundary', () => {
+    expect(loadingTemplate({ componentName: 'Dashboard' })).toContain(
+      'export default function DashboardLoading',
+    );
   });
-});
 
-describe('errorTemplate', () => {
-  it('emits a client-side error component with reset button', () => {
+  it('emits a client error boundary that logs and resets', () => {
     const result = errorTemplate({ componentName: 'Dashboard' });
     expect(result).toContain("'use client';");
     expect(result).toContain('export default function DashboardError');
-    expect(result).toContain('reset: () => void');
-  });
-
-  it('renders the reset button with type="button" (Biome a11y/useButtonType)', () => {
-    const result = errorTemplate({ componentName: 'Dashboard' });
-    expect(result).toContain('<button type="button" onClick={() => reset()}>Try again</button>');
+    expect(result).toContain('logger.error');
+    expect(result).toContain('onClick={reset}');
   });
 });

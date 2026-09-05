@@ -59,7 +59,7 @@ export const registerHookCommand = (program: Command) => {
             sourceFile: hookFile,
             kind: 'hook',
             symbolName: hookName,
-            hookUsesStore: detection.hasRedux && !!options.feature,
+            hookUsesStore: detection.state !== 'none' && !!options.feature,
           });
           spinner.succeed('Test generated');
         }

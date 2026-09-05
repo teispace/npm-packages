@@ -1,168 +1,106 @@
-import { existsSync } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
-import { assertSafeRelativePath, assertSafeSegment } from '../config/path-safety';
-import { kebabToCamel } from '../config/utils';
+import { assertSafeRelativePath, assertSafeSegment, resolveInside } from '../config/path-safety';
+import { kebabToPascal } from '../config/utils';
 import { detectProjectSetup, directoryExists } from '../detection';
-import { generateTest } from '../generators';
-import { createSlicePipelineSteps, executePipeline } from '../pipelines';
+import { generateSlice, generateTest } from '../generators';
+import { registerInRootReducer } from '../modifiers';
 import { promptForSliceDetails } from '../prompts/slice.prompt';
 
 interface SliceCommandOptions {
   path?: string;
-  /** Tri-state from the `--persist` / `--no-persist` pair (Commander). */
   persist?: boolean;
-  /** Tri-state from the `--test` / `--no-test` pair (Commander). */
   test?: boolean;
 }
 
 export const registerSliceCommand = (program: Command) => {
   program
     .command('slice [name]')
-    .description('Generate a Redux slice')
-    .option('--path <path>', 'Custom path for slice generation (default: create new feature)')
-    .option('--persist', 'Enable persistence for this slice')
-    .option('--no-persist', 'Disable persistence for this slice')
-    .option('--test', 'Also generate a sibling test file')
+    .description('Generate a store slice (Redux or Zustand, whichever the project uses)')
+    .option('--path <path>', 'Directory for the slice (default: src/store/slices/<name>)')
+    .option('--persist', 'Persist the slice across reloads (Redux)')
+    .option('--no-persist', 'Do not persist the slice')
+    .option('--test', 'Also generate a sibling test file (Redux)')
     .option('--no-test', 'Skip test file generation')
     .action(async (name: string | undefined, options: SliceCommandOptions) => {
       try {
         const projectPath = process.cwd();
-
         log(pc.cyan('\n🔧 Slice Generator\n'));
 
-        // Detect and validate Redux
         spinner.start('Detecting project setup...');
         const detection = await detectProjectSetup(projectPath);
         spinner.succeed('Project setup detected');
 
-        if (!detection.hasRedux) {
-          spinner.fail('Redux is not setup in this project');
-          logError('Please install @reduxjs/toolkit and react-redux first');
-          log(pc.dim('\nRun: npm install @reduxjs/toolkit react-redux\n'));
-          process.exit(1);
+        if (detection.state === 'none') {
+          throw new Error(
+            'This project has no client store. Re-run init with a state store, or add one with `next-maker setup --set state=redux`.',
+          );
         }
+        log(pc.dim(`  state: ${detection.state}\n`));
 
-        log(pc.dim(`  Redux: ✓\n`));
-
-        // Prompt and resolve paths. `options.persist` is the tri-state from
-        // the --persist/--no-persist pair (true/false/undefined).
-        const sliceOptions = await promptForSliceDetails(name, options.persist);
-
+        const sliceOptions = await promptForSliceDetails(
+          name,
+          detection.state === 'zustand' ? false : options.persist,
+        );
         assertSafeSegment(sliceOptions.sliceName, 'slice name');
         if (options.path) assertSafeRelativePath(options.path, 'path');
 
-        const { basePath, slicePath } = resolveSlicePaths(
-          projectPath,
-          sliceOptions.sliceName,
-          options.path,
-        );
-
-        const featureStorePath = path.join(projectPath, basePath);
-        if (!existsSync(featureStorePath)) {
-          await mkdir(featureStorePath, { recursive: true });
+        const basePath = options.path ?? path.join('src', 'store', 'slices');
+        const slicePath = resolveInside(projectPath, basePath, sliceOptions.sliceName);
+        if (await directoryExists(projectPath, sliceOptions.sliceName, basePath)) {
+          throw new Error(`Slice '${sliceOptions.sliceName}' already exists at ${basePath}.`);
         }
 
-        const exists = await directoryExists(projectPath, sliceOptions.sliceName, basePath);
-        if (exists) {
-          logError(`Slice '${sliceOptions.sliceName}' already exists at ${basePath}!`);
-          process.exit(1);
-        }
-
-        // Execute generation pipeline
-        await executePipeline(createSlicePipelineSteps(), {
-          projectPath,
-          spinner,
-          sliceName: sliceOptions.sliceName,
-          basePath,
-          slicePath,
-          persistSlice: sliceOptions.persistSlice,
+        spinner.start('Generating slice files...');
+        await generateSlice({
+          name: sliceOptions.sliceName,
+          outputPath: slicePath,
+          persist: sliceOptions.persistSlice,
+          state: detection.state,
         });
+        spinner.succeed('Slice files generated');
 
-        // Optional sibling test.
-        let testFile: string | null = null;
-        const shouldTest = resolveShouldTest(options, detection.hasTests);
-        if (shouldTest) {
-          const sliceFile = path.join(slicePath, `${sliceOptions.sliceName}.slice.ts`);
-          spinner.start('Generating test...');
-          testFile = await generateTest({
+        if (detection.state === 'redux') {
+          spinner.start('Registering slice in the store...');
+          await registerInRootReducer({
             projectPath,
-            sourceFile: sliceFile,
-            kind: 'slice',
-            symbolName: kebabToCamel(sliceOptions.sliceName),
+            name: sliceOptions.sliceName,
+            persist: sliceOptions.persistSlice,
+            importPath: path.join(basePath, sliceOptions.sliceName),
           });
-          spinner.succeed('Test generated');
+          spinner.succeed('Slice registered');
+
+          if (options.test ?? detection.hasTests) {
+            spinner.start('Generating test...');
+            await generateTest({
+              projectPath,
+              sourceFile: path.join(slicePath, `${sliceOptions.sliceName}.slice.ts`),
+              kind: 'slice',
+              symbolName: sliceOptions.sliceName.replace(/-([a-z])/g, (_, c) => c.toUpperCase()),
+            });
+            spinner.succeed('Test generated');
+          }
         }
 
-        printSliceSuccess(sliceOptions, basePath, testFile, projectPath);
+        log(
+          pc.green(
+            `\n✨ Slice '${sliceOptions.sliceName}' created in ${basePath}/${sliceOptions.sliceName}/.\n`,
+          ),
+        );
+        if (detection.state === 'zustand') {
+          log(
+            pc.yellow(
+              `  ! Compose create${kebabToPascal(sliceOptions.sliceName)}Slice into AppState in src/store/index.ts`,
+            ),
+          );
+          log('');
+        }
       } catch (error) {
         spinner.fail('Slice generation failed');
-        logError(`${error}`);
+        logError(`${error instanceof Error ? error.message : error}`);
         process.exit(1);
       }
     });
-};
-
-const resolveSlicePaths = (
-  projectPath: string,
-  sliceName: string,
-  customPath?: string,
-): { basePath: string; slicePath: string } => {
-  let basePath: string;
-
-  if (customPath) {
-    const cleanPath = customPath.replace(/^src\//, '');
-    if (cleanPath.startsWith('features/')) {
-      const featureName = cleanPath.split('/')[1];
-      basePath = path.join('src', 'features', featureName, 'store');
-    } else {
-      basePath = path.join('src', cleanPath);
-    }
-  } else {
-    basePath = path.join('src', 'features', sliceName, 'store');
-  }
-
-  return {
-    basePath,
-    slicePath: path.join(projectPath, basePath, sliceName),
-  };
-};
-
-const resolveShouldTest = (options: { test?: boolean }, hasTests: boolean): boolean => {
-  // Tri-state `test`: false for --no-test, true for --test, undefined for
-  // neither. (The old `options.noTest` was always undefined.)
-  if (options.test === false) return false;
-  if (options.test === true) return true;
-  return hasTests;
-};
-
-const printSliceSuccess = (
-  sliceOptions: { sliceName: string; persistSlice: boolean },
-  basePath: string,
-  testFile: string | null,
-  projectPath: string,
-) => {
-  const displayPath = path.join(basePath, sliceOptions.sliceName);
-  log(pc.green(`\n✨ Slice '${sliceOptions.sliceName}' created successfully!\n`));
-  log(pc.dim('Generated files:'));
-  log(pc.dim(`  📂 ${displayPath}/`));
-  log(pc.dim(`     ├── ${sliceOptions.sliceName}.slice.ts`));
-  log(pc.dim(`     ├── ${sliceOptions.sliceName}.selectors.ts`));
-  if (sliceOptions.persistSlice) log(pc.dim(`     ├── persist.ts`));
-  log(pc.dim(`     ├── ${sliceOptions.sliceName}.types.ts`));
-  log(pc.dim(`     └── index.ts\n`));
-  if (testFile) log(pc.dim(`  🧪 ${path.relative(projectPath, testFile)}\n`));
-
-  log(pc.cyan('Next steps:'));
-  const importPath = basePath.replace(/^src\//, '@/');
-  log(
-    pc.dim(
-      `  1. Import actions: import { setLoading, setError } from '${importPath}/${sliceOptions.sliceName}'`,
-    ),
-  );
-  log(pc.dim(`  2. Use in component: dispatch(setLoading(true))`));
-  log('');
 };

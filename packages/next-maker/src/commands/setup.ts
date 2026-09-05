@@ -1,182 +1,166 @@
 import type { Command } from 'commander';
 import Enquirer from 'enquirer';
 import pc from 'picocolors';
-import { log, logError, spinner } from '../config';
-import { setupBundleAnalyzer } from '../services/setup/bundle-analyzer';
-import { setupCommitizen } from '../services/setup/commitizen';
-import { setupDarkTheme } from '../services/setup/dark-theme';
-import { setupHttpClient } from '../services/setup/http-client';
-import { setupI18n } from '../services/setup/i18n';
-import { setupReactCompiler } from '../services/setup/react-compiler';
-import { setupRedux } from '../services/setup/redux';
-import { setupSecurityHeaders } from '../services/setup/security-headers';
-import { setupTests } from '../services/setup/tests';
-import { setupValidationScripts } from '../services/setup/validate-scripts';
-import { setupWs } from '../services/setup/ws';
+import { parseSetFlags, resolveAnswers } from '../composition';
+import {
+  applyReconfigure,
+  checkoutStarter,
+  planReconfigure,
+  type ReconfigurePlan,
+  readProjectRecord,
+} from '../composition/project';
+import { log, logError } from '../config';
+import { detectPackageManager, installDependencies } from '../core/package-manager';
 
 const { prompt } = Enquirer;
 
-export interface SetupOptions {
-  httpClient?: string;
-  darkTheme?: boolean;
-  redux?: boolean;
-  ws?: boolean;
-  i18n?: boolean;
-  tests?: boolean;
-  reactCompiler?: boolean;
-  bundleAnalyzer?: boolean;
-  securityHeaders?: boolean;
-  validateScripts?: boolean;
-  commitizen?: boolean;
+interface SetupCommandOptions {
+  set?: string[];
+  yes?: boolean;
+  dryRun?: boolean;
+  install?: boolean;
+  starterPath?: string;
 }
 
-type SetupHandler = (cwd: string) => Promise<void>;
+const collect = (value: string, previous: string[] = []): string[] => [...previous, value];
 
-interface FeatureSpec {
-  /** Machine value: the enquirer choice `name`, handler-map key, and CLI label. */
-  key: string;
-  /** Human-readable label shown in the interactive picker. */
-  label: string;
-  /** Which `SetupOptions` flag enables this feature non-interactively. */
-  flag: keyof SetupOptions;
-  handler: SetupHandler;
-}
-
-/**
- * Single source of truth for every setup feature. The interactive choices, the
- * flag-based dispatch, and the handler lookup are all derived from this list so
- * they can never drift out of sync again (the original bug was three parallel
- * lists where the choices returned labels but the handler map was keyed by
- * machine values, so every interactive selection fell through to "not
- * implemented yet").
- *
- * Order matters: redux must run before ws (the ws bridge dispatches into a
- * Redux slice, so the store must exist first).
- */
-export const SETUP_FEATURES: readonly FeatureSpec[] = [
-  {
-    key: 'http-client',
-    label: 'HTTP Client (Axios/Fetch)',
-    flag: 'httpClient',
-    handler: setupHttpClient,
-  },
-  { key: 'dark-theme', label: 'Dark Theme', flag: 'darkTheme', handler: setupDarkTheme },
-  { key: 'redux', label: 'Redux Toolkit', flag: 'redux', handler: setupRedux },
-  { key: 'ws', label: 'WebSocket Client (requires Redux)', flag: 'ws', handler: setupWs },
-  { key: 'i18n', label: 'Internationalization (next-intl)', flag: 'i18n', handler: setupI18n },
-  { key: 'tests', label: 'Testing (Vitest + RTL)', flag: 'tests', handler: setupTests },
-  {
-    key: 'react-compiler',
-    label: 'React Compiler',
-    flag: 'reactCompiler',
-    handler: setupReactCompiler,
-  },
-  {
-    key: 'bundle-analyzer',
-    label: 'Bundle Analyzer',
-    flag: 'bundleAnalyzer',
-    handler: setupBundleAnalyzer,
-  },
-  {
-    key: 'security-headers',
-    label: 'Security Headers',
-    flag: 'securityHeaders',
-    handler: setupSecurityHeaders,
-  },
-  {
-    key: 'validate-scripts',
-    label: 'Validation Scripts',
-    flag: 'validateScripts',
-    handler: setupValidationScripts,
-  },
-  { key: 'commitizen', label: 'Commitizen', flag: 'commitizen', handler: setupCommitizen },
-] as const;
-
-/** Optional seam so tests can inject a fake prompt and assert dispatch. */
-export interface RunSetupDeps {
-  promptFn?: typeof prompt;
-  cwd?: () => string;
-}
-
-/**
- * Core setup logic, extracted from the commander action so it can be unit
- * tested with an injected prompt. Returns the key of the feature that was run
- * (or `null` when nothing ran), which makes dispatch directly assertable.
- */
-export const runSetup = async (
-  options: SetupOptions,
-  deps: RunSetupDeps = {},
-): Promise<string | null> => {
-  const promptFn = deps.promptFn ?? prompt;
-  const getCwd = deps.cwd ?? (() => process.cwd());
-
-  log(pc.cyan('\n🔧 Setup Wizard\n'));
-
-  // Non-interactive path: run every feature whose flag was passed, in the
-  // canonical SETUP_FEATURES order (so redux precedes ws).
-  const flagged = SETUP_FEATURES.filter((f) => Boolean(options[f.flag]));
-  if (flagged.length > 0) {
-    for (const feature of flagged) {
-      await feature.handler(getCwd());
+export const printReconfigurePlan = (plan: ReconfigurePlan): void => {
+  const changed = Object.keys(plan.after).filter(
+    (k) => JSON.stringify(plan.after[k]) !== JSON.stringify(plan.before[k]),
+  );
+  log(pc.bold('Options'));
+  for (const k of changed)
+    log(
+      `  ${pc.dim(k.padEnd(20))} ${String(plan.before[k])} ${pc.dim('→')} ${String(plan.after[k])}`,
+    );
+  if (plan.turningOn.length)
+    log(`  ${pc.green('on ')} ${plan.turningOn.map((f) => f.id).join(', ')}`);
+  if (plan.turningOff.length)
+    log(`  ${pc.red('off')} ${plan.turningOff.map((f) => f.id).join(', ')}`);
+  log('');
+  if (plan.copy.length) {
+    log(pc.bold('Files copied from the starter'));
+    for (const f of plan.copy) log(`  ${pc.green('+')} ${f}`);
+  }
+  if (plan.remove.length) {
+    log(pc.bold('Files removed'));
+    for (const f of plan.remove) log(`  ${pc.red('-')} ${f}`);
+  }
+  const pkgs = [...Object.keys(plan.addPackages), ...Object.keys(plan.addDevPackages)];
+  if (pkgs.length) log(`${pc.bold('Packages added')}\n  ${pkgs.join(', ')}`);
+  if (plan.removePackages.length)
+    log(`${pc.bold('Packages removed')}\n  ${plan.removePackages.join(', ')}`);
+  if (Object.keys(plan.addScripts).length)
+    log(`${pc.bold('Scripts added')}\n  ${Object.keys(plan.addScripts).join(', ')}`);
+  if (plan.removeScripts.length)
+    log(`${pc.bold('Scripts removed')}\n  ${plan.removeScripts.join(', ')}`);
+  if (plan.unwrapJsx.length || plan.unwrapCall.length) {
+    log(pc.bold('Wrappers removed'));
+    for (const u of plan.unwrapJsx) log(`  ${pc.red('-')} <${u.tag}> in ${u.file}`);
+    for (const u of plan.unwrapCall) log(`  ${pc.red('-')} ${u.name}() in ${u.file}`);
+  }
+  if (plan.manual.length) {
+    log('');
+    log(pc.yellow(pc.bold('Manual steps')));
+    log(
+      pc.dim(
+        '  Shared files were composed at init; the starter marks these lines for the feature:',
+      ),
+    );
+    for (const m of plan.manual) {
+      log(
+        `  ${m.direction === 'add' ? pc.green('add') : pc.red('delete')} for ${pc.bold(m.feature)}`,
+      );
+      for (const s of m.snippets) {
+        log(`    ${pc.dim(s.file)}`);
+        for (const line of s.lines) log(`      ${line}`);
+      }
     }
-    return flagged.length === 1 ? flagged[0].key : 'multiple';
   }
-
-  // Interactive path. Enquirer's `select` returns the chosen choice's `name`,
-  // so `name` holds the machine key and `message` the human label.
-  const setupChoice = await promptFn<{ feature: string }>([
-    {
-      type: 'select',
-      name: 'feature',
-      message: 'What would you like to setup?',
-      choices: [
-        ...SETUP_FEATURES.map((f) => ({ name: f.key, message: f.label })),
-        { name: 'cancel', message: 'Cancel' },
-      ],
-    },
-  ]);
-  const feature = setupChoice.feature;
-
-  if (feature === 'cancel') {
-    log(pc.yellow('Setup cancelled.'));
-    return null;
-  }
-
-  const spec = SETUP_FEATURES.find((f) => f.key === feature);
-  if (spec) {
-    await spec.handler(getCwd());
-    return spec.key;
-  }
-
-  log(pc.yellow(`\n⚠️  ${feature} setup is not implemented yet.`));
-  return null;
+  log('');
 };
 
+/**
+ * Change starter options on an existing project: turn features on or off by
+ * re-deriving their footprint from a pristine starter checkout. File and
+ * package changes are applied; anchored edits in shared files are listed.
+ */
 export const registerSetupCommand = (program: Command) => {
   program
     .command('setup')
-    .description('Setup features in an existing Next.js project')
-    .option('--http-client', 'Setup HTTP client (axios|fetch)')
-    .option('--dark-theme', 'Setup Dark Theme (Tailwind + @teispace/next-themes)')
-    .option('--redux', 'Setup Redux Toolkit')
-    .option('--ws', 'Setup WebSocket client (socket.io-client + Redux bridge; requires --redux)')
-    .option('--i18n', 'Setup next-intl for internationalization')
-    .option('--tests', 'Setup testing (Vitest + React Testing Library)')
-    .option('--react-compiler', 'Enable the React Compiler')
-    .option('--bundle-analyzer', 'Add @next/bundle-analyzer')
-    .option('--security-headers', 'Add hardened HTTP headers to next.config.ts')
+    .description('Turn starter features on or off in an existing project (e.g. --set ws=true)')
     .option(
-      '--validate-scripts',
-      'Add scripts/sync-env.ts, scripts/check-deprecated.ts, and the validate chain',
+      '--set <key=value>',
+      'Option to change (repeatable), e.g. --set i18n=false --set state=zustand',
+      collect,
     )
-    .option('--commitizen', 'Add Commitizen with the conventional-changelog adapter')
-    .action(async (options: SetupOptions) => {
+    .option('-y, --yes', 'Skip the confirmation prompt')
+    .option('--dry-run', 'Print the plan without writing')
+    .option('--no-install', 'Skip dependency installation after the change')
+    .option('--starter-path <dir>', 'Use a local starter checkout')
+    .action(async (options: SetupCommandOptions) => {
+      const projectPath = process.cwd();
+      let dispose: (() => Promise<void>) | undefined;
       try {
-        await runSetup(options);
+        const record = await readProjectRecord(projectPath);
+        const overrides = parseSetFlags(options.set);
+        if (Object.keys(overrides).length === 0) {
+          throw new Error(
+            'Nothing to change. Pass at least one --set key=value (run `next-maker options` to list them).',
+          );
+        }
+        const checkout = await checkoutStarter(record, { starterPath: options.starterPath });
+        dispose = checkout.dispose;
+
+        const { answers, forced, unknown } = resolveAnswers(checkout.manifest, {
+          ...record.answers,
+          ...overrides,
+        });
+        for (const name of unknown) log(pc.yellow(`  ! unknown option "${name}" ignored`));
+        for (const f of forced) log(pc.yellow(`  ! ${f.reason}; ${f.option} turned off`));
+
+        const plan = await planReconfigure(projectPath, record, checkout, answers);
+        log(pc.cyan('\n🔧 Setup\n'));
+        printReconfigurePlan(plan);
+        if (plan.turningOn.length === 0 && plan.turningOff.length === 0) {
+          log(pc.dim('No feature changes; the options already have these values.\n'));
+          return;
+        }
+        if (options.dryRun) {
+          log(pc.dim('Dry run: nothing was written.\n'));
+          return;
+        }
+        if (!options.yes) {
+          const { confirm } = await prompt<{ confirm: boolean }>({
+            type: 'confirm',
+            name: 'confirm',
+            message: 'Apply these changes?',
+            initial: false,
+          });
+          if (!confirm) {
+            log(pc.yellow('Aborted.\n'));
+            return;
+          }
+        }
+        await applyReconfigure(projectPath, checkout, plan, record);
+        if (options.install !== false) {
+          const pm = record.packageManager ?? (await detectPackageManager(projectPath));
+          log(pc.dim(`Installing with ${pm}...`));
+          await installDependencies(projectPath, pm);
+        }
+        log(pc.green('\n✓ Applied.'));
+        if (plan.manual.length)
+          log(
+            pc.yellow(
+              '  Finish the manual steps listed above, then run `next-maker doctor --compile`.',
+            ),
+          );
+        log('');
       } catch (error) {
-        spinner.fail('Setup failed');
-        logError(`${error}`);
+        logError(`${error instanceof Error ? error.message : error}`);
         process.exit(1);
+      } finally {
+        await dispose?.();
       }
     });
 };

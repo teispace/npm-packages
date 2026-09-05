@@ -57,13 +57,32 @@ const updateSupportedLocaleType = async (projectPath: string, code: string): Pro
 
   let content = await readFile(typesPath);
 
-  // Add to SupportedLocale union: 'en' | 'es' → 'en' | 'es' | 'fr'
+  // v2: `export const SUPPORTED_LOCALES = ['en'] as const;`
+  const arrayRe = /export const SUPPORTED_LOCALES = \[([^\]]*)\] as const;/;
+  const arrayMatch = content.match(arrayRe);
+  if (arrayMatch) {
+    if (arrayMatch[1].includes(`'${code}'`)) return;
+    const entries = arrayMatch[1]
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    entries.push(`'${code}'`);
+    content = content.replace(
+      arrayRe,
+      `export const SUPPORTED_LOCALES = [${entries.join(', ')}] as const;`,
+    );
+    await writeFileCore(typesPath, content);
+    return;
+  }
+
+  // 1.x: `export type SupportedLocale = 'en' | 'es';`
   const localeTypeRegex = /export type SupportedLocale = (.*);/;
   const match = content.match(localeTypeRegex);
-
   if (match && !match[1].includes(`'${code}'`)) {
-    const newType = `${match[1]} | '${code}'`;
-    content = content.replace(localeTypeRegex, `export type SupportedLocale = ${newType};`);
+    content = content.replace(
+      localeTypeRegex,
+      `export type SupportedLocale = ${match[1]} | '${code}';`,
+    );
     await writeFileCore(typesPath, content);
   }
 };
@@ -91,6 +110,7 @@ const updateAppLocalesConfig = async (
     locale: '${code}',
     flag: '${flag}',
     country: '${country}',
+    ogLocale: '${code}_${code.toUpperCase()}',
   },\n`;
 
   content = content.slice(0, closingBracket) + newLocale + content.slice(closingBracket);
