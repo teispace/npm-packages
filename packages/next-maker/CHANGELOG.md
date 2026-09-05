@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.0.2](https://github.com/teispace/npm-packages/compare/next-maker-v4.0.1...next-maker-v4.0.2) (2026-09-05)
+
+
+### Bug Fixes
+
+* **next-maker:** pin the starter to v1.1.1 and report the package manager's output when an install fails ([#158](https://github.com/teispace/npm-packages/issues/158)) ([3fb1b4d](https://github.com/teispace/npm-packages/commit/3fb1b4d80dc72b791d1c919fa73aefd59f4d0a72))
+
 ## [4.0.1](https://github.com/teispace/npm-packages/compare/next-maker-v4.0.0...next-maker-v4.0.1) (2026-09-05)
 
 
