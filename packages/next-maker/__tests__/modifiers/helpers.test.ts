@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   addImportStatement,
   addToAppApis,
-  addToCombineReducers,
+  addToCombineSlices,
+  addToPersistenceEntries,
 } from '../../src/modifiers/helpers';
 
 describe('addImportStatement', () => {
@@ -49,42 +50,34 @@ export const rootReducer = combineReducers({});
   });
 });
 
-describe('addToCombineReducers', () => {
-  it('should add a reducer entry to combineReducers', () => {
-    const content = `const rootReducer = combineReducers({
-  auth: authReducer,
-})`;
-    const result = addToCombineReducers(content, 'counter', 'counterReducer');
-
-    expect(result).toContain('counter: counterReducer,');
-    expect(result).toContain('auth: authReducer,');
+describe('addToCombineSlices', () => {
+  it('inserts the slice before persistSlice', () => {
+    const content = 'export const rootReducer = combineSlices(counterSlice, persistSlice);\n';
+    const out = addToCombineSlices(content, 'cartSlice');
+    expect(out).toContain('combineSlices(counterSlice, cartSlice, persistSlice)');
   });
 
-  it('should add to empty combineReducers', () => {
-    const content = `const rootReducer = combineReducers({})`;
-    const result = addToCombineReducers(content, 'auth', 'authReducer');
-
-    expect(result).toContain('auth: authReducer,');
+  it('is idempotent and appends when persistSlice is absent', () => {
+    const once = addToCombineSlices('combineSlices(a)', 'b');
+    expect(once).toBe('combineSlices(a, b)');
+    expect(addToCombineSlices(once, 'b')).toBe(once);
   });
 
-  it('should add persistReducer entry', () => {
-    const content = `const rootReducer = combineReducers({
-  auth: authReducer,
-})`;
-    const result = addToCombineReducers(
-      content,
-      'counter',
-      'persistReducer(counterPersistConfig, counterReducer)',
+  it('handles the multi-line form and throws when the call is missing', () => {
+    const multi = 'combineSlices(\n  counterSlice,\n  wsSlice,\n  persistSlice,\n)';
+    expect(addToCombineSlices(multi, 'cartSlice')).toContain(
+      'combineSlices(counterSlice, wsSlice, cartSlice, persistSlice)',
     );
-
-    expect(result).toContain('counter: persistReducer(counterPersistConfig, counterReducer),');
+    expect(() => addToCombineSlices('nothing here', 'x')).toThrow(/combineSlices/);
   });
+});
 
-  it('should throw when combineReducers not found', () => {
-    const content = `const rootReducer = {};`;
-    expect(() => addToCombineReducers(content, 'auth', 'authReducer')).toThrow(
-      'Could not find combineReducers',
-    );
+describe('addToPersistenceEntries', () => {
+  it('appends an entry once', () => {
+    const content = 'createPersistence({ entries: [countPersistence], prefix: "app" })';
+    const out = addToPersistenceEntries(content, 'cartPersistence');
+    expect(out).toContain('entries: [countPersistence, cartPersistence]');
+    expect(addToPersistenceEntries(out, 'cartPersistence')).toBe(out);
   });
 });
 

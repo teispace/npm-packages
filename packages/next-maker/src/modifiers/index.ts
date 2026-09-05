@@ -15,7 +15,12 @@ export {
   injectSchemaEntry,
   validateName as validateEnvVarName,
 } from './env-var.modifier';
-export { addImportStatement, addToAppApis, addToCombineReducers } from './helpers';
+export {
+  addImportStatement,
+  addToAppApis,
+  addToCombineSlices,
+  addToPersistenceEntries,
+} from './helpers';
 export {
   addProviderToBarrel,
   findRootProviderFile,

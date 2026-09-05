@@ -9,7 +9,7 @@ A professional Yarn 4 monorepo for Teispace's published npm packages, with autom
 | **[@teispace/env](./packages/env)** | Type-safe, validated environment variables for every JS runtime & framework — load, validate, coerce, and type your env. Zero runtime deps. |
 | **[@teispace/next-themes](./packages/next-themes)** | Feature-rich, lightweight theme management for Next.js & React. Zero-flash SSR, hybrid storage, view transitions, typed themes. Zero runtime deps. |
 | **[@teispace/teieditor](./packages/teieditor)** | A feature-rich, fully customizable rich-text editor built on Lexical. shadcn-style — install, use, customize. |
-| **[@teispace/next-maker](./packages/next-maker)** | CLI to scaffold and extend Teispace Next.js applications with interactive setup. |
+| **[@teispace/next-maker](./packages/next-maker)** | CLI that composes Next.js projects and pnpm + Turborepo workspaces from the Teispace starter manifest, keeps them aligned (`setup`, `doctor`, `upgrade`), and generates features, pages, slices, and API layers. |
 
 ## 🚀 Quick Start
 

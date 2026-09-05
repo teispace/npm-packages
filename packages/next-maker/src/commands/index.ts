@@ -8,6 +8,7 @@ import { registerFeatureCommand } from './feature';
 import { registerHookCommand } from './hook';
 import { registerLayoutCommand } from './layout';
 import { registerLocaleCommand } from './locale';
+import { registerOptionsCommand } from './options';
 import { registerPageCommand } from './page';
 import { registerProviderCommand } from './provider';
 import { registerRemoveCommand } from './remove';
@@ -15,10 +16,15 @@ import { registerServiceCommand } from './service';
 import { registerSetupCommand } from './setup';
 import { registerSliceCommand } from './slice';
 import { registerTestCommand } from './test';
+import { registerUpgradeCommand } from './upgrade';
+import { registerWorkspaceCommand } from './workspace';
 
 export const registerCommands = (program: Command) => {
   registerAppCommand(program);
+  registerWorkspaceCommand(program);
   registerSetupCommand(program);
+  registerOptionsCommand(program);
+  registerUpgradeCommand(program);
   registerFeatureCommand(program);
   registerSliceCommand(program);
   registerServiceCommand(program);

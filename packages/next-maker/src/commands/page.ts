@@ -11,6 +11,7 @@ import { promptForPageDetails } from '../prompts/page.prompt';
 
 interface PageCommandOptions {
   dynamic?: string;
+  group?: string;
   loading?: boolean;
   error?: boolean;
 }
@@ -20,8 +21,11 @@ export const registerPageCommand = (program: Command) => {
     .command('page [name]')
     .description('Generate a new page/route')
     .option('--dynamic <param>', 'Create dynamic route with parameter (e.g., id)')
+    .option('--group <name>', 'Route group to place the page in, e.g. app or marketing')
     .option('--loading', 'Generate loading.tsx')
+    .option('--no-loading', 'Skip loading.tsx')
     .option('--error', 'Generate error.tsx')
+    .option('--no-error', 'Skip error.tsx')
     .action(async (name: string | undefined, options: PageCommandOptions) => {
       try {
         const projectPath = process.cwd();
@@ -44,10 +48,14 @@ export const registerPageCommand = (program: Command) => {
         // Validate the resolved name (arg or prompt) before joining to a path.
         assertSafeSegment(pageName, 'page name');
         if (options.dynamic) assertSafeSegment(options.dynamic, 'dynamic param');
+        if (options.group) assertSafeSegment(options.group, 'route group');
         const componentName = kebabToPascal(pageName);
 
         // Check existence
-        const baseDir = detection.hasI18n ? 'src/app/[locale]' : 'src/app';
+        const baseDir = path.join(
+          detection.hasI18n ? 'src/app/[locale]' : 'src/app',
+          options.group ? `(${options.group})` : '',
+        );
         const exists = await directoryExists(projectPath, pageName, baseDir);
         if (exists) {
           logError(`Page '${pageName}' already exists at ${baseDir}/${pageName}!`);
@@ -60,6 +68,7 @@ export const registerPageCommand = (program: Command) => {
           name: pageName,
           projectPath,
           hasI18n: detection.hasI18n,
+          group: options.group,
           dynamic: options.dynamic,
           withLoading: options.loading ?? pageOptions.withLoading,
           withError: options.error ?? pageOptions.withError,

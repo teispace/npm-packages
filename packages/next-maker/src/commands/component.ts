@@ -6,6 +6,7 @@ import { assertSafeRelativePath, assertSafeSegment } from '../config/path-safety
 import { kebabToPascal } from '../config/utils';
 import { detectProjectSetup } from '../detection';
 import { generateComponent, generateTest } from '../generators';
+import { addTranslationNamespace } from '../modifiers';
 import { promptForComponentDetails } from '../prompts/component.prompt';
 
 interface ComponentCommandOptions {
@@ -59,6 +60,7 @@ export const registerComponentCommand = (program: Command) => {
           featurePath: options.feature,
         });
         spinner.succeed('Component generated');
+        if (hasI18n) await addTranslationNamespace(projectPath, componentName);
 
         let testFile: string | null = null;
         if (shouldTest) {
@@ -76,7 +78,7 @@ export const registerComponentCommand = (program: Command) => {
             sourceFile: componentFile,
             kind: 'component',
             symbolName: componentName,
-            hasRedux: detection.hasRedux,
+            hasState: detection.state !== 'none',
             hasI18n: detection.hasI18n,
           });
           spinner.succeed('Test generated');

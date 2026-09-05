@@ -22,9 +22,26 @@ const tailOf = (error: unknown): string => {
   return text.split('\n').filter(Boolean).slice(-12).join('\n');
 };
 
+/**
+ * A composed project carries the starter's lockfile while its dependency
+ * list was pruned, so the first install must be allowed to update it. In CI
+ * (`CI=true`) pnpm and Yarn default to frozen/immutable installs and would
+ * refuse; the flags make the behaviour the same everywhere.
+ */
+const installArgs = (manager: PackageManager): string[] => {
+  switch (manager) {
+    case 'pnpm':
+      return ['install', '--no-frozen-lockfile'];
+    case 'yarn':
+      return ['install', '--no-immutable'];
+    default:
+      return ['install'];
+  }
+};
+
 export const installDependencies = async (cwd: string, manager: PackageManager): Promise<void> => {
   try {
-    await run(manager, ['install'], cwd);
+    await run(manager, installArgs(manager), cwd);
   } catch (error) {
     throw new Error(`Failed to install dependencies with ${manager}:\n${tailOf(error)}`, {
       cause: error,

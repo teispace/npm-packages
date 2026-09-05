@@ -1,7 +1,7 @@
 {
   "name": "@teispace/next-maker",
   "version": "4.0.2",
-  "description": "Create a new Teispace Next.js application with interactive setup.",
+  "description": "Create and grow Next.js 16 applications from the Teispace starter: composable init, feature-aware setup and doctor, and generators for the server-first data layer.",
   "keywords": [
     "nextjs",
     "react",
@@ -9,7 +9,11 @@
     "tailwindcss",
     "starter",
     "template",
-    "redux"
+    "redux",
+    "zustand",
+    "tanstack-query",
+    "server-actions",
+    "cli"
   ],
   "type": "module",
   "homepage": "https://github.com/teispace/npm-packages/tree/main/packages/next-maker#readme",
@@ -39,7 +43,8 @@
     "test:cov": "vitest run --coverage",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "prepublishOnly": "yarn clean && yarn build"
+    "prepublishOnly": "yarn clean && yarn build",
+    "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
     "commander": "^15.0.0",

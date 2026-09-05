@@ -9,6 +9,9 @@ import { promptForLocaleDetails } from '../prompts/locale.prompt';
 
 interface LocaleCommandOptions {
   copyTranslations?: boolean;
+  name?: string;
+  country?: string;
+  flag?: string;
 }
 
 export const registerLocaleCommand = (program: Command) => {
@@ -16,6 +19,9 @@ export const registerLocaleCommand = (program: Command) => {
     .command('locale [code]')
     .description('Add a new locale/language')
     .option('--copy-translations', 'Copy translations from English instead of empty values')
+    .option('--name <name>', 'Language name, e.g. Spanish')
+    .option('--country <country>', 'Country, e.g. Spain')
+    .option('--flag <emoji>', 'Flag emoji, e.g. 🇪🇸')
     .action(async (code: string | undefined, options: LocaleCommandOptions) => {
       try {
         const projectPath = process.cwd();
@@ -37,6 +43,9 @@ export const registerLocaleCommand = (program: Command) => {
         // Prompt — skip questions whose answers were already given via flags.
         const localeOptions = await promptForLocaleDetails(code, {
           copyTranslations: options.copyTranslations,
+          name: options.name,
+          country: options.country,
+          flag: options.flag,
         });
 
         // Validate the locale code (arg or prompt) before it becomes a filename.

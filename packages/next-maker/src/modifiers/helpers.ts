@@ -21,28 +21,41 @@ export const addImportStatement = (fileContent: string, importStatement: string)
 };
 
 /**
- * Add a reducer entry to a combineReducers({...}) call.
+ * Add a slice to a `combineSlices(...)` call, before the trailing
+ * `persistSlice` when present so the persistence reducer stays last.
  */
-export const addToCombineReducers = (
-  fileContent: string,
-  reducerKey: string,
-  reducerEntry: string,
-): string => {
-  const combineReducersRegex = /combineReducers\(\{([^}]*)\}\)/s;
-  const match = fileContent.match(combineReducersRegex);
+export const addToCombineSlices = (fileContent: string, sliceIdentifier: string): string => {
+  const re = /combineSlices\(([\s\S]*?)\)/;
+  const match = fileContent.match(re);
+  if (!match) throw new Error('Could not find combineSlices in rootReducer.ts');
 
-  if (!match) {
-    throw new Error('Could not find combineReducers in rootReducer.ts');
-  }
+  const args = match[1]
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (args.includes(sliceIdentifier)) return fileContent;
 
-  const reducersContent = match[1];
-  const newEntry = `\n  ${reducerKey}: ${reducerEntry},`;
-  const updatedReducersContent = reducersContent.trimEnd() + newEntry;
+  const persistIdx = args.indexOf('persistSlice');
+  if (persistIdx === -1) args.push(sliceIdentifier);
+  else args.splice(persistIdx, 0, sliceIdentifier);
 
-  return fileContent.replace(
-    combineReducersRegex,
-    `combineReducers({${updatedReducersContent}\n})`,
-  );
+  const oneLine = `combineSlices(${args.join(', ')})`;
+  const multi = `combineSlices(\n  ${args.join(',\n  ')},\n)`;
+  return fileContent.replace(re, oneLine.length <= 100 ? oneLine : multi);
+};
+
+/** Add a persistence entry to the `entries: [...]` array in `src/store/index.ts`. */
+export const addToPersistenceEntries = (fileContent: string, entryIdentifier: string): string => {
+  const re = /entries:\s*\[([\s\S]*?)\]/;
+  const match = fileContent.match(re);
+  if (!match) throw new Error('Could not find `entries: [...]` in src/store/index.ts');
+  const entries = match[1]
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (entries.includes(entryIdentifier)) return fileContent;
+  entries.push(entryIdentifier);
+  return fileContent.replace(re, `entries: [${entries.join(', ')}]`);
 };
 
 /**

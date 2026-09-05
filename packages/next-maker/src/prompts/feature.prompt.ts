@@ -1,123 +1,75 @@
 import Enquirer from 'enquirer';
+import type { StateStore } from '../generators/types';
 
 const { prompt } = Enquirer;
 
 export interface FeatureOptions {
   featureName: string;
-  hasRedux: boolean;
+  createApi: boolean;
   createStore: boolean;
   persistStore: boolean;
-  httpClient: 'axios' | 'fetch' | 'both' | 'none';
-  createService: boolean;
-  selectedHttpClient?: 'axios' | 'fetch';
+}
+
+export interface FeaturePromptPresets {
+  api?: boolean;
+  store?: boolean;
+  persist?: boolean;
 }
 
 export const promptForFeatureDetails = async (
-  featureName?: string,
-  hasRedux?: boolean,
-  httpClient?: 'axios' | 'fetch' | 'both' | 'none',
-  skipStore?: boolean,
-  storeOption?: 'persist' | 'no-persist',
-  skipService?: boolean,
-  serviceClient?: 'axios' | 'fetch',
+  featureName: string | undefined,
+  state: StateStore,
+  presets: FeaturePromptPresets = {},
 ): Promise<FeatureOptions> => {
   const questions: any[] = [];
 
-  // Feature name
   if (!featureName) {
     questions.push({
       type: 'input',
       name: 'featureName',
-      message: 'What is the feature name?',
+      message: 'Feature name (kebab-case):',
       initial: 'my-feature',
-      validate: (value: string) => {
-        if (!/^[a-z0-9-]+$/.test(value)) {
-          return 'Feature name must be lowercase and contain only alphanumeric characters and hyphens.';
-        }
-        return true;
-      },
+      validate: (value: string) =>
+        /^[a-z][a-z0-9-]*$/.test(value) || 'Use lowercase letters, digits, and hyphens only.',
     });
   }
 
-  // Redux store questions
-  if (hasRedux && skipStore === undefined && storeOption === undefined) {
+  if (presets.api === undefined) {
+    questions.push({
+      type: 'confirm',
+      name: 'createApi',
+      message: 'Generate the api/ layer (schema, DAL, Server Actions, queries)?',
+      initial: true,
+    });
+  }
+
+  if (state !== 'none' && presets.store === undefined) {
     questions.push({
       type: 'confirm',
       name: 'createStore',
-      message: 'Generate Redux store for this feature?',
-      initial: true,
-    });
-
-    questions.push({
-      type: 'confirm',
-      name: 'persistStore',
-      message: 'Enable persistence for this store?',
+      message: `Generate a ${state === 'zustand' ? 'Zustand' : 'Redux'} slice for client-only state?`,
       initial: false,
-      skip() {
-        // Skip if createStore is false
-
-        return !(this as any).state.answers.createStore;
-      },
     });
-  }
-
-  // HTTP service questions
-  if (
-    httpClient &&
-    httpClient !== 'none' &&
-    skipService === undefined &&
-    serviceClient === undefined
-  ) {
-    questions.push({
-      type: 'confirm',
-      name: 'createService',
-      message: 'Generate API service for this feature?',
-      initial: true,
-    });
-
-    if (httpClient === 'both') {
+    if (state === 'redux' && presets.persist === undefined) {
       questions.push({
-        type: 'select',
-        name: 'selectedHttpClient',
-        message: 'Which HTTP client to use for the service?',
-        choices: ['fetch', 'axios'],
-        initial: 0,
+        type: 'confirm',
+        name: 'persistStore',
+        message: 'Persist the slice across reloads?',
+        initial: false,
         skip() {
-          // Skip if createService is false
-
-          return !(this as any).state.answers.createService;
+          return !(this as any).state.answers.createStore;
         },
       });
     }
   }
 
-  const answers: any = questions.length > 0 ? await prompt(questions) : {};
+  const answers =
+    questions.length > 0 ? ((await prompt(questions)) as Partial<FeatureOptions>) : {};
 
   return {
-    featureName: featureName || (answers.featureName as string),
-    hasRedux: hasRedux || false,
-    createStore:
-      skipStore === true
-        ? false
-        : storeOption !== undefined
-          ? true
-          : (answers.createStore as boolean) || false,
-    persistStore:
-      storeOption === 'persist'
-        ? true
-        : storeOption === 'no-persist'
-          ? false
-          : (answers.persistStore as boolean) || false,
-    httpClient: httpClient || 'none',
-    createService:
-      skipService === true
-        ? false
-        : serviceClient !== undefined
-          ? true
-          : (answers.createService as boolean) || false,
-    selectedHttpClient:
-      serviceClient ||
-      (answers.selectedHttpClient as 'axios' | 'fetch' | undefined) ||
-      (httpClient === 'both' ? 'fetch' : httpClient !== 'none' ? httpClient : undefined),
+    featureName: featureName ?? (answers.featureName as string),
+    createApi: presets.api ?? answers.createApi ?? true,
+    createStore: state !== 'none' && (presets.store ?? answers.createStore ?? false),
+    persistStore: state === 'redux' && (presets.persist ?? answers.persistStore ?? false),
   };
 };

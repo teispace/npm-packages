@@ -1,6 +1,6 @@
+export { generateApi } from './api.generator';
 export type { ComponentGeneratorOptions } from './component.generator';
 export { generateComponent } from './component.generator';
-export { generateCrudService } from './crud-service.generator';
 export { generateFeature } from './feature.generator';
 export type { HookGeneratorOptions } from './hook.generator';
 export { generateHook } from './hook.generator';
@@ -18,12 +18,12 @@ export type {
   ProviderGeneratorResult,
 } from './provider.generator';
 export { generateProvider } from './provider.generator';
-export { generateService } from './service.generator';
 export { generateSlice } from './slice.generator';
 export type { GenerateTestOptions, TestKind } from './test.generator';
 export { generateTest } from './test.generator';
 export type {
+  ApiGeneratorOptions,
   FeatureGeneratorOptions,
-  ServiceGeneratorOptions,
   SliceGeneratorOptions,
+  StateStore,
 } from './types';

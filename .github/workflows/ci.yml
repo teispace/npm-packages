@@ -107,3 +107,56 @@ jobs:
           name: build-artifacts
           path: packages/*/dist
           retention-days: 7
+
+  next-maker-smoke:
+    name: next-maker composition matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [quality]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Read the pinned starter tag
+        id: starter
+        run: |
+          ref=$(node -e "const s=require('fs').readFileSync('packages/next-maker/src/config/starter.ts','utf8');console.log(s.match(/STARTER_REF = '([^']+)'/)[1])")
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout the starter at the pinned tag
+        uses: actions/checkout@v6
+        with:
+          repository: teispace/nextjs-starter
+          ref: ${{ steps.starter.outputs.ref }}
+          path: .starter
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      # Generated projects install with pnpm; put a real pnpm on PATH rather
+      # than relying on the Corepack shim, which cannot download new versions
+      # on a fresh runner.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Compose and build every matrix case
+        working-directory: packages/next-maker
+        env:
+          NEXT_MAKER_STARTER_PATH: ${{ github.workspace }}/.starter
+          NEXT_TELEMETRY_DISABLED: 1
+          # Generated projects pin pnpm through `packageManager`; Corepack must
+          # fetch it without its interactive confirmation on a non-TTY runner.
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+        run: yarn smoke

@@ -1,182 +1,134 @@
 import type { Command } from 'commander';
 import Enquirer from 'enquirer';
 import pc from 'picocolors';
-import { log, logError, spinner } from '../config';
-import { setupBundleAnalyzer } from '../services/setup/bundle-analyzer';
-import { setupCommitizen } from '../services/setup/commitizen';
-import { setupDarkTheme } from '../services/setup/dark-theme';
-import { setupHttpClient } from '../services/setup/http-client';
-import { setupI18n } from '../services/setup/i18n';
-import { setupReactCompiler } from '../services/setup/react-compiler';
-import { setupRedux } from '../services/setup/redux';
-import { setupSecurityHeaders } from '../services/setup/security-headers';
-import { setupTests } from '../services/setup/tests';
-import { setupValidationScripts } from '../services/setup/validate-scripts';
-import { setupWs } from '../services/setup/ws';
+import { parseSetFlags, resolveAnswers } from '../composition';
+import { mergeTrees } from '../composition/merge';
+import { checkoutStarter, readProjectRecord, writeProjectRecord } from '../composition/project';
+import { composeReference, identityForProject } from '../composition/reference';
+import { log, logError } from '../config';
+import { installDependencies } from '../core/package-manager';
+import { printMergeReport } from './upgrade';
 
 const { prompt } = Enquirer;
 
-export interface SetupOptions {
-  httpClient?: string;
-  darkTheme?: boolean;
-  redux?: boolean;
-  ws?: boolean;
-  i18n?: boolean;
-  tests?: boolean;
-  reactCompiler?: boolean;
-  bundleAnalyzer?: boolean;
-  securityHeaders?: boolean;
-  validateScripts?: boolean;
-  commitizen?: boolean;
+interface SetupCommandOptions {
+  set?: string[];
+  yes?: boolean;
+  dryRun?: boolean;
+  install?: boolean;
+  starterPath?: string;
 }
 
-type SetupHandler = (cwd: string) => Promise<void>;
-
-interface FeatureSpec {
-  /** Machine value: the enquirer choice `name`, handler-map key, and CLI label. */
-  key: string;
-  /** Human-readable label shown in the interactive picker. */
-  label: string;
-  /** Which `SetupOptions` flag enables this feature non-interactively. */
-  flag: keyof SetupOptions;
-  handler: SetupHandler;
-}
+const collect = (value: string, previous: string[] = []): string[] => [...previous, value];
 
 /**
- * Single source of truth for every setup feature. The interactive choices, the
- * flag-based dispatch, and the handler lookup are all derived from this list so
- * they can never drift out of sync again (the original bug was three parallel
- * lists where the choices returned labels but the handler map was keyed by
- * machine values, so every interactive selection fell through to "not
- * implemented yet").
- *
- * Order matters: redux must run before ws (the ws bridge dispatches into a
- * Redux slice, so the store must exist first).
+ * Change starter options on an existing project. The starter is composed
+ * twice, with the old and the new answers, and the project is three-way
+ * merged between the two: files a feature adds appear, files it owns
+ * disappear, and anchored lines in shared files (a reducer registration,
+ * a provider import) are merged in place. Only lines the project itself
+ * changed can conflict.
  */
-export const SETUP_FEATURES: readonly FeatureSpec[] = [
-  {
-    key: 'http-client',
-    label: 'HTTP Client (Axios/Fetch)',
-    flag: 'httpClient',
-    handler: setupHttpClient,
-  },
-  { key: 'dark-theme', label: 'Dark Theme', flag: 'darkTheme', handler: setupDarkTheme },
-  { key: 'redux', label: 'Redux Toolkit', flag: 'redux', handler: setupRedux },
-  { key: 'ws', label: 'WebSocket Client (requires Redux)', flag: 'ws', handler: setupWs },
-  { key: 'i18n', label: 'Internationalization (next-intl)', flag: 'i18n', handler: setupI18n },
-  { key: 'tests', label: 'Testing (Vitest + RTL)', flag: 'tests', handler: setupTests },
-  {
-    key: 'react-compiler',
-    label: 'React Compiler',
-    flag: 'reactCompiler',
-    handler: setupReactCompiler,
-  },
-  {
-    key: 'bundle-analyzer',
-    label: 'Bundle Analyzer',
-    flag: 'bundleAnalyzer',
-    handler: setupBundleAnalyzer,
-  },
-  {
-    key: 'security-headers',
-    label: 'Security Headers',
-    flag: 'securityHeaders',
-    handler: setupSecurityHeaders,
-  },
-  {
-    key: 'validate-scripts',
-    label: 'Validation Scripts',
-    flag: 'validateScripts',
-    handler: setupValidationScripts,
-  },
-  { key: 'commitizen', label: 'Commitizen', flag: 'commitizen', handler: setupCommitizen },
-] as const;
-
-/** Optional seam so tests can inject a fake prompt and assert dispatch. */
-export interface RunSetupDeps {
-  promptFn?: typeof prompt;
-  cwd?: () => string;
-}
-
-/**
- * Core setup logic, extracted from the commander action so it can be unit
- * tested with an injected prompt. Returns the key of the feature that was run
- * (or `null` when nothing ran), which makes dispatch directly assertable.
- */
-export const runSetup = async (
-  options: SetupOptions,
-  deps: RunSetupDeps = {},
-): Promise<string | null> => {
-  const promptFn = deps.promptFn ?? prompt;
-  const getCwd = deps.cwd ?? (() => process.cwd());
-
-  log(pc.cyan('\n🔧 Setup Wizard\n'));
-
-  // Non-interactive path: run every feature whose flag was passed, in the
-  // canonical SETUP_FEATURES order (so redux precedes ws).
-  const flagged = SETUP_FEATURES.filter((f) => Boolean(options[f.flag]));
-  if (flagged.length > 0) {
-    for (const feature of flagged) {
-      await feature.handler(getCwd());
-    }
-    return flagged.length === 1 ? flagged[0].key : 'multiple';
-  }
-
-  // Interactive path. Enquirer's `select` returns the chosen choice's `name`,
-  // so `name` holds the machine key and `message` the human label.
-  const setupChoice = await promptFn<{ feature: string }>([
-    {
-      type: 'select',
-      name: 'feature',
-      message: 'What would you like to setup?',
-      choices: [
-        ...SETUP_FEATURES.map((f) => ({ name: f.key, message: f.label })),
-        { name: 'cancel', message: 'Cancel' },
-      ],
-    },
-  ]);
-  const feature = setupChoice.feature;
-
-  if (feature === 'cancel') {
-    log(pc.yellow('Setup cancelled.'));
-    return null;
-  }
-
-  const spec = SETUP_FEATURES.find((f) => f.key === feature);
-  if (spec) {
-    await spec.handler(getCwd());
-    return spec.key;
-  }
-
-  log(pc.yellow(`\n⚠️  ${feature} setup is not implemented yet.`));
-  return null;
-};
-
 export const registerSetupCommand = (program: Command) => {
   program
     .command('setup')
-    .description('Setup features in an existing Next.js project')
-    .option('--http-client', 'Setup HTTP client (axios|fetch)')
-    .option('--dark-theme', 'Setup Dark Theme (Tailwind + @teispace/next-themes)')
-    .option('--redux', 'Setup Redux Toolkit')
-    .option('--ws', 'Setup WebSocket client (socket.io-client + Redux bridge; requires --redux)')
-    .option('--i18n', 'Setup next-intl for internationalization')
-    .option('--tests', 'Setup testing (Vitest + React Testing Library)')
-    .option('--react-compiler', 'Enable the React Compiler')
-    .option('--bundle-analyzer', 'Add @next/bundle-analyzer')
-    .option('--security-headers', 'Add hardened HTTP headers to next.config.ts')
+    .description('Turn starter features on or off in an existing project (e.g. --set ws=true)')
     .option(
-      '--validate-scripts',
-      'Add scripts/sync-env.ts, scripts/check-deprecated.ts, and the validate chain',
+      '--set <key=value>',
+      'Option to change (repeatable), e.g. --set i18n=false --set state=zustand',
+      collect,
     )
-    .option('--commitizen', 'Add Commitizen with the conventional-changelog adapter')
-    .action(async (options: SetupOptions) => {
+    .option('-y, --yes', 'Skip the confirmation prompt')
+    .option('--dry-run', 'Print the plan without writing')
+    .option('--no-install', 'Skip dependency installation after the change')
+    .option('--starter-path <dir>', 'Use a local starter checkout')
+    .action(async (options: SetupCommandOptions) => {
+      const projectPath = process.cwd();
+      const disposers: (() => Promise<void>)[] = [];
       try {
-        await runSetup(options);
+        const record = await readProjectRecord(projectPath);
+        const overrides = parseSetFlags(options.set);
+        if (Object.keys(overrides).length === 0) {
+          throw new Error(
+            'Nothing to change. Pass at least one --set key=value (run `next-maker options` to list them).',
+          );
+        }
+        const checkout = await checkoutStarter(record, { starterPath: options.starterPath });
+        disposers.push(checkout.dispose);
+        const { answers, forced, unknown } = resolveAnswers(checkout.manifest, {
+          ...record.answers,
+          ...overrides,
+        });
+        for (const name of unknown) log(pc.yellow(`  ! unknown option "${name}" ignored`));
+        for (const f of forced) log(pc.yellow(`  ! ${f.reason}; ${f.option} turned off`));
+        const changed = Object.keys(answers).filter(
+          (k) => JSON.stringify(answers[k]) !== JSON.stringify(record.answers[k]),
+        );
+        log(pc.cyan('\n🔧 Setup\n'));
+        if (changed.length === 0) {
+          log(pc.dim('No option changes; the project already has these values.\n'));
+          return;
+        }
+        for (const k of changed)
+          log(
+            `  ${pc.dim(k.padEnd(18))} ${String(record.answers[k])} ${pc.dim('→')} ${String(answers[k])}`,
+          );
+        log('');
+
+        const identity = await identityForProject(projectPath, record);
+        const base = await composeReference(
+          checkout.source,
+          record.answers,
+          identity,
+          record.packageManager,
+          projectPath,
+        );
+        disposers.push(base.dispose);
+        const theirs = await composeReference(
+          checkout.source,
+          answers,
+          identity,
+          record.packageManager,
+          projectPath,
+        );
+        disposers.push(theirs.dispose);
+
+        const preview = await mergeTrees(
+          { base: base.dir, theirs: theirs.dir, ours: projectPath },
+          { dryRun: true },
+        );
+        printMergeReport(preview);
+        if (options.dryRun) {
+          log(pc.dim('\nDry run: nothing was written.\n'));
+          return;
+        }
+        if (!options.yes) {
+          const { confirm } = await prompt<{ confirm: boolean }>({
+            type: 'confirm',
+            name: 'confirm',
+            message: 'Apply these changes?',
+            initial: false,
+          });
+          if (!confirm) {
+            log(pc.yellow('Aborted.\n'));
+            return;
+          }
+        }
+        const report = await mergeTrees({ base: base.dir, theirs: theirs.dir, ours: projectPath });
+        await writeProjectRecord(projectPath, { ...record, answers });
+        if (options.install !== false) {
+          log(pc.dim(`\nInstalling with ${record.packageManager}...`));
+          await installDependencies(projectPath, record.packageManager);
+        }
+        log(pc.green('\n✓ Applied.'));
+        if (report.conflicts.length)
+          log(pc.yellow('  Resolve the conflicts above, then run `next-maker doctor --compile`.'));
+        log('');
       } catch (error) {
-        spinner.fail('Setup failed');
-        logError(`${error}`);
+        logError(`${error instanceof Error ? error.message : error}`);
         process.exit(1);
+      } finally {
+        for (const dispose of disposers) await dispose();
       }
     });
 };

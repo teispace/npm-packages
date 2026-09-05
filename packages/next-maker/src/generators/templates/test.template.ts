@@ -4,29 +4,51 @@ export type ComponentTestParams = {
   sourceImportPath: string;
   /** Import path from the test file to `test/test-utils`, without extension. */
   testUtilsImportPath: string;
-  hasRedux: boolean;
+  /** Whether a client store (Redux or Zustand) is present. */
+  hasState: boolean;
   hasI18n: boolean;
+  /** For components that read a hydrated query: seed the cache instead of mocking HTTP. */
+  withQueryData?: { keysImport: string; keys: string; key: string };
 };
 
 export const componentTestTemplate = (params: ComponentTestParams): string => {
-  const { componentName, sourceImportPath, testUtilsImportPath, hasRedux, hasI18n } = params;
+  const { componentName, sourceImportPath, testUtilsImportPath, hasState, hasI18n, withQueryData } =
+    params;
 
-  const extraOptions: string[] = [];
-  if (hasI18n) extraOptions.push('messages: {}');
-  if (hasRedux) extraOptions.push('preloadedState: {}');
-  const optionsBlock = extraOptions.length
-    ? `, {\n      ${extraOptions.join(',\n      ')},\n    }`
-    : '';
+  const options: string[] = [];
+  if (hasI18n) options.push('messages: {}');
+  if (hasState) options.push('preloadedState: {}');
 
+  if (withQueryData) {
+    return `import { describe, expect, it } from 'vitest';
+
+import { makeTestQueryClient, renderWithProviders, screen } from '${testUtilsImportPath}';
+import { ${withQueryData.keys} } from '${withQueryData.keysImport}';
+import { ${componentName} } from '${sourceImportPath}';
+
+describe('${componentName}', () => {
+  it('renders hydrated data', () => {
+    const queryClient = makeTestQueryClient();
+    queryClient.setQueryData(${withQueryData.keys}.${withQueryData.key}(), [
+      { id: '1', title: 'First', createdAt: '2026-01-01T00:00:00.000Z' },
+    ]);
+    renderWithProviders(<${componentName} />, { queryClient${options.length ? `, ${options.join(', ')}` : ''} });
+    expect(screen.getByText('First')).toBeInTheDocument();
+  });
+});
+`;
+  }
+
+  const optionsBlock = options.length ? `, { ${options.join(', ')} }` : '';
   return `import { describe, expect, it } from 'vitest';
+
 import { renderWithProviders, screen } from '${testUtilsImportPath}';
 import { ${componentName} } from '${sourceImportPath}';
 
 describe('${componentName}', () => {
-  it('renders without crashing', () => {
+  it('renders', () => {
     renderWithProviders(<${componentName} />${optionsBlock});
-    // TODO: assert something meaningful about the rendered output.
-    expect(screen).toBeDefined();
+    expect(screen.getByRole('heading')).toBeInTheDocument();
   });
 });
 `;
@@ -35,7 +57,7 @@ describe('${componentName}', () => {
 export type HookTestParams = {
   hookName: string;
   sourceImportPath: string;
-  /** When the hook reads from the Redux store, wrap `renderHook` in TestProviders. */
+  /** When the hook reads from the store, wrap `renderHook` in TestProviders. */
   withStore: boolean;
   /** Only used when withStore is true. */
   testUtilsImportPath?: string;
@@ -45,8 +67,10 @@ export const hookTestTemplate = (params: HookTestParams): string => {
   const { hookName, sourceImportPath, withStore, testUtilsImportPath } = params;
 
   if (withStore) {
-    return `import { renderHook } from '@testing-library/react';
+    return `// @vitest-environment jsdom
+import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+
 import { TestProviders } from '${testUtilsImportPath}';
 import { ${hookName} } from '${sourceImportPath}';
 
@@ -59,8 +83,10 @@ describe('${hookName}', () => {
 `;
   }
 
-  return `import { renderHook } from '@testing-library/react';
+  return `// @vitest-environment jsdom
+import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+
 import { ${hookName} } from '${sourceImportPath}';
 
 describe('${hookName}', () => {
@@ -84,28 +110,25 @@ export const sliceTestTemplate = (params: SliceTestParams): string => {
   const sliceRef = `${camelName}Slice`;
 
   return `import { describe, expect, it } from 'vitest';
-import { ${sliceRef}, resetState, setError, setLoading } from '${sourceImportPath}';
+
+import { failed, reset, ${sliceRef}, started } from '${sourceImportPath}';
 
 describe('${sliceRef}', () => {
-  const initialState = { loading: false, error: null } as const;
+  const initialState = { status: 'idle', error: null } as const;
 
   it('returns the initial state', () => {
     expect(${sliceRef}.reducer(undefined, { type: '@@INIT' })).toEqual(initialState);
   });
 
-  it('handles setLoading', () => {
-    const next = ${sliceRef}.reducer(initialState, setLoading(true));
-    expect(next.loading).toBe(true);
+  it('tracks a start and a failure', () => {
+    const loading = ${sliceRef}.reducer(initialState, started());
+    expect(loading.status).toBe('loading');
+    const errored = ${sliceRef}.reducer(loading, failed('boom'));
+    expect(errored).toEqual({ status: 'error', error: 'boom' });
   });
 
-  it('handles setError', () => {
-    const next = ${sliceRef}.reducer(initialState, setError('boom'));
-    expect(next.error).toBe('boom');
-  });
-
-  it('handles resetState', () => {
-    const next = ${sliceRef}.reducer({ loading: true, error: 'boom' }, resetState());
-    expect(next).toEqual(initialState);
+  it('resets', () => {
+    expect(${sliceRef}.reducer({ status: 'error', error: 'boom' }, reset())).toEqual(initialState);
   });
 });
 `;

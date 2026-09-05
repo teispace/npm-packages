@@ -66,10 +66,10 @@ export const registerTestCommand = (program: Command) => {
           sourceFile,
           kind,
           symbolName,
-          hasRedux: detection.hasRedux,
+          hasState: detection.state !== 'none',
           hasI18n: detection.hasI18n,
           hookUsesStore:
-            kind === 'hook' && detection.hasRedux && content.includes('useAppSelector'),
+            kind === 'hook' && detection.state !== 'none' && content.includes('useAppSelector'),
         });
         spinner.succeed('Test generated');
 

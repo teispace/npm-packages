@@ -15,7 +15,7 @@ export type GenerateTestOptions = {
   kind: TestKind;
   /** Component/hook/slice identifier (e.g. "Counter", "useCounter", "counter"). */
   symbolName: string;
-  hasRedux?: boolean;
+  hasState?: boolean;
   hasI18n?: boolean;
   /** Whether the hook uses the Redux store (only relevant for `kind === 'hook'`). */
   hookUsesStore?: boolean;
@@ -41,7 +41,7 @@ export const generateTest = async (options: GenerateTestOptions): Promise<string
       componentName: symbolName,
       sourceImportPath,
       testUtilsImportPath,
-      hasRedux: !!options.hasRedux,
+      hasState: !!options.hasState,
       hasI18n: !!options.hasI18n,
     });
   } else if (kind === 'hook') {

@@ -1,265 +1,191 @@
 import { describe, expect, it } from 'vitest';
 import {
+  apiActionsTemplate,
+  apiEndpointsTemplate,
+  apiKeysTemplate,
+  apiQueriesTemplate,
+  apiSchemaTemplate,
+  apiServerTemplate,
+} from '../../../src/generators/templates/api.template';
+import {
   featureBarrelTemplate,
   sliceBarrelTemplate,
 } from '../../../src/generators/templates/barrel.template';
 import { componentTemplate } from '../../../src/generators/templates/component.template';
-import {
-  crudApiConfigTemplate,
-  crudServiceTemplate,
-} from '../../../src/generators/templates/crud-service.template';
 import {
   hookWithoutStoreTemplate,
   hookWithStoreTemplate,
 } from '../../../src/generators/templates/hook.template';
 import { persistTemplate } from '../../../src/generators/templates/persist.template';
 import { selectorsTemplate } from '../../../src/generators/templates/selectors.template';
-import { serviceTemplate } from '../../../src/generators/templates/service.template';
 import { sliceTemplate } from '../../../src/generators/templates/slice.template';
-import { stateTypesTemplate } from '../../../src/generators/templates/types.template';
+import {
+  componentTestTemplate,
+  sliceTestTemplate,
+} from '../../../src/generators/templates/test.template';
+import { zustandSliceTemplate } from '../../../src/generators/templates/zustand-slice.template';
 
-describe('sliceTemplate', () => {
-  it('should generate a valid Redux slice', () => {
-    const result = sliceTemplate({
-      componentName: 'UserDashboard',
-      camelName: 'userDashboard',
-      sliceName: 'user-dashboard',
-      typesImportPath: './user-dashboard.types',
+const params = { kebabName: 'blog-post', camelName: 'blogPost', pascalName: 'BlogPost' };
+
+describe('api templates', () => {
+  it('schema infers types from zod', () => {
+    const out = apiSchemaTemplate(params);
+    expect(out).toContain('export const blogPostSchema = z.object({');
+    expect(out).toContain('export type BlogPost = z.infer<typeof blogPostSchema>;');
+    expect(out).toContain('export const createBlogPostInputSchema');
+  });
+
+  it('server DAL is server-only and uses the cookie-forwarding client with schema validation', () => {
+    const out = apiServerTemplate(params);
+    expect(out).toContain("import 'server-only';");
+    expect(out).toContain('serverHttp.get(AppApis.blogPost.list, { schema: blogPostListSchema })');
+    expect(out).toContain("export const BLOGPOST_TAG = 'blogPost';");
+  });
+
+  it('actions use authActionClient with input schemas and revalidate the tag', () => {
+    const out = apiActionsTemplate(params);
+    expect(out).toContain("'use server';");
+    expect(out).toContain('authActionClient');
+    expect(out).toContain('.inputSchema(createBlogPostInputSchema)');
+    expect(out).toContain("revalidateTag(BLOGPOST_TAG, 'max')");
+  });
+
+  it('queries expose queryOptions and suspense hooks keyed by the feature', () => {
+    const out = apiQueriesTemplate(params);
+    expect(out).toContain('queryOptions({');
+    expect(out).toContain('queryKey: blogPostKeys.list()');
+    expect(out).toContain(
+      'export const useBlogPostList = () => useSuspenseQuery(blogPostListQuery());',
+    );
+    expect(apiKeysTemplate(params)).toContain("all: ['blog-post'] as const");
+  });
+
+  it('endpoints are bare paths under the API prefix', () => {
+    const out = apiEndpointsTemplate(params);
+    expect(out).toContain("list: '/blog-post'");
+    expect(out).toContain('detail: (id: string) => `/blog-post/${id}`');
+  });
+});
+
+describe('store templates', () => {
+  it('redux slice, selectors, and definePersistence entry', () => {
+    const slice = sliceTemplate({
+      componentName: 'Cart',
+      camelName: 'cart',
+      typesImportPath: './cart.types',
     });
-
-    expect(result).toContain("import { createSlice, type PayloadAction } from '@reduxjs/toolkit'");
-    expect(result).toContain("import type { UserDashboardState } from './user-dashboard.types'");
-    expect(result).toContain('export const userDashboardSlice = createSlice');
-    expect(result).toContain("name: 'userDashboard'");
-    expect(result).toContain('export const userDashboardReducer');
-  });
-
-  it('should use custom types import path for feature-embedded slices', () => {
-    const result = sliceTemplate({
-      componentName: 'Auth',
-      camelName: 'auth',
-      sliceName: 'auth',
-      typesImportPath: '../types/auth.types',
+    expect(slice).toContain("import { createSlice, type PayloadAction } from '@reduxjs/toolkit';");
+    expect(slice).toContain('export const cartSlice = createSlice({');
+    expect(slice).toContain('export const { started, failed, reset } = cartSlice.actions;');
+    expect(
+      selectorsTemplate({ componentName: 'Cart', camelName: 'cart', sliceName: 'cart' }),
+    ).toContain('state.cart.status');
+    const persist = persistTemplate({
+      componentName: 'Cart',
+      camelName: 'cart',
+      typesImportPath: './cart.types',
     });
-
-    expect(result).toContain("import type { AuthState } from '../types/auth.types'");
+    expect(persist).toContain("import { definePersistence } from '@/store/persistence';");
+    expect(persist).toContain('export const cartPersistence = definePersistence<CartState>({');
+    expect(persist).not.toContain('redux-persist');
   });
-});
 
-describe('selectorsTemplate', () => {
-  it('should generate selectors with correct state accessor', () => {
-    const result = selectorsTemplate({
-      componentName: 'Auth',
-      camelName: 'auth',
-      sliceName: 'auth',
+  it('zustand slice creator', () => {
+    const out = zustandSliceTemplate({
+      componentName: 'Cart',
+      camelName: 'cart',
+      typesImportPath: './cart.types',
     });
+    expect(out).toContain("import type { StateCreator } from 'zustand';");
+    expect(out).toContain('export const createCartSlice: StateCreator<any, [], [], CartSlice>');
+    expect(sliceBarrelTemplate({ sliceName: 'cart', withPersist: false, state: 'zustand' })).toBe(
+      "export * from './cart.store';\n",
+    );
+  });
 
-    expect(result).toContain('export const selectAuthState');
-    expect(result).toContain('state.auth');
-    expect(result).toContain("from './auth.slice'");
+  it('barrels include persistence only when asked', () => {
+    expect(sliceBarrelTemplate({ sliceName: 'cart', withPersist: true })).toContain(
+      "export * from './persist';",
+    );
+    expect(sliceBarrelTemplate({ sliceName: 'cart', withPersist: false })).not.toContain('persist');
   });
 });
 
-describe('persistTemplate', () => {
-  it('should generate persist config', () => {
-    const result = persistTemplate({
-      componentName: 'Counter',
-      camelName: 'counter',
-      sliceName: 'counter',
-      typesImportPath: './counter.types',
+describe('hooks and components', () => {
+  it('redux and zustand store hooks', () => {
+    const redux = hookWithStoreTemplate({
+      hookName: 'useCart',
+      componentName: 'Cart',
+      featureName: 'cart',
+      state: 'redux',
     });
-
-    expect(result).toContain('PersistConfig<CounterState>');
-    expect(result).toContain("key: 'counter'");
-    expect(result).toContain('export const counterPersistConfig');
-  });
-});
-
-describe('serviceTemplate', () => {
-  it('should generate axios service', () => {
-    const result = serviceTemplate({ camelName: 'userProfile', httpClient: 'axios' });
-
-    expect(result).toContain('axiosClient');
-    expect(result).toContain('userProfileService');
-    expect(result).toContain('AppApis.userProfile.getAll');
-    expect(result).not.toContain('fetchClient');
-  });
-
-  it('should generate fetch service', () => {
-    const result = serviceTemplate({ camelName: 'userProfile', httpClient: 'fetch' });
-
-    expect(result).toContain('fetchClient');
-    expect(result).not.toContain('axiosClient');
-  });
-});
-
-describe('componentTemplate', () => {
-  it('should generate component with hook import', () => {
-    const result = componentTemplate({
-      componentName: 'UserDashboard',
-      hookName: 'useUserDashboard',
+    expect(redux).toContain("import { useAppDispatch, useAppSelector } from '@/store/hooks';");
+    const zustand = hookWithStoreTemplate({
+      hookName: 'useCart',
+      componentName: 'Cart',
+      featureName: 'cart',
+      state: 'zustand',
     });
-
-    expect(result).toContain("'use client'");
-    expect(result).toContain('useUserDashboard');
-    expect(result).toContain('function UserDashboard()');
-    expect(result).toContain('export default UserDashboard');
+    expect(zustand).toContain("import { useAppStore } from '@/store/hooks';");
+    expect(hookWithoutStoreTemplate({ hookName: 'useCart' })).toContain(
+      'export const useCart = () => {',
+    );
   });
-});
 
-describe('hookWithStoreTemplate / hookWithoutStoreTemplate', () => {
-  it('should generate hook with Redux store', () => {
-    const result = hookWithStoreTemplate({
-      hookName: 'useAuth',
-      componentName: 'Auth',
-      featureName: 'auth',
+  it('api-backed component reads the suspense hook; i18n adds translations', () => {
+    const out = componentTemplate({
+      componentName: 'CartList',
+      hookName: 'useCart',
+      withApi: true,
+      pascalName: 'Cart',
+      hasI18n: true,
     });
-
-    expect(result).toContain('useAppDispatch');
-    expect(result).toContain('useAppSelector');
-    expect(result).toContain('selectAuthState');
-    expect(result).toContain("from '../store/auth.selectors'");
+    expect(out).toContain("import { useCartList } from '../api/queries';");
+    expect(out).toContain("useTranslations('Cart')");
+    const plain = componentTemplate({
+      componentName: 'Cart',
+      hookName: 'useCart',
+      withApi: false,
+      pascalName: 'Cart',
+      hasI18n: false,
+    });
+    expect(plain).toContain("import { useCart } from '../hooks/useCart';");
+    expect(plain).not.toContain('next-intl');
   });
 
-  it('should generate hook without store', () => {
-    const result = hookWithoutStoreTemplate({ hookName: 'useAuth' });
-
-    expect(result).toContain('useState');
-    expect(result).not.toContain('useAppDispatch');
-  });
-});
-
-describe('stateTypesTemplate', () => {
-  it('should generate types with store fields', () => {
-    const result = stateTypesTemplate({ componentName: 'Auth', withStore: true });
-
-    expect(result).toContain('interface AuthState');
-    expect(result).toContain('loading: boolean');
-    expect(result).toContain('error: string | null');
-  });
-
-  it('should generate empty types without store', () => {
-    const result = stateTypesTemplate({ componentName: 'Auth', withStore: false });
-
-    expect(result).toContain('interface AuthState');
-    expect(result).not.toContain('loading');
-  });
-});
-
-describe('barrelTemplates', () => {
-  it('should generate slice barrel with persist', () => {
-    const result = sliceBarrelTemplate({ sliceName: 'auth', withPersist: true });
-
-    expect(result).toContain("from './auth.slice'");
-    expect(result).toContain("from './auth.selectors'");
-    expect(result).toContain("from './persist'");
-  });
-
-  it('should generate slice barrel without persist', () => {
-    const result = sliceBarrelTemplate({ sliceName: 'auth', withPersist: false });
-
-    expect(result).not.toContain('persist');
-  });
-
-  it('should generate feature barrel with all options', () => {
-    const result = featureBarrelTemplate({
-      featureName: 'auth',
-      componentName: 'Auth',
-      hookName: 'useAuth',
+  it('feature barrel exports the api surface and the server barrel is server-only', () => {
+    const out = featureBarrelTemplate({
+      featureName: 'cart',
+      componentName: 'CartList',
+      hookName: 'useCart',
+      pascalName: 'Cart',
       withStore: true,
-      withService: true,
+      withApi: true,
     });
-
-    expect(result).toContain("from './components/Auth'");
-    expect(result).toContain("from './hooks/useAuth'");
-    expect(result).toContain("from './store'");
-    expect(result).toContain("from './services/auth.service'");
-  });
-
-  it('should generate minimal feature barrel', () => {
-    const result = featureBarrelTemplate({
-      featureName: 'auth',
-      componentName: 'Auth',
-      hookName: 'useAuth',
-      withStore: false,
-      withService: false,
-    });
-
-    expect(result).not.toContain('store');
-    expect(result).not.toContain('services');
+    expect(out).toContain("export { createCart, deleteCart, updateCart } from './api/actions';");
+    expect(out).toContain(
+      "export { cartListQuery, cartQuery, useCart, useCartList } from './api/queries';",
+    );
+    expect(out).toContain("export * from './store';");
   });
 });
 
-describe('crudApiConfigTemplate', () => {
-  it('emits bare-path endpoints — no API_PREFIX interpolation', () => {
-    const result = crudApiConfigTemplate({ camelName: 'users', kebabName: 'users' });
-
-    // The /api/v{n} prefix is owned by getApiBaseUrl(), so endpoints are
-    // relative to the API base. Interpolating API_PREFIX would double-prefix.
-    expect(result).not.toContain('API_PREFIX');
-    expect(result).toContain("base: '/users',");
-    expect(result).toContain("getAll: '/users',");
-    expect(result).toContain("create: '/users',");
-  });
-
-  it('emits template literals for id-parameterised endpoints', () => {
-    const result = crudApiConfigTemplate({ camelName: 'orders', kebabName: 'orders' });
-
-    // Use `${'$'}` so the test source itself isn't a template-string
-    // placeholder — Biome's `noTemplateCurlyInString` otherwise warns.
-    const idInterp = `${'$'}{id}`;
-    expect(result).toContain(`getById: (id: string) => \`/orders/${idInterp}\`,`);
-    expect(result).toContain(`update: (id: string) => \`/orders/${idInterp}\`,`);
-    expect(result).toContain(`delete: (id: string) => \`/orders/${idInterp}\`,`);
-  });
-
-  it('honours different camelName and kebabName', () => {
-    const result = crudApiConfigTemplate({
-      camelName: 'orderItems',
-      kebabName: 'order-items',
+describe('test templates', () => {
+  it('seeds hydrated query data for api components', () => {
+    const out = componentTestTemplate({
+      componentName: 'CartList',
+      sourceImportPath: './CartList',
+      testUtilsImportPath: '../../../../test/test-utils',
+      hasState: true,
+      hasI18n: true,
+      withQueryData: { keysImport: '../api/keys', keys: 'cartKeys', key: 'list' },
     });
-
-    const idInterp = `${'$'}{id}`;
-    // The object key uses camelName; the URL path uses kebabName.
-    expect(result).toContain('orderItems: {');
-    expect(result).toContain("base: '/order-items',");
-    expect(result).toContain(`getById: (id: string) => \`/order-items/${idInterp}\`,`);
-  });
-});
-
-describe('crudServiceTemplate', () => {
-  it('wires the axios client variant', () => {
-    const result = crudServiceTemplate({
-      camelName: 'users',
-      pascalName: 'User',
-      httpClient: 'axios',
-    });
-
-    expect(result).toContain("import { axiosClient } from '@/lib/utils/http';");
-    expect(result).toContain('axiosClient.get<UserSummary[]>(AppApis.users.getAll)');
+    expect(out).toContain('queryClient.setQueryData(cartKeys.list(), [');
+    expect(out).toContain('{ queryClient, messages: {}, preloadedState: {} }');
   });
 
-  it('wires the fetch client variant', () => {
-    const result = crudServiceTemplate({
-      camelName: 'users',
-      pascalName: 'User',
-      httpClient: 'fetch',
-    });
-
-    expect(result).toContain("import { fetchClient } from '@/lib/utils/http';");
-    expect(result).toContain('fetchClient.get<UserSummary[]>(AppApis.users.getAll)');
-  });
-
-  it('generates Summary, Detail, Create, and Update types', () => {
-    const result = crudServiceTemplate({
-      camelName: 'orders',
-      pascalName: 'Order',
-      httpClient: 'fetch',
-    });
-
-    expect(result).toContain('export interface OrderSummary');
-    expect(result).toContain('export interface OrderDetail extends OrderSummary');
-    expect(result).toContain('export interface CreateOrderDto');
-    expect(result).toContain('export interface UpdateOrderDto');
+  it('slice test exercises the generated reducers', () => {
+    const out = sliceTestTemplate({ camelName: 'cart', sourceImportPath: './cart.slice' });
+    expect(out).toContain("import { failed, reset, cartSlice, started } from './cart.slice';");
   });
 });

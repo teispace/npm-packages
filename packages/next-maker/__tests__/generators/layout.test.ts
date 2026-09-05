@@ -27,8 +27,8 @@ describe('generateLayout', () => {
     expect(result.componentName).toBe('DashboardLayout');
 
     const contents = await readFile(result.layoutFile, 'utf-8');
-    expect(contents).toContain('export default async function DashboardLayout');
-    expect(contents).toContain('next-intl/server');
+    expect(contents).toContain('export default function DashboardLayout');
+    expect(contents).not.toContain('next-intl');
   });
 
   it('writes a non-locale layout when hasI18n is false', async () => {

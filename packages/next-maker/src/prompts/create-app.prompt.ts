@@ -1,146 +1,89 @@
 import Enquirer from 'enquirer';
+import type { Answers, OptionValue, StarterManifest } from '../composition/manifest';
+import { satisfies } from '../composition/manifest';
 import type { PackageManager } from '../core/package-manager';
+
+const { prompt } = Enquirer;
 
 const PROJECT_NAME_RE = /^[a-z0-9-_]+$/;
 const SEMVER_RE = /^\d+\.\d+\.\d+$/;
 
-const isValidProjectName = (value: string): boolean => PROJECT_NAME_RE.test(value);
+export const isValidProjectName = (value: string): boolean => PROJECT_NAME_RE.test(value);
 const isValidSemver = (value: string): boolean => SEMVER_RE.test(value);
 
-/**
- * The opinionated production defaults `init --yes` ships. Mirrors the
- * "should I include X?" answer the prompt walkthrough would suggest as
- * `initial`/`default` for each question — every architecture feature ON,
- * the heavyweight integrations (Docker, GitHub Actions, bundle analyzer)
- * OFF. Users who want a leaner install run `next-maker remove <feature>`
- * after init.
- */
-export const defaultProjectAnswers = (
-  initialName: string | undefined,
-  overrides: Partial<ProjectPrompts> = {},
-): ProjectPrompts => {
-  const projectName = overrides.projectName ?? initialName ?? 'my-app';
-  if (!isValidProjectName(projectName)) {
-    throw new Error(
-      `Invalid project name "${projectName}". Use lowercase letters, digits, hyphens, and underscores only.`,
-    );
-  }
-  const version = overrides.version ?? '0.1.0';
-  if (!isValidSemver(version)) {
-    throw new Error(`Invalid version "${version}". Expected semver (e.g. 0.1.0).`);
-  }
-
-  const author = overrides.author ?? 'Teispace';
-  const company = overrides.company ?? author;
-
-  return {
-    projectName,
-    description: overrides.description ?? 'A Next.js application',
-    author,
-    version,
-    packageManager: overrides.packageManager ?? 'yarn',
-    gitRemote: overrides.gitRemote ?? '',
-    pushToRemote: overrides.pushToRemote ?? false,
-    gitIssues: overrides.gitIssues ?? '',
-    gitHomepage: overrides.gitHomepage ?? '',
-    httpClient: overrides.httpClient ?? 'fetch',
-    reactSecureStorage: overrides.reactSecureStorage ?? true,
-    email: overrides.email ?? 'support@example.com',
-    company,
-    keepTemplates: overrides.keepTemplates ?? false,
-    darkMode: overrides.darkMode ?? true,
-    redux: overrides.redux ?? true,
-    // WS requires Redux. If redux is off (whether by default or override), ws
-    // can't be on — force it to false regardless of how it was supplied.
-    ws: (overrides.redux ?? true) && (overrides.ws ?? false),
-    i18n: overrides.i18n ?? true,
-    communityFiles: overrides.communityFiles ?? [],
-    readme: overrides.readme ?? true,
-    docker: overrides.docker ?? false,
-    containerName: overrides.containerName,
-    imageName: overrides.imageName,
-    imageTag: overrides.imageTag,
-    ci: overrides.ci ?? false,
-    preCommitHooks: overrides.preCommitHooks ?? true,
-    commitizen: overrides.commitizen ?? true,
-    copyEnv: overrides.copyEnv ?? true,
-    tests: overrides.tests ?? true,
-    reactCompiler: overrides.reactCompiler ?? true,
-    bundleAnalyzer: overrides.bundleAnalyzer ?? false,
-  };
-};
-
-const { prompt } = Enquirer;
-
-type PromptContext = {
-  state?: { answers?: Partial<ProjectPrompts> };
-  enquirer?: { answers?: Partial<ProjectPrompts> };
-};
-
-export interface ProjectPrompts {
+/** Everything about the project that is not a starter option. */
+export interface ProjectIdentity {
   projectName: string;
   description: string;
   author: string;
   version: string;
-  packageManager: PackageManager;
+  email: string;
   gitRemote: string;
   pushToRemote: boolean;
   gitIssues: string;
   gitHomepage: string;
-  httpClient: 'axios' | 'fetch' | 'both' | 'none';
-  reactSecureStorage?: boolean;
-  email: string;
-  company: string;
-  keepTemplates: boolean;
-  darkMode: boolean;
-  redux: boolean;
-  /**
-   * Include the WebSocket transport layer (`src/lib/utils/ws/` + `wsReducer`).
-   * Requires Redux — if `redux: false`, this is forced to `false` regardless
-   * of how it's set, because the WS bridge dispatches into the WS slice.
-   */
-  ws: boolean;
-  i18n: boolean;
-  communityFiles: string[];
   readme: boolean;
-  docker: boolean;
-  containerName?: string;
-  imageName?: string;
-  imageTag?: string;
-  ci: boolean;
-  preCommitHooks: boolean;
-  commitizen: boolean;
   copyEnv: boolean;
-  tests: boolean;
-  reactCompiler: boolean;
-  bundleAnalyzer: boolean;
 }
 
-export const promptForProjectDetails = async (initialName?: string): Promise<ProjectPrompts> => {
-  // When a name is passed as a CLI arg the projectName prompt is skipped
-  // (`skip: !!initialName`), which also skips its `validate`. Validate it here
-  // so an arg like `../evil` can't flow through unchecked into the scaffold
-  // path (the name is later joined onto cwd and used for degit/rm).
-  if (initialName !== undefined && !isValidProjectName(initialName)) {
+export interface ProjectPrompts extends ProjectIdentity {
+  packageManager: PackageManager;
+  options: Answers;
+}
+
+export const assertValidProjectName = (name: string): void => {
+  if (!isValidProjectName(name)) {
     throw new Error(
-      `Invalid project name "${initialName}". Use lowercase letters, digits, hyphens, ` +
-        'and underscores only — no slashes, "..", or absolute paths.',
+      `Invalid project name "${name}". Use lowercase letters, digits, hyphens, and underscores only — no slashes, "..", or absolute paths.`,
     );
   }
+};
 
-  const response = await prompt<ProjectPrompts>([
+export const defaultIdentity = (
+  initialName: string | undefined,
+  overrides: Partial<ProjectIdentity> = {},
+): ProjectIdentity => {
+  const projectName = overrides.projectName ?? initialName ?? 'my-app';
+  assertValidProjectName(projectName);
+  const version = overrides.version ?? '0.1.0';
+  if (!isValidSemver(version)) {
+    throw new Error(`Invalid version "${version}". Expected semver (e.g. 0.1.0).`);
+  }
+  return {
+    projectName,
+    description: overrides.description ?? 'A Next.js application',
+    author: overrides.author ?? 'Teispace',
+    version,
+    email: overrides.email ?? 'support@example.com',
+    gitRemote: overrides.gitRemote ?? '',
+    pushToRemote: overrides.pushToRemote ?? false,
+    gitIssues: overrides.gitIssues ?? '',
+    gitHomepage: overrides.gitHomepage ?? '',
+    readme: overrides.readme ?? true,
+    copyEnv: overrides.copyEnv ?? true,
+  };
+};
+
+type PromptContext = {
+  state?: { answers?: Record<string, unknown> };
+  enquirer?: { answers?: Record<string, unknown> };
+};
+const answersOf = (ctx: PromptContext): Record<string, unknown> =>
+  ctx.state?.answers ?? ctx.enquirer?.answers ?? {};
+
+export const promptForIdentity = async (initialName?: string): Promise<ProjectIdentity> => {
+  if (initialName !== undefined) assertValidProjectName(initialName);
+
+  const response = await prompt<ProjectIdentity>([
     {
       type: 'input',
       name: 'projectName',
       message: 'What is the project name?',
       initial: initialName || 'my-app',
       skip: !!initialName,
-      validate: (value: string) => {
-        if (!/^[a-z0-9-_]+$/.test(value)) {
-          return 'Project name must be lowercase and contain only alphanumeric characters, hyphens, and underscores.';
-        }
-        return true;
-      },
+      validate: (value: string) =>
+        isValidProjectName(value) ||
+        'Project name must be lowercase and contain only alphanumeric characters, hyphens, and underscores.',
     },
     {
       type: 'input',
@@ -148,281 +91,94 @@ export const promptForProjectDetails = async (initialName?: string): Promise<Pro
       message: 'Project description:',
       initial: 'A Next.js application',
     },
-    {
-      type: 'input',
-      name: 'author',
-      message: 'Author:',
-      initial: 'Teispace',
-    },
+    { type: 'input', name: 'author', message: 'Author:', initial: 'Teispace' },
     {
       type: 'input',
       name: 'version',
       message: 'Version:',
       initial: '0.1.0',
-      validate: (value: string) => {
-        if (!/^\d+\.\d+\.\d+$/.test(value)) {
-          return 'Version must be a valid semantic version (x.y.z).';
-        }
-        return true;
-      },
+      validate: (value: string) =>
+        isValidSemver(value) || 'Version must be a valid semantic version (x.y.z).',
     },
-    {
-      type: 'input',
-      name: 'email',
-      message: 'Support email:',
-      initial: 'support@example.com',
-      validate: (value: string) => {
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          return 'Please enter a valid email address.';
-        }
-        return true;
-      },
-    },
-    {
-      type: 'select',
-      name: 'packageManager',
-      message: 'Which package manager would you like to use?',
-      choices: ['npm', 'yarn', 'pnpm', 'bun'],
-      initial: 1,
-    },
+    { type: 'input', name: 'email', message: 'Support email:', initial: 'support@example.com' },
     {
       type: 'input',
       name: 'gitRemote',
       message: 'GitHub repository URL (optional):',
       initial: '',
+      validate: (value: string) =>
+        !value ||
+        /^(https:\/\/github\.com\/[\w-]+\/[\w.-]+(\.git)?|git@github\.com:[\w-]+\/[\w.-]+\.git)$/.test(
+          value,
+        ) ||
+        'Enter a GitHub URL (https://github.com/user/repo or git@github.com:user/repo.git).',
     },
     {
       type: 'confirm',
       name: 'pushToRemote',
-      message: 'Would you like to push the changes to the remote repository?',
-      initial: true,
-      skip: function (this: PromptContext) {
-        return !this.state?.answers?.gitRemote;
-      },
-    },
-    {
-      type: 'input',
-      name: 'gitIssues',
-      message: 'GitHub issues URL (optional):',
-      initial: '',
-      skip: function (this: PromptContext) {
-        return !this.state?.answers?.gitRemote;
-      },
-      validate: (value: string) => {
-        if (!value) return true;
-        // GitHub issues URL pattern: https://github.com/user/repo/issues
-        const httpsPattern = /^https:\/\/github\.com\/[\w-]+\/[\w.-]+\/issues$/;
-        if (!httpsPattern.test(value)) {
-          return 'Please enter a valid GitHub issues URL (e.g., https://github.com/user/repo/issues)';
-        }
-        return true;
-      },
-    },
-    {
-      type: 'input',
-      name: 'gitHomepage',
-      message: 'GitHub homepage URL (optional):',
-      initial: '',
-      skip: function (this: PromptContext) {
-        return !this.state?.answers?.gitRemote;
-      },
-      validate: (value: string) => {
-        if (!value) return true;
-        // GitHub homepage URL pattern: https://github.com/user/repo#readme
-        const httpsPattern = /^https:\/\/github\.com\/[\w-]+\/[\w.-]+#readme$/;
-        if (!httpsPattern.test(value)) {
-          return 'Please enter a valid GitHub homepage URL (e.g., https://github.com/user/repo#readme)';
-        }
-        return true;
-      },
-    },
-    {
-      type: 'confirm',
-      name: 'keepTemplates',
-      message: 'Do you want to keep GitHub issue and pull request templates?',
-      initial: false,
-    },
-    {
-      type: 'select',
-      name: 'httpClient',
-      message: 'Which HTTP client do you want to use?',
-      choices: ['axios', 'fetch', 'both', 'none'],
-      initial: 1,
-    },
-    {
-      type: 'confirm',
-      name: 'reactSecureStorage',
-      message: 'Do you want to include react-secure-storage?',
-      initial: true,
-      skip: function (this: PromptContext) {
-        // Access answers from the prompt instance safely across versions
-        const answers = this.state?.answers ?? this.enquirer?.answers ?? {};
-        // If HTTP client is selected (not 'none'), we skip this question (it will be auto-included)
-        return !!(answers.httpClient && answers.httpClient !== 'none');
-      },
-    },
-    {
-      type: 'confirm',
-      name: 'darkMode',
-      message: 'Do you want to include Dark Mode (Tailwind + @teispace/next-themes)?',
-      initial: true,
-    },
-    {
-      type: 'confirm',
-      name: 'redux',
-      message: 'Do you want to include Redux Toolkit?',
-      initial: true,
-    },
-    {
-      type: 'confirm',
-      name: 'ws',
-      message: 'Do you want to include WebSocket support (socket.io-client + Redux bridge)?',
+      message: 'Push the initial commit to the remote?',
       initial: false,
       skip: function (this: PromptContext) {
-        // WS depends on Redux (bridge dispatches into a Redux slice). Hide
-        // the question when Redux is off; defaultProjectAnswers forces
-        // ws=false in that case so the project state stays consistent.
-        const answers = this.state?.answers ?? this.enquirer?.answers ?? {};
-        return !answers.redux;
+        return !answersOf(this).gitRemote;
       },
     },
-    {
-      type: 'confirm',
-      name: 'i18n',
-      message: 'Do you want to include Internationalization (next-intl)?',
-      initial: true,
-    },
-    {
-      type: 'confirm',
-      name: 'tests',
-      message: 'Do you want to include testing setup (Vitest + React Testing Library)?',
-      initial: true,
-    },
-    {
-      type: 'confirm',
-      name: 'reactCompiler',
-      message: 'Do you want to enable the React Compiler?',
-      initial: true,
-    },
-    {
-      type: 'confirm',
-      name: 'bundleAnalyzer',
-      message: 'Do you want to include @next/bundle-analyzer?',
-      initial: false,
-    },
-    {
-      type: 'multiselect',
-      name: 'communityFiles',
-      message: 'Select community files to include:',
-      choices: [
-        { name: 'CODE_OF_CONDUCT.md', value: 'CODE_OF_CONDUCT.md' },
-        { name: 'CONTRIBUTING.md', value: 'CONTRIBUTING.md' },
-        { name: 'SECURITY.md', value: 'SECURITY.md' },
-      ],
-      initial: [],
-    },
-    {
-      type: 'confirm',
-      name: 'readme',
-      message: 'Do you want to create a README.md?',
-      initial: true,
-    },
-    {
-      type: 'confirm',
-      name: 'docker',
-      message: 'Do you want to include Docker configuration?',
-      initial: false,
-    },
-    {
-      type: 'input',
-      name: 'containerName',
-      message: 'Docker Container Name:',
-      initial: 'next-app',
-      skip: function (this: PromptContext) {
-        const answers = this.state?.answers ?? this.enquirer?.answers ?? {};
-        return !answers.docker;
-      },
-      validate: (value: string) => {
-        if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(value)) {
-          return 'Invalid Docker container name.';
-        }
-        return true;
-      },
-    },
-    {
-      type: 'input',
-      name: 'imageName',
-      message: 'Docker Image Name:',
-      initial: 'nextjs-starter',
-      skip: function (this: PromptContext) {
-        const answers = this.state?.answers ?? this.enquirer?.answers ?? {};
-        return !answers.docker;
-      },
-      validate: (value: string) => {
-        if (!/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/.test(value)) {
-          return 'Invalid Docker image name (must be lowercase).';
-        }
-        return true;
-      },
-    },
-    {
-      type: 'input',
-      name: 'imageTag',
-      message: 'Docker Image Tag:',
-      initial: 'latest',
-      skip: function (this: PromptContext) {
-        const answers = this.state?.answers ?? this.enquirer?.answers ?? {};
-        return !answers.docker;
-      },
-      validate: (value: string) => {
-        if (!/^[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}$/.test(value)) {
-          return 'Invalid Docker image tag.';
-        }
-        return true;
-      },
-    },
-    {
-      type: 'confirm',
-      name: 'ci',
-      message: 'Do you want to include GitHub Actions (CI/CD)?',
-      initial: false,
-    },
-    {
-      type: 'confirm',
-      name: 'preCommitHooks',
-      message: 'Do you want to setup pre-commit hooks (Husky, Commitlint, Lint-staged)?',
-      initial: true,
-    },
-    {
-      type: 'confirm',
-      name: 'commitizen',
-      message: 'Do you want to setup Commitizen?',
-      initial: true,
-    },
-    {
-      type: 'confirm',
-      name: 'copyEnv',
-      message: 'Want to copy .env.example to .env?',
-      initial: true,
-    },
+    { type: 'confirm', name: 'readme', message: 'Create a README.md?', initial: true },
+    { type: 'confirm', name: 'copyEnv', message: 'Copy .env.example to .env?', initial: true },
   ] as any);
 
-  // Set company to be the same as author
-  response.company = response.author;
+  return defaultIdentity(initialName, {
+    ...response,
+    projectName: initialName ?? response.projectName,
+  });
+};
 
-  // The `ws` question is hidden when redux=false; Enquirer leaves the field
-  // undefined in that case. Normalise to a strict boolean so callers can rely
-  // on it.
-  response.ws = !!response.redux && !!response.ws;
+/**
+ * Ask the starter's own questions. The manifest declares each option's
+ * type, label, values, default, and `requires`; nothing here knows what a
+ * feature is. Options whose requirements are not met are skipped and later
+ * forced to their off value by `resolveAnswers`.
+ */
+export const promptForOptions = async (
+  manifest: StarterManifest,
+  preset: Answers = {},
+): Promise<Answers> => {
+  const questions = Object.entries(manifest.options).map(([name, spec]) => {
+    const initial = preset[name] ?? spec.default;
+    const base = {
+      name,
+      message: spec.label ?? name,
+      skip: function (this: PromptContext) {
+        if (!spec.requires) return false;
+        const current = answersOf(this);
+        return !Object.entries(spec.requires).every(([dep, accepted]) =>
+          satisfies(manifest.options[dep], current[dep] as OptionValue | undefined, accepted),
+        );
+      },
+    };
+    if (spec.type === 'boolean') return { ...base, type: 'confirm', initial: Boolean(initial) };
+    if (spec.type === 'multi') {
+      return {
+        ...base,
+        type: 'multiselect',
+        choices: (spec.values ?? []).map((v) => ({ name: v, value: v })),
+        initial: Array.isArray(initial) ? initial : [],
+      };
+    }
+    const values = spec.values ?? [];
+    return {
+      ...base,
+      type: 'select',
+      choices: values,
+      initial: Math.max(0, values.indexOf(String(initial))),
+    };
+  });
 
-  // Generate git URLs from gitRemote if provided
-  if (response.gitRemote && !response.gitHomepage) {
-    const baseUrl = response.gitRemote
-      .replace('git@github.com:', 'https://github.com/')
-      .replace(/\.git$/, '');
-    response.gitHomepage = `${baseUrl}#readme`;
-    response.gitIssues = `${baseUrl}/issues`;
+  const response = (await prompt(questions as any)) as Record<string, unknown>;
+  const answers: Answers = {};
+  for (const [name, spec] of Object.entries(manifest.options)) {
+    const value = response[name];
+    if (value === undefined) continue;
+    answers[name] = spec.type === 'multi' && !Array.isArray(value) ? [] : (value as OptionValue);
   }
-
-  return response;
+  return answers;
 };

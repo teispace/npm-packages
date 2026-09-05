@@ -13,6 +13,9 @@ export interface LocalePromptResult {
 export interface LocalePromptPresets {
   /** When set, the copy-translations prompt is skipped and this value is used. */
   copyTranslations?: boolean;
+  name?: string;
+  country?: string;
+  flag?: string;
 }
 
 export const promptForLocaleDetails = async (
@@ -36,26 +39,30 @@ export const promptForLocaleDetails = async (
     });
   }
 
-  questions.push(
-    {
+  if (!presets.name) {
+    questions.push({
       type: 'input',
       name: 'name',
       message: 'Language name (e.g., Spanish, French):',
       validate: (value: string) => (value ? true : 'Language name is required'),
-    },
-    {
+    });
+  }
+  if (!presets.country) {
+    questions.push({
       type: 'input',
       name: 'country',
       message: 'Country (e.g., Spain, France):',
       validate: (value: string) => (value ? true : 'Country is required'),
-    },
-    {
+    });
+  }
+  if (!presets.flag) {
+    questions.push({
       type: 'input',
       name: 'flag',
       message: 'Flag emoji (e.g., 🇪🇸, 🇫🇷):',
       validate: (value: string) => (value ? true : 'Flag emoji is required'),
-    },
-  );
+    });
+  }
 
   if (presets.copyTranslations === undefined) {
     questions.push({
@@ -66,13 +73,16 @@ export const promptForLocaleDetails = async (
     });
   }
 
-  const answers = (await prompt(questions)) as unknown as Partial<LocalePromptResult>;
+  const answers =
+    questions.length > 0
+      ? ((await prompt(questions)) as unknown as Partial<LocalePromptResult>)
+      : {};
 
   return {
     code: code ?? (answers.code as string),
-    name: answers.name as string,
-    country: answers.country as string,
-    flag: answers.flag as string,
+    name: presets.name ?? (answers.name as string),
+    country: presets.country ?? (answers.country as string),
+    flag: presets.flag ?? (answers.flag as string),
     copyTranslations: presets.copyTranslations ?? answers.copyTranslations ?? false,
   };
 };
