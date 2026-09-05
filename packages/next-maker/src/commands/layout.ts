@@ -1,6 +1,7 @@
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
+import { formatTouched } from '../core/format';
 import { detectProjectSetup } from '../detection';
 import { generateLayout } from '../generators/layout.generator';
 
@@ -20,6 +21,7 @@ export const registerLayoutCommand = (program: Command) => {
     .action(async (segment: string, options: LayoutCommandOptions) => {
       try {
         const projectPath = process.cwd();
+        const startedAt = Date.now();
 
         log(pc.cyan('\n📐 Layout Generator\n'));
 
@@ -39,6 +41,8 @@ export const registerLayoutCommand = (program: Command) => {
           withGroup: !!options.group,
         });
         spinner.succeed('Layout generated');
+
+        await formatTouched(projectPath, startedAt);
 
         log(pc.green(`\n✨ ${result.componentName} created!\n`));
         log(pc.dim(`  📄 ${result.displayPath}`));

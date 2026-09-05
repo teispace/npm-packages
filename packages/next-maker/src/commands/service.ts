@@ -4,6 +4,7 @@ import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
 import { assertSafeRelativePath, assertSafeSegment, resolveInside } from '../config/path-safety';
 import { fileExists } from '../core/files';
+import { formatTouched } from '../core/format';
 import { detectProjectSetup } from '../detection';
 import { generateApi } from '../generators/api.generator';
 import { registerApiEndpoints } from '../modifiers';
@@ -30,6 +31,7 @@ export const registerServiceCommand = (program: Command) => {
     .action(async (name: string | undefined, options: ServiceCommandOptions) => {
       try {
         const projectPath = process.cwd();
+        const startedAt = Date.now();
         log(pc.cyan('\n🔌 API Layer Generator\n'));
 
         if (!name) throw new Error('Pass the resource name, e.g. `next-maker api invoice`.');
@@ -61,6 +63,8 @@ export const registerServiceCommand = (program: Command) => {
         spinner.start('Registering API endpoints...');
         await registerApiEndpoints({ serviceName: name, projectPath });
         spinner.succeed('Endpoints registered in src/lib/config/app-apis.ts');
+
+        await formatTouched(projectPath, startedAt);
 
         log(pc.green(`\n✨ ${path.relative(projectPath, featurePath)}/api ready.\n`));
         for (const file of files) log(pc.dim(`  ${file}`));

@@ -4,6 +4,7 @@ import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
 import { assertSafeSegment } from '../config/path-safety';
 import { kebabToPascal } from '../config/utils';
+import { formatTouched } from '../core/format';
 import { detectProjectSetup, directoryExists } from '../detection';
 import { generatePage } from '../generators';
 import { addTranslationNamespace, registerAppPath } from '../modifiers';
@@ -29,6 +30,7 @@ export const registerPageCommand = (program: Command) => {
     .action(async (name: string | undefined, options: PageCommandOptions) => {
       try {
         const projectPath = process.cwd();
+        const startedAt = Date.now();
 
         log(pc.cyan('\n📄 Page Generator\n'));
 
@@ -92,6 +94,8 @@ export const registerPageCommand = (program: Command) => {
         const displayPath = options.dynamic
           ? path.join(baseDir, pageName, `[${options.dynamic}]`)
           : path.join(baseDir, pageName);
+
+        await formatTouched(projectPath, startedAt);
 
         log(pc.green(`\n✨ Page '${pageName}' created successfully!\n`));
         log(pc.dim('Generated files:'));

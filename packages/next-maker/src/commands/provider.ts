@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
+import { formatTouched } from '../core/format';
 import { generateProvider } from '../generators/provider.generator';
 import { registerProvider } from '../modifiers/root-provider.modifier';
 
@@ -12,6 +13,7 @@ export const registerProviderCommand = (program: Command) => {
     .action(async (name: string) => {
       try {
         const projectPath = process.cwd();
+        const startedAt = Date.now();
 
         log(pc.cyan('\n🔌 Provider Generator\n'));
 
@@ -29,6 +31,8 @@ export const registerProviderCommand = (program: Command) => {
           fileBaseName,
         });
         spinner.succeed('Provider registered');
+
+        await formatTouched(projectPath, startedAt);
 
         log(pc.green(`\n✨ ${componentName} created!\n`));
         log(pc.dim('Generated files:'));

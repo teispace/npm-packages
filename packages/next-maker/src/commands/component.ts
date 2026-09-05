@@ -4,6 +4,7 @@ import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
 import { assertSafeRelativePath, assertSafeSegment } from '../config/path-safety';
 import { kebabToPascal } from '../config/utils';
+import { formatTouched } from '../core/format';
 import { detectProjectSetup } from '../detection';
 import { generateComponent, generateTest } from '../generators';
 import { addTranslationNamespace } from '../modifiers';
@@ -29,6 +30,7 @@ export const registerComponentCommand = (program: Command) => {
     .action(async (name: string | undefined, options: ComponentCommandOptions) => {
       try {
         const projectPath = process.cwd();
+        const startedAt = Date.now();
 
         log(pc.cyan('\n🧩 Component Generator\n'));
 
@@ -88,6 +90,8 @@ export const registerComponentCommand = (program: Command) => {
         const location = options.feature
           ? `${options.feature}/components/${componentName}.tsx`
           : `src/components/common/${componentName}/${componentName}.tsx`;
+
+        await formatTouched(projectPath, startedAt);
 
         log(pc.green(`\n✨ Component '${componentName}' created successfully!\n`));
         log(pc.dim(`  📄 ${location}`));

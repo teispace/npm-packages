@@ -12,6 +12,7 @@ import {
 } from '../composition/reference';
 import { log, logError } from '../config';
 import { resolveStarterSource, STARTER_REF } from '../config/starter';
+import { formatTouched } from '../core/format';
 import { installDependencies } from '../core/package-manager';
 
 const { prompt } = Enquirer;
@@ -143,7 +144,9 @@ export const registerUpgradeCommand = (program: Command) => {
             return;
           }
         }
+        const startedAt = Date.now();
         const report = await mergeTrees({ base: base.dir, theirs: theirs.dir, ours: projectPath });
+        await formatTouched(projectPath, startedAt);
         await writeProjectRecord(projectPath, {
           ...record,
           cli: pkg.version,

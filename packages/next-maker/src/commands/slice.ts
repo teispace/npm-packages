@@ -4,6 +4,7 @@ import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
 import { assertSafeRelativePath, assertSafeSegment, resolveInside } from '../config/path-safety';
 import { kebabToPascal } from '../config/utils';
+import { formatTouched } from '../core/format';
 import { detectProjectSetup, directoryExists } from '../detection';
 import { generateSlice, generateTest } from '../generators';
 import { registerInRootReducer } from '../modifiers';
@@ -27,6 +28,7 @@ export const registerSliceCommand = (program: Command) => {
     .action(async (name: string | undefined, options: SliceCommandOptions) => {
       try {
         const projectPath = process.cwd();
+        const startedAt = Date.now();
         log(pc.cyan('\n🔧 Slice Generator\n'));
 
         spinner.start('Detecting project setup...');
@@ -83,6 +85,8 @@ export const registerSliceCommand = (program: Command) => {
             spinner.succeed('Test generated');
           }
         }
+
+        await formatTouched(projectPath, startedAt);
 
         log(
           pc.green(
