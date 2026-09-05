@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.2](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.1...next-maker-v5.0.2) (2026-09-05)
+
+
+### Bug Fixes
+
+* **next-maker:** report the starter version from its package.json ([#164](https://github.com/teispace/npm-packages/issues/164)) ([543fdd0](https://github.com/teispace/npm-packages/commit/543fdd0ff92fa8268dc84e7c9778987421b51d0e))
+
 ## [5.0.1](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.0...next-maker-v5.0.1) (2026-09-05)
 
 
