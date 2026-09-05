@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.0.1](https://github.com/teispace/npm-packages/compare/next-themes-v3.0.0...next-themes-v3.0.1) (2026-09-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **next-maker:** compose projects from the starter manifest (next-maker 5) ([#156](https://github.com/teispace/npm-packages/issues/156))
+
+### Features
+
+* **next-maker:** compose projects from the starter manifest (next-maker 5) ([#156](https://github.com/teispace/npm-packages/issues/156)) ([8a279c3](https://github.com/teispace/npm-packages/commit/8a279c3693740ed6860de9c37873fbcb9a0d30b7))
+
+
+### Bug Fixes
+
+* **next-themes:** release the storage probe fix as 3.0.1 ([#161](https://github.com/teispace/npm-packages/issues/161)) ([7dbfde3](https://github.com/teispace/npm-packages/commit/7dbfde304736d51faafe409a8468716d4399014b))
+
 ## [3.0.0](https://github.com/teispace/npm-packages/compare/next-themes-v2.0.4...next-themes-v3.0.0) (2026-08-21)
 
 
