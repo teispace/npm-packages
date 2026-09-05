@@ -79,3 +79,28 @@ describe('isFeatureOn', () => {
     ).toBe(true);
   });
 });
+
+describe('loadStarterManifest', () => {
+  it('takes the version from the starter package.json over the manifest copy', async () => {
+    const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const path = await import('node:path');
+    const { loadStarterManifest } = await import('../../src/composition/manifest');
+    const dir = await mkdtemp(path.join(tmpdir(), 'nm-manifest-'));
+    try {
+      const manifest = {
+        manifestVersion: 1,
+        starter: { name: '@teispace/nextjs-starter', version: '2.0.0-alpha.0' },
+        options: {},
+        features: {},
+        packageManagers: {},
+      };
+      await writeFile(path.join(dir, 'next-maker.json'), JSON.stringify(manifest));
+      expect((await loadStarterManifest(dir)).starter.version).toBe('2.0.0-alpha.0');
+      await writeFile(path.join(dir, 'package.json'), JSON.stringify({ version: '2.0.0-alpha.1' }));
+      expect((await loadStarterManifest(dir)).starter.version).toBe('2.0.0-alpha.1');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
