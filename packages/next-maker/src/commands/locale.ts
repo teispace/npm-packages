@@ -3,6 +3,7 @@ import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
 import { assertSafeSegment, resolveInside } from '../config/path-safety';
 import { fileExists } from '../core/files';
+import { formatTouched } from '../core/format';
 import { detectProjectSetup } from '../detection';
 import { generateLocale } from '../generators';
 import { promptForLocaleDetails } from '../prompts/locale.prompt';
@@ -25,6 +26,7 @@ export const registerLocaleCommand = (program: Command) => {
     .action(async (code: string | undefined, options: LocaleCommandOptions) => {
       try {
         const projectPath = process.cwd();
+        const startedAt = Date.now();
 
         log(pc.cyan('\n🌍 Locale Generator\n'));
 
@@ -73,6 +75,7 @@ export const registerLocaleCommand = (program: Command) => {
         spinner.succeed('Locale added');
 
         // Success
+        await formatTouched(projectPath, startedAt);
         log(
           pc.green(
             `\n✨ Locale '${localeOptions.code}' (${localeOptions.name}) added successfully!\n`,

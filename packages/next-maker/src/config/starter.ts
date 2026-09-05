@@ -15,7 +15,7 @@ const execFileAsync = promisify(execFile);
  * together with the CLI changes that track it.
  */
 export const STARTER_REPO = 'teispace/nextjs-starter';
-export const STARTER_REF = 'v2.0.0-alpha.0';
+export const STARTER_REF = 'v2.0.0-alpha.1';
 
 /** Environment override for development and the composition matrix. */
 export const STARTER_PATH_ENV = 'NEXT_MAKER_STARTER_PATH';

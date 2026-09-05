@@ -3,6 +3,7 @@ import { cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { listFiles } from './glob';
+import { resolveConflicts } from './merge3';
 
 const execFileAsync = promisify(execFile);
 
@@ -93,7 +94,11 @@ const write = async (target: string, content: Buffer | string, dryRun: boolean):
   await writeFile(target, content);
 };
 
-/** `git merge-file -p`; exit 0 clean, exit n>0 with markers, other failures throw. */
+/**
+ * `git merge-file --diff3 -p`, with its conflict blocks retried by the
+ * token-level resolver in `merge3.ts`. Exit 0 is clean; exit n>0 carries
+ * the marked-up text on stdout; other failures throw.
+ */
 export const mergeText = async (
   ours: string,
   base: string,
@@ -115,6 +120,7 @@ export const mergeText = async (
         [
           'merge-file',
           '-p',
+          '--diff3',
           '-L',
           labels.ours,
           '-L',
@@ -136,7 +142,7 @@ export const mergeText = async (
         e.code < 128 &&
         typeof e.stdout === 'string'
       ) {
-        return { content: e.stdout, conflicts: e.code };
+        return resolveConflicts(e.stdout, labels);
       }
       if (e.code === 'ENOENT')
         throw new Error('git is required for merges but was not found on PATH.');

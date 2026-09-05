@@ -118,7 +118,7 @@ ${packageManager} install
 ${runCommand(packageManager, 'dev')}
 \`\`\`
 
-Open [http://localhost:3000](http://localhost:3000). Copy \`.env.example\` to \`.env\` and set \`NEXT_PUBLIC_API_URL\` to your API origin.
+Open [http://localhost:3000](http://localhost:3000). Copy \`.env.example\` to \`.env\` and set \`NEXT_PUBLIC_API_URL\` to your API origin. Production builds also need \`NEXT_PUBLIC_APP_URL\`, the public URL of this app.
 
 ## What is included
 

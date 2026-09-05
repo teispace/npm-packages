@@ -4,6 +4,7 @@ import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
 import { assertSafeRelativePath, assertSafeSegment, resolveInside } from '../config/path-safety';
 import { kebabToPascal } from '../config/utils';
+import { formatTouched } from '../core/format';
 import { detectProjectSetup, directoryExists } from '../detection';
 import { generateFeature } from '../generators';
 import { addTranslationNamespace, registerApiEndpoints, registerInRootReducer } from '../modifiers';
@@ -33,6 +34,7 @@ export const registerFeatureCommand = (program: Command) => {
     .action(async (name: string | undefined, options: FeatureCommandOptions) => {
       try {
         const projectPath = process.cwd();
+        const startedAt = Date.now();
         log(pc.cyan('\n🎯 Feature Generator\n'));
 
         spinner.start('Detecting project setup...');
@@ -93,6 +95,8 @@ export const registerFeatureCommand = (program: Command) => {
           });
           spinner.succeed('Slice registered');
         }
+
+        await formatTouched(projectPath, startedAt);
 
         printFeatureSuccess(feature, basePath, detection.state);
       } catch (error) {

@@ -1,17 +1,14 @@
-import { execFile } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import { resolveStarterSource, type StarterSource } from '../config/starter';
 import { fileExists } from '../core/files';
+import { formatWithBiome } from '../core/format';
 import type { PackageManager } from '../core/package-manager';
 import { defaultIdentity, type ProjectIdentity } from '../prompts/create-app.prompt';
 import { composeProject, fetchAndPlan, type ScaffoldPlan } from '../services/init/scaffold.service';
 import type { Answers } from './manifest';
 import type { ProjectRecord } from './project';
-
-const execFileAsync = promisify(execFile);
 
 export interface ReferenceTree {
   dir: string;
@@ -82,19 +79,7 @@ export const composeReference = async (
       packageManager,
     });
     await composeProject(target, identity, scaffold, source);
-    const biome = formatWithBiomeFrom
-      ? path.join(formatWithBiomeFrom, 'node_modules', '.bin', 'biome')
-      : undefined;
-    if (biome && fileExists(biome)) {
-      try {
-        await execFileAsync(biome, ['check', '--write', '--no-errors-on-unmatched', '.'], {
-          cwd: target,
-          maxBuffer: 64 * 1024 * 1024,
-        });
-      } catch {
-        // Lint errors are irrelevant here; formatting is what matters and it was applied.
-      }
-    }
+    if (formatWithBiomeFrom) await formatWithBiome(target, ['.'], formatWithBiomeFrom);
     return { dir: target, scaffold, dispose: () => rm(dir, { recursive: true, force: true }) };
   } catch (error) {
     await rm(dir, { recursive: true, force: true });

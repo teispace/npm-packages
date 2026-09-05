@@ -6,6 +6,7 @@ import { mergeTrees } from '../composition/merge';
 import { checkoutStarter, readProjectRecord, writeProjectRecord } from '../composition/project';
 import { composeReference, identityForProject } from '../composition/reference';
 import { log, logError } from '../config';
+import { formatTouched } from '../core/format';
 import { installDependencies } from '../core/package-manager';
 import { printMergeReport } from './upgrade';
 
@@ -114,7 +115,9 @@ export const registerSetupCommand = (program: Command) => {
             return;
           }
         }
+        const startedAt = Date.now();
         const report = await mergeTrees({ base: base.dir, theirs: theirs.dir, ours: projectPath });
+        await formatTouched(projectPath, startedAt);
         await writeProjectRecord(projectPath, { ...record, answers });
         if (options.install !== false) {
           log(pc.dim(`\nInstalling with ${record.packageManager}...`));

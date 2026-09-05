@@ -1,6 +1,7 @@
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
+import { formatTouched } from '../core/format';
 import {
   addEnvVar,
   type EnvVarSpec,
@@ -60,6 +61,7 @@ export const registerEnvCommand = (program: Command) => {
     .action(async (name: string, options: EnvCommandOptions) => {
       try {
         const projectPath = process.cwd();
+        const startedAt = Date.now();
 
         log(pc.cyan('\n🔐 Env Var Generator\n'));
 
@@ -88,6 +90,7 @@ export const registerEnvCommand = (program: Command) => {
         spinner.succeed('Env var written');
 
         const fullName = ensurePublicPrefix(spec.name, spec.public);
+        await formatTouched(projectPath, startedAt);
         log(pc.green(`\n✨ ${fullName} declared in the ${result.group} group.\n`));
         log(pc.dim('Touched:'));
         log(pc.dim(`  ${result.schemaUpdated ? '✏️ ' : '⏭ '} src/lib/env/index.ts`));

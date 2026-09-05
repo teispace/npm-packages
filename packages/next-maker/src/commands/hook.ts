@@ -4,6 +4,7 @@ import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
 import { assertSafeRelativePath, assertSafeSegment } from '../config/path-safety';
 import { kebabToPascal } from '../config/utils';
+import { formatTouched } from '../core/format';
 import { detectProjectSetup } from '../detection';
 import { generateHook, generateTest } from '../generators';
 import { promptForHookDetails } from '../prompts/hook.prompt';
@@ -26,6 +27,7 @@ export const registerHookCommand = (program: Command) => {
     .action(async (name: string | undefined, options: HookCommandOptions) => {
       try {
         const projectPath = process.cwd();
+        const startedAt = Date.now();
 
         log(pc.cyan('\n🪝 Hook Generator\n'));
 
@@ -67,6 +69,8 @@ export const registerHookCommand = (program: Command) => {
         const location = options.feature
           ? `${options.feature}/hooks/${hookName}.ts`
           : `src/hooks/${hookName}.ts`;
+
+        await formatTouched(projectPath, startedAt);
 
         log(pc.green(`\n✨ Hook '${hookName}' created successfully!\n`));
         log(pc.dim(`  📄 ${location}`));

@@ -4,6 +4,7 @@ import pc from 'picocolors';
 import { log, logError, spinner } from '../config';
 import { kebabToCamel, kebabToPascal } from '../config/utils';
 import { fileExists, readFile } from '../core/files';
+import { formatTouched } from '../core/format';
 import { detectProjectSetup } from '../detection';
 import { generateTest, type TestKind } from '../generators';
 
@@ -24,6 +25,7 @@ export const registerTestCommand = (program: Command) => {
     .action(async (file: string, options: TestCommandOptions) => {
       try {
         const projectPath = process.cwd();
+        const startedAt = Date.now();
         const sourceFile = path.isAbsolute(file) ? file : path.join(projectPath, file);
 
         log(pc.cyan('\n🧪 Test Generator\n'));
@@ -72,6 +74,8 @@ export const registerTestCommand = (program: Command) => {
             kind === 'hook' && detection.state !== 'none' && content.includes('useAppSelector'),
         });
         spinner.succeed('Test generated');
+
+        await formatTouched(projectPath, startedAt);
 
         log(pc.green(`\n✨ Test '${path.basename(written)}' created.\n`));
         log(pc.dim(`  🧪 ${path.relative(projectPath, written)}`));
