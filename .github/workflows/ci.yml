@@ -140,6 +140,14 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'yarn'
 
+      # Generated projects install with pnpm; put a real pnpm on PATH rather
+      # than relying on the Corepack shim, which cannot download new versions
+      # on a fresh runner.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
       - name: Install dependencies
         run: yarn install --immutable
 
