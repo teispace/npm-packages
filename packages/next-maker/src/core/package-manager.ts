@@ -12,13 +12,23 @@ export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun';
  * a string `exec`, be interpreted by the shell. `execFile` never spawns a shell,
  * so every argument is inert data.
  */
-const run = (bin: string, args: string[], cwd: string) => execFileAsync(bin, args, { cwd });
+const run = (bin: string, args: string[], cwd: string) =>
+  execFileAsync(bin, args, { cwd, maxBuffer: 64 * 1024 * 1024 });
+
+/** The last lines a package manager printed, so a failure message says why. */
+const tailOf = (error: unknown): string => {
+  const e = error as { stderr?: string; stdout?: string; message?: string };
+  const text = `${e.stdout ?? ''}\n${e.stderr ?? ''}`.trim() || (e.message ?? String(error));
+  return text.split('\n').filter(Boolean).slice(-12).join('\n');
+};
 
 export const installDependencies = async (cwd: string, manager: PackageManager): Promise<void> => {
   try {
     await run(manager, ['install'], cwd);
   } catch (error) {
-    throw new Error(`Failed to install dependencies with ${manager}: ${error}`, { cause: error });
+    throw new Error(`Failed to install dependencies with ${manager}:\n${tailOf(error)}`, {
+      cause: error,
+    });
   }
 };
 
@@ -71,7 +81,9 @@ export const installPackages = async (
   try {
     await run(manager, [...getInstallArgs(manager), ...packages], cwd);
   } catch (error) {
-    throw new Error(`Failed to install packages with ${manager}: ${error}`, { cause: error });
+    throw new Error(`Failed to install packages with ${manager}:\n${tailOf(error)}`, {
+      cause: error,
+    });
   }
 };
 
@@ -118,7 +130,9 @@ export const installDevPackages = async (
   try {
     await run(manager, [...getInstallArgs(manager), getDevFlag(manager), ...packages], cwd);
   } catch (error) {
-    throw new Error(`Failed to install dev packages with ${manager}: ${error}`, { cause: error });
+    throw new Error(`Failed to install dev packages with ${manager}:\n${tailOf(error)}`, {
+      cause: error,
+    });
   }
 };
 

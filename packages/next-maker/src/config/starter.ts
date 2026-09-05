@@ -10,7 +10,7 @@ import degit from 'degit';
  * ref deliberately, together with the CLI changes that track it.
  */
 export const STARTER_REPO = 'teispace/nextjs-starter';
-export const STARTER_REF: string = 'v1.1.0';
+export const STARTER_REF: string = 'v1.1.1';
 
 export const starterSource = (): string =>
   STARTER_REF === 'main' ? STARTER_REPO : `${STARTER_REPO}#${STARTER_REF}`;
