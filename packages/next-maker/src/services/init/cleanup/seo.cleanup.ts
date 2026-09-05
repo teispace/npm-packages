@@ -35,6 +35,8 @@ import { env } from '@/lib/env';
 
 const APP_URL = env.NEXT_PUBLIC_APP_URL;
 const APP_NAME = 'Nextjs Starter';
+/** Route served by \`src/app/opengraph-image.tsx\`; relative so \`metadataBase\` resolves it. */
+const DEFAULT_OG_IMAGE_PATH = '/opengraph-image';
 
 type SEOParams = {
   title: string;
@@ -52,7 +54,7 @@ export function generateSEOMetadata({
   noIndex = false,
 }: SEOParams): Metadata {
   const url = \`\${APP_URL}\${path}\`;
-  const ogImage = image || \`\${APP_URL}/og-image.png\`;
+  const ogImage = image ?? DEFAULT_OG_IMAGE_PATH;
 
   return {
     title,
@@ -95,7 +97,7 @@ export function generateSEOMetadata({
   };
 }
 
-export { APP_NAME, APP_URL };
+export { APP_NAME, APP_URL, DEFAULT_OG_IMAGE_PATH };
 `;
 
 const NON_I18N_SITEMAP = `import type { MetadataRoute } from 'next';

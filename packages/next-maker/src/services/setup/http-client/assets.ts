@@ -1,18 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import degit from 'degit';
 import type { Ora } from 'ora';
 import { PROJECT_PATHS } from '../../../config/paths';
+import { cloneStarter } from '../../../config/starter';
 import { copyFile, deleteDirectory, fileExists, readFile, writeFile } from '../../../core/files';
 
 export const fetchAssets = async (tempDir: string, spinner: Ora): Promise<void> => {
   spinner.text = 'Downloading assets from starter repository...';
-  const emitter = degit('teispace/nextjs-starter', {
-    cache: false,
-    force: true,
-    verbose: false,
-  });
-  await emitter.clone(tempDir);
+  await cloneStarter(tempDir);
 };
 
 export const copyHttpClientFiles = async (

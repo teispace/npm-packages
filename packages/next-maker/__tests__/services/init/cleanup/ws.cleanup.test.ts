@@ -126,6 +126,7 @@ async function seedTemplateProject(root: string): Promise<void> {
 
   // slice
   await mkdir(path.join(root, 'src/store/slices'), { recursive: true });
+  await writeFile(path.join(root, 'src/store/slices/ws.slice.test.ts'), '// sibling test\n');
   await writeFile(
     path.join(root, 'src/store/slices/ws.slice.ts'),
     'export const wsReducer = () => ({}) as any;\n',
@@ -173,6 +174,12 @@ describe('cleanupWs', () => {
     expect(existsSync(path.join(project, 'src/lib/utils/ws'))).toBe(true);
     expect(existsSync(path.join(project, 'src/store/slices/ws.slice.ts'))).toBe(true);
     expect(uninstallPackageSpy).not.toHaveBeenCalled();
+  });
+
+  it('deletes the slice test file, which imports the deleted modules', async () => {
+    expect(existsSync(path.join(project, 'src/store/slices/ws.slice.test.ts'))).toBe(true);
+    await cleanupWs(project, baseAnswers({ ws: false, redux: true }));
+    expect(existsSync(path.join(project, 'src/store/slices/ws.slice.test.ts'))).toBe(false);
   });
 
   it('deletes the ws subtree and slice when ws is off', async () => {

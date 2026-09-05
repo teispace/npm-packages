@@ -23,6 +23,9 @@ export const cleanupWs = async (projectPath: string, answers: ProjectPrompts): P
   // 1. Delete WS source tree + the slice file.
   await deleteDirectory(path.join(projectPath, PROJECT_PATHS.WS_UTILS));
   await deleteFile(path.join(projectPath, PROJECT_PATHS.WS_SLICE_FILE));
+  // The slice's sibling test imports both of the above; leaving it behind
+  // fails `tsc` and `next build` in every project that keeps tests.
+  await deleteFile(path.join(projectPath, PROJECT_PATHS.WS_SLICE_TEST_FILE));
 
   // 2. Surgical removals from rootReducer + StoreProvider. Skip when redux
   //    is also off — cleanupRedux is about to delete the whole store.
