@@ -46,7 +46,9 @@ const run = (cmd: string, args: string[], cwd: string, env: NodeJS.ProcessEnv = 
     cwd,
     stdio: 'pipe',
     encoding: 'utf-8',
-    env: { ...process.env, ...env },
+    // Corepack downloads the package manager a generated project pins; never
+    // stop for its confirmation prompt.
+    env: { COREPACK_ENABLE_DOWNLOAD_PROMPT: '0', ...process.env, ...env },
     maxBuffer: 64 * 1024 * 1024,
   });
   return { ok: result.status === 0, output: `${result.stdout}\n${result.stderr}` };
