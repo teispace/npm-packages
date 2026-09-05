@@ -3,24 +3,19 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import type { Ora } from 'ora';
 import pc from 'picocolors';
-import pkg from '../../package.json' with { type: 'json' };
 import {
   type Answers,
-  applyComposition,
   type CompositionPlan,
   getPreset,
   loadInitConfig,
-  loadStarterManifest,
   parseSetFlags,
-  planComposition,
   presetNames,
-  resolveAnswers,
   type StarterManifest,
 } from '../composition';
 import { log, logError, printBanner } from '../config';
 import { onCancellation } from '../config/errorHandlers';
 import { startSpinner } from '../config/spinner';
-import { cloneStarter, resolveStarterSource, type StarterSource } from '../config/starter';
+import { resolveStarterSource, type StarterSource } from '../config/starter';
 import { deleteDirectory, fileExists } from '../core/files';
 import { initializeGit } from '../core/git';
 import { installDependencies, type PackageManager, runScript } from '../core/package-manager';
@@ -30,13 +25,7 @@ import {
   promptForIdentity,
   promptForOptions,
 } from '../prompts/create-app.prompt';
-import { configurePackageJson } from '../services/init/config.service';
-import {
-  personaliseDockerEnv,
-  personaliseTemplates,
-  writeProjectReadme,
-  writeProjectRecord,
-} from '../services/init/finalize.service';
+import { composeProject, fetchAndPlan, replan } from '../services/init/scaffold.service';
 
 interface InitCommandOptions {
   yes?: boolean;
@@ -218,30 +207,34 @@ const createApp = async (
 
   try {
     const source: StarterSource = resolveStarterSource({ starterPath: options.starterPath });
-    await withStepSpinner(
+    let scaffold = await withStepSpinner(
       `Fetching starter (${source.location})...`,
       'Starter fetched.',
-      () => cloneStarter(projectPath, { source }),
+      () =>
+        fetchAndPlan({
+          projectPath,
+          source,
+          supplied: inputs.suppliedOptions,
+          packageManager: inputs.packageManager,
+        }),
       active,
     );
-
-    const manifest = await loadStarterManifest(projectPath);
-    log(pc.dim(`  ${manifest.starter.name} ${manifest.starter.version}`));
+    log(pc.dim(`  ${scaffold.manifest.starter.name} ${scaffold.manifest.starter.version}`));
     log('');
 
-    let supplied = inputs.suppliedOptions;
     if (inputs.interactive) {
-      const preset = resolveAnswers(manifest, supplied).answers;
-      supplied = { ...supplied, ...(await promptForOptions(manifest, preset)) };
+      const supplied = {
+        ...inputs.suppliedOptions,
+        ...(await promptForOptions(scaffold.manifest, scaffold.answers)),
+      };
       if (options.packageManager) supplied.packageManager = options.packageManager;
+      scaffold = replan(scaffold.manifest, supplied, inputs.packageManager);
       log('');
     }
-    const { answers, forced, unknown } = resolveAnswers(manifest, supplied);
-    for (const name of unknown) log(pc.yellow(`  ! unknown option "${name}" ignored`));
-    const packageManager = (answers.packageManager as PackageManager) ?? inputs.packageManager;
-    const plan = planComposition(manifest, answers, packageManager);
+    for (const name of scaffold.unknown) log(pc.yellow(`  ! unknown option "${name}" ignored`));
+    const { packageManager, plan, manifest } = scaffold;
 
-    printPlan(manifest, plan, forced);
+    printPlan(manifest, plan, scaffold.forced);
 
     if (options.dryRun) {
       deregisterCleanup();
@@ -253,24 +246,7 @@ const createApp = async (
     await withStepSpinner(
       'Composing project...',
       'Project composed.',
-      async () => {
-        const report = await applyComposition(projectPath, manifest, plan);
-        await configurePackageJson(projectPath, identity);
-        await personaliseTemplates(projectPath, identity);
-        await personaliseDockerEnv(projectPath, identity);
-        await writeProjectReadme(projectPath, identity, manifest, answers, packageManager);
-        await writeProjectRecord(projectPath, {
-          cli: pkg.version,
-          starter: {
-            name: manifest.starter.name,
-            version: manifest.starter.version,
-            source: source.location,
-          },
-          packageManager,
-          answers,
-        });
-        return report;
-      },
+      () => composeProject(projectPath, identity, scaffold, source),
       active,
     );
 

@@ -13,6 +13,7 @@ Requires Node 24+. The CLI is pinned to one starter tag (see `src/config/starter
 | Command                         | Purpose                                                                            |
 | :------------------------------ | :--------------------------------------------------------------------------------- |
 | `init [name]`                   | Create a project. Interactive, or `--yes`, `--preset`, `--config`, `--set`.         |
+| `workspace <name>`              | pnpm + Turborepo monorepo with one starter app per `--apps` entry.                 |
 | `options`                       | List the starter's options with the project's current values.                      |
 | `setup --set k=v`               | Turn features on or off in an existing project.                                    |
 | `remove <feature>`              | Shorthand for `setup --set <feature>=false`.                                        |
@@ -67,6 +68,30 @@ Presets: `default`, `minimal`, `full`, `zustand`, `spa`. A `--config` file holds
 What `init` does, in order: fetch the pinned starter (or `--starter-path` / `NEXT_MAKER_STARTER_PATH`), read its manifest, resolve answers (constraints such as `ws` needing Redux are enforced), apply the package-manager overlay, delete the files of features that are off, copy overlays for chosen variants, strip anchor comments and unwrap provider wrappers, prune `package.json` and `.env.example`, rewrite package-manager commands, stamp the identity, write `README.md` and `.next-maker.json`, install, format, copy `.env`, and initialise git.
 
 Every generated project passes the starter's own gates (`lint`, `type-check`, `check:deprecated`, `test`, `build`); the `smoke` script composes a matrix of option combinations and runs them.
+
+## workspace
+
+```bash
+npx @teispace/next-maker workspace acme --apps web,admin
+npx @teispace/next-maker workspace acme --apps web,admin,docs --yes --set state=zustand
+```
+
+Creates:
+
+```
+acme/
+  apps/web/            a starter app (same answers for every app)
+  apps/admin/
+  packages/            shared libraries you add
+  package.json         turbo run dev | build | lint | type-check | test | validate
+  pnpm-workspace.yaml  apps/*, packages/*, the starter's install policy
+  turbo.json           task graph, cached build output, NEXT_PUBLIC_* pass-through
+  biome.json           root config for root files (apps keep their own)
+  .husky/, commitlint.config.mjs, .lintstagedrc.mjs   (--no-hooks to skip)
+  .github/workflows/ci.yml                            (--no-ci to skip)
+```
+
+Git hooks, CI, Docker, community files, and the lockfile are root concerns, so those options are forced off inside the apps. The generated root README explains how to add a shared package (`pnpm add @acme/ui --workspace`), add another app, and build one app's Docker image with `turbo prune`. Only pnpm is supported for workspaces.
 
 ## setup, remove, doctor
 
