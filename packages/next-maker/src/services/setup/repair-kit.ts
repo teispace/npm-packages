@@ -15,8 +15,8 @@
  */
 
 import path from 'node:path';
-import degit from 'degit';
 import { PROJECT_PATHS } from '../../config/paths';
+import { cloneStarter } from '../../config/starter';
 import { deleteDirectory, fileExists, updateJson } from '../../core/files';
 import {
   detectPackageManager,
@@ -112,12 +112,7 @@ export const withStarterAssets = async <T>(
   tempDir: string,
   run: (tempDir: string) => Promise<T>,
 ): Promise<T> => {
-  const emitter = degit('teispace/nextjs-starter', {
-    cache: false,
-    force: true,
-    verbose: false,
-  });
-  await emitter.clone(tempDir);
+  await cloneStarter(tempDir);
   try {
     return await run(tempDir);
   } finally {

@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import degit from 'degit';
 import pc from 'picocolors';
 import { PROJECT_PATHS } from '../../../config/paths';
 import { startSpinner } from '../../../config/spinner';
+import { cloneStarter } from '../../../config/starter';
 import { copyFile, deleteDirectory, fileExists, readFile, updateJson } from '../../../core/files';
 import { detectPackageManager, installDevPackages, runScript } from '../../../core/package-manager';
 import { writeTestUtils } from '../../common/test-utils';
@@ -31,8 +31,7 @@ export const setupTests = async (projectPath: string): Promise<void> => {
 
     // 1. Fetch the starter to copy vitest.config.ts + test/setup.ts.
     spinner.text = 'Fetching assets from starter repo...';
-    const emitter = degit('teispace/nextjs-starter', { cache: false, force: true, verbose: false });
-    await emitter.clone(tempDir);
+    await cloneStarter(tempDir);
 
     await copyFile(
       path.join(tempDir, PROJECT_PATHS.VITEST_CONFIG),

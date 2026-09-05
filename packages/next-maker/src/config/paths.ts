@@ -57,6 +57,7 @@ export const PROJECT_PATHS = {
   HTTP_BUNDLE_SENTINEL_FILE: 'src/lib/utils/http/__bundle-sentinel__/client-bundle-sentinel.tsx',
   WS_UTILS: 'src/lib/utils/ws',
   WS_SLICE_FILE: 'src/store/slices/ws.slice.ts',
+  WS_SLICE_TEST_FILE: 'src/store/slices/ws.slice.test.ts',
   ROOT_REDUCER: 'src/store/rootReducer.ts',
   TEST_SETUP_FILE: 'test/setup.ts',
   AXIOS_CLIENT: 'src/lib/utils/http/axios-client',
