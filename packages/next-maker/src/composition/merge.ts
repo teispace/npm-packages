@@ -188,7 +188,8 @@ export const mergePackageJson = (
     const b = (base[section] as Json) ?? {};
     const t = (theirs[section] as Json) ?? {};
     const o = (ours[section] as Json) ?? {};
-    const target = ((result[section] as Json) ??= {});
+    if (!result[section]) result[section] = {};
+    const target = result[section] as Json;
     for (const key of new Set([...Object.keys(b), ...Object.keys(t)])) {
       mergeKey(target, o, b, t, key, `${section}.${key}`);
     }

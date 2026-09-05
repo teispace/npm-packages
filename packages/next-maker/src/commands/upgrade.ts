@@ -46,10 +46,8 @@ export const printMergeReport = (report: MergeReport): void => {
       `  ${MARK[e.outcome] ?? ' '} ${e.outcome.padEnd(8)} ${e.file}${e.note ? pc.dim(`  (${e.note})`) : ''}`,
     );
   }
-  const counts = shown.reduce<Record<string, number>>(
-    (acc, e) => ({ ...acc, [e.outcome]: (acc[e.outcome] ?? 0) + 1 }),
-    {},
-  );
+  const counts: Record<string, number> = {};
+  for (const e of shown) counts[e.outcome] = (counts[e.outcome] ?? 0) + 1;
   log('');
   log(
     pc.dim(
