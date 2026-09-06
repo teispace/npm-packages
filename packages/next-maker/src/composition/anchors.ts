@@ -21,7 +21,10 @@ const removeAnchorComment = (line: string): string =>
   line
     .replace(/\s*\{\s*\/\*[^*]*@next-maker:[^*]*\*\/\s*\}\s*$/, '')
     .replace(/\s*\/\*[^*]*@next-maker:[^*]*\*\/\s*$/, '')
+    // Markdown prose reads better with the marker in front of the sentence it
+    // owns, so an HTML comment is stripped at either end of the line.
     .replace(/\s*<!--[^>]*@next-maker:[^>]*-->\s*$/, '')
+    .replace(/^\s*<!--[^>]*@next-maker:[^>]*-->\s*/, '')
     .replace(/\s*\/\/[^\n]*@next-maker:[^\n]*$/, '')
     .replace(/\s*#[^\n]*@next-maker:[^\n]*$/, '');
 

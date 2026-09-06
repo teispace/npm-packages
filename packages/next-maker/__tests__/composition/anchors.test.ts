@@ -140,6 +140,12 @@ describe('markdown anchors', () => {
     expect(out).toContain('Everything else.');
   });
 
+  it('strips a marker that leads the line as well as one that trails it', () => {
+    const line = '<!-- @next-maker:ws --> The realtime guide covers the client.';
+    expect(stripAnchors(line, { off: new Set() })).toBe('The realtime guide covers the client.');
+    expect(stripAnchors(line, { off: new Set(['ws']) })).toBe('');
+  });
+
   it('keeps the content and removes only the marker when the feature is on', () => {
     const out = stripAnchors(doc, { off: new Set() });
     expect(out).toContain('| [Realtime](../src/lib/ws/README.md) | Sockets |');
