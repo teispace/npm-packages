@@ -1,5 +1,13 @@
 # Changelog
 
+## [5.1.2](https://github.com/teispace/npm-packages/compare/next-maker-v5.1.1...next-maker-v5.1.2) (2026-09-06)
+
+
+### Miscellaneous Chores
+
+* move the workspace to Vitest 5 ([#180](https://github.com/teispace/npm-packages/issues/180)) ([3fdd98a](https://github.com/teispace/npm-packages/commit/3fdd98ae8b216aafd186f91a368ac543d256e5f6))
+* **next-maker:** pin starter v2.0.0-alpha.5 ([#182](https://github.com/teispace/npm-packages/issues/182)) ([6c6cb67](https://github.com/teispace/npm-packages/commit/6c6cb67d0b960d54541c28c25e979ee40b7babb6))
+
 ## [5.1.1](https://github.com/teispace/npm-packages/compare/next-maker-v5.1.0...next-maker-v5.1.1) (2026-09-06)
 
 

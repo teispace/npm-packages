@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/teispace/npm-packages/compare/env-v1.0.0...env-v1.0.1) (2026-09-06)
+
+
+### Miscellaneous Chores
+
+* move the workspace to Vitest 5 ([#180](https://github.com/teispace/npm-packages/issues/180)) ([3fdd98a](https://github.com/teispace/npm-packages/commit/3fdd98ae8b216aafd186f91a368ac543d256e5f6))
+
 ## [1.0.0](https://github.com/teispace/npm-packages/compare/env-v0.2.4...env-v1.0.0) (2026-08-21)
 
 

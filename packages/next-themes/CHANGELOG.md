@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.2](https://github.com/teispace/npm-packages/compare/next-themes-v3.0.1...next-themes-v3.0.2) (2026-09-06)
+
+
+### Miscellaneous Chores
+
+* move the workspace to Vitest 5 ([#180](https://github.com/teispace/npm-packages/issues/180)) ([3fdd98a](https://github.com/teispace/npm-packages/commit/3fdd98ae8b216aafd186f91a368ac543d256e5f6))
+
 ## [3.0.1](https://github.com/teispace/npm-packages/compare/next-themes-v3.0.0...next-themes-v3.0.1) (2026-09-05)
 
 
