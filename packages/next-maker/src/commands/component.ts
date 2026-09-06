@@ -23,6 +23,7 @@ export const registerComponentCommand = (program: Command) => {
     .command('component [name]')
     .description('Generate a shared component')
     .option('--client', "Add 'use client' directive")
+    .option('--no-client', 'Keep the component a Server Component')
     .option('--i18n', 'Add useTranslations hook')
     .option('--feature <path>', 'Generate in feature directory (e.g., src/features/auth)')
     .option('--test', 'Also generate a sibling test file')
