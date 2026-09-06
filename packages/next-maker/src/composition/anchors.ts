@@ -12,13 +12,16 @@
 
 const ANCHOR_RE = /@next-maker:([\w-]+)(?::(start|end))?/;
 
-const COMMENT_ONLY_RE = /^\s*(?:\{\s*\/\*.*?\*\/\s*\}|\/\*.*?\*\/|\/\/.*|#.*)\s*$/;
+// Markdown carries anchors too: a documentation table has a row per feature,
+// and a row for a feature that is off has to go with it.
+const COMMENT_ONLY_RE = /^\s*(?:\{\s*\/\*.*?\*\/\s*\}|\/\*.*?\*\/|<!--.*?-->|\/\/.*|#.*)\s*$/;
 
 /** Strip the comment that carries the anchor from a line, keeping the code. */
 const removeAnchorComment = (line: string): string =>
   line
     .replace(/\s*\{\s*\/\*[^*]*@next-maker:[^*]*\*\/\s*\}\s*$/, '')
     .replace(/\s*\/\*[^*]*@next-maker:[^*]*\*\/\s*$/, '')
+    .replace(/\s*<!--[^>]*@next-maker:[^>]*-->\s*$/, '')
     .replace(/\s*\/\/[^\n]*@next-maker:[^\n]*$/, '')
     .replace(/\s*#[^\n]*@next-maker:[^\n]*$/, '');
 

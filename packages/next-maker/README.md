@@ -67,6 +67,12 @@ The starter declares its options in `next-maker.json`; the CLI asks those questi
 
 Presets: `default`, `minimal`, `full`, `zustand`, `spa`. A `--config` file holds identity fields (`name`, `description`, `author`, `version`, `email`, `gitRemote`) plus `packageManager`, `preset`, and `options`.
 
+The manifest's `always` block holds what never reaches a project: `remove`
+for starter-only files, and `anchors` for ids stripped regardless of the
+answers, which is how a documentation paragraph that links those files
+disappears with them. Anchors work in Markdown as well as code, so a table
+row pointing at an optional feature's guide leaves with the feature.
+
 What `init` does, in order: fetch the pinned starter (or `--starter-path` / `NEXT_MAKER_STARTER_PATH`), read its manifest, resolve answers (constraints such as `ws` needing Redux are enforced), apply the package-manager overlay, delete the files of features that are off, copy overlays for chosen variants, strip anchor comments and unwrap provider wrappers, prune `package.json` and `.env.example`, rewrite package-manager commands, stamp the identity, write `README.md` and `.next-maker.json`, install, format, copy `.env`, and initialise git.
 
 Every generated project passes the starter's own gates (`lint`, `type-check`, `check:deprecated`, `test`, `build`); the `smoke` script composes a matrix of option combinations and runs them.

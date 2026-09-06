@@ -122,7 +122,9 @@ export const planComposition = (
     removePatterns: uniq([...unconditionalRemovals, ...featureRemovals.flatMap((r) => r.patterns)]),
     unconditionalRemovals,
     featureRemovals,
-    anchorsOff: new Set(active.flatMap((v) => v.anchors ?? [])),
+    // `always.anchors` marks content that never belongs to a generated
+    // project: a documentation link to a file only the starter keeps.
+    anchorsOff: new Set([...manifest.always.anchors, ...active.flatMap((v) => v.anchors ?? [])]),
     unwrapJsx: ownedUnwrapJsx,
     unwrapCall: ownedUnwrapCall,
     packages: uniq(active.flatMap((v) => v.packages ?? [])),
