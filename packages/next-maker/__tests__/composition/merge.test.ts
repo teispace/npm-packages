@@ -184,3 +184,58 @@ describe('defaultSkip', () => {
     }
   });
 });
+
+describe('mergeTrees with a variant switch', () => {
+  let root: string;
+  afterEach(async () => root && (await rm(root, { recursive: true, force: true })));
+
+  it('takes variant files whole, drops what the old variant owned, and merges the rest', async () => {
+    root = await mkdtemp(path.join(tmpdir(), 'nm-variant-'));
+    const base = path.join(root, 'base');
+    const theirs = path.join(root, 'theirs');
+    const ours = path.join(root, 'ours');
+    await seed(base, {
+      'src/store/index.ts': 'redux store\n',
+      'src/store/rootReducer.ts': 'combineSlices()\n',
+      'src/app/page.tsx': 'page\n',
+    });
+    await seed(theirs, {
+      'src/store/index.ts': 'zustand store\n',
+      'src/app/page.tsx': 'page v2\n',
+    });
+    await seed(ours, {
+      'src/store/index.ts': 'redux store\nwith my edits\n',
+      'src/store/rootReducer.ts': 'combineSlices(mySlice)\n',
+      // A generator wrote this into a directory the old variant owns.
+      'src/store/slices/cart.ts': 'my cart slice\n',
+      'src/app/page.tsx': 'page\n',
+    });
+
+    const report = await mergeTrees(
+      { base, theirs, ours },
+      { variant: (file) => file.startsWith('src/store/') },
+    );
+    const outcome = (file: string) => report.entries.find((e) => e.file === file)?.outcome;
+
+    expect(outcome('src/store/index.ts')).toBe('replaced');
+    expect(await readFile(path.join(ours, 'src/store/index.ts'), 'utf-8')).toBe('zustand store\n');
+    // Owned by the old variant and absent from the new one: gone, edits and all.
+    expect(outcome('src/store/rootReducer.ts')).toBe('deleted');
+    expect(outcome('src/store/slices/cart.ts')).toBe('deleted');
+    // Outside the variant, the usual rules still apply.
+    expect(outcome('src/app/page.tsx')).toBe('updated');
+    expect(report.conflicts).toEqual([]);
+  });
+
+  it('leaves files alone when no variant predicate is given', async () => {
+    root = await mkdtemp(path.join(tmpdir(), 'nm-variant-'));
+    const base = path.join(root, 'base');
+    const theirs = path.join(root, 'theirs');
+    const ours = path.join(root, 'ours');
+    await seed(base, { 'a.ts': 'one\n' });
+    await seed(theirs, { 'a.ts': 'two\n' });
+    await seed(ours, { 'a.ts': 'mine\n', 'untouched.ts': 'mine\n' });
+    const report = await mergeTrees({ base, theirs, ours });
+    expect(report.entries.some((e) => e.file === 'untouched.ts')).toBe(false);
+  });
+});

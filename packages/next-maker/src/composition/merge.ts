@@ -26,6 +26,7 @@ export type MergeOutcome =
   | 'merged'
   | 'conflict'
   | 'kept'
+  | 'replaced'
   | 'skipped';
 
 export interface MergeEntry {
@@ -43,6 +44,14 @@ export interface MergeOptions {
   dryRun?: boolean;
   /** Files never merged (lockfiles, env files, records). Relative paths. */
   skip?: (file: string) => boolean;
+  /**
+   * Files owned by a variant the user just switched away from or to: an
+   * overlay's files, and the paths the other variant's removals claim.
+   * Merging them line by line is meaningless — a Redux store and a Zustand
+   * store share a path but nothing else — so they are taken whole from the
+   * new tree, or deleted when the new tree has no such file.
+   */
+  variant?: (file: string) => boolean;
 }
 
 const DEFAULT_SKIP = new Set([
@@ -245,7 +254,12 @@ export const mergeTrees = async (
     if (outcome === 'conflict') report.conflicts.push(file);
   };
 
-  for (const file of [...new Set([...baseFiles, ...theirFiles])].sort()) {
+  const isVariant = options.variant ?? (() => false);
+  // Project-only files count too: a generator may have written a slice into
+  // a directory the old variant owned, and it cannot survive the switch.
+  const candidates = new Set([...baseFiles, ...theirFiles, ...ourFiles.filter(isVariant)]);
+
+  for (const file of [...candidates].sort()) {
     if (skip(file)) continue;
     const inBase = baseSet.has(file);
     const inTheirs = theirSet.has(file);
@@ -256,6 +270,18 @@ export const mergeTrees = async (
       inOurs ? readMaybe(path.join(ours, file)) : null,
     ]);
     const target = path.join(ours, file);
+
+    if (isVariant(file)) {
+      if (inTheirs) {
+        const same = inOurs && (o as Buffer).equals(t as Buffer);
+        if (!same) await write(target, t as Buffer, dryRun);
+        add(file, same ? 'unchanged' : inOurs ? 'replaced' : 'added');
+      } else if (inOurs) {
+        if (!dryRun) await rm(target, { force: true });
+        add(file, 'deleted', 'belonged to the variant you switched away from');
+      }
+      continue;
+    }
 
     if (inTheirs && !inBase) {
       if (!inOurs) {

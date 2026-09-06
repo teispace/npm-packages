@@ -38,6 +38,15 @@ export interface FeatureRemoval {
   patterns: string[];
 }
 
+/** An unwrap plus the options whose value selected it. */
+export interface OwnedUnwrapJsx extends UnwrapJsx {
+  options: string[];
+}
+
+export interface OwnedUnwrapCall extends UnwrapCall {
+  options: string[];
+}
+
 export interface CompositionPlan {
   answers: Answers;
   packageManager: PackageManager;
@@ -55,8 +64,8 @@ export interface CompositionPlan {
   /** Patterns owned by features, kept separate so overlay files can be exempted per option. */
   featureRemovals: FeatureRemoval[];
   anchorsOff: Set<string>;
-  unwrapJsx: UnwrapJsx[];
-  unwrapCall: UnwrapCall[];
+  unwrapJsx: OwnedUnwrapJsx[];
+  unwrapCall: OwnedUnwrapCall[];
   packages: string[];
   devPackages: string[];
   scripts: string[];
@@ -83,6 +92,8 @@ export const planComposition = (
   const active: Variant[] = [];
   const featureOverlays: FeatureOverlay[] = [];
   const featureRemovals: FeatureRemoval[] = [];
+  const ownedUnwrapJsx: OwnedUnwrapJsx[] = [];
+  const ownedUnwrapCall: OwnedUnwrapCall[] = [];
   for (const [id, feature] of Object.entries(manifest.features)) {
     const on = isFeatureOn(manifest, feature, answers);
     (on ? featuresOn : featuresOff).push(id);
@@ -95,6 +106,8 @@ export const planComposition = (
     }
     if (variant.remove?.length)
       featureRemovals.push({ feature: id, options, patterns: variant.remove });
+    for (const entry of variant.unwrapJsx ?? []) ownedUnwrapJsx.push({ ...entry, options });
+    for (const entry of variant.unwrapCall ?? []) ownedUnwrapCall.push({ ...entry, options });
   }
   const unconditionalRemovals = uniq([...manifest.always.remove, ...(pmSpec.remove ?? [])]);
 
@@ -110,8 +123,8 @@ export const planComposition = (
     unconditionalRemovals,
     featureRemovals,
     anchorsOff: new Set(active.flatMap((v) => v.anchors ?? [])),
-    unwrapJsx: active.flatMap((v) => v.unwrapJsx ?? []),
-    unwrapCall: active.flatMap((v) => v.unwrapCall ?? []),
+    unwrapJsx: ownedUnwrapJsx,
+    unwrapCall: ownedUnwrapCall,
     packages: uniq(active.flatMap((v) => v.packages ?? [])),
     devPackages: uniq(active.flatMap((v) => v.devPackages ?? [])),
     scripts: uniq(active.flatMap((v) => v.scripts ?? [])),
