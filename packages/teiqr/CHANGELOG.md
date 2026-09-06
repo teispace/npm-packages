@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.7](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.6...teiqr-v0.3.7) (2026-09-06)
+
+
+### Miscellaneous Chores
+
+* move the workspace to Vitest 5 ([#180](https://github.com/teispace/npm-packages/issues/180)) ([3fdd98a](https://github.com/teispace/npm-packages/commit/3fdd98ae8b216aafd186f91a368ac543d256e5f6))
+
 ## [0.3.6](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.5...teiqr-v0.3.6) (2026-08-25)
 
 
