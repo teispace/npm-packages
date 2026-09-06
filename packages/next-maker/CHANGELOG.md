@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.6](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.5...next-maker-v5.0.6) (2026-09-06)
+
+
+### Bug Fixes
+
+* **next-maker:** switch variants instead of merging them ([#172](https://github.com/teispace/npm-packages/issues/172)) ([8e393d9](https://github.com/teispace/npm-packages/commit/8e393d91f033a47b9232da046c8b3cda7255749b))
+
 ## [5.0.5](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.4...next-maker-v5.0.5) (2026-09-06)
 
 
