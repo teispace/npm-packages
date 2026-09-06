@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.7](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.6...next-maker-v5.0.7) (2026-09-06)
+
+
+### Bug Fixes
+
+* **next-maker:** shape an app added to an existing workspace like its siblings ([#174](https://github.com/teispace/npm-packages/issues/174)) ([81f2bde](https://github.com/teispace/npm-packages/commit/81f2bdec94b7f45d39eba1966af0b8a89ce04cb0))
+
 ## [5.0.6](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.5...next-maker-v5.0.6) (2026-09-06)
 
 
