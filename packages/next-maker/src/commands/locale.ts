@@ -20,6 +20,7 @@ export const registerLocaleCommand = (program: Command) => {
     .command('locale [code]')
     .description('Add a new locale/language')
     .option('--copy-translations', 'Copy translations from English instead of empty values')
+    .option('--no-copy-translations', 'Start the new locale with empty values')
     .option('--name <name>', 'Language name, e.g. Spanish')
     .option('--country <country>', 'Country, e.g. Spain')
     .option('--flag <emoji>', 'Flag emoji, e.g. 🇪🇸')
