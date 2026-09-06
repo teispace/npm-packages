@@ -24,7 +24,8 @@ export const providerTemplate = ({ baseName }: ProviderTemplateParams): string =
 import { createContext, useContext, useMemo } from 'react';
 
 type ${valueType} = {
-  // TODO: declare context value fields
+  /** Replace with this provider's own fields. */
+  ready: boolean;
 };
 
 const ${contextName} = createContext<${valueType} | null>(null);
@@ -38,7 +39,7 @@ export const ${hookName} = (): ${valueType} => {
 };
 
 export const ${componentName} = ({ children }: { children: React.ReactNode }) => {
-  const value = useMemo<${valueType}>(() => ({}), []);
+  const value = useMemo<${valueType}>(() => ({ ready: true }), []);
   return <${contextName}.Provider value={value}>{children}</${contextName}.Provider>;
 };
 `;

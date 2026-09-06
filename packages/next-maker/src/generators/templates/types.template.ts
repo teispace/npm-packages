@@ -12,8 +12,11 @@ export interface ${componentName}State {
 }
 `;
   }
+  // An empty shape would trip Biome's noBannedTypes, so the placeholder
+  // carries the prop every component in the starter already accepts.
   return `export interface ${componentName}Props {
-  // Props for the ${componentName} component
+  /** Extra classes for the root element. Add this feature's own props here. */
+  className?: string;
 }
 `;
 };
