@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.1.1](https://github.com/teispace/npm-packages/compare/next-maker-v5.1.0...next-maker-v5.1.1) (2026-09-06)
+
+
+### Bug Fixes
+
+* **next-maker:** strip a Markdown anchor that leads its line ([#178](https://github.com/teispace/npm-packages/issues/178)) ([0f8bb2f](https://github.com/teispace/npm-packages/commit/0f8bb2f9aea3c60f1cda00c9cb753b08771c50f1))
+
 ## [5.1.0](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.7...next-maker-v5.1.0) (2026-09-06)
 
 
