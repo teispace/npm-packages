@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.5](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.4...next-maker-v5.0.5) (2026-09-06)
+
+
+### Bug Fixes
+
+* **next-maker:** let locale and component run without a terminal ([#170](https://github.com/teispace/npm-packages/issues/170)) ([fa818d9](https://github.com/teispace/npm-packages/commit/fa818d94868e726d389a6cb27ea90fc414a09198))
+
 ## [5.0.4](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.3...next-maker-v5.0.4) (2026-09-06)
 
 
