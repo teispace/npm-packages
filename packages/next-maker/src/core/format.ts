@@ -32,11 +32,20 @@ export const formatWithBiome = async (
   cwd: string,
   paths: string[],
   biomeFrom = cwd,
+  /**
+   * Lay the code out without applying lint fixes. Used on the merge's base
+   * tree: a fix there (dropping an import an edit just made unused) is a
+   * change the project never had, and the merge would report it as one.
+   */
+  formatOnly = false,
 ): Promise<boolean> => {
   const biome = biomeBinary(biomeFrom);
   if (paths.length === 0 || !fileExists(biome)) return false;
+  const args = formatOnly
+    ? ['format', '--write', '--no-errors-on-unmatched', ...paths]
+    : ['check', '--write', '--no-errors-on-unmatched', ...paths];
   try {
-    await execFileAsync(biome, ['check', '--write', '--no-errors-on-unmatched', ...paths], {
+    await execFileAsync(biome, args, {
       cwd,
       maxBuffer: 64 * 1024 * 1024,
     });

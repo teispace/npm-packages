@@ -32,6 +32,7 @@ const MARK: Record<string, string> = {
   merged: pc.cyan('⇄'),
   deleted: pc.red('-'),
   conflict: pc.red('✗'),
+  replaced: pc.cyan('⇉'),
   kept: pc.yellow('·'),
   skipped: pc.dim('·'),
 };

@@ -229,3 +229,35 @@ describe('applyComposition', () => {
     expect(await exists('src/store/store.test.ts')).toBe(false);
   });
 });
+
+describe('unwrap attribution', () => {
+  it('records which options selected each unwrap', () => {
+    const plan = planComposition(
+      validateManifest({
+        manifestVersion: 1,
+        starter: { name: 's', version: '1' },
+        options: { i18n: { type: 'boolean', default: true } },
+        features: {
+          i18n: {
+            when: { i18n: [true] },
+            off: {
+              unwrapJsx: [
+                { file: 'src/providers/RootProvider.tsx', tag: 'NextIntlClientProvider' },
+              ],
+              unwrapCall: [{ file: 'next.config.ts', name: 'withNextIntl' }],
+            },
+          },
+        },
+        packageManagers: { pnpm: { packageManager: 'pnpm@11.0.0', lockfile: 'pnpm-lock.yaml' } },
+      }),
+      { i18n: false },
+      'pnpm',
+    );
+    expect(plan.unwrapJsx).toEqual([
+      { file: 'src/providers/RootProvider.tsx', tag: 'NextIntlClientProvider', options: ['i18n'] },
+    ]);
+    expect(plan.unwrapCall).toEqual([
+      { file: 'next.config.ts', name: 'withNextIntl', options: ['i18n'] },
+    ]);
+  });
+});
