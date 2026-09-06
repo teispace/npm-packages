@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.3](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.2...next-maker-v5.0.3) (2026-09-06)
+
+
+### Bug Fixes
+
+* **next-maker:** read dynamic route params inside Suspense ([#166](https://github.com/teispace/npm-packages/issues/166)) ([61f693d](https://github.com/teispace/npm-packages/commit/61f693d5606a83e07c8606efdb606a30f58b280a))
+
 ## [5.0.2](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.1...next-maker-v5.0.2) (2026-09-05)
 
 
