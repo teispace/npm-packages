@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.4](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.3...next-maker-v5.0.4) (2026-09-06)
+
+
+### Bug Fixes
+
+* **next-maker:** keep generated placeholders free of empty object types ([#168](https://github.com/teispace/npm-packages/issues/168)) ([b0b3d40](https://github.com/teispace/npm-packages/commit/b0b3d40f6d9d8e3ea8966143527be58f8bbdf2e1))
+
 ## [5.0.3](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.2...next-maker-v5.0.3) (2026-09-06)
 
 
