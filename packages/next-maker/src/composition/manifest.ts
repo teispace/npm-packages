@@ -61,7 +61,7 @@ export interface StarterManifest {
   manifestVersion: number;
   starter: { name: string; version: string; minCli?: string };
   options: Record<string, OptionSpec>;
-  always: { remove: string[] };
+  always: { remove: string[]; anchors: string[] };
   features: Record<string, Feature>;
   packageManagers: Record<string, PackageManagerSpec>;
   validateScript?: { name: string; steps: string[] };
@@ -108,7 +108,7 @@ export const validateManifest = (raw: unknown): StarterManifest => {
   }
   return {
     ...(m as StarterManifest),
-    always: { remove: m.always?.remove ?? [] },
+    always: { remove: m.always?.remove ?? [], anchors: m.always?.anchors ?? [] },
   };
 };
 

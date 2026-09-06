@@ -117,3 +117,33 @@ describe('unwrapCall', () => {
     expect(unwrapCall('x(y({ z: (1) }))', 'y')).toBe('x({ z: (1) })');
   });
 });
+
+describe('markdown anchors', () => {
+  const doc = [
+    '| Guide | What it covers |',
+    '| :-- | :-- |',
+    '| [Data layer](data-layer.md) | Reads and writes |',
+    '| [Realtime](../src/lib/ws/README.md) | Sockets | <!-- @next-maker:ws -->',
+    '',
+    '<!-- @next-maker:i18n:start -->',
+    'Locales are configured in `src/i18n/routing.ts`.',
+    '<!-- @next-maker:i18n:end -->',
+    '',
+    'Everything else.',
+  ].join('\n');
+
+  it('drops a row and a block for a feature that is off', () => {
+    const out = stripAnchors(doc, { off: new Set(['ws', 'i18n']) });
+    expect(out).not.toContain('Realtime');
+    expect(out).not.toContain('Locales are configured');
+    expect(out).toContain('Data layer');
+    expect(out).toContain('Everything else.');
+  });
+
+  it('keeps the content and removes only the marker when the feature is on', () => {
+    const out = stripAnchors(doc, { off: new Set() });
+    expect(out).toContain('| [Realtime](../src/lib/ws/README.md) | Sockets |');
+    expect(out).toContain('Locales are configured');
+    expect(out).not.toContain('@next-maker');
+  });
+});

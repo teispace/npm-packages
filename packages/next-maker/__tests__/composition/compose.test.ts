@@ -261,3 +261,21 @@ describe('unwrap attribution', () => {
     ]);
   });
 });
+
+describe('always.anchors', () => {
+  it('strips content marked as starter-only regardless of the answers', () => {
+    const plan = planComposition(
+      validateManifest({
+        manifestVersion: 1,
+        starter: { name: 's', version: '1' },
+        options: { tests: { type: 'boolean', default: true } },
+        features: {},
+        always: { anchors: ['starterDocs'] },
+        packageManagers: { pnpm: { packageManager: 'pnpm@11.0.0', lockfile: 'pnpm-lock.yaml' } },
+      }),
+      { tests: true },
+      'pnpm',
+    );
+    expect(plan.anchorsOff.has('starterDocs')).toBe(true);
+  });
+});
