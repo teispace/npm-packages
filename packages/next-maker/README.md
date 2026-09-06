@@ -158,7 +158,7 @@ NEXT_MAKER_STARTER_PATH=../../../starters/nextjs-starter yarn workspace @teispac
 yarn workspace @teispace/next-maker build
 ```
 
-`smoke` accepts case names (`default`, `minimal`, `full`, `zustand`, `spa`, `no-i18n`, `no-dark`, `no-state-i18n`, `zustand-no-i18n-axios`, `npm`, `bff`); set `SMOKE_KEEP=1` to keep the generated projects and `SMOKE_E2E=1` to run the default case's Playwright suite (browsers must be installed).
+`smoke` accepts case names (`default`, `minimal`, `full`, `zustand`, `spa`, `no-i18n`, `no-dark`, `no-state-i18n`, `zustand-no-i18n-axios`, `npm`, `bff`); set `SMOKE_KEEP=1` to keep the generated projects and `SMOKE_E2E=1` to run the default case's Playwright suite (browsers must be installed). Three cases (`default`, `zustand-no-i18n-axios`, `no-state-i18n`) also run the feature, dynamic-page, and component generators before their gates, so generated code has to lint, type-check, test, and build like the rest of the project.
 
 ### Layers
 

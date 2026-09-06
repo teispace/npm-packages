@@ -57,6 +57,10 @@ export const printMergeReport = (report: MergeReport): void => {
         .join(', ')}`,
     ),
   );
+  if (shown.some((e) => e.file.endsWith('.env.example') && e.outcome !== 'kept')) {
+    log('');
+    log(pc.yellow('  .env.example changed; check your own .env for new or renamed variables.'));
+  }
   if (report.conflicts.length) {
     log('');
     log(pc.red(`  ${report.conflicts.length} file(s) need attention; look for <<<<<<< markers:`));

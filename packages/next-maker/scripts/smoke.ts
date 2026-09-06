@@ -30,6 +30,26 @@ const CASES: Record<string, string[]> = {
 /** Cases whose Playwright suite runs when SMOKE_E2E=1 (browsers must be installed). */
 const E2E_CASES = new Set(['default']);
 
+/**
+ * Cases that also run the generators before their gates, so generated code
+ * has to pass lint, tsc, the tests, and a production build like the rest of
+ * the project. Covers redux + i18n, zustand without i18n, and no state.
+ */
+const GENERATOR_CASES = new Set(['default', 'zustand-no-i18n-axios', 'no-state-i18n']);
+
+/** Generator invocations for a case, shaped by the answers it was built with. */
+const generatorCommands = (answers: Record<string, unknown>): [string, string[]][] => {
+  const state = typeof answers.state === 'string' ? answers.state : 'none';
+  const feature = ['feature', 'invoice', '--api'];
+  feature.push(state === 'none' ? '--no-store' : '--store');
+  feature.push(state === 'redux' ? '--persist' : '--no-persist');
+  return [
+    ['gen:feature', feature],
+    ['gen:page', ['page', 'product', '--dynamic', 'id', '--group', 'app', '--no-loading', '--no-error']],
+    ['gen:component', ['component', 'badge', '--client']],
+  ];
+};
+
 const cli = path.resolve(import.meta.dirname, '../src/index.ts');
 const tsx = path.resolve(import.meta.dirname, '../../../node_modules/.bin/tsx');
 const starter = process.env.NEXT_MAKER_STARTER_PATH;
@@ -86,19 +106,28 @@ for (const name of names) {
   }
   const cwd = path.join(root, project);
   const scripts = JSON.parse(await readFile(path.join(cwd, 'package.json'), 'utf-8')).scripts as Record<string, string>;
-  const steps: [string, () => { ok: boolean; output: string }][] = [
+  const steps: [string, () => { ok: boolean; output: string }][] = [];
+  if (GENERATOR_CASES.has(name)) {
+    const record = JSON.parse(await readFile(path.join(cwd, '.next-maker.json'), 'utf-8')) as {
+      answers: Record<string, unknown>;
+    };
+    for (const [label, args] of generatorCommands(record.answers)) {
+      steps.push([label, () => run(tsx, [cli, ...args], cwd)]);
+    }
+  }
+  steps.push(
     ['ci:check', () => runScript(pm, 'ci:check', cwd)],
     ['type-check', () => runScript(pm, 'type-check', cwd)],
     ['check:deprecated', () => runScript(pm, 'check:deprecated', cwd)],
     ['test', () => runScript(pm, 'test', cwd)],
     ['build', () => runScript(pm, 'build', cwd, { NEXT_PUBLIC_APP_URL: 'https://ci.example.com' })],
-  ];
+  );
   if (process.env.SMOKE_E2E && E2E_CASES.has(name)) {
     steps.push(['test:e2e', () => run(pm, pm === 'npm' || pm === 'bun' ? ['run', 'test:e2e', '--', '--project=chromium'] : ['test:e2e', '--project=chromium'], cwd, { CI: 'true' })]);
   }
   let failed = false;
   for (const [label, step] of steps) {
-    if (!scripts[label]) continue;
+    if (!label.startsWith('gen:') && !scripts[label]) continue;
     const result = step();
     if (!result.ok) {
       failed = true;

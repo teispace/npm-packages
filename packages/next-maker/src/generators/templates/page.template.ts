@@ -14,13 +14,39 @@ export interface PageTemplateParams {
 const routeType = ({ routePath, hasI18n, paramName }: PageTemplateParams): string =>
   `${hasI18n ? '/[locale]' : ''}${routePath}${paramName ? `/[${paramName}]` : ''}`;
 
+const pascal = (value: string): string =>
+  value
+    .replace(/[[\]]/g, '')
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
+
+/**
+ * `params` is request data. Under Cache Components, awaiting it in the page
+ * body would opt the whole route out of prerendering, so the access lives in
+ * a child the page renders inside `<Suspense>`.
+ */
+const dynamicChild = (componentName: string, paramName: string, route: string): string =>
+  `
+async function ${componentName}${pascal(paramName)}({
+  params,
+}: {
+  params: PageProps<'${route}'>['params'];
+}) {
+  const { ${paramName} } = await params;
+
+  return <p className="text-sm">${paramName}: {${paramName}}</p>;
+}
+`;
+
 export const pageTemplate = (params: PageTemplateParams): string => {
   const { componentName, routePath, hasI18n, paramName } = params;
   const route = routeType(params);
 
   if (hasI18n) {
     return `import type { Metadata } from 'next';
-import { getLocale, getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';${paramName ? `\nimport { Suspense } from 'react';` : ''}
 
 import { generateSEOMetadata } from '@/lib/config/seo';
 
@@ -36,20 +62,22 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function ${componentName}Page(${paramName ? `{ params }: PageProps<'${route}'>` : ''}) {
   const t = await getTranslations('${componentName}');
-${paramName ? `  const { ${paramName} } = await params;\n` : ''}
+
   return (
     <div className="flex flex-col gap-2 p-6">
       <h1 className="font-bold text-2xl">{t('title')}</h1>
       <p className="text-gray-500 dark:text-gray-400">{t('description')}</p>${
-        paramName ? `\n      <p className="text-sm">${paramName}: {${paramName}}</p>` : ''
+        paramName
+          ? `\n      <Suspense fallback={<p className="text-sm">…</p>}>\n        <${componentName}${pascal(paramName)} params={params} />\n      </Suspense>`
+          : ''
       }
     </div>
   );
 }
-`;
+${paramName ? dynamicChild(componentName, paramName, route) : ''}`;
   }
 
-  return `import type { Metadata } from 'next';
+  return `import type { Metadata } from 'next';${paramName ? `\nimport { Suspense } from 'react';` : ''}
 
 import { generateSEOMetadata } from '@/lib/config/seo';
 
@@ -59,16 +87,18 @@ export const metadata: Metadata = generateSEOMetadata({
   path: '${routePath}',
 });
 
-export default ${paramName ? 'async ' : ''}function ${componentName}Page(${paramName ? `{ params }: PageProps<'${route}'>` : ''}) {
-${paramName ? `  const { ${paramName} } = await params;\n\n` : ''}  return (
+export default function ${componentName}Page(${paramName ? `{ params }: PageProps<'${route}'>` : ''}) {
+  return (
     <div className="flex flex-col gap-2 p-6">
       <h1 className="font-bold text-2xl">${componentName}</h1>${
-        paramName ? `\n      <p className="text-sm">${paramName}: {${paramName}}</p>` : ''
+        paramName
+          ? `\n      <Suspense fallback={<p className="text-sm">…</p>}>\n        <${componentName}${pascal(paramName)} params={params} />\n      </Suspense>`
+          : ''
       }
     </div>
   );
 }
-`;
+${paramName ? dynamicChild(componentName, paramName, route) : ''}`;
 };
 
 export const loadingTemplate = (params: { componentName: string }): string => {

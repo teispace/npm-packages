@@ -47,6 +47,33 @@ describe('pageTemplate', () => {
     });
     expect(intl).toContain("PageProps<'/[locale]/products/[id]'>");
   });
+
+  it('reads params inside Suspense so the route still prerenders', () => {
+    for (const hasI18n of [false, true]) {
+      const result = pageTemplate({
+        componentName: 'Product',
+        routePath: '/products',
+        hasI18n,
+        paramName: 'id',
+      });
+      expect(result).toContain("import { Suspense } from 'react';");
+      expect(result).toContain('<Suspense fallback=');
+      expect(result).toContain('<ProductId params={params} />');
+      expect(result).toContain('async function ProductId(');
+      // The page body itself must not await request data.
+      const body = result.slice(
+        result.indexOf('export default'),
+        result.indexOf('async function ProductId('),
+      );
+      expect(body).not.toContain('await params');
+    }
+  });
+
+  it('keeps static pages free of Suspense and params', () => {
+    const result = pageTemplate({ componentName: 'Reports', routePath: '/reports', hasI18n: true });
+    expect(result).not.toContain('Suspense');
+    expect(result).not.toContain('params');
+  });
 });
 
 describe('loading and error templates', () => {
