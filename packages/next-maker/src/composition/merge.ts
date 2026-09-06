@@ -51,14 +51,21 @@ const DEFAULT_SKIP = new Set([
   'yarn.lock',
   'bun.lock',
   'bun.lockb',
-  '.env',
   '.next-maker.json',
   'next-env.d.ts',
   'tsconfig.tsbuildinfo',
 ]);
 
-export const defaultSkip = (file: string): boolean =>
-  DEFAULT_SKIP.has(file) || file.startsWith('.env.') || file.endsWith('.log');
+/**
+ * `.env.example` is a starter-owned template and merges like any other
+ * source file; every other `.env*` file holds the machine's own values and
+ * is never touched.
+ */
+export const defaultSkip = (file: string): boolean => {
+  const name = file.split('/').pop() ?? file;
+  if (name === '.env.example') return false;
+  return DEFAULT_SKIP.has(file) || name.startsWith('.env') || file.endsWith('.log');
+};
 
 const BINARY_EXT = new Set([
   '.png',

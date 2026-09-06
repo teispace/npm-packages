@@ -165,3 +165,22 @@ describe('mergeTrees', () => {
     expect(await readFile(path.join(root, 'ours', 'a.ts'), 'utf8')).toBe('one\n');
   });
 });
+
+describe('defaultSkip', () => {
+  it('merges .env.example but never a machine-local env file or a lockfile', async () => {
+    const { defaultSkip } = await import('../../src/composition/merge');
+    expect(defaultSkip('.env.example')).toBe(false);
+    expect(defaultSkip('apps/web/.env.example')).toBe(false);
+    for (const file of [
+      '.env',
+      '.env.local',
+      '.env.production',
+      'apps/web/.env',
+      'pnpm-lock.yaml',
+      '.next-maker.json',
+      'debug.log',
+    ]) {
+      expect(defaultSkip(file), file).toBe(true);
+    }
+  });
+});
