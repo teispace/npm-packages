@@ -189,3 +189,13 @@ describe('test templates', () => {
     expect(out).toContain("import { failed, reset, cartSlice, started } from './cart.slice';");
   });
 });
+
+describe('placeholder shapes lint clean', () => {
+  it('gives a store-less feature a real props field', async () => {
+    const { stateTypesTemplate } = await import('../../../src/generators/templates/types.template');
+    const result = stateTypesTemplate({ componentName: 'Audit', withStore: false });
+    expect(result).toContain('export interface AuditProps {');
+    expect(result).toContain('className?: string;');
+    expect(result).not.toMatch(/AuditProps\s*=\s*\{\s*\}/);
+  });
+});

@@ -36,6 +36,10 @@ describe('providerTemplate', () => {
 
   it('memoises the value object', () => {
     const result = providerTemplate({ baseName: 'Theme' });
-    expect(result).toContain('const value = useMemo<ThemeContextValue>(() => ({}), []);');
+    expect(result).toContain(
+      'const value = useMemo<ThemeContextValue>(() => ({ ready: true }), []);',
+    );
+    // An empty object type would warn under Biome's noBannedTypes.
+    expect(result).not.toContain('ThemeContextValue = {\n};');
   });
 });
