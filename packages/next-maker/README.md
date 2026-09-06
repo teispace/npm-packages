@@ -94,7 +94,7 @@ acme/
   .github/workflows/ci.yml                            (--no-ci to skip)
 ```
 
-Git hooks, CI, Docker, community files, and the lockfile are root concerns, so those options are forced off inside the apps. The generated root README explains how to add a shared package (`pnpm add @acme/ui --workspace`), add another app, and build one app's Docker image with `turbo prune`. Only pnpm is supported for workspaces.
+Git hooks, CI, Docker, community files, and the lockfile are root concerns, so those options are forced off inside the apps. The generated root README explains how to add a shared package (`pnpm add @acme/ui --workspace`), add another app, and build one app's Docker image with `turbo prune`. Only pnpm is supported for workspaces. Running `init` inside an existing workspace is enough to add an app later: it detects the root, forces the root-owned options off, drops the app-level package-manager pin, lockfile and npm config, points shared ranges at the root catalog, and installs from the root.
 
 ## setup, remove, doctor, upgrade
 

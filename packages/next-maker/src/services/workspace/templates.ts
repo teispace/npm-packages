@@ -215,10 +215,13 @@ Give the package a \`build\` script (or point \`exports\` at TypeScript sources 
 ## Adding an app
 
 \`\`\`bash
-cd apps && npx @teispace/next-maker init <name> --yes --set hooks=false --set commitizen=false --set ci=false --set docker=false --no-git
+cd apps && npx @teispace/next-maker init <name> --yes
 \`\`\`
 
-Git hooks, CI, and Docker live at the workspace root; apps keep their own tests, lint, and type-check.
+\`init\` sees the workspace above it and shapes the app to match its siblings:
+git hooks, CI, Docker and the lockfile stay at the root, dependency ranges
+come from the root catalog, and the install runs from the root. Apps keep
+their own tests, lint, and type-check.
 
 ## Docker
 

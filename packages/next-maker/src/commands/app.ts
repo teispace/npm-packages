@@ -26,6 +26,11 @@ import {
   promptForOptions,
 } from '../prompts/create-app.prompt';
 import { composeProject, fetchAndPlan, replan } from '../services/init/scaffold.service';
+import {
+  adoptIntoWorkspace,
+  findWorkspace,
+  ROOT_OWNED_OPTIONS,
+} from '../services/init/workspace-app.service';
 
 interface InitCommandOptions {
   yes?: boolean;
@@ -192,6 +197,21 @@ const createApp = async (
     throw new Error(`Directory ${identity.projectName} already exists.`);
   }
 
+  // Inside an existing pnpm workspace an app is not a standalone project:
+  // the root owns the package manager, the lockfile, hooks, CI and Docker,
+  // and shared ranges live in its catalog.
+  const workspace = await findWorkspace(path.dirname(projectPath));
+  if (workspace) {
+    log(
+      pc.dim(`  pnpm workspace detected at ${path.relative(process.cwd(), workspace.root) || '.'}`),
+    );
+    log(pc.dim('  Hooks, CI, Docker and the lockfile stay at the root.'));
+    log('');
+    Object.assign(inputs.suppliedOptions, ROOT_OWNED_OPTIONS);
+    inputs.suppliedOptions.packageManager = 'pnpm';
+    inputs.packageManager = 'pnpm';
+  }
+
   const active: { current: Ora | null } = { current: null };
   const cleanupProject = async () => {
     if (!fileExists(projectPath)) return;
@@ -250,11 +270,22 @@ const createApp = async (
       active,
     );
 
+    if (workspace) {
+      const adopted = await adoptIntoWorkspace(projectPath, workspace);
+      if (adopted.removed.length)
+        log(pc.dim(`  Root-owned files dropped: ${adopted.removed.join(', ')}`));
+      if (adopted.catalogued)
+        log(pc.dim(`  ${adopted.catalogued} dependency range(s) now read from the root catalog`));
+    }
+
     if (inputs.install) {
+      // One lockfile per workspace: install from the root so the new app is
+      // linked with its siblings instead of growing a lockfile of its own.
+      const installPath = workspace ? workspace.root : projectPath;
       await withStepSpinner(
         `Installing dependencies with ${packageManager}...`,
         'Dependencies installed.',
-        () => installDependencies(projectPath, packageManager),
+        () => installDependencies(installPath, packageManager),
         active,
       );
       await withStepSpinner(
@@ -269,7 +300,7 @@ const createApp = async (
       await copyFile(path.join(projectPath, '.env.example'), path.join(projectPath, '.env'));
     }
 
-    if (inputs.git) {
+    if (inputs.git && !workspace) {
       await withStepSpinner(
         'Initializing git...',
         'Git initialized.',
@@ -283,6 +314,11 @@ const createApp = async (
     log(pc.green(`✨ ${identity.projectName} is ready.`));
     log('');
     log('Next:');
+    if (workspace) {
+      log(pc.cyan(`  pnpm --filter ${identity.projectName} dev`));
+      log('');
+      return;
+    }
     log(pc.cyan(`  cd ${identity.projectName}`));
     if (!inputs.install) log(pc.cyan(`  ${packageManager} install`));
     log(
