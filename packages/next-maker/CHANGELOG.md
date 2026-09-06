@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.1.0](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.7...next-maker-v5.1.0) (2026-09-06)
+
+
+### Features
+
+* **next-maker:** compose Markdown, not just code ([#176](https://github.com/teispace/npm-packages/issues/176)) ([b3c35ff](https://github.com/teispace/npm-packages/commit/b3c35ffd0cd18ac928b8116be99468487798acea))
+
 ## [5.0.7](https://github.com/teispace/npm-packages/compare/next-maker-v5.0.6...next-maker-v5.0.7) (2026-09-06)
 
 
