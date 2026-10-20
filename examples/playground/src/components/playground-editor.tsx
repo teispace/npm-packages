@@ -7,6 +7,7 @@ import { SlashCommand } from '@teispace/teieditor/extensions/slash-command';
 import { Mention } from '@teispace/teieditor/extensions/mention';
 import { Image } from '@teispace/teieditor/extensions/image';
 import { FontFamily } from '@teispace/teieditor/extensions/font-family';
+import { Placeholder } from '@teispace/teieditor/extensions/placeholder';
 import {
   EditorContent,
   OnChangePlugin,
@@ -91,6 +92,17 @@ export function PlaygroundEditor({ onChange, format = 'html', mode = 'full' }: P
               return USERS.filter((u) => u.name.toLowerCase().includes(q));
             },
             menuRenderFn: mentionMenuRenderFn,
+          }),
+          // Per-block hints. The empty-document hint comes from EditorContent's
+          // placeholder below, so the root entry is left blank.
+          Placeholder.configure({
+            placeholders: {
+              root: '',
+              paragraph: "Type '/' for commands...",
+              heading: 'Heading',
+              quote: 'Enter a quote...',
+              code: 'Write code...',
+            },
           }),
           Image.configure({
             maxSize: 10 * 1024 * 1024,

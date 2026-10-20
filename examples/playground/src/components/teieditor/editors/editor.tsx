@@ -1,7 +1,7 @@
 'use client';
 
 import type { TeiEditorConfig, TeiExtension } from '@teispace/teieditor/core';
-import { createTeiEditor, TeiEditorProvider } from '@teispace/teieditor/core';
+import { createTeiEditor, TeiEditorProvider, TeiEditorSlot } from '@teispace/teieditor/core';
 import { SlashCommand, StarterKit } from '@teispace/teieditor/extensions/starter-kit';
 import type { OutputFormat } from '@teispace/teieditor/plugins';
 import {
@@ -26,6 +26,24 @@ import { SlashMenu } from '../components/slash-menu/slash-menu';
 import { TableMenu } from '../components/table-menu/table-menu';
 import { Toolbar } from '../components/toolbar/toolbar';
 
+// Stable identities for omitted props. Using inline `= []` / `= {}` defaults
+// would create a new object every render, changing the `editor` useMemo
+// identity and forcing the whole editor (extensions, plugins, command
+// registrations) to tear down and rebuild on every parent re-render.
+const EMPTY_EXTENSIONS: TeiExtension[] = [];
+const EMPTY_CONFIG: TeiEditorConfigOverrides = {};
+
+/**
+ * The slice of `TeiEditorConfig` this component lets you override.
+ *
+ * `extensions` and `editable` are deliberately excluded: they are derived from
+ * the `extensions` and `readOnly` props. Accepting them here (as a plain
+ * `Partial<TeiEditorConfig>`) meant a caller passing
+ * `config={{ extensions: [X] }}` silently discarded the whole StarterKit — and
+ * `readOnly` along with it.
+ */
+export type TeiEditorConfigOverrides = Omit<Partial<TeiEditorConfig>, 'extensions' | 'editable'>;
+
 export interface TeiEditorProps {
   extensions?: TeiExtension[];
   initialValue?: string;
@@ -37,10 +55,12 @@ export interface TeiEditorProps {
   editorClassName?: string;
   showToolbar?: boolean;
   showBubbleMenu?: boolean;
+  /** Show the word/character count status bar under the content. Default `true`. */
+  showWordCount?: boolean;
   readOnly?: boolean;
   /** Toggle the browser's native spell-check. Default `true`. */
   spellCheck?: boolean;
-  config?: Partial<TeiEditorConfig>;
+  config?: TeiEditorConfigOverrides;
 }
 
 /**
@@ -50,7 +70,7 @@ export interface TeiEditorProps {
  * SSR-safe: renders a skeleton during server-side rendering.
  */
 export function TeiEditor({
-  extensions = [],
+  extensions = EMPTY_EXTENSIONS,
   initialValue,
   initialFormat = 'html',
   onChange,
@@ -60,9 +80,10 @@ export function TeiEditor({
   editorClassName = '',
   showToolbar = true,
   showBubbleMenu = true,
+  showWordCount = true,
   readOnly = false,
   spellCheck = true,
-  config = {},
+  config = EMPTY_CONFIG,
 }: TeiEditorProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -84,10 +105,12 @@ export function TeiEditor({
       return ext;
     });
 
+    // `config` is spread FIRST so the props-derived keys below always win, even
+    // if a JS caller (unchecked by TeiEditorConfigOverrides) smuggles them in.
     return createTeiEditor({
+      ...config,
       extensions: [...configuredStarterKit, ...extensions],
       editable: !readOnly,
-      ...config,
     });
   }, [readOnly, extensions, config]);
 
@@ -141,6 +164,13 @@ export function TeiEditor({
           <AutoEmbedPlugin />
           <EmojiPickerPlugin />
         </div>
+
+        {/*
+          Placement target for extension chrome (the WordCount status bar).
+          Extension plugins mount above the toolbar so their Lexical commands
+          keep priority; anything they render visibly portals down here.
+        */}
+        {showWordCount && <TeiEditorSlot />}
       </div>
     </TeiEditorProvider>
   );

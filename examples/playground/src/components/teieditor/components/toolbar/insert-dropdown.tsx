@@ -204,8 +204,8 @@ function InsertTableDialog({
           <TeiButton
             onClick={() => {
               onInsert({
-                rows: Math.max(1, parseInt(rows) || 3),
-                columns: Math.max(1, parseInt(columns) || 3),
+                rows: Math.max(1, parseInt(rows, 10) || 3),
+                columns: Math.max(1, parseInt(columns, 10) || 3),
                 includeHeaders,
               });
               onClose();

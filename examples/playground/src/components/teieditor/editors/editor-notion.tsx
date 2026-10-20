@@ -1,7 +1,7 @@
 'use client';
 
 import type { TeiEditorConfig, TeiExtension } from '@teispace/teieditor/core';
-import { createTeiEditor, TeiEditorProvider } from '@teispace/teieditor/core';
+import { createTeiEditor, TeiEditorProvider, TeiEditorSlot } from '@teispace/teieditor/core';
 import { SlashCommand, StarterKit } from '@teispace/teieditor/extensions/starter-kit';
 import type { OutputFormat } from '@teispace/teieditor/plugins';
 import {
@@ -25,6 +25,22 @@ import { LinkEditor } from '../components/link-editor/link-editor';
 import { SlashMenu } from '../components/slash-menu/slash-menu';
 import { TableMenu } from '../components/table-menu/table-menu';
 
+// Stable identities for omitted props — see the note in editor.tsx. Inline
+// `= []` / `= {}` defaults would rebuild the editor on every parent re-render.
+const EMPTY_EXTENSIONS: TeiExtension[] = [];
+const EMPTY_CONFIG: TeiEditorConfigOverrides = {};
+
+/**
+ * The slice of `TeiEditorConfig` this component lets you override.
+ *
+ * `extensions` and `editable` are deliberately excluded: they are derived from
+ * the `extensions` and `readOnly` props. Accepting them here (as a plain
+ * `Partial<TeiEditorConfig>`) meant a caller passing
+ * `config={{ extensions: [X] }}` silently discarded the whole StarterKit — and
+ * `readOnly` along with it.
+ */
+export type TeiEditorConfigOverrides = Omit<Partial<TeiEditorConfig>, 'extensions' | 'editable'>;
+
 export interface TeiEditorNotionProps {
   extensions?: TeiExtension[];
   initialValue?: string;
@@ -35,9 +51,14 @@ export interface TeiEditorNotionProps {
   className?: string;
   editorClassName?: string;
   readOnly?: boolean;
+  /**
+   * Show the word/character count status bar under the content.
+   * Default `false` — Notion mode is deliberately chrome-free.
+   */
+  showWordCount?: boolean;
   /** Toggle the browser's native spell-check. Default `true`. */
   spellCheck?: boolean;
-  config?: Partial<TeiEditorConfig>;
+  config?: TeiEditorConfigOverrides;
 }
 
 /**
@@ -46,7 +67,7 @@ export interface TeiEditorNotionProps {
  * Like Lexical Playground but without the fixed toolbar.
  */
 export function TeiEditorNotion({
-  extensions = [],
+  extensions = EMPTY_EXTENSIONS,
   initialValue,
   initialFormat = 'html',
   onChange,
@@ -55,8 +76,9 @@ export function TeiEditorNotion({
   className = '',
   editorClassName = '',
   readOnly = false,
+  showWordCount = false,
   spellCheck = true,
-  config = {},
+  config = EMPTY_CONFIG,
 }: TeiEditorNotionProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -78,10 +100,12 @@ export function TeiEditorNotion({
       return ext;
     });
 
+    // `config` is spread FIRST so the props-derived keys below always win, even
+    // if a JS caller (unchecked by TeiEditorConfigOverrides) smuggles them in.
     return createTeiEditor({
+      ...config,
       extensions: [...configuredStarterKit, ...extensions],
       editable: !readOnly,
-      ...config,
     });
   }, [readOnly, extensions, config]);
 
@@ -134,6 +158,9 @@ export function TeiEditorNotion({
           <AutoEmbedPlugin />
           <EmojiPickerPlugin />
         </div>
+
+        {/* Placement target for extension chrome — see editor.tsx. */}
+        {showWordCount && <TeiEditorSlot />}
       </div>
     </TeiEditorProvider>
   );

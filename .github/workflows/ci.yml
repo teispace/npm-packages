@@ -160,3 +160,45 @@ jobs:
           # fetch it without its interactive confirmation on a non-TTY runner.
           COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
         run: yarn smoke
+
+  teieditor-e2e:
+    name: teieditor strict-CSP e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [quality]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Install browsers
+        working-directory: examples/playground
+        run: yarn playwright install --with-deps chromium firefox webkit
+
+      # The Playwright web server builds the package and the playground, then
+      # serves it under a nonce CSP; every test asserts zero violations.
+      - name: Run Playwright in Chromium, Firefox and WebKit
+        working-directory: examples/playground
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+        run: yarn test:e2e
+
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: teieditor-playwright-traces
+          path: examples/playground/test-results
+          retention-days: 7

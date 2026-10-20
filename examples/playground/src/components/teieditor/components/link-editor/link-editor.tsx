@@ -4,35 +4,18 @@ import { $isLinkNode, $toggleLink } from '@lexical/link';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $isAtNodeEnd } from '@lexical/selection';
 import { TOGGLE_LINK_EDITOR_COMMAND } from '@teispace/teieditor/extensions/link';
-import { getSelectionRect, useFloatingPosition } from '@teispace/teieditor/utils';
+import {
+  getSelectionRect,
+  isSafeUrl,
+  useFloatingPosition,
+  withDefaultScheme,
+} from '@teispace/teieditor/utils';
 import { $getSelection, $isRangeSelection, COMMAND_PRIORITY_LOW } from 'lexical';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TeiButton } from '../../ui/button';
 import { IconCheck, IconExternalLink, IconUnlink } from '../../ui/icons';
 import { TeiInput } from '../../ui/input';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const URL_REGEX = /^https?:\/\//i;
-const MAILTO_REGEX = /^mailto:/i;
-
-function isValidUrl(url: string): boolean {
-  if (!url.trim()) return false;
-  return URL_REGEX.test(url) || MAILTO_REGEX.test(url);
-}
-
-function sanitizeUrl(url: string): string {
-  const trimmed = url.trim();
-  if (!trimmed) return '';
-  // Auto-add https:// if no protocol
-  if (!URL_REGEX.test(trimmed) && !MAILTO_REGEX.test(trimmed)) {
-    return `https://${trimmed}`;
-  }
-  return trimmed;
-}
 
 // ---------------------------------------------------------------------------
 // LinkEditor
@@ -107,8 +90,8 @@ export function LinkEditor() {
   });
 
   const applyLink = useCallback(() => {
-    const sanitized = sanitizeUrl(url);
-    if (!isValidUrl(sanitized)) {
+    const sanitized = withDefaultScheme(url);
+    if (!isSafeUrl(sanitized)) {
       setIsInvalid(true);
       return;
     }
@@ -198,7 +181,9 @@ export function LinkEditor() {
         /* View mode */
         <div className="flex items-center gap-1.5">
           <a
-            href={url}
+            // The URL may come from pasted HTML or a saved document, not from
+            // this field, so it is checked again before it becomes a link.
+            href={isSafeUrl(url) ? url : undefined}
             target="_blank"
             rel="noopener noreferrer"
             className="max-w-[240px] truncate text-sm text-[hsl(var(--tei-primary))] underline"
