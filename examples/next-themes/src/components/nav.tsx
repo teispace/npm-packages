@@ -15,6 +15,7 @@ const routes = [
   { href: '/hooks', label: 'Hooks' },
   { href: '/storage', label: 'Storage' },
   { href: '/advanced', label: 'Advanced' },
+  { href: '/csp', label: 'CSP' },
 ];
 
 export function Nav() {
