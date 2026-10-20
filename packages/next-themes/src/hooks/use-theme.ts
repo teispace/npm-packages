@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useSyncExternalStore } from 'react';
+import { useContext, useMemo, useSyncExternalStore } from 'react';
 import { DefaultThemeContext, type ThemeContext } from '../core/context';
 import type { SetThemeOptions, ThemeContract, ThemeState } from '../core/types';
 
@@ -81,17 +81,15 @@ export function makeUseTheme(Context: ThemeContext): UseThemeHook {
       // theme-dependent UI). Without a provider, stay inert.
       store ? store.getServerSnapshot : getEmpty,
     );
-    if (!store) {
-      if (process.env.NODE_ENV !== 'production') warnNoProvider();
-      return {
-        ...state,
-        setTheme: NOOP_SET,
-      } as ThemeContract as ReturnType<UseThemeHook>;
-    }
-    return {
-      ...state,
-      setTheme: store.setTheme,
-    } as ReturnType<UseThemeHook>;
+    if (!store && process.env.NODE_ENV !== 'production') warnNoProvider();
+    const setTheme = store ? store.setTheme : NOOP_SET;
+    // One object per state, so a consumer that passes the result (or a field
+    // of it) to a memo, effect or child sees a stable identity until the
+    // theme actually changes.
+    return useMemo(
+      () => ({ ...state, setTheme }) as ThemeContract as ReturnType<UseThemeHook>,
+      [state, setTheme],
+    );
   }
   return useTheme as UseThemeHook;
 }
@@ -100,4 +98,4 @@ export function makeUseTheme(Context: ThemeContext): UseThemeHook {
  * Read the current theme state and obtain a setter. Must be called inside a
  * ThemeProvider. `T` narrows the accepted theme values for setTheme.
  */
-export const useTheme: UseThemeHook = makeUseTheme(DefaultThemeContext);
+export const useTheme: UseThemeHook = /*#__PURE__*/ makeUseTheme(DefaultThemeContext);

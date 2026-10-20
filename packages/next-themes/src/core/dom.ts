@@ -1,7 +1,7 @@
 import { hasMatchMedia, isDom } from './env';
 import type { Attribute } from './types';
 
-const DISABLE_TRANSITION_CSS =
+export const DISABLE_TRANSITION_CSS =
   '*,*::before,*::after{-webkit-transition:none!important;transition:none!important;-moz-transition:none!important;-o-transition:none!important;}';
 
 const MEDIA_DARK = '(prefers-color-scheme: dark)';
@@ -130,11 +130,10 @@ export function isAttributeAlreadyApplied(
 }
 
 export function applyColorScheme(el: HTMLElement, theme: string): void {
-  if (theme === 'light' || theme === 'dark') {
-    el.style.colorScheme = theme;
-  } else {
-    el.style.colorScheme = '';
-  }
+  const next = theme === 'light' || theme === 'dark' ? theme : '';
+  // Skip identical writes: each one rewrites the `style` attribute and wakes
+  // any observer of it.
+  if (el.style.colorScheme !== next) el.style.colorScheme = next;
 }
 
 /**
@@ -146,7 +145,7 @@ export function applyColorScheme(el: HTMLElement, theme: string): void {
  * We only manage tags we own. A tag the developer hand-rolled in their
  * `<head>` is left untouched.
  */
-const OWNED_META_MARKER = 'data-teispace-themes';
+const OWNED_MARKER = 'data-teispace-themes';
 
 export function applyThemeColor(
   theme: string,
@@ -160,9 +159,7 @@ export function applyThemeColor(
       ? themeColor
       : (themeColor[resolvedTheme] ?? themeColor[theme] ?? null);
 
-  let meta = document.querySelector<HTMLMetaElement>(
-    `meta[name="theme-color"][${OWNED_META_MARKER}]`,
-  );
+  let meta = document.querySelector<HTMLMetaElement>(`meta[name="theme-color"][${OWNED_MARKER}]`);
   if (!color) {
     // Theme color disabled (or no mapping for the current theme). Remove our
     // owned tag if any; never touch a hand-authored one.
@@ -172,13 +169,64 @@ export function applyThemeColor(
   if (!meta) {
     meta = document.createElement('meta');
     meta.name = 'theme-color';
-    meta.setAttribute(OWNED_META_MARKER, '');
+    meta.setAttribute(OWNED_MARKER, '');
     document.head.appendChild(meta);
   }
   if (meta.getAttribute('content') !== color) meta.setAttribute('content', color);
 }
 
-export function disableTransition(value: string | true, respectReducedMotion: boolean): () => void {
+/**
+ * Add a stylesheet to the document and return a function that removes it.
+ *
+ * A strict `style-src` CSP (no `'unsafe-inline'`) blocks a script-created
+ * `<style>` element unless it carries the page nonce — upstream next-themes
+ * issue #303. A constructable stylesheet adopted through
+ * `document.adoptedStyleSheets` is CSSOM, which `style-src` does not govern, so
+ * it works under any policy and needs no nonce. Engines without constructable
+ * stylesheets get a `<style>` stamped with `nonce`, which a nonce-based policy
+ * accepts.
+ */
+function supportsConstructableSheets(): boolean {
+  try {
+    return (
+      typeof Document !== 'undefined' &&
+      'adoptedStyleSheets' in Document.prototype &&
+      typeof CSSStyleSheet !== 'undefined' &&
+      typeof CSSStyleSheet.prototype.replaceSync === 'function'
+    );
+  } catch (_e) {
+    return false;
+  }
+}
+
+export function injectStyle(css: string, nonce?: string): () => void {
+  if (supportsConstructableSheets()) {
+    try {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(css);
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+      return () => {
+        // Read the live list at removal time: anything else may have adopted
+        // or dropped sheets in between, and a stale copy would undo that.
+        document.adoptedStyleSheets = document.adoptedStyleSheets.filter((s) => s !== sheet);
+      };
+    } catch (_e) {
+      /* fall through to a <style> element */
+    }
+  }
+  const style = document.createElement('style');
+  style.setAttribute(OWNED_MARKER, '');
+  if (nonce) style.nonce = nonce;
+  style.appendChild(document.createTextNode(css));
+  document.head.appendChild(style);
+  return () => style.remove();
+}
+
+export function disableTransition(
+  value: string | true,
+  respectReducedMotion: boolean,
+  nonce?: string,
+): () => void {
   if (!isDom()) return () => {};
   if (respectReducedMotion && hasMatchMedia()) {
     try {
@@ -187,17 +235,14 @@ export function disableTransition(value: string | true, respectReducedMotion: bo
       /* ignore — fall through and apply the disable */
     }
   }
-  const css = value === true ? DISABLE_TRANSITION_CSS : value;
-  const style = document.createElement('style');
-  style.appendChild(document.createTextNode(css));
-  document.head.appendChild(style);
+  const removeStyle = injectStyle(value === true ? DISABLE_TRANSITION_CSS : value, nonce);
   if (document.body) void window.getComputedStyle(document.body).opacity;
   return () => {
     let done = false;
     const remove = (): void => {
       if (done) return;
       done = true;
-      style.remove();
+      removeStyle();
     };
     // The two RAFs guarantee the no-transition style survives the frame where
     // the theme attribute is applied. But RAF is throttled (or never fires) in

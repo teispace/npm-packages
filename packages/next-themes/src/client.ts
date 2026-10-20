@@ -29,4 +29,4 @@ export { ThemeProvider } from './providers/client';
 export type { ThemeProviderProps } from './providers/props';
 
 /** See {@link createThemes} in the default entry. This variant binds the generic React provider (non-Next). */
-export const createThemes = makeCreateThemes(ClientThemeProvider);
+export const createThemes = /*#__PURE__*/ makeCreateThemes(ClientThemeProvider);

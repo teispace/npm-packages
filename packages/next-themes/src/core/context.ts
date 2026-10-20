@@ -38,4 +38,4 @@ export function createThemeContext() {
  * single-provider setup needs no wiring at all — you import `ThemeProvider` and
  * `useTheme` from different files and they find each other.
  */
-export const DefaultThemeContext: ThemeContext = createThemeContext();
+export const DefaultThemeContext: ThemeContext = /*#__PURE__*/ createThemeContext();

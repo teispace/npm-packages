@@ -39,4 +39,4 @@ export type { ThemeProviderProps } from './providers/props';
  *     defaultTheme: 'system',
  *   });
  */
-export const createThemes = makeCreateThemes(NextThemeProvider);
+export const createThemes = /*#__PURE__*/ makeCreateThemes(NextThemeProvider);
