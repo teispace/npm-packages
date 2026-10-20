@@ -1,11 +1,8 @@
-import { execFile } from 'node:child_process';
 import { cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { promisify } from 'node:util';
+import { exec } from '../core/exec';
 import { listFiles } from './glob';
 import { resolveConflicts } from './merge3';
-
-const execFileAsync = promisify(execFile);
 
 /**
  * Three-way merge of a project (`ours`) against two composed starter trees:
@@ -131,7 +128,7 @@ export const mergeText = async (
     await writeFile(path.join(dir, 'base'), base);
     await writeFile(path.join(dir, 'theirs'), theirs);
     try {
-      const { stdout } = await execFileAsync(
+      const { stdout } = await exec(
         'git',
         [
           'merge-file',
@@ -147,7 +144,7 @@ export const mergeText = async (
           'base',
           'theirs',
         ],
-        { cwd: dir, maxBuffer: 64 * 1024 * 1024 },
+        { cwd: dir },
       );
       return { content: stdout, conflicts: 0 };
     } catch (error) {

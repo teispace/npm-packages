@@ -18,7 +18,16 @@ try {
       js: '#!/usr/bin/env node',
     },
     outfile: 'dist/index.js',
-    external: ['enquirer', 'commander', 'picocolors', 'ora', 'degit', 'sharp', 'png-to-ico'],
+    external: [
+      'enquirer',
+      'commander',
+      'cross-spawn',
+      'picocolors',
+      'ora',
+      'degit',
+      'sharp',
+      'png-to-ico',
+    ],
     minify: true, // Minify the output
     treeShaking: true, // Remove unused code
     target: 'node24', // Target Node.js 24+ (matches engines.node)

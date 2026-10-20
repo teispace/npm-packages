@@ -1,10 +1,7 @@
-import { execFile } from 'node:child_process';
 import { cp, mkdir, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import degit from 'degit';
-
-const execFileAsync = promisify(execFile);
+import { exec } from '../core/exec';
 
 /**
  * The starter template every `init`, `setup`, and repair composes from.
@@ -80,11 +77,15 @@ export const cloneStarter = async (
 export const copyLocalStarter = async (from: string, dest: string): Promise<void> => {
   let files: string[] | null = null;
   try {
-    const { stdout } = await execFileAsync(
-      'git',
-      ['-C', from, 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
-      { maxBuffer: 64 * 1024 * 1024 },
-    );
+    const { stdout } = await exec('git', [
+      '-C',
+      from,
+      'ls-files',
+      '-z',
+      '--cached',
+      '--others',
+      '--exclude-standard',
+    ]);
     files = stdout.split('\0').filter(Boolean);
   } catch {
     files = null;

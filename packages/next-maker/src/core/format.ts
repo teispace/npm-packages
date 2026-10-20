@@ -1,11 +1,8 @@
-import { execFile } from 'node:child_process';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import { listFiles } from '../composition/glob';
+import { exec } from './exec';
 import { fileExists } from './files';
-
-const execFileAsync = promisify(execFile);
 
 const FORMATTABLE = new Set([
   '.ts',
@@ -19,8 +16,13 @@ const FORMATTABLE = new Set([
   '.css',
 ]);
 
-export const biomeBinary = (projectPath: string): string =>
-  path.join(projectPath, 'node_modules', '.bin', 'biome');
+/**
+ * The project's Biome launcher. On Windows the extensionless file in
+ * `node_modules/.bin` is the POSIX shell shim, which cannot run there; the
+ * `.cmd` beside it is the one to call.
+ */
+export const biomeBinary = (projectPath: string, platform = process.platform): string =>
+  path.join(projectPath, 'node_modules', '.bin', platform === 'win32' ? 'biome.cmd' : 'biome');
 
 /**
  * Format and sort imports in `paths` with the Biome installed in
@@ -45,10 +47,7 @@ export const formatWithBiome = async (
     ? ['format', '--write', '--no-errors-on-unmatched', ...paths]
     : ['check', '--write', '--no-errors-on-unmatched', ...paths];
   try {
-    await execFileAsync(biome, args, {
-      cwd,
-      maxBuffer: 64 * 1024 * 1024,
-    });
+    await exec(biome, args, { cwd });
   } catch (error) {
     if ((error as { code?: unknown }).code === 'ENOENT') return false;
   }

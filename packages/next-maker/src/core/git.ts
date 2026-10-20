@@ -1,16 +1,13 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const execFileAsync = promisify(execFile);
+import { exec } from './exec';
 
 /**
  * Run a git command with argv passed as an array (no shell). This is the
  * security-critical detail: a shell string like
  * `git remote add origin ${gitRemote}` lets a value such as
- * `x; rm -rf $HOME` execute arbitrary commands. `execFile` with argv never
+ * `x; rm -rf $HOME` execute arbitrary commands. {@link exec} with argv never
  * invokes a shell, so user-supplied values are inert data.
  */
-const git = (args: string[], cwd?: string) => execFileAsync('git', args, cwd ? { cwd } : undefined);
+const git = (args: string[], cwd?: string) => exec('git', args, { cwd });
 
 /**
  * Validate a git remote URL/spec before use. Even though argv form already
