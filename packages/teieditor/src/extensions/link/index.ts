@@ -5,18 +5,20 @@ import { createCommand, type LexicalCommand } from 'lexical';
 import type { ComponentType } from 'react';
 import { BaseExtension } from '../../core/extension.js';
 import type { ExtensionConfig } from '../../core/types.js';
+import { isSafeUrl } from '../../utils/url.js';
 import { AutoLinkPlugin } from './auto-link-plugin.js';
 
 export interface LinkConfig extends ExtensionConfig {
   /** Enable auto-link detection for URLs and emails. Default: true. */
   autoLink: boolean;
-  /** Custom URL validation. Default: basic http/https/mailto check. */
+  /**
+   * Custom URL validation. Default: {@link isSafeUrl} — http, https, mailto,
+   * tel and relative links; never `javascript:`, `data:` or `//host`.
+   */
   validateUrl?: (url: string) => boolean;
 }
 
-function defaultValidateUrl(url: string): boolean {
-  return /^(https?:\/\/|mailto:)/i.test(url);
-}
+const defaultValidateUrl = (url: string): boolean => isSafeUrl(url);
 
 /**
  * Command dispatched by Ctrl+K or toolbar link button.

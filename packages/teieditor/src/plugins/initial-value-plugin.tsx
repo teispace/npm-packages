@@ -3,13 +3,15 @@
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { HISTORY_MERGE_TAG } from 'lexical';
 import { useEffect, useRef } from 'react';
-import { deserialize, type SerializationFormat } from '../utils/serialization.js';
+import { deserialize, type HtmlPolicy, type SerializationFormat } from '../utils/serialization.js';
 
 export interface InitialValuePluginProps {
   /** Initial content string. */
   value?: string;
   /** Format of the initial content. Default: 'html'. */
   format?: SerializationFormat;
+  /** Trusted Types policy for HTML content; see `DeserializeOptions.htmlPolicy`. */
+  htmlPolicy?: HtmlPolicy;
 }
 
 /**
@@ -22,7 +24,11 @@ export interface InitialValuePluginProps {
  * entry instead of becoming its own undo step. Untagged, the very first Ctrl+Z
  * would wipe the document the editor was seeded with.
  */
-export function InitialValuePlugin({ value, format = 'html' }: InitialValuePluginProps) {
+export function InitialValuePlugin({
+  value,
+  format = 'html',
+  htmlPolicy,
+}: InitialValuePluginProps) {
   const [editor] = useLexicalComposerContext();
   const initialized = useRef(false);
 
@@ -32,9 +38,9 @@ export function InitialValuePlugin({ value, format = 'html' }: InitialValuePlugi
 
     // Small delay to ensure editor is fully mounted
     queueMicrotask(() => {
-      deserialize(editor, value, format, { tag: HISTORY_MERGE_TAG });
+      deserialize(editor, value, format, { tag: HISTORY_MERGE_TAG, htmlPolicy });
     });
-  }, [editor, value, format]);
+  }, [editor, value, format, htmlPolicy]);
 
   return null;
 }

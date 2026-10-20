@@ -124,14 +124,17 @@ export function $deserialize(
   value: string,
   format: SerializationFormat,
   editor: LexicalEditor,
+  options: Pick<DeserializeOptions, 'htmlPolicy'> = {},
 ): void {
   const root = $getRoot();
   root.clear();
 
   switch (format) {
     case 'html': {
-      const parser = new DOMParser();
-      const dom = parser.parseFromString(value, 'text/html');
+      // Under `require-trusted-types-for 'script'` parseFromString accepts only
+      // TrustedHTML, so the string goes through the caller's policy first.
+      const html = options.htmlPolicy ? options.htmlPolicy.createHTML(value) : value;
+      const dom = new DOMParser().parseFromString(html as string, 'text/html');
       const nodes = $generateNodesFromDOM(editor, dom);
       $insertNodes(nodes);
       break;
@@ -175,6 +178,25 @@ export interface DeserializeOptions {
    * entry and a single Ctrl+Z empties the document.
    */
   tag?: UpdateTag | UpdateTag[];
+  /**
+   * A Trusted Types policy for HTML import. Pages that enforce
+   * `require-trusted-types-for 'script'` reject a plain string passed to
+   * `DOMParser`, so HTML import throws there unless the string is wrapped.
+   * Pass a policy whose `createHTML` returns its input — the parsed document
+   * is inert, and every node the editor builds from it is checked (URLs
+   * included) before anything reaches the page:
+   *
+   * ```ts
+   * const htmlPolicy = trustedTypes.createPolicy('teieditor', { createHTML: (s) => s });
+   * deserialize(editor, html, 'html', { htmlPolicy });
+   * ```
+   */
+  htmlPolicy?: HtmlPolicy;
+}
+
+/** The part of a Trusted Types policy HTML import needs. */
+export interface HtmlPolicy {
+  createHTML(input: string): unknown;
 }
 
 /**
@@ -196,7 +218,7 @@ export function deserialize(
   format: SerializationFormat,
   options: DeserializeOptions = {},
 ): void {
-  const { tag } = options;
+  const { tag, htmlPolicy } = options;
 
   if (format === 'json') {
     // JSON deserialization uses setEditorState, not update(). Its options bag
@@ -209,7 +231,7 @@ export function deserialize(
 
   editor.update(
     () => {
-      $deserialize(value, format, editor);
+      $deserialize(value, format, editor, { htmlPolicy });
     },
     tag === undefined ? undefined : { tag },
   );

@@ -1,6 +1,7 @@
 import type { DOMExportOutput, LexicalNode, NodeKey, SerializedLexicalNode, Spread } from 'lexical';
 import { $applyNodeReplacement, DecoratorNode } from 'lexical';
 import type { JSX } from 'react';
+import { safeUrl } from '../../utils/url.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,8 +47,10 @@ export class EmbedNode extends DecoratorNode<JSX.Element> {
 
   constructor(url: string, embedType?: EmbedType, key?: NodeKey) {
     super(key);
-    this.__url = url;
-    this.__embedType = embedType ?? detectEmbedType(url);
+    // Checked here so every path in — insert, paste, importJSON — gets it, and
+    // a refused URL never reaches the DOM or an export.
+    this.__url = safeUrl(url);
+    this.__embedType = embedType ?? detectEmbedType(this.__url);
   }
 
   createDOM(): HTMLElement {

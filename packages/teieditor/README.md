@@ -127,6 +127,7 @@ registry/ (copied to your project via CLI — you own these files)
 - [Collaboration & Advanced Lexical Config](#collaboration--advanced-lexical-config)
 - [Peer Dependencies](#peer-dependencies)
 - [Next.js & SSR](#nextjs--ssr)
+- [Security and Content Security Policy](#security-and-content-security-policy)
 - [Mobile & touch](#mobile--touch)
 - [Troubleshooting](#troubleshooting)
 - [Upgrading from 3.0.x](#upgrading-from-30x)
@@ -815,6 +816,73 @@ HTML is fine for rendering/email output. Markdown is good for git-friendly conte
 
 ---
 
+## Security and Content Security Policy
+
+### Untrusted content
+
+Content reaches an editor from places you don't control: pasted HTML, a document saved by an
+older version, a collaborator. Every node that holds a URL checks it when the node is created.
+That covers insert commands, paste, `importDOM` and `importJSON`, so a refused URL never
+reaches the page or an export:
+
+| Node | Allowed |
+|---|---|
+| Link (default `validateUrl`), link editor, embed | `https:`, `http:`, `mailto:`, `tel:`, relative paths |
+| Image | `https:`, `http:`, `blob:`, `data:image/*` (uploads without an `onUpload` handler are stored inline) |
+| File attachment | `https:`, `http:`, `blob:`, `data:` of any type except HTML, SVG, XML or script |
+
+Everything else is refused: `javascript:`, `vbscript:`, `data:text/html`, protocol-relative
+`//host`. The check also catches mixed case and control characters or whitespace hidden inside
+the scheme (`JaVaScRiPt:`, `java\tscript:`). A refused link or embed points at
+`about:blank`, and a refused image loads nothing. The check is exported for your own UI:
+
+```ts
+import { isSafeUrl, isSafeImageSrc } from '@teispace/teieditor/utils';
+
+isSafeUrl('https://example.com');   // true
+isSafeUrl('java\tscript:alert(1)'); // false
+```
+
+### Content Security Policy
+
+The editor works under a strict policy with no `'unsafe-inline'` for scripts or styles. It
+creates no `<style>` elements and no inline scripts. Its own positioning and sizing go through
+the CSSOM (`element.style.top = …`), which CSP does not restrict. Per-block placeholders are a
+rule in `styles.css`. The shadcn registry adds that rule to your stylesheet as well. Before
+4.1.0 the placeholder plugin injected a `<style>` element at runtime, which a strict
+`style-src` blocked.
+
+```text
+default-src 'self';
+script-src 'self' 'nonce-{nonce}' 'strict-dynamic';
+style-src 'self' 'nonce-{nonce}';
+img-src 'self' data: blob: https:;
+frame-src https://www.youtube-nocookie.com https://www.youtube.com https://www.figma.com;
+object-src 'none'; base-uri 'self'
+```
+
+`img-src data: blob:` is for pasted and uploaded images. `frame-src` is needed only if you use
+the YouTube, embed or Figma extensions.
+
+**Trusted Types.** HTML import parses with `DOMParser`, which a page enforcing
+`require-trusted-types-for 'script'` only accepts `TrustedHTML` for. Pass a policy:
+
+```ts
+const htmlPolicy = trustedTypes.createPolicy('teieditor', { createHTML: (s) => s });
+deserialize(editor, html, 'html', { htmlPolicy });
+// or: <InitialValuePlugin value={html} htmlPolicy={htmlPolicy} />
+```
+
+Passing the string through unchanged is safe here. The parsed document is inert and never
+attached to the page, and the editor rebuilds content from it node by node, with the URL checks
+above. Markdown, JSON and plain-text import need no policy.
+
+The playground (`examples/playground`) serves every page under the policy above. Its
+Playwright suite runs Chromium, Firefox and WebKit and checks that typing, formatting, links,
+placeholders and theme switching produce no violations.
+
+---
+
 ## Mobile & touch
 
 Floating UI (bubble menu, slash menu, context menu, link editor, code actions) uses the VisualViewport API where available, so positions stay correct when:
@@ -836,6 +904,9 @@ Webpack (especially in older Next.js setups) sometimes misses ESM-only exports. 
 
 **Styles aren't applying**
 Two things to check: (1) you imported `@teispace/teieditor/styles.css` once somewhere in your app, (2) Tailwind scans the package's compiled output. The easy fix is to `@import "@teispace/teieditor/tailwind.css";` in your main CSS — it adds the right `@source` directive.
+
+**Per-block placeholders don't show**
+They are a rule in `styles.css` since 4.1.0; before that the plugin injected it at runtime. Import `@teispace/teieditor/styles.css`, or copy its `[data-tei-placeholder]::before` rule into your own CSS. The shadcn registry adds the rule for you.
 
 **"window is not defined" during build**
 You're rendering the editor from a server component. Either add `'use client'` at the top of the file, or import via `next/dynamic` with `ssr: false` (see Next.js & SSR above).

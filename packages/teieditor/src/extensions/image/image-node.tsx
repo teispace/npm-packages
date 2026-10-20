@@ -21,6 +21,7 @@ import {
 } from 'lexical';
 import type { JSX } from 'react';
 import { useCallback, useEffect, useRef } from 'react';
+import { isSafeImageSrc } from '../../utils/url.js';
 
 // ---------------------------------------------------------------------------
 // Serialization
@@ -72,7 +73,10 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
     key?: NodeKey,
   ) {
     super(key);
-    this.__src = src;
+    // Checked here so every path in — upload, paste, importDOM, importJSON —
+    // gets it. A refused source is dropped rather than replaced: an image
+    // with no `src` loads nothing.
+    this.__src = isSafeImageSrc(src) ? src.trim() : '';
     this.__altText = altText;
     this.__width = width ?? 'inherit';
     this.__height = height ?? 'inherit';
@@ -103,7 +107,7 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
 
   exportDOM(): DOMExportOutput {
     const img = document.createElement('img');
-    img.setAttribute('src', this.__src);
+    if (this.__src) img.setAttribute('src', this.__src);
     img.setAttribute('alt', this.__altText);
     if (this.__width !== 'inherit') img.setAttribute('width', String(this.__width));
     if (this.__height !== 'inherit') img.setAttribute('height', String(this.__height));
@@ -238,7 +242,7 @@ function ImageComponent({
       <div className="relative inline-block">
         <img
           ref={imgRef}
-          src={src}
+          src={src || undefined}
           alt={altText}
           className="max-w-full rounded-lg cursor-pointer"
           style={{

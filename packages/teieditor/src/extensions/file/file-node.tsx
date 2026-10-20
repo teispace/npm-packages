@@ -1,6 +1,7 @@
 import type { DOMExportOutput, LexicalNode, NodeKey, SerializedLexicalNode, Spread } from 'lexical';
 import { $applyNodeReplacement, DecoratorNode } from 'lexical';
 import type { JSX } from 'react';
+import { isSafeFileUrl } from '../../utils/url.js';
 
 export type SerializedFileNode = Spread<
   { url: string; fileName: string; fileSize: number; mimeType: string },
@@ -41,7 +42,8 @@ export class FileNode extends DecoratorNode<JSX.Element> {
 
   constructor(url: string, fileName: string, fileSize: number, mimeType: string, key?: NodeKey) {
     super(key);
-    this.__url = url;
+    // Checked here so every path in gets it; see utils/url.ts.
+    this.__url = isSafeFileUrl(url) ? url.trim() : 'about:blank';
     this.__fileName = fileName;
     this.__fileSize = fileSize;
     this.__mimeType = mimeType;
