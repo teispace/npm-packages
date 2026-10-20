@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ArgError, formatFlags, parseArgs } from '../src/cli/args.js';
 import { type CliIo, run } from '../src/cli/run.js';
+import { encode } from '../src/core/encode.js';
+import { serializePayload } from '../src/payload/index.js';
 import { scan } from '../src/verify/api.js';
 
 /** An in-memory filesystem and console, so the CLI is testable without spawning. */
@@ -226,7 +228,28 @@ describe('teiqr scan', () => {
     await run(['scan', 'in.png', '--parse'], h.io);
     expect(h.out).toContain('type: wifi');
     expect(h.out).toContain('ssid: Cafe');
-    expect(h.out).toContain('password: hunter2');
+    // The password is masked, in the field and in the raw text, unless asked for.
+    expect(h.out).toContain('password: ••••');
+    expect(h.out).not.toContain('hunter2');
+
+    const revealed = harness({ 'in.png': h0.fs.get('w.png') as Uint8Array });
+    await run(['scan', 'in.png', '--parse', '--reveal'], revealed.io);
+    expect(revealed.out).toContain('WIFI:');
+    expect(revealed.out).toContain('password: hunter2');
+  });
+
+  it('encodes a payload type at its minimum level by default', async () => {
+    // Most payloads leave slack that the encoder spends on a stronger level
+    // anyway, which would pass this test without the minimum. Find an SSID
+    // whose code at the default M has none left.
+    const ssid = Array.from({ length: 80 }, (_, i) => 'x'.repeat(i + 1)).find(
+      (candidate) =>
+        encode(serializePayload('wifi', { ssid: candidate, password: 'hunter2' })).ecc === 'M',
+    );
+    expect(ssid).toBeDefined();
+    const h = harness();
+    await run(['-t', 'wifi', `ssid=${ssid}`, 'password=hunter2', '-o', 'w.png'], h.io);
+    expect(h.out).toMatch(/ [QH]\)/);
   });
 
   it('exits non-zero when there is no code in the image', async () => {

@@ -15,6 +15,10 @@
  * ```
  */
 
+export {
+  type PayloadFieldPropsOptions,
+  payloadFieldProps,
+} from './react/payload-field-props.js';
 export { QrCanvas, type QrCanvasProps } from './react/qr-canvas.js';
 export { QrCode, type QrCodeProps } from './react/qr-code.js';
 export { type SceneElements, sceneToElements } from './react/scene-elements.js';

@@ -7,7 +7,7 @@
  * something subtly wrong rather than failing outright.
  */
 import { GROUP_LABEL, PAYLOAD_GROUPS, PAYLOAD_TYPES, getPayloadType, serializePayload } from 'teiqr/payload';
-import { parseablePayloadTypes, parsePayload } from 'teiqr/payload';
+import { parseablePayloadTypes, parsePayload, redactPayloadValues, validateOtpauth } from 'teiqr/payload';
 import { encode } from 'teiqr/core';
 import { check, section } from './_shared.mjs';
 
@@ -60,4 +60,28 @@ for (const url of [
 ]) {
   const p = parsePayload(url);
   console.log(`    ${url.padEnd(45)} -> ${p.type}${p.values.handle ? ` (${p.values.handle})` : ''}`);
+}
+
+section('Authenticator enrolment (otpauth), and keeping the secret out of logs');
+{
+  const values = {
+    issuer: 'Example',
+    account: 'you@example.com',
+    // Grouped and lower-case, the way a service shows it; normalised on output.
+    secret: 'jbsw y3dp ehpk 3pxp jbsw y3dp ehpk 3pxp',
+    digits: '8',
+  };
+  console.log(`    problems: ${JSON.stringify(validateOtpauth(values))}`);
+  const uri = serializePayload('otpauth', values);
+  const read = parsePayload(uri);
+  check(read.type === 'otpauth', 'a key URI must read back as otpauth');
+  check(serializePayload(read.type, read.values) === uri, 'and round trip exactly');
+  // Log the redacted copy, never the values themselves.
+  console.log(`    -> ${JSON.stringify(redactPayloadValues(read.type, read.values))}`);
+  check(!JSON.stringify(redactPayloadValues(read.type, read.values)).includes('JBSW'), 'the secret must be masked');
+
+  const short = validateOtpauth({ ...values, secret: 'JBSWY3DPEHPK3PXP' });
+  console.log(`    a 10-byte secret: ${short.map((p) => `${p.level}: ${p.message}`).join('; ')}`);
+  const export_ = parsePayload('otpauth-migration://offline?data=AAAA');
+  console.log(`    otpauth-migration:// -> ${export_.type} (${export_.unsupported})`);
 }

@@ -578,7 +578,7 @@ report.print;
 
 ## Payloads
 
-32 built-in types with the escaping rules that decide whether a code works on a real phone — an
+33 built-in types with the escaping rules that decide whether a code works on a real phone — an
 unescaped `;` in a WiFi password silently truncates it; an unfolded 200-character vCard line is
 rejected outright by some contact importers.
 
@@ -595,6 +595,7 @@ qr(serializePayload('wifi', {
 | Web & app | `url` `youtube` `spotify` `app` `pdf` `googleform` `review`  |
 | Contact   | `vcard` `vcard4` `mecard`                                   |
 | Network   | `wifi`                                                       |
+| Security  | `otpauth`                                                    |
 | Messaging | `email` `sms` `phone` `facetime` `whatsapp` `telegram`       |
 | Time/place| `geo` `maps` `event`                                        |
 | Payments  | `bitcoin` `ethereum` `lightning` `upi` `sepa`               |
@@ -608,6 +609,53 @@ hand-written:
 getPayloadType('wifi').fields;
 // [{ name: 'ssid', label: 'Network name', type: 'text', required: true }, …]
 ```
+
+Some types declare a `minEcc`: payment, WiFi and contact codes are scanned once, often from
+print, and a misread is expensive. The CLI encodes them at that level by default and refuses a
+lower `--ecc`.
+
+### Authenticator codes and other credentials
+
+`otpauth` builds the Key URI that authenticator apps read to add an account:
+
+```ts
+import { serializePayload, validateOtpauth } from 'teiqr/payload';
+
+const values = { issuer: 'Example', account: 'you@example.com', secret: 'JBSW Y3DP EHPK 3PXP …' };
+validateOtpauth(values);   // [{ field, level: 'error' | 'warning', message }] — one per problem
+serializePayload('otpauth', values);
+// otpauth://totp/Example:you%40example.com?secret=JBSWY3DP…&issuer=Example
+```
+
+- **Fields:** `kind` (`totp`, the default, or `hotp`), `issuer`, `account`, `secret`
+  (Base32), `algorithm` (`SHA1`, `SHA256` or `SHA512`), `digits` (6 or 8), `period` (TOTP
+  only, 15–300 seconds) and `counter` (required for HOTP).
+- **Secret:** normalised the way services display it: upper-cased, with grouping spaces and `=`
+  padding removed.
+- **Serialising:** parameters equal to their defaults are left out, and the issuer appears in the
+  label and as a parameter.
+- **Refused by `serializePayload`:** anything an app would reject or misread. That covers a
+  non-Base32 secret or one of impossible length, a colon in the issuer or account, and an
+  out-of-range period or counter.
+- **Warning only:** a secret shorter than the 16 bytes RFC 4226 asks for. Services still issue
+  80-bit secrets, and refusing them would make those codes impossible to clone.
+
+`parsePayload` reads Key URIs back, filling in the defaults. A Google Authenticator export
+(`otpauth-migration://`) packs several accounts into one code. It comes back as text, with
+`unsupported` explaining why.
+
+**Treat these codes as the secret itself.** Anyone who photographs an authenticator code can
+generate the same one-time passwords for as long as the account keeps that secret. The same goes
+for a WiFi code and its network:
+
+- show the code only to the person enrolling, and never log or store the rendered image;
+- don't put it in analytics, error reports or URLs;
+- once the account is confirmed, the code has done its job. Don't keep it around.
+
+Fields that hold a credential (the `otpauth` secret, the WiFi password) are marked
+`sensitive: true`. `redactPayloadValues(type, values)` masks them for logs.
+`payloadFieldProps(field)` from `teiqr/react` renders them as password inputs with
+autocomplete off. The CLI masks them unless you pass `--reveal`.
 
 Ethereum amounts are converted to wei by decimal-string arithmetic with `BigInt` — a double
 cannot hold 18 significant digits, and a wallet handed an off-by-one-wei amount is a bug worth
@@ -914,17 +962,23 @@ teiqr scan ticket.png                # prints the payload
 teiqr scan photo.jpg                 # JPEG too, baseline or progressive
 teiqr scan sheet.png --all           # every code in the image
 teiqr scan wifi.png --parse          # decomposed into fields
+teiqr scan wifi.png --parse --reveal # …with the password in clear
 teiqr scan ticket.png --json         # full result, including version and ecc
 ```
 
 ```console
 $ teiqr scan wifi.png --parse
-WIFI:T:WPA;S:Pokhara Cafe;P:himalaya2026;;
+[WiFi network: password masked as ••••; pass --reveal to print it]
   type: wifi (exact)
   encryption: WPA
   ssid: Pokhara Cafe
-  password: himalaya2026
+  password: ••••
 ```
+
+Passwords and authenticator secrets are masked by default, because terminal output ends up in
+scrollback, shell history and screen shares. The raw text carries the credential too, so it is
+withheld along with it. With `--json`, `text` is `null` and `redacted` lists the masked
+fields.
 
 **Batch**
 
@@ -1006,6 +1060,29 @@ call site passes an inline object:
 
 A `useMemo` keyed on those props would miss every single time, because object identity changes.
 `useQrCode` caches on a structural digest of the inputs instead, so inline literals still hit.
+
+### Payload forms
+
+`payloadFieldProps(field)` turns a payload field into input props, so a form generated from
+`type.fields` handles credentials correctly without special-casing them:
+
+```tsx
+import { getPayloadType } from 'teiqr/payload';
+import { payloadFieldProps } from 'teiqr/react';
+
+const [reveal, setReveal] = useState(false);
+getPayloadType('otpauth').fields.map((field) => (
+  <input
+    key={field.name}
+    {...payloadFieldProps(field, { reveal })}
+    value={values[field.name] ?? ''}
+    onChange={(e) => setValues({ ...values, [field.name]: e.target.value })}
+  />
+));
+```
+
+Sensitive fields get `type="password"` (or `text` while `reveal` is on), with autocomplete,
+autocapitalise, autocorrect and spellcheck off.
 
 ### Canvas
 

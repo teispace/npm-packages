@@ -29,7 +29,10 @@ export {
   type PayloadGroup,
   type PayloadType,
   type PayloadValues,
+  redactPayloadValues,
   registerPayloadType,
+  SECRET_MASK,
+  sensitiveFieldsIn,
   serializePayload,
   unregisterPayloadType,
 } from './payload/index.js';
@@ -40,4 +43,10 @@ export {
   parsePayload,
   registerPayloadParser,
 } from './payload/parse.js';
+export {
+  normalizeOtpSecret,
+  OTPAUTH_DEFAULTS,
+  type OtpauthProblem,
+  validateOtpauth,
+} from './payload/security.js';
 export { val } from './payload/types.js';
