@@ -7,7 +7,7 @@ synchronous API, identical output in Node, browsers, Cloudflare Workers, Deno an
 npm install teiqr
 ```
 
-> **Status: 0.0.x — early, but not experimental.** Everything documented here is implemented,
+> **Status: 0.x — early, but not experimental.** Everything documented here is implemented,
 > tested, and now covered by a [stability policy](#stability). The version stays low while the
 > API settles under real use; a patch release may still make a breaking change, but only
 > deliberately and only with the reason in the changelog. What is here is verified to the
