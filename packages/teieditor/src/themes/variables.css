@@ -35,6 +35,7 @@
   --tei-bubble-fg: 0 0% 98%;
   --tei-drag-handle: 0 0% 63.9%;
   --tei-placeholder: 0 0% 45.1%;
+  --tei-placeholder-color: hsl(var(--tei-placeholder));
   --tei-highlight: 48 96% 89%;
   --tei-selection: 214 95% 93%;
 
@@ -99,7 +100,8 @@
   --tei-bubble-bg: 0 0% 14.9%;
   --tei-bubble-fg: 0 0% 98%;
   --tei-drag-handle: 0 0% 45.1%;
-  --tei-placeholder: 0 0% 35%;
+  --tei-placeholder: 0 0% 45.1%;
+  --tei-placeholder-color: hsl(var(--tei-placeholder));
   --tei-highlight: 48 40% 30%;
   --tei-selection: 214 40% 25%;
 

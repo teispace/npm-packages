@@ -10,36 +10,19 @@ export interface PlaceholderPluginProps {
   placeholders: Record<string, string>;
 }
 
+const ATTRIBUTE = 'data-tei-placeholder';
+
 /**
- * Adds CSS-based per-block-type placeholder text via data attributes.
- * Works by setting `data-placeholder` on empty block elements and
- * injecting a minimal CSS rule for `[data-placeholder]:empty::before`.
+ * Per-block placeholder text. Sets `data-tei-placeholder` on each empty top-level
+ * block; the rule that shows it lives in `@teispace/teieditor/styles.css`.
+ *
+ * It used to inject that rule as a `<style>` element, which a strict
+ * `style-src` blocks, which raced between editors on one page (the first to
+ * unmount removed it for all), and whose selector never matched: an empty
+ * Lexical block holds a `<br>`, so it is never `:empty`.
  */
 export function PlaceholderPlugin({ placeholders }: PlaceholderPluginProps): null {
   const [editor] = useLexicalComposerContext();
-
-  // Inject the CSS rule once
-  useEffect(() => {
-    const styleId = 'tei-placeholder-styles';
-    if (document.getElementById(styleId)) return;
-
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = `
-      [data-tei-placeholder]:empty::before {
-        content: attr(data-tei-placeholder);
-        color: var(--tei-placeholder-color, hsl(var(--muted-foreground) / 0.4));
-        pointer-events: none;
-        position: absolute;
-        font-style: italic;
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      style.remove();
-    };
-  }, []);
 
   // Update placeholders on content changes
   useEffect(() => {
@@ -52,9 +35,8 @@ export function PlaceholderPlugin({ placeholders }: PlaceholderPluginProps): nul
           const domElem = editor.getElementByKey(child.getKey());
           if (!domElem) continue;
 
-          const isEmpty = child.getTextContent().trim() === '';
-          if (!isEmpty) {
-            domElem.removeAttribute('data-tei-placeholder');
+          if (child.getTextContent().trim() !== '') {
+            setPlaceholder(domElem, '');
             continue;
           }
 
@@ -70,16 +52,21 @@ export function PlaceholderPlugin({ placeholders }: PlaceholderPluginProps): nul
             placeholderKey = children.length === 1 ? 'root' : 'paragraph';
           }
 
-          const text = placeholders[placeholderKey] || '';
-          if (text) {
-            domElem.setAttribute('data-tei-placeholder', text);
-          } else {
-            domElem.removeAttribute('data-tei-placeholder');
-          }
+          setPlaceholder(domElem, placeholders[placeholderKey] || '');
         }
       });
     });
   }, [editor, placeholders]);
 
   return null;
+}
+
+/**
+ * Set or clear the attribute, touching the DOM only when it changes. This runs
+ * for every block on every update, so most calls are no-ops.
+ */
+function setPlaceholder(element: HTMLElement, text: string): void {
+  if ((element.getAttribute(ATTRIBUTE) ?? '') === text) return;
+  if (text) element.setAttribute(ATTRIBUTE, text);
+  else element.removeAttribute(ATTRIBUTE);
 }

@@ -42,6 +42,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = resolve(__dirname, '../..');
 const REGISTRY_SRC = join(PACKAGE_ROOT, 'src', 'registry');
 const VARIABLES_CSS = join(PACKAGE_ROOT, 'src', 'themes', 'variables.css');
+const STYLES_CSS = join(PACKAGE_ROOT, 'styles.css');
 const OUT_DIR = join(PACKAGE_ROOT, 'r');
 const SOURCE_MANIFEST = join(PACKAGE_ROOT, 'registry.json');
 
@@ -85,6 +86,8 @@ interface RegistryItem {
     light?: Record<string, string>;
     dark?: Record<string, string>;
   };
+  /** Rules shadcn adds to the consumer's stylesheet, keyed by at-rule then selector. */
+  css?: Record<string, Record<string, Record<string, string>>>;
   meta?: Record<string, unknown>;
 }
 
@@ -122,6 +125,26 @@ function parseCssVars(css: string, selector: string): Record<string, string> {
   return vars;
 }
 
+/**
+ * Rules from `styles.css` that the scaffolded components need beyond the
+ * tokens — the per-block placeholder, for one. Read from the stylesheet so
+ * there is one definition, and shipped through shadcn's `css` field so a
+ * project that never imports `styles.css` still gets them.
+ */
+export const REGISTRY_RULES = ['[data-tei-placeholder]::before'];
+
+export function parseCssRule(css: string, selector: string): Record<string, string> {
+  const start = css.indexOf(`${selector} {`);
+  if (start === -1) throw new Error(`styles.css has no rule for ${selector}`);
+  const body = css.slice(css.indexOf('{', start) + 1, css.indexOf('}', start));
+  const declarations: Record<string, string> = {};
+  for (const line of body.split('\n')) {
+    const match = /^\s*([\w-]+)\s*:\s*(.+?);\s*$/.exec(line);
+    if (match) declarations[match[1] as string] = (match[2] as string).trim();
+  }
+  return declarations;
+}
+
 // ---------------------------------------------------------------------------
 // Item construction
 // ---------------------------------------------------------------------------
@@ -157,6 +180,7 @@ function buildItem(
   group: RegistryGroup,
   options: BuildOptions,
   cssVars?: RegistryItem['cssVars'],
+  css?: RegistryItem['css'],
 ): RegistryItem {
   const files = listCopyableFiles(REGISTRY_SRC, group.path);
   if (files.length === 0) {
@@ -188,6 +212,7 @@ function buildItem(
   };
 
   if (cssVars) item.cssVars = cssVars;
+  if (css) item.css = css;
   if (item.dependencies?.length === 0) delete item.dependencies;
   if (item.registryDependencies?.length === 0) delete item.registryDependencies;
 
@@ -247,11 +272,18 @@ export function buildRegistry(argv: string[] = []): void {
     dark: parseCssVars(css, '.dark'),
   };
 
+  const styles = readFileSync(STYLES_CSS, 'utf8');
+  const rules = {
+    '@layer base': Object.fromEntries(
+      REGISTRY_RULES.map((selector) => [selector, parseCssRule(styles, selector)]),
+    ),
+  };
+
   // The `ui` group is the root of the dependency graph — every other item
-  // depends on it — so attaching the design tokens there guarantees they are
-  // installed exactly once, no matter which item the user adds.
+  // depends on it — so attaching the design tokens and rules there guarantees
+  // they are installed exactly once, no matter which item the user adds.
   const items = GROUPS.map((group) =>
-    buildItem(group, options, group.name === 'ui' ? cssVars : undefined),
+    group.name === 'ui' ? buildItem(group, options, cssVars, rules) : buildItem(group, options),
   );
 
   const registry: Registry = {

@@ -40,6 +40,7 @@
   --tei-bubble-fg: 0 0% 98%;
   --tei-drag-handle: 0 0% 63.9%;
   --tei-placeholder: 0 0% 45.1%;
+  --tei-placeholder-color: hsl(var(--tei-placeholder));
   --tei-highlight: 48 96% 89%;
   --tei-selection: 214 95% 93%;
 
@@ -134,7 +135,8 @@
   --tei-bubble-bg: 0 0% 14.9%;
   --tei-bubble-fg: 0 0% 98%;
   --tei-drag-handle: 0 0% 45.1%;
-  --tei-placeholder: 0 0% 35%;
+  --tei-placeholder: 0 0% 45.1%;
+  --tei-placeholder-color: hsl(var(--tei-placeholder));
   --tei-highlight: 48 40% 30%;
   --tei-selection: 214 40% 25%;
 
@@ -176,4 +178,23 @@
   --tei-token-inserted: 114 40% 60%;
   --tei-token-deleted: 5 74% 65%;
   --tei-token-important: 5 74% 65%;
+}
+
+/*
+ * Per-block placeholders (the Placeholder extension). The plugin sets
+ * `data-tei-placeholder` only while a block is empty, so the rule needs no
+ * `:empty` — which would never match anyway, since an empty Lexical block
+ * holds a `<br>`. Static CSS rather than a stylesheet injected at runtime,
+ * so a strict `style-src` needs nothing for it.
+ *
+ * `--tei-placeholder-color` overrides the colour; without the tokens above
+ * it falls back to the text colour at reduced strength, which works in any
+ * colour space.
+ */
+[data-tei-placeholder]::before {
+  content: attr(data-tei-placeholder);
+  color: var(--tei-placeholder-color, color-mix(in oklab, currentColor 45%, transparent));
+  pointer-events: none;
+  position: absolute;
+  font-style: italic;
 }
