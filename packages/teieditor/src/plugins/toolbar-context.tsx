@@ -1,6 +1,6 @@
 'use client';
 
-import { $isCodeNode, CODE_LANGUAGE_MAP } from '@lexical/code';
+import { $isCodeNode } from '@lexical/code';
 import { $isListNode, ListNode } from '@lexical/list';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $isHeadingNode } from '@lexical/rich-text';
@@ -22,6 +22,7 @@ import {
   type TextFormatType,
 } from 'lexical';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import { codeLanguageLabel } from '../utils/code-language.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -191,7 +192,7 @@ export function ToolbarProvider({ children }: ToolbarProviderProps) {
     } else if ($isCodeNode(element)) {
       setBlockType('code');
       const lang = element.getLanguage();
-      setCodeLanguage(lang ? CODE_LANGUAGE_MAP[lang] || lang : 'javascript');
+      setCodeLanguage(codeLanguageLabel(lang));
     } else if (element.getType() === 'quote') {
       setBlockType('quote');
     } else {
