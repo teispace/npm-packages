@@ -97,6 +97,13 @@ e.string().public(); //            opt a scary-named var out of secret redaction
 > Use `withMeta(schema, { secret: true })` to redact a value validated by a
 > Standard Schema (Zod/Valibot), which has no native `.secret()`.
 
+Without `.secret()`, a value is still redacted when the variable's name
+contains `KEY`, `SECRET`, `TOKEN`, `PASS`, `PRIVATE`, `CREDENTIAL`, `AUTH`,
+`DSN` or `SALT`. It is also redacted when the value is a URL carrying a
+password, such as `DATABASE_URL=postgres://app:hunter2@db/prod`. `.public()`
+or `withMeta(schema, { secret: false })` turns both checks off for one
+variable.
+
 ### 2. Bring your own validator (Standard Schema)
 
 Any [Standard Schema](https://standardschema.dev)-compliant value works as a schema entry — Zod,

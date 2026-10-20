@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatEnvErrors, isSecretKey } from '../src/errors.js';
+import { formatEnvErrors, hasUrlCredentials, isSecretKey } from '../src/errors.js';
 import type { EnvIssue } from '../src/types.js';
 
 // Color is forced off for every assertion so we compare plain text, not ANSI.
@@ -13,6 +13,19 @@ describe('isSecretKey', () => {
     expect(isSecretKey('DB_PASSWORD')).toBe(true);
     expect(isSecretKey('PRIVATE_KEY')).toBe(true);
     expect(isSecretKey('lowercase_secret')).toBe(true);
+  });
+
+  it.each([
+    'SMTP_PASS',
+    'DB_PASSWD',
+    'GPG_PASSPHRASE',
+    'GOOGLE_APPLICATION_CREDENTIALS',
+    'AUTH_SECRET',
+    'BASIC_AUTH',
+    'SENTRY_DSN',
+    'PASSWORD_SALT',
+  ])('redacts %s, which the original pattern missed or only half-covered', (name) => {
+    expect(isSecretKey(name)).toBe(true);
   });
 
   it('does not redact ordinary names', () => {
@@ -29,7 +42,58 @@ describe('isSecretKey', () => {
   });
 });
 
+describe('hasUrlCredentials', () => {
+  it.each([
+    'postgres://app:hunter2@db.internal:5432/prod',
+    'redis://:hunter2@cache:6379',
+    'mongodb+srv://user:p%40ss@cluster.example.net/db',
+    '  amqp://guest:guest@localhost',
+  ])('flags %s', (value) => {
+    expect(hasUrlCredentials(value)).toBe(true);
+  });
+
+  it.each([
+    undefined,
+    'postgres://localhost:5432/dev',
+    'https://user@example.com/',
+    'https://example.com/path?next=a:b@c',
+    'not-a-url',
+  ])('leaves %s alone', (value) => {
+    expect(hasUrlCredentials(value)).toBe(false);
+  });
+});
+
 describe('formatEnvErrors', () => {
+  it('redacts a connection string with a password, whatever the variable is called', () => {
+    const report = formatEnvErrors(
+      [
+        {
+          key: 'DATABASE_URL',
+          received: 'mysql://app:hunter2@db/prod',
+          messages: ['Expected a postgres URL, received "mysql://app:hunter2@db/prod"'],
+        },
+        {
+          key: 'REPLICA_URL',
+          received: 'ftp://localhost/x',
+          messages: ['Expected a postgres URL'],
+        },
+      ],
+      NO_COLOR,
+    );
+    expect(report).not.toContain('hunter2');
+    expect(report).toContain('DATABASE_URL: Expected a postgres URL, received "***"');
+    // No credentials, so it stays visible — that is what makes a typo debuggable.
+    expect(report).toContain('received "ftp://localhost/x"');
+  });
+
+  it('lets an explicit secret: false override the value check too', () => {
+    const report = formatEnvErrors(
+      [{ key: 'DEMO_URL', received: 'https://demo:demo@example.com', messages: ['Bad'] }],
+      { ...NO_COLOR, secretFlags: { DEMO_URL: false } },
+    );
+    expect(report).toContain('demo:demo');
+  });
+
   it('aggregates ALL issues into one scannable report', () => {
     const issues: EnvIssue[] = [
       {

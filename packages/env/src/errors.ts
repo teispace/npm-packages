@@ -12,9 +12,10 @@
  *
  * 1. **Never print a secret.** A value is redacted to `"***"` when its
  *    validator declares `meta.secret`, or when the variable *name* matches the
- *    secret heuristic (`/KEY|SECRET|TOKEN|PASSWORD|PRIVATE/i`). An explicit
- *    `meta.secret === false` always wins, so a var named `PUBLIC_API_KEY` can
- *    opt out. This keeps secrets out of CI logs, terminals, and crash reports.
+ *    secret heuristic (`KEY`, `SECRET`, `TOKEN`, `PASS`, `PRIVATE`, `CREDENTIAL`,
+ *    `AUTH`, `DSN`, `SALT`), or when the value is a URL carrying a password
+ *    (`postgres://user:pass@host`). An explicit `meta.secret === false` always
+ *    wins, so a var named `PUBLIC_API_KEY` can opt out. This keeps secrets out of CI logs, terminals, and crash reports.
  *
  * 2. **Zero dependencies, never crash.** We want colorized output like
  *    `picocolors` gives, but env ships with no runtime deps, so color is a
@@ -31,12 +32,21 @@ import type { EnvIssue } from './types.js';
 
 /**
  * Variable-name heuristic for secrets. Matched case-insensitively against the
- * key so `DATABASE_PASSWORD`, `STRIPE_SECRET`, `JWT_TOKEN`, `API_KEY`, and
- * `PRIVATE_KEY` are all redacted by default — even if the schema author forgot
+ * key so `DATABASE_PASSWORD`, `SMTP_PASS`, `STRIPE_SECRET`, `JWT_TOKEN`,
+ * `API_KEY`, `PRIVATE_KEY`, `GOOGLE_CREDENTIALS`, `AUTH_SECRET` and
+ * `SENTRY_DSN` are all redacted by default — even if the schema author forgot
  * to set `meta.secret`. Deliberately conservative: it errs toward hiding a
- * value rather than leaking one.
+ * value rather than leaking one, so `BYPASS_CACHE` is hidden too.
  */
-const SECRET_NAME_PATTERN = /KEY|SECRET|TOKEN|PASSWORD|PRIVATE/i;
+const SECRET_NAME_PATTERN = /KEY|SECRET|TOKEN|PASS|PRIVATE|CREDENTIAL|AUTH|DSN|SALT/i;
+
+/**
+ * A URL with a password in its userinfo — `postgres://app:hunter2@db/prod`.
+ * Connection strings rarely have a secret-sounding name (`DATABASE_URL`,
+ * `REDIS_URL`), so the value is checked as well as the name. A URL without
+ * credentials still prints, which is what makes a typo in it debuggable.
+ */
+const URL_CREDENTIALS_PATTERN = /^\s*[a-z][a-z0-9+.-]*:\/\/[^/?#@\s]*:[^/?#@\s]*@/i;
 
 /** The string shown in place of a redacted value. */
 const REDACTED = '***';
@@ -52,6 +62,11 @@ const REDACTED = '***';
 export function isSecretKey(key: string, explicitSecret?: boolean): boolean {
   if (typeof explicitSecret === 'boolean') return explicitSecret;
   return SECRET_NAME_PATTERN.test(key);
+}
+
+/** Whether a value is a URL carrying a password, whatever its variable is called. */
+export function hasUrlCredentials(value: string | undefined): boolean {
+  return value !== undefined && URL_CREDENTIALS_PATTERN.test(value);
 }
 
 /**
@@ -213,7 +228,13 @@ export function formatEnvErrors(
   const header = paint.bold(paint.red('❌ Invalid environment variables:', on), on);
 
   const lines = issues.map((issue) => {
-    const redact = isSecretKey(issue.key, secretFlags[issue.key]);
+    const flag = secretFlags[issue.key];
+    // An explicit flag decides alone; otherwise the name or the value can
+    // each mark the variable secret.
+    const redact =
+      typeof flag === 'boolean'
+        ? flag
+        : isSecretKey(issue.key) || hasUrlCredentials(issue.received);
     // Join multiple refinement messages (e.g. min + regex) with "; " so each
     // variable stays on a single, scannable bullet line.
     const joined = issue.messages.length > 0 ? issue.messages.join('; ') : 'Invalid value';
