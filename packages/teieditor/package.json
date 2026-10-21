@@ -77,7 +77,8 @@
     "prepublishOnly": "yarn clean && yarn build",
     "test:e2e": "playwright test -c e2e/playwright.config.ts",
     "test:visual": "node e2e/visual.mjs",
-    "test:types": "tsc -p type-tests/kit && tsc -p type-tests/single"
+    "test:types": "tsc -p type-tests/kit && tsc -p type-tests/single",
+    "size": "node scripts/size-budget.mjs"
   },
   "engines": {
     "node": ">=20.9.0"
