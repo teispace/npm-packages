@@ -34,6 +34,8 @@ export interface MenuItemData {
   variant?: 'danger';
   /** A submenu. */
   items?: readonly MenuItemData[];
+  /** A submenu in sections (instead of `items`). */
+  groups?: readonly MenuGroupData[];
   onSelect?: () => void;
 }
 
@@ -179,6 +181,10 @@ export interface MenuProps {
   id?: string;
 }
 
+/** Whether an item opens a submenu. */
+const hasSubmenu = (item: MenuItemData | undefined): boolean =>
+  Boolean(item?.items?.length || item?.groups?.some((group) => group.items.length > 0));
+
 function textOf(item: MenuItemData): string {
   return item.textValue ?? (typeof item.label === 'string' ? item.label : '');
 }
@@ -218,7 +224,7 @@ export function Menu({
   const select = (index: number) => {
     const item = flat[index];
     if (!item || item.disabled) return;
-    if (item.items?.length) {
+    if (hasSubmenu(item)) {
       setOpenSub(index);
       return;
     }
@@ -233,7 +239,7 @@ export function Menu({
     getText: (index) => textOf(flat[index] as MenuItemData),
     onSelect: select,
     onOpenSub: (index) => {
-      if (!flat[index]?.items?.length) return false;
+      if (!hasSubmenu(flat[index])) return false;
       setOpenSub(index);
       return true;
     },
@@ -302,7 +308,7 @@ export function Menu({
               index++;
               const i = index;
               const isHighlighted = i === highlighted;
-              const hasSub = Boolean(item.items?.length);
+              const hasSub = hasSubmenu(item);
               return (
                 // biome-ignore lint/a11y/useKeyWithClickEvents: keys are handled once, on the menu, through aria-activedescendant
                 <div
@@ -373,7 +379,7 @@ export function Menu({
           </div>
         ),
       )}
-      {openSub >= 0 && flat[openSub]?.items?.length ? (
+      {openSub >= 0 && flat[openSub] && hasSubmenu(flat[openSub]) ? (
         <Popover
           open
           anchor={rowRefs.current[openSub]}
@@ -387,6 +393,7 @@ export function Menu({
         >
           <Menu
             items={flat[openSub].items}
+            groups={flat[openSub].groups}
             label={textOf(flat[openSub])}
             onSelect={onSelect}
             onClose={(reason) => {

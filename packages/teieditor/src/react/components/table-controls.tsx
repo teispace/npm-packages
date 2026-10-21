@@ -19,23 +19,20 @@ import {
 import { getExtensionOptions } from '../../core/define.js';
 import type { TeiEditor } from '../../core/editor.js';
 import type { TeiItem } from '../../core/types.js';
-import {
-  $getTableAtSelection,
-  type CellVerticalAlign,
-  Table,
-} from '../../extensions/table/index.js';
+import { $getTableAtSelection, Table } from '../../extensions/table/index.js';
 import { TeiEditorContext, useOptionalEditor } from '../context.js';
-import { useItemStates } from '../items.js';
+import { contextMenuOwners } from '../context-menu-owner.js';
 import { Button } from '../ui/button.js';
 import { GridPicker } from '../ui/controls.js';
 import { DropdownMenu } from '../ui/dropdown.js';
 import type { FloatingAnchor, VirtualElement } from '../ui/floating.js';
-import { Menu, type MenuGroupData, type MenuItemData } from '../ui/menu.js';
+import { Menu } from '../ui/menu.js';
 import { Popover } from '../ui/popover.js';
 import { useEditorFocus } from '../use-editor-focus.js';
 import { useEditorState } from '../use-editor-state.js';
 import { useHover, useRootListener } from '../use-hover.js';
 import type { ToolbarSubmenu } from './editor-toolbar.js';
+import { useTableMenu } from './table-menu.js';
 
 // -- Insert -------------------------------------------------------------------
 
@@ -92,7 +89,6 @@ InsertTableMenu.overflowMenu = (editor: TeiEditor): ToolbarSubmenu => ({
 
 // -- Shared -------------------------------------------------------------------
 
-/** How long the pointer may be away before hover UI goes, in ms. */
 /** The table cell and table under a DOM node, if any. */
 function cellAt(editor: TeiEditor, target: EventTarget | null) {
   if (!(target instanceof Node)) return null;
@@ -143,108 +139,6 @@ const leaveUnlessInto = (leave: () => void) => (event: PointerEvent) => {
 
 // -- Cell menu ----------------------------------------------------------------
 
-function swatchIcon(color: string | null) {
-  return (
-    <span
-      className="tei-menu-swatch"
-      data-empty={color === null ? '' : undefined}
-      ref={(el) => {
-        if (el && color !== null) el.style.setProperty('--tei-swatch', color);
-      }}
-    />
-  );
-}
-
-/** The menu's entries, from the `tableMenu` items: grouped by section, with submenus for the controls. */
-function useTableMenu(editor: TeiEditor, onDone: () => void): MenuGroupData[] {
-  // Each render: which entries show can follow the options, live.
-  const items = editor.items('tableMenu');
-  const states = useItemStates(editor, items);
-  const extra = useEditorState(
-    (e) => ({
-      background: e.read(() => {
-        const at = $getTableAtSelection();
-        const colors = new Set(at?.cells.map((cell) => cell.getBackgroundColor()));
-        return colors.size === 1 ? ([...colors][0] ?? null) : undefined;
-      }),
-      align: (['top', 'middle', 'bottom'] as const).find((a) => e.isActive('cellVerticalAlign', a)),
-    }),
-    { editor },
-  );
-  const options = getExtensionOptions(editor, Table);
-  const run = (fn: () => void) => () => {
-    fn();
-    onDone();
-  };
-
-  const entry = (item: TeiItem, index: number): MenuItemData => {
-    const state = states[index];
-    const label = editor.t(item.label);
-    if (item.control === 'cellBackground') {
-      const none = editor.t('table.cellBackground.none');
-      return {
-        id: item.id,
-        label,
-        icon: item.icon,
-        disabled: !state?.enabled,
-        items: [
-          { value: null, label: none },
-          ...(options?.cellColors ?? []).map((c) => ({ value: c.value, label: c.label })),
-        ].map((color) => ({
-          id: `cellBackground-${color.label}`,
-          label: color.label,
-          icon: swatchIcon(color.value),
-          checked: extra.background === color.value,
-          radio: true,
-          onSelect: run(() => editor.chain().focus().setCellBackground(color.value).run()),
-        })),
-      };
-    }
-    if (item.control === 'cellVerticalAlign') {
-      return {
-        id: item.id,
-        label,
-        icon: item.icon,
-        disabled: !state?.enabled,
-        items: (['top', 'middle', 'bottom'] as const satisfies readonly CellVerticalAlign[]).map(
-          (align) => ({
-            id: `verticalAlign-${align}`,
-            label: editor.t(`table.verticalAlign.${align}`),
-            icon: `align${align[0]?.toUpperCase()}${align.slice(1)}`,
-            checked: extra.align === align,
-            radio: true,
-            onSelect: run(() => editor.chain().focus().setCellVerticalAlign(align).run()),
-          }),
-        ),
-      };
-    }
-    return {
-      id: item.id,
-      label,
-      icon: item.icon,
-      checked: item.active ? Boolean(state?.active) : undefined,
-      disabled: !state?.enabled,
-      variant: item.id === 'deleteTable' ? 'danger' : undefined,
-      onSelect: run(() => {
-        editor.runItem(item);
-        editor.focus();
-      }),
-    };
-  };
-
-  const groups: MenuGroupData[] = [];
-  items.forEach((item, index) => {
-    const id = item.group ?? 'other';
-    let group = groups.find((g) => g.id === id);
-    if (!group) {
-      group = { id, items: [] };
-      groups.push(group);
-    }
-    (group.items as MenuItemData[]).push(entry(item, index));
-  });
-  return groups;
-}
-
 /** Put the caret in a cell, unless a cell selection already covers it. */
 function selectCell(editor: TeiEditor, key: NodeKey) {
   editor.update(() => {
@@ -284,12 +178,14 @@ function TableCellMenu({ editor }: { editor: TeiEditor }) {
       : null,
   );
   useRootListener(editor, 'pointerleave', editable ? leaveUnlessInto(hover.leave) : null);
-  // Right-click in a cell opens the same menu at the pointer.
+  // Right-click in a cell opens the same menu at the pointer, unless the
+  // editor's context menu (which has the table's actions too) takes it.
   useRootListener(
     editor,
     'contextmenu',
     editable
       ? (event) => {
+          if (contextMenuOwners.has(editor)) return;
           const at = cellAt(editor, event.target);
           if (!at) return;
           event.preventDefault();

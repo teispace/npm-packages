@@ -352,6 +352,21 @@ export const copy: TeiIconNode = [
   rect(8, 8, 14, 14),
   ['path', { d: 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2' }],
 ];
+export const cut: TeiIconNode = [
+  circle(6, 6, 3),
+  circle(6, 18, 3),
+  ['path', { d: 'M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12' }],
+];
+export const paste: TeiIconNode = [
+  rect(8, 2, 8, 4, 1),
+  ['path', { d: 'M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2M16 4h2a2 2 0 0 1 2 2v2' }],
+  ['path', { d: 'M11 14h10m-4-4 4 4-4 4' }],
+];
+export const pastePlain: TeiIconNode = [
+  rect(8, 2, 8, 4, 1),
+  ['path', { d: 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2' }],
+  ['path', { d: 'M9 12v-1h6v1M11 17h2M12 11v6' }],
+];
 export const lock: TeiIconNode = [rect(3, 11, 18, 11), ['path', { d: 'M7 11V7a5 5 0 0 1 10 0v4' }]];
 export const pilcrow = paragraph;
 export const spinner = /* @__PURE__ */ p('M21 12a9 9 0 1 1-6.22-8.56');

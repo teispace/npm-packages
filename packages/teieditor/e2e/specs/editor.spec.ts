@@ -979,8 +979,10 @@ test.describe('tables', () => {
     expect(await tei.problems()).toEqual([]);
   });
 
-  test('right-click in a cell opens the menu at the pointer; Escape closes it', async ({ tei }) => {
-    await tei.open({ content: TABLE, flags: ['table'] });
+  test('without the context menu, right-click in a cell opens the cell menu there', async ({
+    tei,
+  }) => {
+    await tei.open({ content: TABLE, flags: ['table', 'nocontext'] });
     const cell = tei.content.getByText('2', { exact: true });
     await cell.click({ button: 'right' });
     const menu = tei.page.getByRole('menu', { name: 'Table' });

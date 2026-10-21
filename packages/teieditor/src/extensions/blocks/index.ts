@@ -22,6 +22,7 @@ import {
   type SerializedLexicalNode,
 } from 'lexical';
 import { defineTeiExtension } from '../../core/define.js';
+import type { TeiEditor } from '../../core/editor.js';
 import { $selectNode } from '../../core/slot-host.js';
 import { arrowDown, arrowUp, copy, grip, plus, trash } from '../../icons/index.js';
 import { RichText } from '../rich-text/index.js';
@@ -205,6 +206,12 @@ function $copyPath(
   return copy ?? null;
 }
 
+/** A move done is said out loud: the block left the reader's place. */
+function moved(editor: TeiEditor, done: boolean): boolean {
+  if (done) editor.announce(editor.t('block.moved'));
+  return done;
+}
+
 /** The list item a nested list hangs from. */
 function $ownerOf(list: LexicalNode | null): ListItemNode | null {
   const holder = list?.getParent();
@@ -298,21 +305,21 @@ export const Blocks = defineTeiExtension({
   dependencies: [RichText],
   commands: {
     moveBlock: {
-      run: (_ctx, key: NodeKey, target: NodeKey, place: BlockPlace) => {
+      run: ({ editor }, key: NodeKey, target: NodeKey, place: BlockPlace) => {
         const block = $getBlock(key);
         const to = $getBlock(target);
         if (!block || !to || (place !== 'before' && place !== 'after')) return false;
-        return $moveBlock(block, to, place);
+        return moved(editor, $moveBlock(block, to, place));
       },
       can: (_ctx, key?: NodeKey, target?: NodeKey) =>
         key === undefined ||
         ($getBlock(key) !== null && (target === undefined || $getBlock(target) !== null)),
     },
     moveBlockUp: {
-      run: (_ctx, key?: NodeKey) => {
+      run: ({ editor }, key?: NodeKey) => {
         const block = $getBlock(key);
         const to = block && $step(block, true);
-        return Boolean(block && to && $moveBlock(block, to.target, to.place));
+        return moved(editor, Boolean(block && to && $moveBlock(block, to.target, to.place)));
       },
       can: (_ctx, key?: NodeKey) => {
         const block = $getBlock(key);
@@ -320,10 +327,10 @@ export const Blocks = defineTeiExtension({
       },
     },
     moveBlockDown: {
-      run: (_ctx, key?: NodeKey) => {
+      run: ({ editor }, key?: NodeKey) => {
         const block = $getBlock(key);
         const to = block && $step(block, false);
-        return Boolean(block && to && $moveBlock(block, to.target, to.place));
+        return moved(editor, Boolean(block && to && $moveBlock(block, to.target, to.place)));
       },
       can: (_ctx, key?: NodeKey) => {
         const block = $getBlock(key);
@@ -400,7 +407,6 @@ export const Blocks = defineTeiExtension({
     'block.handle': 'Drag to move, click for options',
     'block.add': 'Add a block below ({alt}-click: above)',
     'block.menu': 'Block',
-    'block.turnInto': 'Turn into',
     'block.duplicate': 'Duplicate',
     'block.moveUp': 'Move up',
     'block.moveDown': 'Move down',
@@ -440,6 +446,7 @@ export const Blocks = defineTeiExtension({
     },
     {
       id: 'deleteBlock',
+      variant: 'danger',
       label: 'block.delete',
       icon: 'trash',
       in: ['blockMenu'],

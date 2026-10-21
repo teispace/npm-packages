@@ -10,17 +10,16 @@ import {
   useState,
 } from 'react';
 import type { TeiEditor } from '../../core/editor.js';
-import type { TeiItem } from '../../core/types.js';
 import { $blocks, $getBlock, type BlockPlace, Blocks } from '../../extensions/blocks/index.js';
 import { TeiEditorContext, useOptionalEditor } from '../context.js';
-import { useItemStates } from '../items.js';
 import { Button } from '../ui/button.js';
 import type { FloatingAnchor, VirtualElement } from '../ui/floating.js';
-import { Menu, type MenuGroupData, type MenuItemData } from '../ui/menu.js';
+import { Menu } from '../ui/menu.js';
 import { Popover } from '../ui/popover.js';
 import { useEditorFocus } from '../use-editor-focus.js';
 import { useEditorState } from '../use-editor-state.js';
 import { useHover, useRootListener } from '../use-hover.js';
+import { useBlockMenu } from './block-menu.js';
 
 /** How far a press moves before it is a drag, in px. */
 const DRAG_THRESHOLD = 4;
@@ -175,63 +174,6 @@ function ghostOf(el: HTMLElement): HTMLElement {
     node.removeAttribute('data-lexical-decorator');
   }
   return copy;
-}
-
-// -- The block menu -----------------------------------------------------------
-
-/** Its entries: "Turn into" the block types, then the `blockMenu` actions by group. */
-function useBlockMenu(editor: TeiEditor, onDone: () => void): MenuGroupData[] {
-  const items = editor.items('blockMenu');
-  const states = useItemStates(editor, items);
-  const run = (item: TeiItem) => () => {
-    onDone();
-    editor.runItem(item);
-  };
-  const entry = (item: TeiItem, index: number): MenuItemData => {
-    const state = states[index];
-    const shortcut = item.shortcut ? editor.shortcut(item.shortcut) : undefined;
-    return {
-      id: item.id,
-      label: editor.t(item.label),
-      icon: item.icon,
-      shortcut,
-      checked: item.active ? Boolean(state?.active) : undefined,
-      radio: item.active ? true : undefined,
-      disabled: !state?.enabled,
-      variant: item.group === 'delete' ? 'danger' : undefined,
-      onSelect: run(item),
-    };
-  };
-  const types: MenuItemData[] = [];
-  const groups: MenuGroupData[] = [];
-  items.forEach((item, index) => {
-    if (item.in.includes('blockType')) {
-      types.push(entry(item, index));
-      return;
-    }
-    const id = item.group ?? 'other';
-    let group = groups.find((g) => g.id === id);
-    if (!group) {
-      group = { id, items: [] };
-      groups.push(group);
-    }
-    (group.items as MenuItemData[]).push(entry(item, index));
-  });
-  if (types.some((type) => !type.disabled)) {
-    groups.unshift({
-      id: 'turnInto',
-      items: [
-        {
-          id: 'turnInto',
-          label: editor.t('block.turnInto'),
-          // What the block is now.
-          icon: types.find((type) => type.checked)?.icon ?? 'paragraph',
-          items: types,
-        },
-      ],
-    });
-  }
-  return groups;
 }
 
 // -- The handle ---------------------------------------------------------------

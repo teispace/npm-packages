@@ -712,6 +712,7 @@ export const Table = defineTeiExtension({
     }),
     tableItem({
       id: 'deleteTable',
+      variant: 'danger',
       label: 'table.deleteTable',
       icon: 'trash',
       group: 'table',

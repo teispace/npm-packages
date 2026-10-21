@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { setExtensionOptions } from '../../src/core/define';
 import type { TeiEditor } from '../../src/core/editor';
 import { Blocks } from '../../src/extensions/blocks/index';
+import { Clipboard } from '../../src/extensions/clipboard/index';
 import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
 import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
 import { Html } from '../../src/extensions/html/index';
@@ -38,6 +39,8 @@ declare global {
       setFileOptions: (options: Partial<FileOptions>) => void;
       /** Change the Embed extension's options. */
       setEmbedOptions: (options: Partial<EmbedOptions>) => void;
+      /** What the clipboard reads as for the menu's Paste; `null` as if the browser refused. */
+      setClipboard: (data: { html?: string; text?: string } | null) => void;
     };
   }
 }
@@ -141,6 +144,16 @@ function App() {
     setImageOptions: (options) => setExtensionOptions(editor, Image, options),
     setFileOptions: (options) => setExtensionOptions(editor, FileAttachment, options),
     setEmbedOptions: (options) => setExtensionOptions(editor, Embed, options),
+    setClipboard: (data) =>
+      setExtensionOptions(editor, Clipboard, {
+        read: async (plain) => {
+          if (!data) return null;
+          const transfer = new DataTransfer();
+          if (data.text) transfer.setData('text/plain', data.text);
+          if (data.html && !plain) transfer.setData('text/html', data.html);
+          return transfer;
+        },
+      }),
   };
   return (
     <main data-testid="root">
@@ -149,6 +162,7 @@ function App() {
         placeholder="Write something…"
         toolbarOverflow={params.has('scroll') ? 'scroll' : params.has('wrap') ? 'wrap' : undefined}
         frameProps={{ 'data-testid': 'editor', dir: params.has('rtl') ? 'rtl' : undefined }}
+        slots={params.has('nocontext') ? { contextMenu: false } : undefined}
         contentProps={{ 'data-testid': 'content' }}
       />
       {/* UI outside an editor takes the tokens from .tei-portal. */}

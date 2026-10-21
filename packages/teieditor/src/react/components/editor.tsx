@@ -60,13 +60,16 @@ const LazyImageControls = () => <ImageControls insert={false} />;
 const BlockHandle = lazy(() =>
   import('./block-handle.js').then((module) => ({ default: module.BlockHandle })),
 );
+const ContextMenu = lazy(() =>
+  import('./context-menu.js').then((module) => ({ default: module.ContextMenu })),
+);
 const EmbedControls = lazy(() =>
   import('./embed-controls.js').then((module) => ({ default: module.EmbedControls })),
 );
 
 /**
  * Which UI comes with it.
- * - `full`: toolbar, bubble menu, slash menu, link popover, block handles, code block bar, table, image, file and embed controls.
+ * - `full`: toolbar, bubble menu, slash menu, link popover, block handles, context menu, code block bar, table, image, file and embed controls.
  * - `notion`: no toolbar; select text for the bubble menu, type `/` or press + for blocks, drag a block by its handle.
  * - `minimal`: a toolbar and links, nothing floating: comment boxes, forms.
  */
@@ -82,6 +85,8 @@ export interface EditorSlots {
   linkPopover?: EditorSlot;
   /** The handle beside each block (drag it, or click for its menu) and its + button. */
   blockHandle?: EditorSlot;
+  /** The editor's own right-click menu: clipboard, link, the selected node's actions, the table's, the block's. */
+  contextMenu?: EditorSlot;
   /** The language picker and copy button on code blocks. */
   codeBlockBar?: EditorSlot;
   /** The cell menu, + bars and column resizing on tables. */
@@ -103,6 +108,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     slashMenu: true,
     linkPopover: true,
     blockHandle: true,
+    contextMenu: true,
     codeBlockBar: true,
     tableControls: true,
     imageControls: true,
@@ -115,6 +121,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     slashMenu: true,
     linkPopover: true,
     blockHandle: true,
+    contextMenu: true,
     codeBlockBar: true,
     tableControls: true,
     imageControls: true,
@@ -127,6 +134,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     slashMenu: false,
     linkPopover: true,
     blockHandle: false,
+    contextMenu: false,
     codeBlockBar: false,
     tableControls: false,
     imageControls: false,
@@ -337,6 +345,7 @@ function EditorFrame({
               {slot(parts.bubbleMenu, <BubbleMenu />)}
               {slot(parts.slashMenu, <SlashMenu />)}
               {editor.extension(Blocks) && slot(parts.blockHandle, <BlockHandle />)}
+              {slot(parts.contextMenu, <ContextMenu />)}
               {editor.extension(Image) && parts.imageControls === true && (
                 <ImageInsertPopover editor={editor} />
               )}

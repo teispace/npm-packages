@@ -1,6 +1,7 @@
 import type { TeiExtensionInput } from '../../core/create.js';
 import { Indent, TextAlign } from '../alignment/index.js';
 import { Blockquote } from '../blockquote/index.js';
+import { Clipboard } from '../clipboard/index.js';
 import { CodeBlock } from '../code-block/index.js';
 import { CodeHighlight } from '../code-highlight/index.js';
 import {
@@ -27,6 +28,7 @@ import { RichText } from '../rich-text/index.js';
 const PARTS = {
   richText: RichText,
   history: History,
+  clipboard: Clipboard,
   bold: Bold,
   italic: Italic,
   underline: Underline,

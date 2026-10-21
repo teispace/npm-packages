@@ -33,8 +33,9 @@ const CASES = [
     name: '<Editor> (full preset, StarterKit)',
     code: `import { Editor } from '${dist('react/index.js')}'; use(Editor);`,
     // Grows with what the full preset installs, each feature on purpose:
-    // tables, images, files (59.6 KB), embeds (+4.8 KB), block moves (+2.9 KB).
-    budget: 68 * KB,
+    // tables, images, files (59.6 KB), embeds (+4.8 KB), block moves (+2.9 KB),
+    // clipboard commands (+0.9 KB; the context menu itself loads later).
+    budget: 70 * KB,
   },
   {
     name: 'headless React (useTeiEditor, EditorContent)',

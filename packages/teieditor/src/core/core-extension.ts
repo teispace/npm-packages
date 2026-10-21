@@ -106,6 +106,8 @@ export const TeiCoreExtension = defineExtension({
       'toolbar.more': 'More',
       'bubble.label': 'Text formatting',
       'slash.label': 'Insert block',
+      'contextMenu.label': 'Edit',
+      'block.turnInto': 'Turn into',
       'slash.empty': 'No matches',
       'slash.group.history': 'History',
       'slash.group.basic': 'Basic blocks',

@@ -668,6 +668,7 @@ export const Embed = defineTeiExtension({
     }),
     embedItem({
       id: 'removeEmbed',
+      variant: 'danger',
       label: 'embed.remove',
       icon: 'trash',
       group: 'remove',

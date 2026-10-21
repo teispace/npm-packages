@@ -118,6 +118,20 @@ describe('blocks: moving', () => {
     expect(editor.read(() => $blocks().at(-1)?.getTextContent())).toBe('B');
   });
 
+  it('says a move out loud, in one live region, and nothing when it cannot move', () => {
+    const editor = make('<p>A</p><p>B</p>');
+    const live = () => document.querySelectorAll('[data-tei-live]');
+    caretIn(editor, 'A');
+    expect(editor.commands.moveBlockUp()).toBe(false);
+    expect(live()).toHaveLength(0);
+    editor.commands.moveBlockDown();
+    expect(live()).toHaveLength(1);
+    expect(live()[0]?.getAttribute('role')).toBe('status');
+    expect(live()[0]?.textContent).toBe('Block moved');
+    editor.commands.moveBlockUp();
+    expect(live()).toHaveLength(1);
+  });
+
   it('is one undo step', () => {
     const editor = make('<p>A</p><p>B</p>');
     caretIn(editor, 'A');

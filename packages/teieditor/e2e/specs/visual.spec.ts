@@ -534,6 +534,27 @@ for (const scheme of ['light', 'dark'] as const) {
       await shoot(tei, tei.page.getByTestId('editor'), `blocks-menu-${scheme}.png`);
     });
 
+    test('context menu on a selection, with the table submenu open', async ({ tei }) => {
+      await tei.page.setViewportSize({ width: 768, height: 720 });
+      await tei.open({
+        content: `<p>Pick <strong>these words</strong> to cut.</p><table><tr><td>1</td><td>2</td></tr></table>`,
+        flags: ['table', 'plain'],
+      });
+      await theme(tei.page, scheme);
+      // A selection, not a caret: a caret blinks between shots.
+      const cell = tei.content.getByText('2', { exact: true });
+      await cell.click();
+      await cell.evaluate((el) => getSelection()?.selectAllChildren(el));
+      await cell.click({ button: 'right' });
+      const menu = tei.page.locator('[data-tei-control="context-menu"]');
+      await menu.locator('[data-id="table"]').click();
+      await expect(tei.page.getByRole('menu', { name: 'Table' })).toBeVisible();
+      await settled(tei.page);
+      await shoot(tei, tei.page, `context-menu-${scheme}.png`, {
+        clip: { x: 0, y: 0, width: 768, height: 720 },
+      });
+    });
+
     test('tooltip on a toolbar button', async ({ tei }) => {
       await tei.open();
       await theme(tei.page, scheme);

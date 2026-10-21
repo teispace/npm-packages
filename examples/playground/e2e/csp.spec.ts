@@ -432,3 +432,35 @@ test('blocks: the handle drags a block and opens its menu, reporting nothing', a
   await expect(editor.locator(':scope > *').first()).toHaveText('Welcome to teieditor');
   await expectNoViolations(page);
 });
+
+test('context menu: copy and paste through it, reporting nothing', async ({
+  page,
+  context,
+  browserName,
+}) => {
+  const editor = await open(page, '/');
+  await page.locator('[data-tei-ready]').waitFor();
+  const title = editor.locator('h1');
+  // Select the title's text and right-click inside the selection.
+  await title.evaluate((h1) => getSelection()?.selectAllChildren(h1));
+  await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+  const box = await title.boundingBox();
+  if (!box) throw new Error('not rendered');
+  await page.mouse.click(box.x + 20, box.y + box.height / 2, { button: 'right' });
+  const menu = page.locator('[data-tei-control="context-menu"]');
+  await menu.locator('[data-id="copy"]').click();
+  await expect(menu).toHaveCount(0);
+  // Paste it at the start of the next block, through the menu where the browser allows it.
+  const next = editor.locator(':scope > p').first();
+  await next.click();
+  await page.keyboard.press('Home');
+  if (browserName === 'chromium') {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await next.click({ button: 'right' });
+    await menu.locator('[data-id="pastePlain"]').click();
+  } else {
+    await page.keyboard.press(`${MOD}+v`);
+  }
+  await expect(next).toContainText('Welcome to teieditor');
+  await expectNoViolations(page);
+});

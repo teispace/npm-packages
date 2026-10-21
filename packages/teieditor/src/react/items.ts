@@ -2,6 +2,7 @@
 
 import type { TeiEditor } from '../core/editor.js';
 import type { TeiItem } from '../core/types.js';
+import type { MenuGroupData, MenuItemData } from './ui/menu.js';
 import { useEditorState } from './use-editor-state.js';
 
 /** What a UI item shows: lit up, and whether it can run now. */
@@ -52,4 +53,22 @@ export function itemText(
     description: item.description ? editor.t(item.description) : undefined,
     shortcut: item.shortcut ? editor.shortcut(item.shortcut) : undefined,
   };
+}
+
+/** Menu sections from items, by their `group`, in the order the groups first appear. */
+export function groupItems(
+  items: readonly TeiItem[],
+  entry: (item: TeiItem, index: number) => MenuItemData,
+): MenuGroupData[] {
+  const groups: Array<{ id: string; items: MenuItemData[] }> = [];
+  items.forEach((item, index) => {
+    const id = item.group ?? 'other';
+    let group = groups.find((g) => g.id === id);
+    if (!group) {
+      group = { id, items: [] };
+      groups.push(group);
+    }
+    group.items.push(entry(item, index));
+  });
+  return groups;
 }

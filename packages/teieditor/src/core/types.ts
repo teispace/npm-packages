@@ -128,6 +128,8 @@ export interface TeiItem {
   group?: string;
   /** Sort order within its group; lower first. Default 0. */
   order?: number;
+  /** `'danger'` for one that destroys (delete, remove): menus draw it in the danger colour. */
+  variant?: 'danger';
   /** Extra words the slash menu matches on. */
   keywords?: readonly string[];
   /** Name of the keymap entry to show as its shortcut hint. */

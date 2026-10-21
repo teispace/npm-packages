@@ -9,6 +9,8 @@ export { BubbleMenu } from './components/bubble-menu.js';
 // Ready-made UI, built from what the installed extensions contribute.
 export type { CodeBlockBarProps } from './components/code-block-bar.js';
 export { CodeBlockBar } from './components/code-block-bar.js';
+export type { ContextMenuProps } from './components/context-menu.js';
+export { ContextMenu } from './components/context-menu.js';
 export type { EditorPreset, EditorProps, EditorSlot, EditorSlots } from './components/editor.js';
 export { Editor } from './components/editor.js';
 export type {

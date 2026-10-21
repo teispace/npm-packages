@@ -465,6 +465,26 @@ export class TeiEditor {
     this.lexical.setEditable(editable);
   }
 
+  /**
+   * Tell screen readers what just happened ("Block moved"), through a
+   * polite live region beside the document. Nothing shows.
+   */
+  announce(text: string): void {
+    const root = this.lexical.getRootElement();
+    const host = root?.parentElement;
+    if (!root || !host) return;
+    let region = host.querySelector<HTMLElement>(':scope > [data-tei-live]');
+    if (!region) {
+      region = root.ownerDocument.createElement('div');
+      region.setAttribute('data-tei-live', '');
+      region.setAttribute('role', 'status');
+      region.className = 'tei-sr-only';
+      host.append(region);
+    }
+    // A new node each time: the same words twice are still read out.
+    region.replaceChildren(root.ownerDocument.createTextNode(text));
+  }
+
   // -- Extensions -----------------------------------------------------------
 
   /** An installed extension's live config and output, or `undefined` if absent. */

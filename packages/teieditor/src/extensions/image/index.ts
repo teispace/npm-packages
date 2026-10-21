@@ -924,6 +924,7 @@ export const Image = defineTeiExtension({
     }),
     imageItem({
       id: 'removeImage',
+      variant: 'danger',
       label: 'image.remove',
       icon: 'trash',
       group: 'remove',

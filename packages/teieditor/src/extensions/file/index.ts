@@ -419,6 +419,7 @@ export const FileAttachment = defineTeiExtension({
     }),
     fileItem({
       id: 'removeFile',
+      variant: 'danger',
       label: 'file.remove',
       icon: 'trash',
       group: 'remove',
