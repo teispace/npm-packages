@@ -151,6 +151,8 @@ export default defineConfig({
   // Every dependency and peer stays external: Lexical must be one instance
   // per app, and the app's bundler dedupes the rest.
   external: [
+    // Extensions augment the core's command types by its public name.
+    /^@teispace\/teieditor($|\/)/,
     /^react($|\/)/,
     /^react-dom($|\/)/,
     'lexical',

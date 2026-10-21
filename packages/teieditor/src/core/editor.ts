@@ -3,11 +3,14 @@ import {
   getExtensionDependencyFromEditor,
   KeyboardShortcutsExtension,
 } from '@lexical/extension';
+import type { Transformer } from '@lexical/markdown';
 import {
+  $addUpdateTag,
   $getRoot,
   $getSelection,
   $isRangeSelection,
   type AnyLexicalExtension,
+  type EditorState,
   type LexicalEditor,
   type LexicalExtensionConfig,
   type LexicalExtensionOutput,
@@ -31,29 +34,41 @@ import type {
 
 type Listener = (arg: never) => void;
 
-/** `editor.commands`: run one command now. */
+/**
+ * `editor.commands`: run one command now. Typed from {@link TeiCommands},
+ * so a misspelt name is a type error; for a name known only at run time
+ * use `editor.command(name, ...args)`.
+ */
 export type TeiCommandRunner = {
   [K in keyof TeiCommands]: (...args: CommandArgs<K>) => boolean;
-} & Record<string, (...args: any[]) => boolean>;
+};
 
 /** `editor.chain()`: queue commands, then `run()` them as one undo step. */
 export type TeiChain = {
   [K in keyof TeiCommands]: (...args: CommandArgs<K>) => TeiChain;
-} & Record<string, (...args: any[]) => TeiChain> & {
-    /** Focus the editor when the chain runs (`'start'`, `'end'`, or keep the selection). */
-    focus: (position?: FocusPosition) => TeiChain;
-    /** Run the queued commands in one update; `true` if all of them applied. */
-    run: () => boolean;
-  };
+} & {
+  /** Queue a command by a name known only at run time. */
+  command: <N extends CommandName>(name: N, ...args: CommandArgs<N>) => TeiChain;
+  /** Focus the editor when the chain runs (`'start'`, `'end'`, or keep the selection). */
+  focus: (position?: FocusPosition) => TeiChain;
+  /** Run the queued commands in one update; `true` if all of them applied. */
+  run: () => boolean;
+};
 
 /** `editor.can()`: would this command do anything right now? */
 export type TeiCan = {
   [K in keyof TeiCommands]: (...args: CommandArgs<K>) => boolean;
-} & Record<string, (...args: any[]) => boolean> & { chain: () => TeiCanChain };
+} & {
+  command: <N extends CommandName>(name: N, ...args: CommandArgs<N>) => boolean;
+  chain: () => TeiCanChain;
+};
 
 export type TeiCanChain = {
   [K in keyof TeiCommands]: (...args: CommandArgs<K>) => TeiCanChain;
-} & Record<string, (...args: any[]) => TeiCanChain> & { run: () => boolean };
+} & {
+  command: <N extends CommandName>(name: N, ...args: CommandArgs<N>) => TeiCanChain;
+  run: () => boolean;
+};
 
 /** `null` keeps the current selection; otherwise move it before focusing. */
 export type FocusPosition = 'start' | 'end' | 'all' | null;
@@ -62,6 +77,27 @@ export type FocusPosition = 'start' | 'end' | 'all' | null;
 export type ContentFormat = 'json' | 'html' | 'markdown' | 'text' | (string & {});
 
 const handles = new WeakMap<LexicalEditor, TeiEditor>();
+
+/**
+ * The order item groups appear in, in every placement. A group not listed
+ * comes after these; items without a group come last.
+ */
+export const ITEM_GROUPS: readonly string[] = [
+  'history',
+  'basic',
+  'format',
+  'list',
+  'insert',
+  'media',
+  'align',
+  'advanced',
+];
+
+function groupRank(group: string | undefined): number {
+  if (group === undefined) return ITEM_GROUPS.length + 1;
+  const index = ITEM_GROUPS.indexOf(group);
+  return index < 0 ? ITEM_GROUPS.length : index;
+}
 
 /**
  * Properties a proxy must not answer with a command: `then` would make it
@@ -142,6 +178,12 @@ export class TeiEditor {
             return chain;
           };
         }
+        if (name === 'command') {
+          return (step: string, ...args: unknown[]) => {
+            steps.push([step, args]);
+            return chain;
+          };
+        }
         return (...args: unknown[]) => {
           steps.push([name, args]);
           return chain;
@@ -160,23 +202,34 @@ export class TeiEditor {
           return () => {
             const steps: Array<[string, unknown[]]> = [];
             const chain: TeiCanChain = new Proxy({} as TeiCanChain, {
-              get: (__, step: string | symbol) =>
-                isProbe(step)
-                  ? undefined
-                  : step === 'run'
-                    ? () => this.read(() => steps.every(([n, a]) => this.#check(n, a)))
-                    : (...args: unknown[]) => {
-                        steps.push([step, args]);
-                        return chain;
-                      },
+              get: (__, step: string | symbol) => {
+                if (isProbe(step)) return undefined;
+                if (step === 'run')
+                  return () => this.read(() => steps.every(([n, a]) => this.#check(n, a)));
+                return (...args: unknown[]) => {
+                  if (step === 'command') {
+                    const [named, ...rest] = args as [string, ...unknown[]];
+                    steps.push([named, rest]);
+                  } else steps.push([step, args]);
+                  return chain;
+                };
+              },
             });
             return chain;
           };
+        }
+        if (name === 'command') {
+          return (named: string, ...args: unknown[]) => this.read(() => this.#check(named, args));
         }
         return (...args: unknown[]) => this.read(() => this.#check(name, args));
       },
     });
     return this.#can;
+  }
+
+  /** Run a command by a name known only at run time, as its own undo step. */
+  command<N extends CommandName>(name: N, ...args: CommandArgs<N>): boolean {
+    return this.#update(() => this.#run(name, args));
   }
 
   /** Whether a state is active at the selection: `isActive('bold')`, `isActive('heading', 'h2')`. */
@@ -217,11 +270,31 @@ export class TeiEditor {
   }
 
   /**
+   * Whether this editor is inside an update callback right now (a key
+   * handler, a command), where Lexical would queue a nested update instead of
+   * running it. Update listeners also run with `_updating` set, but after the
+   * commit, with no pending state — those get a fresh update.
+   */
+  get #updating(): boolean {
+    return (
+      (this.lexical as LexicalEditor & { _updating: boolean })._updating && this.#pending !== null
+    );
+  }
+
+  get #pending(): EditorState | null {
+    return (this.lexical as LexicalEditor & { _pendingEditorState: EditorState | null })
+      ._pendingEditorState;
+  }
+
+  /**
    * Run `fn` in an update and return its result. Commits synchronously, so
-   * what a command did is readable on the next line. Inside an existing
-   * update (a key handler, another command) it joins that update instead.
+   * what a command did is readable on the next line. Inside an update that
+   * is already running (a key handler, another command) it runs in place:
+   * Lexical would queue a nested update until the outer one returns, and
+   * the result — whether a key was handled — would be lost.
    */
   #update<T>(fn: () => T): T {
+    if (this.#updating) return fn();
     let result!: T;
     this.lexical.update(
       () => {
@@ -232,13 +305,23 @@ export class TeiEditor {
     return result;
   }
 
-  /** Read the current state: `editor.read(() => $getRoot().getTextContent())`. */
+  /**
+   * Read the current state: `editor.read(() => $getRoot().getTextContent())`.
+   * Inside an update it reads the pending state, which is what that update sees.
+   */
   read<T>(fn: () => T): T {
-    return this.lexical.getEditorState().read(fn, { editor: this.lexical });
+    if (this.#updating) return fn();
+    // Lexical commits pending updates first, so reads see every earlier write.
+    return this.lexical.read(fn);
   }
 
   /** Change the document with Lexical's `$` API, as one undo step. */
   update(fn: () => void, options?: { tag?: string | string[] }): void {
+    if (this.#updating) {
+      for (const tag of [options?.tag ?? []].flat()) $addUpdateTag(tag);
+      fn();
+      return;
+    }
     this.lexical.update(fn, { discrete: true, ...options });
   }
 
@@ -256,7 +339,11 @@ export class TeiEditor {
     this.update(() => codec.parse(this.#ctx(), value), options);
   }
 
+  /** The document as Lexical JSON, including writes made earlier in this update. */
   getJSON(): SerializedEditorState {
+    const pending = this.#updating ? this.#pending : null;
+    if (pending) return pending.toJSON();
+    this.lexical.read(() => {}); // commits pending updates
     return this.lexical.getEditorState().toJSON();
   }
 
@@ -347,11 +434,22 @@ export class TeiEditor {
 
   // -- UI contributions -----------------------------------------------------
 
-  /** The UI items for a placement, sorted by group order then item order. */
+  /**
+   * The UI items for a placement: grouped in {@link ITEM_GROUPS} order (other
+   * groups after, by name), then by each item's `order`.
+   */
   items(placement: TeiPlacement): TeiItem[] {
     return Object.values(this.#config.items)
-      .filter((item): item is TeiItem => Boolean(item?.in.includes(placement)))
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      .filter(
+        (item): item is TeiItem =>
+          Boolean(item?.in.includes(placement)) && (item?.visible?.(this) ?? true),
+      )
+      .sort(
+        (a, b) =>
+          groupRank(a.group) - groupRank(b.group) ||
+          (a.group ?? '').localeCompare(b.group ?? '') ||
+          (a.order ?? 0) - (b.order ?? 0),
+      );
   }
 
   /** Look up a message by id, falling back to the id itself. */
@@ -360,6 +458,16 @@ export class TeiEditor {
     return values
       ? message.replace(/\{(\w+)\}/g, (m, k: string) => String(values[k] ?? m))
       : message;
+  }
+
+  /**
+   * The installed markdown transformers. Text formats come longest marker
+   * first, so `***` is tried before `**` and `*`.
+   */
+  get markdownTransformers(): Transformer[] {
+    const all = Object.values(this.#config.markdown).filter((t): t is Transformer => Boolean(t));
+    const tagLength = (t: Transformer) => (t.type === 'text-format' ? t.tag.length : 0);
+    return all.sort((a, b) => tagLength(b) - tagLength(a));
   }
 
   /** An icon by name, as registered by extensions or replaced by the app. */
@@ -389,7 +497,7 @@ export class TeiEditor {
     if (!item.command) return false;
     return this.chain()
       .focus()
-      [item.command](...(item.args ?? []))
+      .command(item.command, ...((item.args ?? []) as unknown[]))
       .run();
   }
 

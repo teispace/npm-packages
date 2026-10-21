@@ -91,7 +91,8 @@
     user-select: none;
   }
 
-  [data-tei-content]:not(:focus) [data-tei-placeholder][data-tei-placeholder-focus]::before {
+  /* The caret placeholder follows the caret: gone when the editor is not focused. */
+  [data-tei-content]:not(:focus-within) [data-tei-placeholder]::before {
     content: none;
   }
 

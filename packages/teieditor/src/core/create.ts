@@ -1,9 +1,11 @@
 import { buildEditorFromExtensions, KeyboardShortcutsExtension } from '@lexical/extension';
+import type { Transformer } from '@lexical/markdown';
 import {
   type AnyLexicalExtensionArgument,
   configExtension,
   defineExtension,
   type EditorThemeClasses,
+  HISTORY_MERGE_TAG,
   type LexicalEditor,
 } from 'lexical';
 import { getTeiEditor, type TeiCoreConfig, TeiCoreExtension } from './core-extension.js';
@@ -56,6 +58,8 @@ export interface TeiEditorOptions extends TeiEvents {
   messages?: Record<string, string>;
   /** Replace any icon by name. */
   icons?: Record<string, TeiIconNode>;
+  /** Add, replace or remove (`null`) markdown transformers by name. */
+  markdown?: Record<string, Transformer | null>;
   /** Wrap every command run. */
   middleware?: readonly TeiCommandMiddleware[];
 }
@@ -120,10 +124,11 @@ export function createTeiEditor(options: TeiEditorOptions): TeiEditor {
     items,
     messages,
     icons,
+    markdown,
     middleware,
   } = options;
 
-  const app: Partial<TeiCoreConfig> = { commands, items, messages, icons, middleware };
+  const app: Partial<TeiCoreConfig> = { commands, items, messages, icons, markdown, middleware };
   const events: Record<string, unknown[]> = {};
   for (const name of [
     'onCreate',
@@ -167,5 +172,9 @@ export function createTeiEditor(options: TeiEditorOptions): TeiEditor {
           },
   });
 
-  return getTeiEditor(buildEditorFromExtensions(root));
+  const lexical = buildEditorFromExtensions(root);
+  // Lexical commits the initial state on a microtask; commit it now, so the
+  // editor reads its content right away, with or without a root element.
+  lexical.update(() => {}, { discrete: true, tag: HISTORY_MERGE_TAG });
+  return getTeiEditor(lexical);
 }

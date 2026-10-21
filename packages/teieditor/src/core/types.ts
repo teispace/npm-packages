@@ -132,6 +132,8 @@ export interface TeiItem {
   /** Active-state name (and arguments) that lights the item up. */
   active?: ActiveName;
   activeArgs?: readonly unknown[];
+  /** Whether to offer it at all, given the editor's current options. Default: always. */
+  visible?: (editor: TeiEditor) => boolean;
 }
 
 /**

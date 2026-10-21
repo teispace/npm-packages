@@ -1,8 +1,20 @@
+import type { Transformer } from '@lexical/markdown';
 import {
+  $createRangeSelectionFromDom,
+  $getSelection,
+  $isRangeSelection,
+  $isTextNode,
+  $setSelection,
   BLUR_COMMAND,
+  COMMAND_PRIORITY_CRITICAL,
   COMMAND_PRIORITY_EDITOR,
+  COMMAND_PRIORITY_LOW,
+  CONTROL_OR_META,
   defineExtension,
   FOCUS_COMMAND,
+  getDOMSelection,
+  isExactShortcutMatch,
+  KEY_DOWN_COMMAND,
   type LexicalEditor,
   mergeRegister,
   safeCast,
@@ -46,6 +58,8 @@ export interface TeiCoreConfig {
   items: Readonly<Record<string, TeiItem | null>>;
   messages: Readonly<Record<string, string>>;
   icons: Readonly<Record<string, TeiIconNode>>;
+  /** Markdown transformers by name: shortcuts while typing, and the `markdown` format. */
+  markdown: Readonly<Record<string, Transformer | null>>;
   formats: Readonly<Record<string, TeiFormat | null>>;
   middleware: readonly TeiCommandMiddleware[];
   events: Partial<EventLists>;
@@ -73,6 +87,9 @@ function mergeEvents(base: Partial<EventLists>, overrides: Partial<EventLists> |
   return merged as Partial<EventLists>;
 }
 
+/** Keys Lexical's core formats with on its own; see the keydown guard in `register`. */
+const RESERVED_KEYS = ['b', 'i', 'u'];
+
 export const TeiCoreExtension = defineExtension({
   name: '@teispace/teieditor/core',
   // The default classes; the app's `theme` option is deep-merged over them.
@@ -83,6 +100,7 @@ export const TeiCoreExtension = defineExtension({
     items: {},
     messages: {},
     icons: {},
+    markdown: {},
     formats: { json: jsonFormat, text: textFormat },
     middleware: [],
     events: {},
@@ -94,6 +112,7 @@ export const TeiCoreExtension = defineExtension({
     merged.items = { ...config.items, ...overrides.items };
     merged.messages = { ...config.messages, ...overrides.messages };
     merged.icons = { ...config.icons, ...overrides.icons };
+    merged.markdown = { ...config.markdown, ...overrides.markdown };
     merged.formats = { ...config.formats, ...overrides.formats };
     merged.middleware = [...config.middleware, ...(overrides.middleware ?? [])];
     merged.events = mergeEvents(config.events, overrides.events);
@@ -114,6 +133,47 @@ export const TeiCoreExtension = defineExtension({
       editor.emit(name, arg);
     };
     return mergeRegister(
+      // Chromium reports caret moves (selectionchange) a task late, so a key
+      // pressed right after an arrow key would act on the old caret: Backspace
+      // deletes the wrong character. Before any key handler runs, take the
+      // caret from the DOM when Lexical's is behind it.
+      lexical.registerCommand(
+        KEY_DOWN_COMMAND,
+        () => {
+          const domSelection = getDOMSelection(lexical._window);
+          const current = $getSelection();
+          if (!domSelection || !$isRangeSelection(current) || lexical.isComposing()) return false;
+          const root = lexical.getRootElement();
+          if (!root?.contains(domSelection.anchorNode)) return false;
+          const fresh = $createRangeSelectionFromDom(domSelection, lexical);
+          if (fresh && !(fresh.anchor.is(current.anchor) && fresh.focus.is(current.focus))) {
+            // Type with the format of the text the caret moved into, as
+            // Lexical does when it hears of the move itself.
+            const anchor = fresh.anchor.getNode();
+            if ($isTextNode(anchor)) {
+              fresh.format = anchor.getFormat();
+              fresh.style = anchor.getStyle();
+            }
+            $setSelection(fresh);
+          }
+          return false;
+        },
+        COMMAND_PRIORITY_CRITICAL,
+      ),
+      // Lexical's core binds ⌘B, ⌘I and ⌘U itself, whatever is installed.
+      // Here they do only what a keymap binds them to (which runs first), so
+      // leaving Bold out, or moving toggleBold to another key, frees them.
+      lexical.registerCommand(
+        KEY_DOWN_COMMAND,
+        (event) => {
+          if (!RESERVED_KEYS.some((key) => isExactShortcutMatch(event, key, CONTROL_OR_META))) {
+            return false;
+          }
+          event.preventDefault();
+          return true;
+        },
+        COMMAND_PRIORITY_LOW,
+      ),
       lexical.registerUpdateListener(
         ({ editorState, prevEditorState, dirtyElements, dirtyLeaves, tags }) => {
           // The first commit fills the empty initial state; nothing changed yet.

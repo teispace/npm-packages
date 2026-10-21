@@ -29,7 +29,7 @@ export const jsonFormat: TeiFormat = {
     if (nodes.length) root.append(...nodes);
     else root.append($createParagraphNode());
   },
-  serialize: ({ lexical }) => lexical.getEditorState().toJSON(),
+  serialize: ({ editor }) => editor.getJSON(),
 };
 
 /** Plain text: one paragraph per line in, the document's text content out. */

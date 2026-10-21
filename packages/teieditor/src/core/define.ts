@@ -4,6 +4,7 @@ import {
   KeyboardShortcutsExtension,
   namedSignals,
 } from '@lexical/extension';
+import type { Transformer } from '@lexical/markdown';
 import {
   type AnyLexicalExtension,
   type AnyLexicalExtensionArgument,
@@ -31,7 +32,8 @@ import type {
   TeiKeyBinding,
 } from './types.js';
 
-type AnyConfig = Record<string, unknown>;
+// `object`, not `Record<string, unknown>`: an options *interface* has no index signature.
+type AnyConfig = object;
 
 /** What an extension's own code is given: the editor, plus its live options and storage. */
 export interface TeiExtensionContext<Config, Storage> extends TeiContext {
@@ -91,6 +93,8 @@ export interface TeiExtensionSpec<Name extends string, Config extends AnyConfig,
   messages?: Record<string, string>;
   /** Icons this extension's items use, by name. Apps replace them by the same name. */
   icons?: Record<string, TeiIconNode>;
+  /** Markdown transformers by name; apps replace or remove (`null`) them by the same name. */
+  markdown?: Record<string, Transformer>;
   /** Content formats this extension can read and write. */
   formats?: Record<string, TeiFormat>;
   /** Wrap every command run. */
@@ -229,6 +233,7 @@ export function defineTeiExtension<
   if (spec.items) core.items = Object.fromEntries(spec.items.map((item) => [item.id, item]));
   if (spec.messages) core.messages = spec.messages;
   if (spec.icons) core.icons = spec.icons;
+  if (spec.markdown) core.markdown = spec.markdown;
   if (spec.formats) core.formats = spec.formats;
   if (spec.middleware) core.middleware = spec.middleware;
   const events: Record<string, unknown[]> = {};
@@ -331,7 +336,7 @@ export function keymapToShortcuts(
             const handled =
               typeof binding.command === 'function'
                 ? binding.command(editor, event)
-                : editor.commands[binding.command](...(binding.args ?? []));
+                : editor.command(binding.command, ...((binding.args ?? []) as unknown[]));
             if (handled) event.preventDefault();
             return handled;
           },
