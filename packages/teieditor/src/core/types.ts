@@ -1,192 +1,162 @@
-import type {
-  EditorState,
-  EditorThemeClasses,
-  HTMLConfig,
-  Klass,
-  LexicalEditor,
-  LexicalNode,
-  LexicalNodeReplacement,
-} from 'lexical';
-import type { ComponentType } from 'react';
-
-// ---------------------------------------------------------------------------
-// Lexical interop types
-// ---------------------------------------------------------------------------
+import type { KeyboardShortcut, LexicalEditor } from 'lexical';
+import type { TeiEditor } from './editor.js';
 
 /**
- * A Lexical node class **or** a node-replacement descriptor
- * (`{ replace, with, withKlass }`).
+ * Commands by name, with their argument tuples. Extensions add to it by
+ * declaration merging, which is what types `editor.commands.x(...)` and
+ * `editor.chain().x(...)`:
  *
- * Mirrors Lexical's own `LexicalNodeConfig`. Accepting the replacement form
- * everywhere we accept nodes is what lets a consumer swap a core node — e.g.
- * substitute a custom `TextNode`/`ParagraphNode` subclass — without forking an
- * extension. See https://lexical.dev/docs/concepts/node-replacement
+ * ```ts
+ * declare module '@teispace/teieditor' {
+ *   interface TeiCommands {
+ *     toggleBold: [];
+ *     setHeading: [tag: 'h1' | 'h2' | 'h3'];
+ *   }
+ * }
+ * ```
  */
-export type TeiNodeConfig = Klass<LexicalNode> | LexicalNodeReplacement;
+// biome-ignore lint/suspicious/noEmptyInterface: filled in by declaration merging
+export interface TeiCommands {}
+
+/** States `editor.isActive(name, ...args)` can ask about, by declaration merging like {@link TeiCommands}. */
+// biome-ignore lint/suspicious/noEmptyInterface: filled in by declaration merging
+export interface TeiActiveStates {}
+
+/** Extension storage by extension name, by declaration merging. */
+// biome-ignore lint/suspicious/noEmptyInterface: filled in by declaration merging
+export interface TeiStorage {}
+
+export type CommandName = keyof TeiCommands | (string & {});
+export type CommandArgs<N> = N extends keyof TeiCommands
+  ? TeiCommands[N] extends unknown[]
+    ? TeiCommands[N]
+    : unknown[]
+  : unknown[];
+export type ActiveName = keyof TeiActiveStates | (string & {});
+export type ActiveArgs<N> = N extends keyof TeiActiveStates
+  ? TeiActiveStates[N] extends unknown[]
+    ? TeiActiveStates[N]
+    : unknown[]
+  : unknown[];
+
+/** What a command, an active-state check or an event handler is given. */
+export interface TeiContext {
+  /** The editor handle. */
+  editor: TeiEditor;
+  /** The underlying Lexical editor, for anything the handle does not cover. */
+  lexical: LexicalEditor;
+}
+
+export interface TeiCommandContext extends TeiContext {
+  /**
+   * The command this one replaced, when an extension or the app overrode a
+   * command by name. Call it to wrap the original instead of replacing it.
+   */
+  next: (...args: unknown[]) => boolean;
+}
 
 /**
- * Initial editor state accepted by `<LexicalComposer>`.
- *
- * `null` is the load-bearing value: it tells Lexical to skip seeding the root
- * with a default empty paragraph so an external owner — the Yjs collaboration
- * plugin — can populate it instead. Collaboration is unreachable without it.
- * See https://lexical.dev/docs/collaboration/react
+ * A command. `run` executes inside an editor update, so `$` functions are
+ * available; it returns `false` when it did nothing.
  */
-export type TeiInitialEditorState = null | string | EditorState | ((editor: LexicalEditor) => void);
+export interface TeiCommandSpec<A extends unknown[] = any[]> {
+  run: (ctx: TeiCommandContext, ...args: A) => boolean | undefined | void;
+  /**
+   * Whether `run` would do anything now. Runs inside a read, so it must not
+   * change the document. Defaults to `true`.
+   */
+  can?: (ctx: TeiContext, ...args: A) => boolean;
+}
 
-/** Lexical's HTML import/export override map (`{ import?, export? }`). */
-export type TeiHtmlConfig = HTMLConfig;
-
-// ---------------------------------------------------------------------------
-// Extension
-// ---------------------------------------------------------------------------
-
-/** Configuration object passed to an extension's configure() method. */
-export type ExtensionConfig = Record<string, unknown>;
+/** An active-state check, run inside a read: "is the selection bold?". */
+export type TeiActiveCheck<A extends unknown[] = any[]> = (ctx: TeiContext, ...args: A) => boolean;
 
 /**
- * The building block of TeiEditor. Every feature (bold, image, table, …) is
- * an extension. Extensions declare the Lexical nodes they need, keyboard
- * shortcuts, React plugins, toolbar items and serialisation helpers.
+ * Wraps every command run: log it, veto it (`return false` without calling
+ * `next`), or change its arguments.
  */
-export interface TeiExtension<TConfig extends ExtensionConfig = ExtensionConfig> {
-  /** Unique identifier, e.g. "bold", "image". */
-  name: string;
+export type TeiCommandMiddleware = (
+  call: { name: string; args: unknown[]; ctx: TeiContext },
+  next: (args?: unknown[]) => boolean,
+) => boolean;
 
-  /** Current configuration (merged defaults + user overrides). */
-  config: TConfig;
+/** Where an {@link TeiItem} shows up in the UI. */
+export type TeiPlacement =
+  | 'toolbar'
+  | 'bubble'
+  | 'slash'
+  | 'insert'
+  | 'blockType'
+  | 'blockMenu'
+  | 'contextMenu';
 
-  /** Return a **new** extension instance with merged config. Immutable. */
-  configure(config: Partial<TConfig>): TeiExtension<TConfig>;
-
-  // -- Lexical integration --------------------------------------------------
-
-  /**
-   * Lexical node classes this extension registers. May also return
-   * node-replacement descriptors (see {@link TeiNodeConfig}).
-   */
-  getNodes?(): Array<TeiNodeConfig>;
-
-  /** React components mounted inside LexicalComposer (plugins). */
-  getPlugins?(): Array<ComponentType>;
-
-  /** Keyboard shortcuts: key combo → handler returning boolean. */
-  getKeyBindings?(): Record<string, (editor: LexicalEditor) => boolean>;
-
-  // -- Lifecycle ------------------------------------------------------------
-
-  /** Called once when the editor mounts this extension. */
-  onRegister?(editor: LexicalEditor): (() => void) | void;
-
-  /** Called when the editor unmounts this extension. */
-  onDestroy?(editor: LexicalEditor): void;
-}
-
-// ---------------------------------------------------------------------------
-// Editor
-// ---------------------------------------------------------------------------
-
-/** Options passed to `createTeiEditor()`. */
-export interface TeiEditorConfig {
-  /** Extensions to activate. */
-  extensions: TeiExtension[];
-
-  /** Lexical theme overrides. */
-  theme?: EditorThemeClasses;
-
-  /** Whether the editor is read-only. */
-  editable?: boolean;
-
-  /** Lexical namespace (used for DOM identification). */
-  namespace?: string;
-
-  /** Called when Lexical encounters an unrecoverable error. */
-  onError?: (error: Error, editor: LexicalEditor) => void;
-
-  /**
-   * Extra Lexical nodes (or node replacements) appended after every
-   * extension-contributed node. Use this to override a core node such as
-   * `TextNode` or `ParagraphNode` without writing an extension:
-   *
-   * ```ts
-   * createTeiEditor({
-   *   extensions: StarterKit,
-   *   nodes: [MyTextNode, { replace: TextNode, with: (n) => new MyTextNode(n.__text), withKlass: MyTextNode }],
-   * });
-   * ```
-   */
-  nodes?: Array<TeiNodeConfig>;
-
-  /**
-   * Initial editor state, passed straight through to `<LexicalComposer>`.
-   *
-   * Pass `null` when pairing the editor with the Yjs collaboration plugin so
-   * that the collaborative document — not Lexical — owns the initial content.
-   * Omitting the field keeps Lexical's default (seed an empty paragraph).
-   */
-  editorState?: TeiInitialEditorState;
-
-  /**
-   * HTML import/export overrides, passed straight through to
-   * `<LexicalComposer>`. Lets you customise `$generateNodesFromDOM` /
-   * `$generateHtmlFromNodes` behaviour without subclassing nodes.
-   */
-  html?: TeiHtmlConfig;
-}
-
-/** The resolved editor instance returned by `createTeiEditor()`. */
-export interface TeiEditorInstance {
-  /** The config used to create this instance. */
-  config: TeiEditorConfig;
-
-  /** All registered extension instances. */
-  extensions: TeiExtension[];
-
-  /** Merged Lexical nodes from all extensions, plus `config.nodes`. */
-  nodes: Array<TeiNodeConfig>;
-
-  /** Merged React plugins from all extensions. */
-  plugins: Array<ComponentType>;
-
-  /**
-   * Lexical `InitialConfigType` ready for `<LexicalComposer>`.
-   *
-   * `editorState` and `html` are only present when the corresponding
-   * `TeiEditorConfig` field was supplied — passing them through as `undefined`
-   * would be indistinguishable from omitting them, but keeping the key absent
-   * makes the intent obvious when the object is inspected or snapshotted.
-   */
-  composerConfig: {
-    namespace: string;
-    theme: EditorThemeClasses;
-    nodes: Array<TeiNodeConfig>;
-    editable: boolean;
-    onError: (error: Error, editor: LexicalEditor) => void;
-    editorState?: TeiInitialEditorState;
-    html?: TeiHtmlConfig;
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Toolbar (used by registry UI components)
-// ---------------------------------------------------------------------------
-
-export interface ToolbarItem {
-  /** Unique key. */
-  name: string;
-  /** Icon component. */
-  icon?: ComponentType<{ className?: string }>;
-  /** Tooltip / aria-label. */
+/**
+ * A UI entry an extension contributes — a toolbar button, a slash-menu row,
+ * a block-type option. Plain data, so the app can reorder, regroup, relabel,
+ * hide or replace any of them by `id`.
+ */
+export interface TeiItem {
+  /** Unique id; the key apps use to override or remove it. */
+  id: string;
+  /** Label, or a message id resolved through the editor's messages. */
   label: string;
-  /** Whether the format is currently active. */
-  isActive?: (editor: LexicalEditor) => boolean;
-  /** Execute the command. */
-  action: (editor: LexicalEditor) => void;
-  /** Keyboard shortcut label for tooltip, e.g. "Ctrl+B". */
+  /** Longer text for slash menus and tooltips. */
+  description?: string;
+  /** Icon name, resolved through the icon map so apps can swap it. */
+  icon?: string;
+  /** Where it appears. */
+  in: readonly TeiPlacement[];
+  /** Group within a placement (`'format'`, `'blocks'`, `'media'`, …). */
+  group?: string;
+  /** Sort order within its group; lower first. Default 0. */
+  order?: number;
+  /** Extra words the slash menu matches on. */
+  keywords?: readonly string[];
+  /** Name of the keymap entry to show as its shortcut hint. */
   shortcut?: string;
+  /** The command to run, with arguments. */
+  command?: CommandName;
+  args?: readonly unknown[];
+  /** Or run arbitrary code instead of a named command. */
+  run?: (editor: TeiEditor) => void;
+  /** Active-state name (and arguments) that lights the item up. */
+  active?: ActiveName;
+  activeArgs?: readonly unknown[];
 }
 
-export interface ToolbarGroup {
-  name: string;
-  items: ToolbarItem[];
+/**
+ * A keymap entry. The key uses `Mod` for ⌘ on Apple platforms and Ctrl
+ * elsewhere: `'Mod-b'`, `'Mod-Shift-7'`, `'Alt-Mod-1'`.
+ */
+export interface TeiKeyBinding {
+  key: string | readonly string[];
+  /** The command to run, with arguments; or a function. */
+  command: CommandName | ((editor: TeiEditor, event: KeyboardEvent) => boolean);
+  args?: readonly unknown[];
+  /** Shown in shortcut help. */
+  description?: string;
 }
+
+/** A keymap by entry name; `null` disables an entry another extension set. */
+export type TeiKeymap = Record<string, TeiKeyBinding | null>;
+
+/** Lexical's shortcut table entries, re-exported for raw access. */
+export type { KeyboardShortcut };
+
+export interface TeiUpdateEvent extends TeiContext {
+  /** Whether the document changed, rather than only the selection. */
+  docChanged: boolean;
+  /** Update tags (`'history-merge'`, `'collaboration'`, …). */
+  tags: ReadonlySet<string>;
+}
+
+export interface TeiEvents {
+  onCreate?: (ctx: TeiContext) => void;
+  onUpdate?: (event: TeiUpdateEvent) => void;
+  onSelectionUpdate?: (ctx: TeiContext) => void;
+  onFocus?: (ctx: TeiContext & { event: FocusEvent }) => void;
+  onBlur?: (ctx: TeiContext & { event: FocusEvent }) => void;
+  onDestroy?: (ctx: TeiContext) => void;
+}
+
+export type TeiEventName = keyof TeiEvents;

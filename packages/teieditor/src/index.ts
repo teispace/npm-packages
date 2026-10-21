@@ -1,67 +1,30 @@
-// Core
+/**
+ * @teispace/teieditor — the core: build editors from extensions, run
+ * commands, read and write content. Framework-free; React lives in
+ * `@teispace/teieditor/react`, features in `@teispace/teieditor/extensions/*`.
+ */
 
+export type { TeiCoreConfig, TeiFormat } from './core/core-extension.js';
+export { getTeiEditor, TeiCoreExtension } from './core/core-extension.js';
+export type { TeiEditorOptions, TeiExtensionInput } from './core/create.js';
+export { createTeiEditor, flattenExtensions } from './core/create.js';
 export type {
-  ExtensionConfig,
-  TeiChromeSlot,
-  TeiEditorConfig,
-  TeiEditorInstance,
-  TeiEditorSlotProps,
   TeiExtension,
-  TeiHtmlConfig,
-  TeiInitialEditorState,
-  TeiNodeConfig,
-  ToolbarGroup,
-  ToolbarItem,
-} from './core/index.js';
-export {
-  BaseExtension,
-  createTeiEditor,
-  TeiEditorProvider,
-  TeiEditorSlot,
-  useTeiChromeSlot,
-  useTeiEditor,
-} from './core/index.js';
-
-// Extensions (re-export everything from the extensions barrel)
-export * from './extensions/index.js';
-
-// Plugins
+  TeiExtensionCommand,
+  TeiExtensionContext,
+  TeiExtensionOutput,
+  TeiExtensionSpec,
+} from './core/define.js';
+export { defineTeiExtension, keymapToShortcuts, setExtensionOptions } from './core/define.js';
 export type {
-  BubbleMenuPluginProps,
-  EditorContentProps,
-  InitialValuePluginProps,
-  OnChangePluginProps,
-  OutputFormat,
-  ToolbarActions,
-  ToolbarContextValue,
-  ToolbarState,
-} from './plugins/index.js';
-export {
-  AutoEmbedPlugin,
-  BubbleMenuPlugin,
-  ClickableLinkPlugin,
-  CodeActionMenuPlugin,
-  EditorContent,
-  EmojiPickerPlugin,
-  InitialValuePlugin,
-  KeyboardShortcutsPlugin,
-  OnChangePlugin,
-  TabIndentationPlugin,
-  TableCellResizerPlugin,
-  TableHoverActionsPlugin,
-  ToolbarProvider,
-  useToolbarState,
-} from './plugins/index.js';
-
-// Themes
-export { defaultTheme } from './themes/index.js';
-
-// Serialization utilities
-export {
-  $deserialize,
-  $serialize,
-  type DeserializeOptions,
-  deserialize,
-  type SerializationFormat,
-  serialize,
-} from './utils/index.js';
+  ContentFormat,
+  FocusPosition,
+  TeiCan,
+  TeiCanChain,
+  TeiChain,
+  TeiCommandRunner,
+} from './core/editor.js';
+export { TeiEditor } from './core/editor.js';
+export { jsonFormat, textFormat } from './core/formats.js';
+export { parseKey } from './core/keymap.js';
+export type * from './core/types.js';

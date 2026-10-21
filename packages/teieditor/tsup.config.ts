@@ -1,3 +1,4 @@
+import { existsSync, readdirSync } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Plugin } from 'esbuild';
@@ -114,64 +115,32 @@ async function applyUseClientDirective(): Promise<void> {
   await rm(SIDECAR, { force: true });
 }
 
+/**
+ * One entry per public subpath, found from the folder layout so a new
+ * extension is published by creating its folder: `src/extensions/<name>/index.ts`
+ * becomes `@teispace/teieditor/extensions/<name>`.
+ */
+function entries(): Record<string, string> {
+  const found: Record<string, string> = { index: 'src/index.ts' };
+  for (const dir of ['extensions']) {
+    for (const name of readdirSync(path.join('src', dir))) {
+      for (const file of ['index.ts', 'index.tsx']) {
+        const source = path.join('src', dir, name, file);
+        if (existsSync(source)) found[`${dir}/${name}/index`] = source;
+      }
+    }
+  }
+  for (const single of ['react', 'server', 'cli']) {
+    for (const file of ['index.ts', 'index.tsx']) {
+      const source = path.join('src', single, file);
+      if (existsSync(source)) found[`${single}/index`] = source;
+    }
+  }
+  return found;
+}
+
 export default defineConfig({
-  entry: {
-    index: 'src/index.ts',
-    'core/index': 'src/core/index.ts',
-    'extensions/index': 'src/extensions/index.ts',
-    'extensions/starter-kit/index': 'src/extensions/starter-kit/index.ts',
-    'extensions/bold/index': 'src/extensions/bold/index.ts',
-    'extensions/italic/index': 'src/extensions/italic/index.ts',
-    'extensions/underline/index': 'src/extensions/underline/index.ts',
-    'extensions/strikethrough/index': 'src/extensions/strikethrough/index.ts',
-    'extensions/code/index': 'src/extensions/code/index.ts',
-    'extensions/highlight/index': 'src/extensions/highlight/index.ts',
-    'extensions/subscript/index': 'src/extensions/subscript/index.ts',
-    'extensions/superscript/index': 'src/extensions/superscript/index.ts',
-    'extensions/heading/index': 'src/extensions/heading/index.ts',
-    'extensions/paragraph/index': 'src/extensions/paragraph/index.ts',
-    'extensions/blockquote/index': 'src/extensions/blockquote/index.ts',
-    'extensions/horizontal-rule/index': 'src/extensions/horizontal-rule/index.ts',
-    'extensions/history/index': 'src/extensions/history/index.ts',
-    'extensions/list/index': 'src/extensions/list/index.ts',
-    'extensions/link/index': 'src/extensions/link/index.ts',
-    'extensions/code-block/index': 'src/extensions/code-block/index.ts',
-    'extensions/alignment/index': 'src/extensions/alignment/index.ts',
-    'extensions/font-size/index': 'src/extensions/font-size/index.ts',
-    'extensions/font-family/index': 'src/extensions/font-family/index.ts',
-    'extensions/color/index': 'src/extensions/color/index.ts',
-    'extensions/slash-command/index': 'src/extensions/slash-command/index.ts',
-    'extensions/drag-handle/index': 'src/extensions/drag-handle/index.ts',
-    'extensions/placeholder/index': 'src/extensions/placeholder/index.ts',
-    'extensions/turn-into/index': 'src/extensions/turn-into/index.ts',
-    'extensions/image/index': 'src/extensions/image/index.ts',
-    'extensions/table/index': 'src/extensions/table/index.ts',
-    'extensions/embed/index': 'src/extensions/embed/index.ts',
-    'extensions/callout/index': 'src/extensions/callout/index.ts',
-    'extensions/toggle/index': 'src/extensions/toggle/index.ts',
-    'extensions/file/index': 'src/extensions/file/index.ts',
-    'extensions/mention/index': 'src/extensions/mention/index.ts',
-    'extensions/emoji/index': 'src/extensions/emoji/index.ts',
-    'extensions/markdown/index': 'src/extensions/markdown/index.ts',
-    'extensions/find-replace/index': 'src/extensions/find-replace/index.ts',
-    'extensions/word-count/index': 'src/extensions/word-count/index.ts',
-    'extensions/toc/index': 'src/extensions/toc/index.ts',
-    'extensions/math/index': 'src/extensions/math/index.ts',
-    'extensions/youtube/index': 'src/extensions/youtube/index.ts',
-    'extensions/twitter/index': 'src/extensions/twitter/index.ts',
-    'extensions/figma/index': 'src/extensions/figma/index.tsx',
-    'extensions/page-break/index': 'src/extensions/page-break/index.tsx',
-    'extensions/layout/index': 'src/extensions/layout/index.ts',
-    'extensions/max-length/index': 'src/extensions/max-length/index.ts',
-    'extensions/list-max-indent/index': 'src/extensions/list-max-indent/index.ts',
-    'extensions/drag-drop-paste/index': 'src/extensions/drag-drop-paste/index.ts',
-    'extensions/datetime/index': 'src/extensions/datetime/index.ts',
-    'plugins/index': 'src/plugins/index.ts',
-    'themes/index': 'src/themes/index.ts',
-    'utils/index': 'src/utils/index.ts',
-    'cli/index': 'src/cli/index.ts',
-    'react/index': 'src/react/index.ts',
-  },
+  entry: entries(),
   format: ['esm'],
   dts: true,
   clean: true,
@@ -179,20 +148,20 @@ export default defineConfig({
   treeshake: true,
   minify: true,
   sourcemap: false,
+  // Every dependency and peer stays external: Lexical must be one instance
+  // per app, and the app's bundler dedupes the rest.
   external: [
-    'react',
-    'react-dom',
+    /^react($|\/)/,
+    /^react-dom($|\/)/,
     'lexical',
     /^@lexical\//,
-    'commander',
-    'ora',
-    'picocolors',
-    // Self-ref: registry editors import from '@teispace/teieditor/core' etc.
-    // Keep them as externals so Node resolves them via our own exports map at runtime.
-    '@teispace/teieditor',
-    /^@teispace\/teieditor\//,
+    /^@floating-ui\//,
+    'yjs',
+    'katex',
+    /^@excalidraw\//,
+    /^shiki/,
   ],
-  target: 'es2020',
+  target: 'es2022',
   outDir: 'dist',
   esbuildPlugins: [collectUseClientOutputs()],
   esbuildOptions(options) {

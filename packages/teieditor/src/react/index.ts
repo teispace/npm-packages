@@ -1,30 +1,10 @@
 /**
- * Drop-in React components for TeiEditor.
- *
- * Use this subpath when you want a fully-configured editor with zero setup.
- * For full customization (owning the UI source), use `npx teieditor init` instead.
- *
- * @example Minimal usage
- *   import { TeiEditor } from '@teispace/teieditor/react';
- *   import '@teispace/teieditor/styles.css';
- *
- *   <TeiEditor onChange={(html) => console.log(html)} />
- *
- * @example Notion-style (no toolbar)
- *   import { TeiEditorNotion } from '@teispace/teieditor/react';
- *
- *   <TeiEditorNotion initialValue="<p>Start writing...</p>" format="markdown" />
+ * @teispace/teieditor/react — hooks and components for React.
  */
 
-// Commonly-needed types, re-exported so consumers only need one import path
-// to type their extensions and onChange handlers.
-export type { TeiEditorConfig, TeiExtension } from '../core/index.js';
-export type { OutputFormat } from '../plugins/index.js';
-export type {
-  TeiEditorConfigOverrides,
-  TeiEditorProps,
-} from '../registry/editors/editor.js';
-export { TeiEditor } from '../registry/editors/editor.js';
-export type { TeiEditorNotionProps } from '../registry/editors/editor-notion.js';
-export { TeiEditorNotion } from '../registry/editors/editor-notion.js';
-export type { SerializationFormat } from '../utils/index.js';
+export { TeiEditorContext, useCurrentEditor, useOptionalEditor } from './context.js';
+export type { ContentEditableProps, EditorContentProps } from './editor-content.js';
+export { ContentEditable, EditorContent, EditorProvider } from './editor-content.js';
+export type { UseEditorStateOptions } from './use-editor-state.js';
+export { shallowEqual, useEditorState } from './use-editor-state.js';
+export { createReactTeiEditor, useTeiEditor } from './use-tei-editor.js';
