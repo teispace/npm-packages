@@ -7,23 +7,27 @@ import {
   InlineSchema,
   sel,
 } from '@lexical/html';
-import type { ElementTransformer } from '@lexical/markdown';
+import type { ElementTransformer, TextMatchTransformer } from '@lexical/markdown';
 import { DRAG_DROP_PASTE } from '@lexical/rich-text';
 import {
   $createParagraphNode,
+  $createTextNode,
   $getNodeByKey,
   $getPreviousSelection,
   $getSelection,
   $isNodeSelection,
   $isRangeSelection,
+  $isTextNode,
   $onUpdate,
   $setSlot,
   COMMAND_PRIORITY_LOW,
   HISTORY_MERGE_TAG,
+  isBlockDomNode,
   type LexicalEditor,
   type LexicalNode,
   mergeRegister,
   type NodeKey,
+  type NodeMutation,
 } from 'lexical';
 import {
   defineTeiExtension,
@@ -50,6 +54,7 @@ import {
   imageEnd,
   imageFull,
   image as imageIcon,
+  imageInline,
   imageStart,
   replace,
   trash,
@@ -60,19 +65,33 @@ import { isSafeImageSrc } from '../../utils/url.js';
 import { RichText } from '../rich-text/index.js';
 import {
   $createImageNode,
+  $createInlineImageNode,
+  $isAnyImageNode,
   $isImageNode,
+  $isInlineImageNode,
+  type BaseImageNode,
   IMAGE_ALIGNS,
+  IMAGE_FLOATS,
   type ImageAlign,
+  type ImageFloat,
   ImageNode,
+  InlineImageNode,
 } from './node.js';
 
-export type { SerializedImageNode } from './node.js';
+export type { SerializedImageNode, SerializedInlineImageNode } from './node.js';
 export {
   $createImageNode,
+  $createInlineImageNode,
+  $isAnyImageNode,
   $isImageNode,
+  $isInlineImageNode,
+  BaseImageNode,
   IMAGE_ALIGNS,
+  IMAGE_FLOATS,
   type ImageAlign,
+  type ImageFloat,
   ImageNode,
+  InlineImageNode,
 } from './node.js';
 
 /** An image to insert. */
@@ -82,8 +101,12 @@ export interface ImageData {
   width?: number | null;
   height?: number | null;
   align?: ImageAlign;
-  /** A caption: its text, or `true` for an empty one to type in. */
+  /** A caption: its text, or `true` for an empty one to type in. Block images only. */
   caption?: string | boolean;
+  /** In the line of text at the caret, like a character, rather than a block of its own. */
+  inline?: boolean;
+  /** For an inline image: the side it floats to, the text wrapping round it. */
+  float?: ImageFloat;
 }
 
 /** What an upload handler gets besides the file. */
@@ -145,9 +168,16 @@ export interface ImageOptions {
   captions: boolean;
   /** Images can be resized by dragging their corners. Default true. */
   resizable: boolean;
-  /** The narrowest an image can be dragged, in px. Default 64. */
+  /**
+   * The narrowest an image can be made, in px. Default 64. An inline image
+   * can go down to 16, an icon's size, whatever this is.
+   */
   minWidth: number;
 }
+
+/** The narrowest an image can be made: an inline one, an icon's size. */
+export const minImageWidth = (options: ImageOptions, inline: boolean): number =>
+  inline ? Math.min(16, options.minWidth) : options.minWidth;
 
 declare module '@teispace/teieditor' {
   interface TeiCommands {
@@ -164,7 +194,13 @@ declare module '@teispace/teieditor' {
     setImageSrc: [src: string, key?: NodeKey];
     /** Upload a file in place of the selected image (or the one with `key`). */
     replaceImageFile: [file: File, key?: NodeKey];
+    /**
+     * Where the image sits. An inline image floats to the side for `start`
+     * and `end`, and becomes a block for `center` and `full`.
+     */
     setImageAlign: [align: ImageAlign, key?: NodeKey];
+    /** Make the image inline (in its line of text) or a block; without `inline`, toggle. */
+    setImageInline: [inline?: boolean, key?: NodeKey];
     setImageAltText: [altText: string, key?: NodeKey];
     /** The image's size in px; `null` for its own. */
     setImageSize: [width: number | null, height?: number | null, key?: NodeKey];
@@ -177,6 +213,8 @@ declare module '@teispace/teieditor' {
     image: [];
     imageAlign: [align: ImageAlign];
     imageCaption: [];
+    /** The selected image is in a line of text. */
+    imageInline: [];
   }
 }
 
@@ -202,16 +240,19 @@ type Ctx = TeiExtensionContext<ImageOptions, ImageStorage> & {
   lexical: LexicalEditor;
 };
 
-/** The image with this key; else the selected one, or the one whose caption has the caret. */
-export function $getImage(key?: NodeKey): ImageNode | null {
+/**
+ * The image (block or inline) with this key; else the selected one, or the
+ * one whose caption has the caret.
+ */
+export function $getImage(key?: NodeKey): BaseImageNode | null {
   if (key !== undefined) {
     const node = $getNodeByKey(key);
-    return $isImageNode(node) ? node : null;
+    return $isAnyImageNode(node) ? node : null;
   }
   const selection = $getSelection();
   if ($isNodeSelection(selection)) {
     const nodes = selection.getNodes();
-    return nodes.length === 1 && $isImageNode(nodes[0]) ? nodes[0] : null;
+    return nodes.length === 1 && $isAnyImageNode(nodes[0]) ? nodes[0] : null;
   }
   if ($isRangeSelection(selection)) return $findSlotHost(selection.anchor.getNode(), $isImageNode);
   return null;
@@ -225,11 +266,49 @@ function $canInsert(): boolean {
   return $isRangeSelection(selection) || $getImage() !== null;
 }
 
-function $insertImageNode(node: ImageNode): ImageNode {
+function $insertImageNode<T extends BaseImageNode>(node: T): T {
+  const selection = $getSelection() ?? $getPreviousSelection();
   const selected = $getImage();
-  if (selected && !$isRangeSelection($getSelection())) selected.insertAfter(node);
+  if (selected && !$isRangeSelection(selection)) {
+    if (node.isInline() && !selected.isInline()) {
+      const line = $createParagraphNode().append(node);
+      selected.insertAfter(line);
+    } else selected.insertAfter(node);
+  } else if (node.isInline() && $isRangeSelection(selection)) selection.insertNodes([node]);
   else $insertBlock(node);
   return node.getLatest();
+}
+
+/**
+ * `node` as the other kind of image, in its place, keeping what it has: a
+ * block image's caption becomes the paragraph after it, its side a float.
+ */
+function $convertImage(node: BaseImageNode, inline: boolean): BaseImageNode {
+  const data = {
+    src: node.getSrc(),
+    altText: node.getAltText(),
+    width: node.getWidth(),
+    height: node.getHeight(),
+  };
+  const align = node.getAlign();
+  let next: BaseImageNode;
+  if (inline && $isImageNode(node)) {
+    next = $createInlineImageNode({
+      ...data,
+      float: align === 'start' || align === 'end' ? align : 'none',
+    });
+    const caption = node.getCaption();
+    const text = caption && caption.getTextContentSize() > 0 ? caption.getChildren() : [];
+    const line = $createParagraphNode().append(next);
+    node.replace(line);
+    if (text.length > 0) line.insertAfter($createParagraphNode().append(...text));
+  } else if (!inline && $isInlineImageNode(node)) {
+    // The transform lifts it out of its paragraph.
+    next = $createImageNode({ ...data, align: align ?? 'center' });
+    node.replace(next);
+  } else return node;
+  $selectNode(next);
+  return next;
 }
 
 /** The upload's state on the image's DOM, for CSS: no document change, nothing to undo. */
@@ -299,7 +378,7 @@ function startUpload(ctx: Ctx, key: NodeKey, file: File, preview: string): void 
       lexical.update(
         () => {
           const node = $getNodeByKey(key);
-          if (!$isImageNode(node)) return;
+          if (!$isAnyImageNode(node)) return;
           node.setSrc(data.src);
           if (node.getWidth() === null && data.width) node.setSize(data.width, data.height);
           if (!node.getAltText() && data.altText) node.setAltText(data.altText);
@@ -348,12 +427,124 @@ function $imageFromElement(el: HTMLImageElement, align?: string | null): ImageNo
   });
 }
 
+/** A line break, or a block: the end of an `<img>`'s line. */
+const endsLine = (node: Node) => node.nodeName === 'BR' || isBlockDomNode(node);
+
+/** The blocks an `<img>` can sit in a line of. */
+const LINE = 'p,li,h1,h2,h3,h4,h5,h6,blockquote,td,th,dt,dd,figcaption,pre';
+
+/**
+ * An `<img>` is inline when it says so (`data-inline`, as an inline image
+ * saves) or shares its line with text; on a line of its own it is a block.
+ */
+function isInlineImg(el: HTMLImageElement): boolean {
+  if (el.hasAttribute('data-inline')) return true;
+  // Text either side of it, up to a line break, in its block: or in what
+  // was pasted, which is often a paragraph's inside without the paragraph.
+  const block = el.parentElement?.closest(LINE) ?? null;
+  for (let node: Element | null = el; node && node !== block; node = node.parentElement) {
+    for (const way of ['previousSibling', 'nextSibling'] as const) {
+      for (let other = node[way]; other && !endsLine(other); other = other[way]) {
+        if (other.textContent?.trim()) return true;
+      }
+    }
+  }
+  return false;
+}
+
 const IMG_RULE = defineImportRule({
   name: '@teispace/teieditor/image/img',
   match: sel.tag('img'),
   $import: (_ctx, el) => {
+    if (isInlineImg(el)) {
+      const src = el.getAttribute('src')?.trim();
+      if (!src || !isSafeImageSrc(src)) return [];
+      const float = el.getAttribute('data-float') as ImageFloat | null;
+      return [
+        $createInlineImageNode({
+          src,
+          altText: el.getAttribute('alt') ?? '',
+          width: size(el, 'width'),
+          height: size(el, 'height'),
+          float: float && IMAGE_FLOATS.includes(float) ? float : 'none',
+        }),
+      ];
+    }
     const node = $imageFromElement(el);
     return node ? [node] : [];
+  },
+});
+
+/**
+ * The space between text and an `<img>` beside it, which the core rule
+ * collapses as if the image were not there: an image is something in the
+ * line, like a character.
+ */
+/**
+ * The node next to `node` that way on its line, through the inline elements
+ * round it (a copied paragraph's text often comes in spans): `null` at a
+ * line's end.
+ */
+function onLine(node: Node, way: 'previousSibling' | 'nextSibling'): Node | null {
+  let at: Node | null = node;
+  while (at && !at[way]) {
+    at = at.parentNode;
+    if (!at || isBlockDomNode(at)) return null;
+  }
+  let other = at?.[way] ?? null;
+  const into = way === 'previousSibling' ? 'lastChild' : 'firstChild';
+  while (other?.[into] && other.nodeName !== 'IMG' && !endsLine(other)) other = other[into];
+  return other && !endsLine(other) ? other : null;
+}
+
+/** An `<img>` that becomes an image: one with a safe source. */
+const isImage = (node: Node | null): boolean =>
+  node?.nodeName === 'IMG' && isSafeImageSrc((node as Element).getAttribute('src')?.trim() ?? '');
+
+const TEXT_BY_IMG_RULE = defineImportRule({
+  name: '@teispace/teieditor/image/text',
+  match: sel.text(),
+  $import: (_ctx, el, $next) => {
+    const nodes = $next();
+    const text = el.textContent ?? '';
+    const inlineImg = (node: Node | null) =>
+      node?.nodeName === 'IMG' && isInlineImg(node as HTMLImageElement);
+    const previous = onLine(el, 'previousSibling');
+    const before = /^\s/.test(text) && isImage(previous) && inlineImg(previous);
+    // Kept before any inline <img>: one that is refused leaves a single space.
+    const after = /\s$/.test(text) && inlineImg(onLine(el, 'nextSibling'));
+    if (!before && !after) return nodes;
+    // All white space, which the core rule dropped.
+    if (nodes.length === 0) return [$createTextNode(' ')];
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    if (before && $isTextNode(first) && !/^\s/.test(first.getTextContent())) {
+      first.setTextContent(` ${first.getTextContent()}`);
+    }
+    if (after && $isTextNode(last) && !/\s$/.test(last.getTextContent())) {
+      last.setTextContent(`${last.getTextContent()} `);
+    }
+    return nodes;
+  },
+});
+
+/** The sibling that way, past white space. */
+function adjacent(node: Node, way: 'previousSibling' | 'nextSibling'): Node | null {
+  let other = node[way];
+  while (other?.nodeType === 3 && !other.textContent?.trim()) other = other[way];
+  return other;
+}
+
+/** A `<br>` beside an image on a line of its own: the image is a block, so no line break is needed. */
+const BR_BY_IMG_RULE = defineImportRule({
+  name: '@teispace/teieditor/image/br',
+  match: sel.tag('br'),
+  $import: (_ctx, el, $next) => {
+    for (const way of ['previousSibling', 'nextSibling'] as const) {
+      const side = adjacent(el, way);
+      if (isImage(side) && !isInlineImg(side as HTMLImageElement)) return [];
+    }
+    return $next();
   },
 });
 
@@ -407,6 +598,32 @@ export const IMAGE: ElementTransformer = {
   type: 'element',
 };
 
+/** `![alt](src)` in a line of text: an inline image. */
+const INLINE_IMAGE_TEXT =
+  /!\[((?:[^\]\\]|\\.)*)\]\(\s*<?([^\s<>)]+)>?(?:\s+"(?:[^"\\]|\\.)*")?\s*\)/;
+
+export const INLINE_IMAGE: TextMatchTransformer = {
+  dependencies: [InlineImageNode],
+  export: (node) => {
+    if (!$isInlineImageNode(node)) return null;
+    const alt = escape(node.getAltText(), /[\\\]]/g);
+    return `![${alt}](${node.getSrc().replace(/[\s()<>]/g, encodeURIComponent)})`;
+  },
+  importRegExp: INLINE_IMAGE_TEXT,
+  // Typed, only after something on the line: at its start, the image
+  // shortcut makes a block of it on the space that follows.
+  regExp: new RegExp(`(?<=.)${INLINE_IMAGE_TEXT.source}$`),
+  replace: (textNode, match) => {
+    const src = match[2] ?? '';
+    if (!isSafeImageSrc(src)) return;
+    const node = $createInlineImageNode({ src, altText: unescape(match[1] ?? '') });
+    textNode.replace(node);
+    node.selectNext(0, 0);
+  },
+  trigger: ')',
+  type: 'text-match',
+};
+
 // -- Extension ----------------------------------------------------------------
 
 /** The extension itself, for its items to read its options. */
@@ -442,10 +659,12 @@ export const Image = defineTeiExtension({
     resizable: true,
     minWidth: 64,
   } as ImageOptions,
-  nodes: [ImageNode],
+  nodes: [ImageNode, InlineImageNode],
   dependencies: [
     RichText,
-    configExtension(DOMImportExtension, { rules: [FIGURE_RULE, IMG_RULE] }),
+    configExtension(DOMImportExtension, {
+      rules: [FIGURE_RULE, IMG_RULE, TEXT_BY_IMG_RULE, BR_BY_IMG_RULE],
+    }),
     configExtension(DOMRenderExtension, {
       overrides: [
         domOverride([ImageNode], {
@@ -460,12 +679,30 @@ export const Image = defineTeiExtension({
     insertRequest: signal(0),
     pickers: signal(0),
   }),
-  markdown: { image: IMAGE },
+  markdown: { image: IMAGE, inlineImage: INLINE_IMAGE },
   register: (ctx) => {
     const { lexical, storage, editor } = ctx;
+    const onMutations = (mutations: Map<NodeKey, NodeMutation>) => {
+      for (const [key, kind] of mutations) {
+        if (kind === 'created') {
+          // What an empty caption shows, in the editor's language.
+          lexical
+            .getElementByKey(key)
+            ?.querySelector('figcaption')
+            ?.setAttribute('data-placeholder', editor.t('image.caption.placeholder'));
+        }
+        const upload = storage.uploads.get(key);
+        if (!upload) continue;
+        if (kind === 'destroyed') {
+          upload.controller.abort();
+          storage.uploads.delete(key);
+          URL.revokeObjectURL(upload.preview);
+        } else paintUpload(lexical, key, upload);
+      }
+    };
     return mergeRegister(
-      registerHostSelection(lexical, $isImageNode),
-      registerSelectedAttribute(lexical, $isImageNode),
+      registerHostSelection(lexical, $isAnyImageNode),
+      registerSelectedAttribute(lexical, $isAnyImageNode),
       registerSlotKeys(lexical, $isImageNode),
       lexical.registerNodeTransform(ImageNode, $liftBlock),
       // Rich text has put the caret where the files were dropped.
@@ -474,28 +711,8 @@ export const Image = defineTeiExtension({
         (files) => $insertFiles(ctx, files),
         COMMAND_PRIORITY_LOW,
       ),
-      lexical.registerMutationListener(
-        ImageNode,
-        (mutations) => {
-          for (const [key, kind] of mutations) {
-            if (kind === 'created') {
-              // What an empty caption shows, in the editor's language.
-              lexical
-                .getElementByKey(key)
-                ?.querySelector('figcaption')
-                ?.setAttribute('data-placeholder', editor.t('image.caption.placeholder'));
-            }
-            const upload = storage.uploads.get(key);
-            if (!upload) continue;
-            if (kind === 'destroyed') {
-              upload.controller.abort();
-              storage.uploads.delete(key);
-              URL.revokeObjectURL(upload.preview);
-            } else paintUpload(lexical, key, upload);
-          }
-        },
-        { skipInitialization: false },
-      ),
+      lexical.registerMutationListener(ImageNode, onMutations, { skipInitialization: false }),
+      lexical.registerMutationListener(InlineImageNode, onMutations),
       () => {
         for (const upload of storage.uploads.values()) {
           upload.controller.abort();
@@ -527,7 +744,12 @@ export const Image = defineTeiExtension({
           return false;
         }
         if (!$canInsert()) return false;
-        const node = $insertImageNode($createImageNode({ ...image, src: image.src.trim() }));
+        const src = image.src.trim();
+        if (image.inline) {
+          $insertImageNode($createInlineImageNode({ ...image, src })).selectNext(0, 0);
+          return;
+        }
+        const node = $insertImageNode($createImageNode({ ...image, src }));
         if (image.caption === true) node.getCaption()?.select();
         else $caretAfter(node);
       },
@@ -566,12 +788,31 @@ export const Image = defineTeiExtension({
       can: $hasImage,
     },
     setImageAlign: {
-      run: (_ctx, align: ImageAlign, key?: NodeKey) => {
-        const node = $getImage(key);
+      run: ({ storage }, align: ImageAlign, key?: NodeKey) => {
+        let node = $getImage(key);
         if (!node || !IMAGE_ALIGNS.includes(align)) return false;
-        node.setAlign(align);
+        if ($isInlineImageNode(node)) {
+          if (align === 'start' || align === 'end') {
+            node.setFloat(node.getFloat() === align ? 'none' : align);
+            return;
+          }
+          if (storage.uploads.has(node.getKey())) return false;
+          node = $convertImage(node, false);
+        }
+        if ($isImageNode(node)) node.setAlign(align);
       },
       can: $hasImage,
+    },
+    setImageInline: {
+      run: ({ storage }, inline?: boolean, key?: NodeKey) => {
+        const node = $getImage(key);
+        if (!node || storage.uploads.has(node.getKey())) return false;
+        $convertImage(node, inline ?? !node.isInline());
+      },
+      can: ({ storage }) => {
+        const node = $getImage();
+        return node !== null && !storage.uploads.has(node.getKey());
+      },
     },
     setImageAltText: {
       run: (_ctx, text: string, key?: NodeKey) => {
@@ -590,16 +831,22 @@ export const Image = defineTeiExtension({
           return;
         }
         if (!Number.isFinite(width)) return false;
-        const w = Math.max(options.minWidth, width);
+        const w = Math.max(minImageWidth(options, node.isInline()), width);
         const h = height && Number.isFinite(height) ? (height * w) / width : null;
         node.setSize(w, h);
       },
       can: ({ options }) => options.resizable && $hasImage(),
     },
     toggleImageCaption: {
-      run: ({ options }, key?: NodeKey) => {
-        const node = $getImage(key);
+      run: ({ options, storage }, key?: NodeKey) => {
+        let node = $getImage(key);
         if (!node) return false;
+        // A caption is a block image's: an inline one becomes one.
+        if ($isInlineImageNode(node)) {
+          if (!options.captions || storage.uploads.has(node.getKey())) return false;
+          node = $convertImage(node, false);
+        }
+        if (!$isImageNode(node)) return false;
         if (node.getCaption()) {
           const inCaption = $isRangeSelection($getSelection());
           node.setCaption(false);
@@ -612,13 +859,20 @@ export const Image = defineTeiExtension({
       },
       can: ({ options }) => {
         const node = $getImage();
-        return node !== null && (options.captions || node.getCaption() !== null);
+        return (
+          node !== null && (options.captions || ($isImageNode(node) && node.getCaption() !== null))
+        );
       },
     },
     removeImage: {
       run: (_ctx, key?: NodeKey) => {
         const node = $getImage(key);
         if (!node) return false;
+        if (node.isInline()) {
+          node.selectPrevious();
+          node.remove();
+          return;
+        }
         const next = node.getNextSibling();
         const previous = node.getPreviousSibling();
         node.remove();
@@ -632,7 +886,11 @@ export const Image = defineTeiExtension({
   active: {
     image: $hasImage,
     imageAlign: (_ctx, align: ImageAlign) => $getImage()?.getAlign() === align,
-    imageCaption: () => $getImage()?.getCaption() != null,
+    imageCaption: () => {
+      const node = $getImage();
+      return $isImageNode(node) && node.getCaption() !== null;
+    },
+    imageInline: () => $getImage()?.isInline() === true,
   },
   icons: {
     image: imageIcon,
@@ -641,6 +899,7 @@ export const Image = defineTeiExtension({
     imageCenter,
     imageEnd,
     imageFull,
+    imageInline,
     caption,
     altText,
     replace,
@@ -665,6 +924,7 @@ export const Image = defineTeiExtension({
     'image.align.center': 'Align centre',
     'image.align.end': 'Align right',
     'image.align.full': 'Full width',
+    'image.inline': 'In line with text',
     'image.caption': 'Caption',
     'image.caption.placeholder': 'Write a caption…',
     'image.replace': 'Replace',
@@ -698,6 +958,15 @@ export const Image = defineTeiExtension({
         activeArgs: [align],
       }),
     ),
+    imageItem({
+      id: 'imageInline',
+      label: 'image.inline',
+      icon: 'imageInline',
+      group: 'align',
+      order: IMAGE_ALIGNS.length,
+      command: 'setImageInline',
+      active: 'imageInline',
+    }),
     imageItem({
       id: 'imageCaption',
       label: 'image.caption',

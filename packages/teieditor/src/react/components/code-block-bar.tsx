@@ -14,6 +14,7 @@ import {
   normalizeLanguage,
 } from '../../extensions/code-block/index.js';
 import { TeiEditorContext, useOptionalEditor } from '../context.js';
+import { hoverNow } from '../hover-now.js';
 import { Button } from '../ui/button.js';
 import { DropdownMenu } from '../ui/dropdown.js';
 import type { MenuItemData } from '../ui/menu.js';
@@ -86,6 +87,7 @@ export function CodeBlockBar({ editor: editorProp, languages, copyButton }: Code
       previous?.removeEventListener('pointerleave', onLeave);
       root?.addEventListener('pointerover', onOver);
       root?.addEventListener('pointerleave', onLeave);
+      if (root) hoverNow(root, onOver);
     });
     return () => {
       clear();

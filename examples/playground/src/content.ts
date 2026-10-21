@@ -38,6 +38,10 @@ drag a column edge to resize it, and open a cell's menu from its corner or a rig
 <p>Drop or paste a picture, or insert one from the toolbar or <code>/image</code>. Click it to align it,
 add alt text or a caption, and drag a corner to resize it.</p>
 <figure><img src="/hills.svg" alt="Green hills under a summer sun" width="400" height="240"><figcaption>A caption is part of the document: type in it, undo it, copy it.</figcaption></figure>
+<p><img src="/hills.svg" alt="Hills" width="160" height="96" data-inline="" data-float="end">An image can also
+sit in a line of text, <img src="/hills.svg" alt="" width="30" height="18" data-inline=""> like this one, or
+float to a side with the text wrapping round it, like the one here. Type <code>![alt](src)</code> after some
+text for one, or turn <em>In line with text</em> on in an image's toolbar.</p>
 <hr>
 <p>That is the whole document. Make it yours.</p>
 `;

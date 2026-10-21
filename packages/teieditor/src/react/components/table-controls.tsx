@@ -25,6 +25,7 @@ import {
   Table,
 } from '../../extensions/table/index.js';
 import { TeiEditorContext, useOptionalEditor } from '../context.js';
+import { hoverNow } from '../hover-now.js';
 import { useItemStates } from '../items.js';
 import { Button } from '../ui/button.js';
 import { GridPicker } from '../ui/controls.js';
@@ -178,6 +179,7 @@ function useRootListener<K extends keyof HTMLElementEventMap>(
       previous?.removeEventListener(type, handle);
       root?.addEventListener(type, handle);
       current = root;
+      if (root && type === 'pointerover') hoverNow(root, handle as (event: PointerEvent) => void);
     });
     return () => {
       stop();

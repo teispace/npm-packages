@@ -204,6 +204,11 @@ export const imageEnd: TeiIconNode = [
   ['path', { d: 'M3 6h6M3 10h6M3 17h18M9 21h12' }],
 ];
 export const imageFull: TeiIconNode = [rect(3, 3, 18, 12, 1.5), ['path', { d: 'M3 19h18' }]];
+/** An image in a line of text. */
+export const imageInline: TeiIconNode = [
+  rect(9, 9, 6, 6, 1),
+  ['path', { d: 'M3 5h18M3 19h18M3 12h3M18 12h3' }],
+];
 export const caption: TeiIconNode = [
   rect(3, 5, 18, 14),
   ['path', { d: 'M7 15h4M15 15h2M7 11h2M13 11h4' }],

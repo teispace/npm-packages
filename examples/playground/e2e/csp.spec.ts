@@ -296,7 +296,7 @@ test('images: a dropped file uploads, resizes and aligns, reporting nothing', as
   await expect(editor.locator('[data-tei-uploading]')).toHaveCount(1);
   await expect(editor.locator('[data-tei-uploading]')).toHaveCount(0);
   // The demo image: select, align, resize.
-  const demo = editor.locator('img[src="/hills.svg"]');
+  const demo = editor.locator('figure img[src="/hills.svg"]');
   await demo.click();
   await page.getByRole('button', { name: 'Align left', exact: true }).click();
   await expect(demo.locator('xpath=..')).toHaveAttribute('data-align', 'start');

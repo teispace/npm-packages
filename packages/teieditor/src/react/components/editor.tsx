@@ -1,8 +1,17 @@
 'use client';
 
-import { type ComponentPropsWithoutRef, type ReactNode, useEffect, useRef } from 'react';
+import {
+  type ComponentPropsWithoutRef,
+  lazy,
+  type ReactNode,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import type { TeiEditorOptions } from '../../core/create.js';
 import type { ContentFormat, TeiEditor } from '../../core/editor.js';
+import { CodeBlock } from '../../extensions/code-block/index.js';
 import { Image } from '../../extensions/image/index.js';
 import { StarterKit } from '../../extensions/starter-kit/index.js';
 import { Table } from '../../extensions/table/index.js';
@@ -11,12 +20,25 @@ import { type ContentEditableProps, EditorContent, EditorProvider } from '../edi
 import { cx } from '../ui/context.js';
 import { useTeiEditor } from '../use-tei-editor.js';
 import { BubbleMenu } from './bubble-menu.js';
-import { CodeBlockBar } from './code-block-bar.js';
 import { EditorToolbar, type EditorToolbarProps, type ToolbarLayout } from './editor-toolbar.js';
-import { ImageControls } from './image-controls.js';
+import { ImageInsertPopover } from './image-insert.js';
 import { LinkPopover } from './link-popover.js';
 import { SlashMenu } from './slash-menu.js';
-import { TableControls } from './table-controls.js';
+
+/**
+ * The parts that show only once there is something to act on (a table, an
+ * image, a code block) load after the editor, so they cost nothing up front.
+ */
+const CodeBlockBar = lazy(() =>
+  import('./code-block-bar.js').then((module) => ({ default: module.CodeBlockBar })),
+);
+const TableControls = lazy(() =>
+  import('./table-controls.js').then((module) => ({ default: module.TableControls })),
+);
+const ImageControls = lazy(() =>
+  import('./image-controls.js').then((module) => ({ default: module.ImageControls })),
+);
+const LazyImageControls = () => <ImageControls insert={false} />;
 
 /**
  * Which UI comes with it.
@@ -141,6 +163,10 @@ export interface EditorProps extends Partial<Omit<TeiEditorOptions, 'editable'>>
  * Every part comes from the installed extensions, so adding one adds its
  * buttons, menu entries and shortcuts. For full control, build the same
  * thing from `useTeiEditor`, `EditorContent` and the parts it uses.
+ *
+ * The parts for tables, images and code blocks load just after the editor
+ * shows (they appear only once there is one to act on); the frame gets
+ * `data-tei-ready` when they are in.
  */
 export function Editor(props: EditorProps) {
   return props.editor ? <EditorFrame {...props} editor={props.editor} /> : <OwnEditor {...props} />;
@@ -197,6 +223,8 @@ function EditorFrame({
   }, [editor, editable]);
 
   // The latest callback, without re-subscribing on every render.
+  // `data-tei-ready` once the parts that load later are in.
+  const [ready, setReady] = useState(false);
   const change = useRef({ onChange, format });
   change.current = { onChange, format };
   useEffect(
@@ -218,6 +246,7 @@ function EditorFrame({
         data-tei-bordered={bordered ? '' : undefined}
         data-theme={colorScheme}
         data-tei-preset={preset}
+        data-tei-ready={ready ? '' : undefined}
       >
         {slot(
           parts.toolbar,
@@ -237,15 +266,28 @@ function EditorFrame({
           {slot(parts.linkPopover, <LinkPopover />)}
           {slot(parts.bubbleMenu, <BubbleMenu />)}
           {slot(parts.slashMenu, <SlashMenu />)}
-          {slot(parts.codeBlockBar, <CodeBlockBar />)}
-          {slot(parts.tableControls, <TableControls />)}
-          {slot(parts.imageControls, <ImageControls />)}
+          {/* Up front: the slash menu's Image opens it at once. */}
+          {editor.extension(Image) && parts.imageControls === true && (
+            <ImageInsertPopover editor={editor} />
+          )}
+          <Suspense fallback={null}>
+            {editor.extension(CodeBlock) && slot(parts.codeBlockBar, <CodeBlockBar />)}
+            {editor.extension(Table) && slot(parts.tableControls, <TableControls />)}
+            {editor.extension(Image) && slot(parts.imageControls, <LazyImageControls />)}
+            <Ready onReady={setReady} />
+          </Suspense>
           {children}
         </EditorContent>
         {parts.footer}
       </div>
     </EditorProvider>
   );
+}
+
+/** Rendered once everything in its Suspense boundary has loaded. */
+function Ready({ onReady }: { onReady: (ready: true) => void }) {
+  useEffect(() => onReady(true), [onReady]);
+  return null;
 }
 
 function slot(value: EditorSlot | undefined, fallback: ReactNode): ReactNode {

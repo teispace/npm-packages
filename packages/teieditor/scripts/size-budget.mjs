@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
-import { build } from 'esbuild';
+import { rolldown } from 'rolldown';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = (path) => resolve(root, 'dist', path);
@@ -54,21 +54,44 @@ const CASES = [
 /** Peers: the app has them already, whatever editor it uses. */
 const external = ['lexical', '@lexical/*', 'react', 'react-dom', 'react/*', 'prismjs', 'prismjs/*'];
 
+/**
+ * Bundled as an app's bundler does it (Rolldown, Vite's): what loads up
+ * front is the entry and the chunks it imports; the parts it `import()`s
+ * (the UI for tables, images, code blocks) are `lazy`, fetched after the
+ * editor shows.
+ */
 async function measure(code) {
-  const result = await build({
-    stdin: { contents: `${code}\nfunction use(...a) { globalThis.__used = a; }`, resolveDir: root },
-    bundle: true,
-    minify: true,
-    format: 'esm',
-    platform: 'browser',
-    target: 'es2022',
-    write: false,
-    external,
-    define: { 'process.env.NODE_ENV': '"production"' },
+  const ENTRY = '\0size-entry';
+  const bundle = await rolldown({
+    input: ENTRY,
+    cwd: root,
+    external: (id) => external.some((pattern) => (pattern.endsWith('/*') ? id.startsWith(pattern.slice(0, -1)) : id === pattern)),
+    plugins: [
+      {
+        name: 'size-entry',
+        resolveId: (id) => (id === ENTRY ? id : null),
+        load: (id) => (id === ENTRY ? `${code}\nfunction use(...a) { globalThis.__used = a; }` : null),
+      },
+    ],
+    transform: { define: { 'process.env.NODE_ENV': '"production"' } },
     logLevel: 'silent',
   });
-  const bytes = result.outputFiles[0].contents;
-  return { raw: bytes.length, gzip: gzipSync(bytes, { level: 9 }).length };
+  const { output } = await bundle.generate({ format: 'esm', minify: true });
+  await bundle.close();
+  const chunks = new Map(output.filter((o) => o.type === 'chunk').map((chunk) => [chunk.fileName, chunk]));
+  const initial = new Set();
+  const visit = (name) => {
+    if (initial.has(name) || !chunks.has(name)) return;
+    initial.add(name);
+    for (const dep of chunks.get(name)?.imports ?? []) visit(dep);
+  };
+  visit([...chunks.values()].find((chunk) => chunk.isEntry).fileName);
+  const size = (names) => ({
+    raw: names.reduce((sum, name) => sum + Buffer.byteLength(chunks.get(name).code), 0),
+    gzip: names.reduce((sum, name) => sum + gzipSync(chunks.get(name).code, { level: 9 }).length, 0),
+  });
+  const lazy = [...chunks.keys()].filter((name) => !initial.has(name));
+  return { ...size([...initial]), lazy: size(lazy).gzip };
 }
 
 const fmt = (n) => `${(n / KB).toFixed(1)} KB`;
@@ -76,19 +99,26 @@ const rows = [];
 let over = false;
 
 for (const { name, code, budget } of CASES) {
-  const { raw, gzip } = await measure(code);
+  const { raw, gzip, lazy } = await measure(code);
   const fails = budget !== undefined && gzip > budget;
   over ||= fails;
-  rows.push([name, fmt(raw), fmt(gzip), budget ? fmt(budget) : '', fails ? 'OVER' : budget ? 'ok' : '']);
+  rows.push([
+    name,
+    fmt(raw),
+    fmt(gzip),
+    lazy ? `+${fmt(lazy)}` : '',
+    budget ? fmt(budget) : '',
+    fails ? 'OVER' : budget ? 'ok' : '',
+  ]);
 }
 
 const css = readFileSync(dist('styles.css'));
 const cssGzip = gzipSync(css, { level: 9 }).length;
 const cssBudget = 12 * KB;
 over ||= cssGzip > cssBudget;
-rows.push(['styles.css', fmt(css.length), fmt(cssGzip), fmt(cssBudget), cssGzip > cssBudget ? 'OVER' : 'ok']);
+rows.push(['styles.css', fmt(css.length), fmt(cssGzip), '', fmt(cssBudget), cssGzip > cssBudget ? 'OVER' : 'ok']);
 
-const head = ['case', 'min', 'min+gzip', 'budget', ''];
+const head = ['case', 'min', 'min+gzip', 'lazy', 'budget', ''];
 const widths = head.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)));
 const line = (r) => r.map((c, i) => (i === 0 ? c.padEnd(widths[i]) : c.padStart(widths[i]))).join('  ');
 console.log(line(head));

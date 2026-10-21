@@ -1,13 +1,22 @@
-import { $createNodeSelection, $getRoot, $setSelection, type LexicalNode } from 'lexical';
+import { $dfs } from '@lexical/utils';
+import {
+  $createNodeSelection,
+  $getRoot,
+  $getSelection,
+  $setSelection,
+  type LexicalNode,
+} from 'lexical';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   $getImage,
   $isImageNode,
+  $isInlineImageNode,
   IMAGE,
   Image,
   type ImageNode,
   type ImageUploadError,
   type ImageUploadHandler,
+  INLINE_IMAGE,
 } from '../../src/extensions/image/index.js';
 import { MARKDOWN_LINK } from '../../src/extensions/link/index.js';
 import { StarterKit } from '../../src/extensions/starter-kit/index.js';
@@ -18,6 +27,7 @@ const editors: TeiEditor[] = [];
 const urls = new Set<string>();
 let next = 0;
 beforeEach(() => {
+  next = 0;
   // jsdom has no object URLs.
   URL.createObjectURL = vi.fn(() => {
     const url = `blob:test/${next++}`;
@@ -182,10 +192,14 @@ describe('image: HTML', () => {
     );
   });
 
-  it('an image inside a paragraph or a list item splits it', () => {
-    expect(make(`<p>One ${PHOTO} two</p>`).getHTML()).toBe(`<p>One</p>${PHOTO}<p>two</p>`);
+  it('an image on a line of its own is a block, splitting what it was in', () => {
     expect(make(`<p>${PHOTO}</p>`).getHTML()).toBe(PHOTO);
-    expect(make(`<ul><li>a ${PHOTO} b</li></ul>`).getHTML()).toBe(
+    expect(make(`<p>One</p>${PHOTO}<div>two</div>`).getHTML()).toBe(`<p>One</p>${PHOTO}<p>two</p>`);
+    expect(make(`<p>One<br>${PHOTO}</p>`).getHTML()).toBe(`<p>One</p>${PHOTO}`);
+    // The line breaks either side of it go: it is a block.
+    expect(make(`<p>One<br>\n${PHOTO}<br>two</p>`).getHTML()).toBe(`<p>One</p>${PHOTO}<p>two</p>`);
+    expect(make(`<p>One<br>two</p>`).getHTML()).toBe('<p>One<br>two</p>');
+    expect(make(`<ul><li>a</li><li>${PHOTO}</li><li>b</li></ul>`).getHTML()).toBe(
       `<ul><li>a</li></ul>${PHOTO}<ul><li>b</li></ul>`,
     );
   });
@@ -332,6 +346,198 @@ describe('image: commands', () => {
     expect(storage.insertRequest.value).toBe(1);
     expect(click).toHaveBeenCalledTimes(1);
     click.mockRestore();
+  });
+});
+
+describe('inline image', () => {
+  const IMG = '<img src="https://x.test/i.png" alt="I" width="20" height="20"';
+  const $inline = () =>
+    $dfs()
+      .map(({ node }) => node)
+      .filter($isInlineImageNode);
+  const inlines = (editor: TeiEditor) =>
+    editor.read(() =>
+      $inline().map((node) => ({
+        src: node.getSrc(),
+        alt: node.getAltText(),
+        float: node.getFloat(),
+      })),
+    );
+  function selectInline(editor: TeiEditor) {
+    editor.update(() => {
+      const selection = $createNodeSelection();
+      selection.add(($inline()[0] as LexicalNode).getKey());
+      $setSelection(selection);
+    });
+  }
+
+  it('HTML: in a line of text it stays there, saved with data-inline and its float', () => {
+    const editor = make(`<p>One ${IMG}> two</p>`);
+    expect(inlines(editor)).toEqual([{ src: 'https://x.test/i.png', alt: 'I', float: 'none' }]);
+    expect(editor.getHTML()).toBe(`<p>One ${IMG} data-inline=""> two</p>`);
+    // data-inline keeps it inline even on a line of its own; data-float is read back.
+    const floated = `<p>${IMG} data-inline="" data-float="end"></p>`;
+    expect(make(floated).getHTML()).toBe(floated);
+    expect(make(`<p>${IMG} data-inline="" data-float="up"></p>`).getHTML()).not.toContain(
+      'data-float',
+    );
+    expect(make('<p>a <img src="javascript:alert(1)"> b</p>').getHTML()).toBe('<p>a b</p>');
+    // Its spaces, through the spans a copied line comes in.
+    expect(make(`<p><span>One </span>${IMG}><span> two</span></p>`).getHTML()).toBe(
+      `<p>One ${IMG} data-inline=""> two</p>`,
+    );
+    // Safari's copy: the spaces in spans of their own.
+    expect(
+      make(`<span>One<span> </span></span>${IMG}><span><span> </span>two</span>`).getHTML(),
+    ).toBe(`<p>One ${IMG} data-inline=""> two</p>`);
+    // Indented markup round an image on a line of its own adds nothing.
+    expect(make(`<p>\n  ${IMG}>\n</p>`).getHTML()).toBe(`${IMG}>`);
+    // Pasted from inside a paragraph, without the paragraph.
+    expect(make(`One <span>${IMG}></span> two`).getHTML()).toContain('data-inline');
+    // In a list item with text.
+    expect(make(`<ul><li>a ${IMG}></li></ul>`).getHTML()).toBe(
+      `<ul><li>a ${IMG} data-inline=""></li></ul>`,
+    );
+  });
+
+  it('JSON: its float, only when set', () => {
+    const editor = make(`<p>x ${IMG} data-inline="" data-float="start"></p>`);
+    const json = editor.getJSON() as {
+      root: { children: { children: Record<string, unknown>[] }[] };
+    };
+    expect(json.root.children[0]?.children[1]).toMatchObject({
+      type: 'inline-image',
+      src: 'https://x.test/i.png',
+      width: 20,
+      float: 'start',
+    });
+    const plain = make(`<p>x ${IMG}></p>`).getJSON() as typeof json;
+    expect(plain.root.children[0]?.children[1]).not.toHaveProperty('float');
+    expect(make(json, 'json').getHTML()).toBe(editor.getHTML());
+  });
+
+  it('Markdown: ![alt](src) in a line of text, both ways', () => {
+    const md = 'Look ![an \\] icon](https://x.test/i.png) here';
+    const editor = make(md, 'markdown');
+    expect(inlines(editor)).toEqual([
+      { src: 'https://x.test/i.png', alt: 'an ] icon', float: 'none' },
+    ]);
+    expect(editor.getMarkdown()).toBe(md);
+    expect(make('a ![x](javascript:alert(1)) b', 'markdown').getHTML()).not.toContain('<img');
+    expect(
+      INLINE_IMAGE.export?.(
+        $fakeParagraph(),
+        () => '',
+        () => '',
+      ),
+    ).toBeNull();
+  });
+
+  it('insertImage({ inline }) puts it at the caret, the caret after it', () => {
+    const editor = make('<p>Hello</p>');
+    endOf(editor);
+    expect(
+      editor.commands.insertImage({ src: 'https://x.test/i.png', inline: true, float: 'end' }),
+    ).toBe(true);
+    editor.update(() => $getSelection()?.insertText('!'));
+    expect(editor.getHTML()).toBe(
+      '<p>Hello<img src="https://x.test/i.png" alt="" data-inline="" data-float="end">!</p>',
+    );
+    // With a block image selected: on a new line after it.
+    const other = make(`${PHOTO}<p>End</p>`);
+    selectImage(other);
+    other.commands.insertImage({ src: 'https://x.test/i.png', inline: true });
+    expect(other.getHTML()).toBe(
+      `${PHOTO}<p><img src="https://x.test/i.png" alt="" data-inline=""></p><p>End</p>`,
+    );
+  });
+
+  it('setImageInline turns a block into an inline image and back, keeping what it has', () => {
+    const editor = make(
+      `<figure data-align="end">${PHOTO}<figcaption>Hi <b>there</b></figcaption></figure>`,
+    );
+    selectImage(editor);
+    expect(editor.isActive('imageInline')).toBe(false);
+    editor.commands.setImageInline();
+    // The side becomes a float; the caption the line after it.
+    expect(editor.getHTML()).toBe(
+      '<p><img src="https://x.test/a.png" alt="A" width="200" height="100" data-inline="" data-float="end"></p><p>Hi <strong>there</strong></p>',
+    );
+    expect(editor.isActive('imageInline')).toBe(true);
+    expect(editor.isActive('imageAlign', 'end')).toBe(true);
+    editor.commands.setImageInline(true);
+    expect(inlines(editor)).toHaveLength(1);
+    editor.commands.setImageInline(false);
+    expect(images(editor)).toMatchObject([{ align: 'end', width: 200, caption: null }]);
+    expect(editor.isActive('image')).toBe(true);
+  });
+
+  it('an inline image out of its line of text is lifted to a block of its own', () => {
+    const editor = make(`<p>a ${IMG}> b</p>`);
+    selectInline(editor);
+    editor.commands.setImageInline(false);
+    expect(editor.getHTML()).toBe(`<p>a</p>${IMG}><p>b</p>`);
+  });
+
+  it('align floats an inline image (again to unfloat); centre or full makes it a block', () => {
+    const editor = make(`<p>a ${IMG}> b</p>`);
+    selectInline(editor);
+    expect(editor.isActive('imageAlign', 'start')).toBe(false);
+    editor.commands.setImageAlign('start');
+    expect(inlines(editor)[0]?.float).toBe('start');
+    expect(editor.isActive('imageAlign', 'start')).toBe(true);
+    editor.commands.setImageAlign('start');
+    expect(inlines(editor)[0]?.float).toBe('none');
+    editor.commands.setImageAlign('full');
+    expect(inlines(editor)).toHaveLength(0);
+    expect(images(editor)).toMatchObject([{ align: 'full' }]);
+  });
+
+  it('a caption makes it a block, the caret in the caption; not without captions', () => {
+    const editor = make(`<p>a ${IMG}> b</p>`);
+    selectInline(editor);
+    expect(editor.isActive('imageCaption')).toBe(false);
+    editor.commands.toggleImageCaption();
+    expect(images(editor)).toMatchObject([{ caption: '' }]);
+    expect(editor.isActive('imageCaption')).toBe(true);
+    const off = make(`<p>a ${IMG}> b</p>`);
+    setExtensionOptions(off, Image, { captions: false });
+    selectInline(off);
+    expect(off.can().toggleImageCaption()).toBe(false);
+    expect(off.commands.toggleImageCaption()).toBe(false);
+  });
+
+  it('size, alt text and remove work on it too', () => {
+    const editor = make(`<p>a ${IMG}> b</p>`);
+    selectInline(editor);
+    editor.commands.setImageSize(40, 40);
+    editor.commands.setImageAltText('Icon');
+    expect(editor.read(() => [$inline()[0]?.getWidth(), $inline()[0]?.getAltText()])).toEqual([
+      40,
+      'Icon',
+    ]);
+    editor.commands.removeImage();
+    editor.update(() => $getSelection()?.insertText('|'));
+    expect(editor.getHTML()).toBe('<p>a | b</p>');
+  });
+
+  it('no switching kinds while it uploads', () => {
+    const editor = make(`<p>a ${IMG}> b</p>`);
+    setExtensionOptions(editor, Image, { upload: () => new Promise(() => {}) });
+    selectInline(editor);
+    editor.commands.replaceImageFile(png());
+    expect(editor.can().setImageInline()).toBe(false);
+    expect(editor.commands.setImageInline(false)).toBe(false);
+    expect(editor.commands.setImageAlign('center')).toBe(false);
+    expect(editor.commands.toggleImageCaption()).toBe(false);
+    // Floating is fine.
+    expect(editor.commands.setImageAlign('end')).toBe(true);
+    expect(
+      editor.lexical
+        .getRootElement()
+        ?.querySelector('.tei-inline-image')
+        ?.hasAttribute('data-tei-uploading'),
+    ).toBe(true);
   });
 });
 

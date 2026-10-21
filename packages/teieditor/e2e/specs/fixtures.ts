@@ -53,6 +53,11 @@ export const test = base.extend<{ tei: Harness }>({
         if (html !== undefined) params.set('content', html);
         await page.goto(`/?${params}`);
         await expect(content).toBeVisible();
+        // <Editor>'s table, image and code block parts load after it shows.
+        await page.waitForFunction(() => {
+          const frame = document.querySelector('[data-tei-preset]');
+          return !frame || frame.hasAttribute('data-tei-ready');
+        });
       },
       html: () => page.evaluate(() => window.__tei.editor.getHTML()),
       text: () => page.evaluate(() => window.__tei.editor.getText()),
@@ -66,6 +71,11 @@ export const test = base.extend<{ tei: Harness }>({
           if (root && selection) selection.selectAllChildren(root);
           selection?.collapseToEnd();
         });
+        // The editor takes the caret on the selectionchange that follows.
+        await page.evaluate(
+          () =>
+            new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+        );
       },
       async selectAll() {
         await content.click();

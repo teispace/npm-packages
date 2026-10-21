@@ -154,6 +154,13 @@ test.describe('images', () => {
     expect(await tei.html()).toBe('<p>Before</p><p>After</p>');
   });
 
+  test('typing with the image selected starts a line after it', async ({ tei, page }) => {
+    await tei.open({ content: FIGURE, flags: ['image', 'plain'] });
+    await selectImage(tei);
+    await page.keyboard.type('Zed');
+    await expect.poll(() => tei.html()).toContain('</figure><p>Zed</p><p>After</p>');
+  });
+
   test('Delete on the toolbar removes the image; undo brings it back', async ({ tei, page }) => {
     await tei.open({ content: FIGURE, flags: ['image', 'plain'] });
     await selectImage(tei);
@@ -397,15 +404,15 @@ test.describe('images', () => {
     await expect(page.locator('.tei-image-handle')).toHaveCount(0);
   });
 
-  test('pasted HTML: an image inside a paragraph splits it', async ({ tei, page }) => {
+  test('pasted HTML: an image on a line of its own splits the paragraph', async ({ tei, page }) => {
     await tei.open({ content: '<p>Hello</p>', flags: ['image', 'plain'] });
     await page.evaluate(() =>
-      window.__tei.setClipSource('<p>One <img src="/photo.svg" alt="x"> two</p>'),
+      window.__tei.setClipSource('<p>One<br><img src="/photo.svg" alt="x"><br>two</p>'),
     );
     await page.keyboard.press('ControlOrMeta+c');
     await tei.caretAtEnd();
     await page.keyboard.press('ControlOrMeta+v');
-    await expect(figure(tei)).toHaveCount(1);
+    await expect(page.locator('figure[data-tei-image]')).toHaveCount(1);
     await settled(page);
     // Chromium writes the image's URL out in full on the clipboard.
     expect(await tei.html()).toMatch(
@@ -424,5 +431,175 @@ test.describe('images', () => {
     const bar = await toolbar(tei).boundingBox();
     const viewport = page.viewportSize();
     expect(bar && viewport && bar.x >= 0 && bar.x + bar.width <= viewport.width).toBe(true);
+  });
+});
+
+test.describe('inline images', () => {
+  const ICON = '<img src="/photo.svg" alt="Icon" width="40" height="24" data-inline="">';
+  const LINE = `<p>Before ${ICON} after</p>`;
+  const inline = (tei: Harness) => tei.page.locator('.tei-inline-image');
+  const inlineJSON = (tei: Harness) =>
+    tei.page.evaluate(() => {
+      const doc = window.__tei.editor.getJSON() as {
+        root: { children: Array<{ children?: Array<Record<string, unknown>> }> };
+      };
+      return doc.root.children.flatMap((block) =>
+        (block.children ?? []).filter((node) => node.type === 'inline-image'),
+      );
+    });
+  async function selectInline(tei: Harness) {
+    await inline(tei).locator('img').click();
+    await expect(inline(tei)).toHaveAttribute('data-tei-selected', '');
+    await expect(toolbar(tei)).toBeVisible();
+  }
+
+  test('sits in its line of text; a click selects it, with In line pressed', async ({ tei }) => {
+    await tei.open({ content: LINE, flags: ['image', 'plain'] });
+    const box = await inline(tei).boundingBox();
+    const text = await tei.content.getByText('Before').boundingBox();
+    // On the line, not a block of its own: its bottom on the text's baseline area.
+    expect(box && text && Math.abs(box.y + box.height - (text.y + text.height)) < text.height).toBe(
+      true,
+    );
+    await selectInline(tei);
+    await expect(button(tei, 'In line with text')).toHaveAttribute('aria-pressed', 'true');
+    await expect(button(tei, 'Caption')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('typing ![alt](src) in a line of text makes an inline image', async ({ tei, page }) => {
+    await tei.open({ content: '<p>Hello</p>', flags: ['image', 'plain'] });
+    await tei.caretAtEnd();
+    await page.keyboard.type(' see ![An icon](/photo.svg)');
+    await expect(inline(tei).locator('img')).toHaveAttribute('alt', 'An icon');
+    await page.keyboard.type(' here');
+    expect(await tei.html()).toBe(
+      '<p>Hello see <img src="/photo.svg" alt="An icon" data-inline=""> here</p>',
+    );
+  });
+
+  test('align left or right floats it, the text wrapping round; again unfloats', async ({
+    tei,
+  }) => {
+    await tei.open({
+      content: `<p>${ICON.replace('width="40" height="24"', 'width="120" height="72"')} ${'Words wrap round the picture. '.repeat(8)}</p>`,
+      flags: ['image', 'plain'],
+    });
+    await selectInline(tei);
+    await button(tei, 'Align right').click();
+    await expect(inline(tei)).toHaveAttribute('data-float', 'end');
+    const content = await tei.content.boundingBox();
+    const box = await inline(tei).boundingBox();
+    expect(box && content && Math.abs(box.x + box.width - (content.x + content.width)) < 24).toBe(
+      true,
+    );
+    await expect(button(tei, 'Align right')).toHaveAttribute('aria-pressed', 'true');
+    await button(tei, 'Align right').click();
+    await expect(inline(tei)).toHaveAttribute('data-float', 'none');
+    expect((await inlineJSON(tei))[0]).not.toHaveProperty('float');
+  });
+
+  test('In line off makes it a block of its own; on again puts it back in a line', async ({
+    tei,
+  }) => {
+    await tei.open({ content: LINE, flags: ['image', 'plain'] });
+    await selectInline(tei);
+    await button(tei, 'In line with text').click();
+    await expect(inline(tei)).toHaveCount(0);
+    await expect(figure(tei)).toHaveCount(1);
+    expect(await tei.html()).toBe(
+      '<p>Before</p><img src="/photo.svg" alt="Icon" width="40" height="24"><p>after</p>',
+    );
+    await expect(button(tei, 'In line with text')).toHaveAttribute('aria-pressed', 'false');
+    await button(tei, 'In line with text').click();
+    await expect(inline(tei)).toHaveCount(1);
+    await expect(inline(tei)).toHaveAttribute('data-tei-selected', '');
+  });
+
+  test('a caption makes it a block image, the caret in the caption', async ({ tei, page }) => {
+    await tei.open({ content: LINE, flags: ['image', 'plain'] });
+    await selectInline(tei);
+    await button(tei, 'Caption').click();
+    await page.keyboard.type('Cap');
+    await expect(page.locator('figure[data-tei-image] figcaption')).toHaveText('Cap');
+  });
+
+  test('the caret steps over it, selecting it on the way; typing on it goes after it', async ({
+    tei,
+    page,
+  }) => {
+    await tei.open({ content: `<p>ab${ICON}cd</p>`, flags: ['image', 'plain'] });
+    await tei.caretAtEnd();
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowLeft');
+    // Next to it, an arrow selects it; typing then goes on after it.
+    await page.keyboard.press('ArrowLeft');
+    await expect(inline(tei)).toHaveAttribute('data-tei-selected', '');
+    await page.keyboard.type('X');
+    await expect.poll(() => tei.html()).toBe(`<p>ab${ICON}Xcd</p>`);
+    await expect(inline(tei)).not.toHaveAttribute('data-tei-selected');
+    for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowLeft');
+    await page.keyboard.type('Y');
+    await expect.poll(() => tei.html()).toBe(`<p>abY${ICON}Xcd</p>`);
+  });
+
+  test('Backspace after it deletes it, like a character; undo brings it back', async ({
+    tei,
+    page,
+  }) => {
+    await tei.open({ content: `<p>ab${ICON}cd</p>`, flags: ['image', 'plain'] });
+    await tei.caretAtEnd();
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('Backspace');
+    await expect(inline(tei)).toHaveCount(0);
+    await page.keyboard.type('|');
+    await expect.poll(() => tei.html()).toBe('<p>ab|cd</p>');
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect.poll(() => tei.html()).toBe('<p>abcd</p>');
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect.poll(() => tei.html()).toBe(`<p>ab${ICON}cd</p>`);
+  });
+
+  test('selected, Backspace deletes it', async ({ tei, page }) => {
+    await tei.open({ content: LINE, flags: ['image', 'plain'] });
+    await selectInline(tei);
+    await page.keyboard.press('Backspace');
+    await expect(inline(tei)).toHaveCount(0);
+    await page.keyboard.type('|');
+    await expect.poll(() => tei.html()).toBe('<p>Before | after</p>');
+  });
+
+  test('resizes from its corners, down to an icon’s size', async ({ tei, page }) => {
+    await tei.open({ content: LINE, flags: ['image', 'plain'] });
+    await selectInline(tei);
+    await page.locator('.tei-inline-image img').evaluate((img: HTMLImageElement) => img.decode());
+    const handle = page.locator('.tei-image-handle[data-corner="se"]');
+    await handle.focus();
+    await page.keyboard.press('Shift+ArrowLeft');
+    await expect(inline(tei).locator('img')).toHaveAttribute('width', '16');
+    await page.keyboard.press('ArrowRight');
+    await expect(inline(tei).locator('img')).toHaveAttribute('width', '26');
+  });
+
+  test('pasted HTML with an image in a line of text keeps it there', async ({ tei, page }) => {
+    await tei.open({ content: '<p>Hello</p>', flags: ['image', 'plain'] });
+    await page.evaluate(() =>
+      window.__tei.setClipSource('<p>One <img src="/photo.svg" alt="x"> two</p>'),
+    );
+    await page.keyboard.press('ControlOrMeta+c');
+    await tei.caretAtEnd();
+    await page.keyboard.press('ControlOrMeta+v');
+    await expect(inline(tei)).toHaveCount(1);
+    await settled(page);
+    expect(await tei.html()).toMatch(
+      /^<p>HelloOne <img src="(http:\/\/127\.0\.0\.1:3119)?\/photo\.svg" alt="x" data-inline=""> two<\/p>$/,
+    );
+  });
+
+  test('tap selects it on a phone @mobile', async ({ tei }) => {
+    await tei.open({ content: LINE, flags: ['image', 'plain'] });
+    await inline(tei).locator('img').tap();
+    await expect(inline(tei)).toHaveAttribute('data-tei-selected', '');
+    await expect(toolbar(tei)).toBeVisible();
   });
 });

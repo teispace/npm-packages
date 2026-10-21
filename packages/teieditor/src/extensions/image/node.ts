@@ -51,21 +51,14 @@ function textOf(value: unknown): string {
 }
 
 /**
- * An image: a block with its own caption, which is a slot of the document
- * (typed in place, undone with everything else, collaborative). It draws
- * its own DOM, `<figure><img><figcaption>`, so it needs no framework and
- * renders the same on a server.
+ * What both kinds of image hold: a source, alt text and a size. Not a node
+ * of its own; `ImageNode` and `InlineImageNode` are.
  */
-export class ImageNode extends DecoratorNode<null> {
+export class BaseImageNode extends DecoratorNode<null> {
   __src = '';
   __altText = '';
   __width: number | null = null;
   __height: number | null = null;
-  __align: ImageAlign = 'center';
-
-  $config() {
-    return this.config('image', { extends: DecoratorNode, slots: ['caption'] });
-  }
 
   afterCloneFrom(prev: this): void {
     super.afterCloneFrom(prev);
@@ -73,10 +66,7 @@ export class ImageNode extends DecoratorNode<null> {
     this.__altText = prev.__altText;
     this.__width = prev.__width;
     this.__height = prev.__height;
-    this.__align = prev.__align;
   }
-
-  // -- Data ------------------------------------------------------------------
 
   getSrc(): string {
     return this.getLatest().__src;
@@ -115,6 +105,91 @@ export class ImageNode extends DecoratorNode<null> {
     return self;
   }
 
+  /** Where it sits: an inline image only floats to a side, or not. */
+  getAlign(): ImageAlign | null {
+    return null;
+  }
+
+  updateFromJSON(json: LexicalUpdateJSON<SerializedImageNode>): this {
+    const self = super.updateFromJSON(json);
+    const data = json as Partial<SerializedImageNode> & { alt?: unknown };
+    if (typeof data.src === 'string') self.setSrc(data.src);
+    const alt = typeof data.altText === 'string' ? data.altText : data.alt;
+    if (typeof alt === 'string') self.setAltText(alt);
+    self.setSize(size(data.width), size(data.height));
+    return self;
+  }
+
+  exportJSON(): SerializedImageNode {
+    const json: SerializedImageNode = {
+      ...super.exportJSON(),
+      src: this.getSrc(),
+      altText: this.getAltText(),
+    };
+    const width = this.getWidth();
+    const height = this.getHeight();
+    if (width !== null) json.width = width;
+    if (height !== null) json.height = height;
+    return json;
+  }
+
+  /** The `<img>`, from attributes only: no style attribute for a strict CSP to report. */
+  protected paintImage(img: HTMLImageElement): void {
+    if (img.getAttribute('src') !== this.__src) img.setAttribute('src', this.__src);
+    img.alt = this.__altText;
+    const set = (name: string, value: number | null) =>
+      value === null ? img.removeAttribute(name) : img.setAttribute(name, String(value));
+    set('width', this.__width);
+    set('height', this.__height);
+  }
+
+  /** A fresh `<img>` for the editor's DOM. */
+  protected createImage(): HTMLImageElement {
+    const img = $getDocument().createElement('img');
+    img.draggable = false;
+    img.decoding = 'async';
+    return img;
+  }
+
+  /** The `<img>` saved HTML gets. */
+  protected exportImage(): HTMLImageElement {
+    const img = $getDocument().createElement('img');
+    img.setAttribute('src', this.getSrc());
+    img.setAttribute('alt', this.getAltText());
+    const width = this.getWidth();
+    const height = this.getHeight();
+    if (width !== null) img.setAttribute('width', String(width));
+    if (height !== null) img.setAttribute('height', String(height));
+    return img;
+  }
+
+  decorate(): null {
+    return null;
+  }
+
+  getTextContent(): string {
+    return '';
+  }
+}
+
+/**
+ * An image: a block with its own caption, which is a slot of the document
+ * (typed in place, undone with everything else, collaborative). It draws
+ * its own DOM, `<figure><img><figcaption>`, so it needs no framework and
+ * renders the same on a server.
+ */
+export class ImageNode extends BaseImageNode {
+  __align: ImageAlign = 'center';
+
+  $config() {
+    return this.config('image', { extends: BaseImageNode, slots: ['caption'] });
+  }
+
+  afterCloneFrom(prev: this): void {
+    super.afterCloneFrom(prev);
+    this.__align = prev.__align;
+  }
+
   getAlign(): ImageAlign {
     return this.getLatest().__align;
   }
@@ -148,14 +223,9 @@ export class ImageNode extends DecoratorNode<null> {
   updateFromJSON(json: LexicalUpdateJSON<SerializedImageNode>): this {
     const self = super.updateFromJSON(json);
     const data = json as Partial<SerializedImageNode> & {
-      alt?: unknown;
       caption?: unknown;
       showCaption?: unknown;
     };
-    if (typeof data.src === 'string') self.setSrc(data.src);
-    const alt = typeof data.altText === 'string' ? data.altText : data.alt;
-    if (typeof alt === 'string') self.setAltText(alt);
-    self.setSize(size(data.width), size(data.height));
     if (typeof data.align === 'string') self.setAlign(data.align as ImageAlign);
     // 4.x kept the caption as a string; the Lexical playground in an editor
     // of its own. Both become this image's caption.
@@ -167,15 +237,7 @@ export class ImageNode extends DecoratorNode<null> {
   }
 
   exportJSON(): SerializedImageNode {
-    const json: SerializedImageNode = {
-      ...super.exportJSON(),
-      src: this.getSrc(),
-      altText: this.getAltText(),
-    };
-    const width = this.getWidth();
-    const height = this.getHeight();
-    if (width !== null) json.width = width;
-    if (height !== null) json.height = height;
+    const json = super.exportJSON();
     if (this.getAlign() !== 'center') json.align = this.getAlign();
     return json;
   }
@@ -183,15 +245,11 @@ export class ImageNode extends DecoratorNode<null> {
   // -- DOM -------------------------------------------------------------------
 
   createDOM(config: EditorConfig): HTMLElement {
-    const doc = $getDocument();
-    const figure = doc.createElement('figure');
+    const figure = $getDocument().createElement('figure');
     figure.className = (config.theme.image as string | undefined) ?? 'tei-image';
     figure.contentEditable = 'false';
     figure.setAttribute('data-tei-image', '');
-    const img = doc.createElement('img');
-    img.draggable = false;
-    img.decoding = 'async';
-    figure.append(img, doc.createElement('figcaption'));
+    figure.append(this.createImage(), $getDocument().createElement('figcaption'));
     this.#paint(figure);
     return figure;
   }
@@ -201,21 +259,11 @@ export class ImageNode extends DecoratorNode<null> {
     return false;
   }
 
-  /** Attributes only: no style attribute, so a strict CSP has nothing to report. */
   #paint(figure: HTMLElement): void {
     const img = figure.querySelector('img');
     if (!img) return;
-    if (img.getAttribute('src') !== this.__src) img.setAttribute('src', this.__src);
-    img.alt = this.__altText;
-    const set = (name: string, value: number | null) =>
-      value === null ? img.removeAttribute(name) : img.setAttribute(name, String(value));
-    set('width', this.__width);
-    set('height', this.__height);
+    this.paintImage(img);
     figure.setAttribute('data-align', this.__align);
-  }
-
-  decorate(): null {
-    return null;
   }
 
   isInline(): false {
@@ -224,30 +272,19 @@ export class ImageNode extends DecoratorNode<null> {
 
   /** `<img>` when that is all there is; `<figure>` for a caption or an alignment. */
   exportDOM(editor: LexicalEditor): DOMExportOutput {
-    const doc = $getDocument();
-    const img = doc.createElement('img');
-    img.setAttribute('src', this.getSrc());
-    img.setAttribute('alt', this.getAltText());
-    const width = this.getWidth();
-    const height = this.getHeight();
-    if (width !== null) img.setAttribute('width', String(width));
-    if (height !== null) img.setAttribute('height', String(height));
+    const img = this.exportImage();
     const caption = this.getCaption();
     const align = this.getAlign();
     if (!caption && align === 'center') return { element: img };
-    const figure = doc.createElement('figure');
+    const figure = $getDocument().createElement('figure');
     if (align !== 'center') figure.setAttribute('data-align', align);
     figure.append(img);
     if (caption) {
-      const figcaption = doc.createElement('figcaption');
+      const figcaption = $getDocument().createElement('figcaption');
       for (const child of caption.getChildren()) $appendNodeToHTML(editor, child, figcaption);
       figure.append(figcaption);
     }
     return { element: figure };
-  }
-
-  getTextContent(): string {
-    return '';
   }
 }
 
@@ -270,4 +307,115 @@ export function $createImageNode(data: {
 
 export function $isImageNode(node: LexicalNode | null | undefined): node is ImageNode {
   return node instanceof ImageNode;
+}
+
+/** Which side an inline image floats to, the text wrapping round it; `none` keeps it in the line. */
+export type ImageFloat = 'none' | 'start' | 'end';
+export const IMAGE_FLOATS: readonly ImageFloat[] = ['none', 'start', 'end'];
+
+export interface SerializedInlineImageNode extends SerializedImageNode {
+  float?: ImageFloat;
+}
+
+/**
+ * An image in a line of text, like a character: an emoji-sized icon, a
+ * badge, or a picture the text wraps round when it floats to a side. No
+ * caption; turned into a block image, it can have one.
+ */
+export class InlineImageNode extends BaseImageNode {
+  __float: ImageFloat = 'none';
+
+  $config() {
+    return this.config('inline-image', { extends: BaseImageNode });
+  }
+
+  afterCloneFrom(prev: this): void {
+    super.afterCloneFrom(prev);
+    this.__float = prev.__float;
+  }
+
+  getFloat(): ImageFloat {
+    return this.getLatest().__float;
+  }
+
+  setFloat(float: ImageFloat): this {
+    const self = this.getWritable();
+    if (IMAGE_FLOATS.includes(float)) self.__float = float;
+    return self;
+  }
+
+  getAlign(): ImageAlign | null {
+    const float = this.getFloat();
+    return float === 'none' ? null : float;
+  }
+
+  updateFromJSON(json: LexicalUpdateJSON<SerializedInlineImageNode>): this {
+    const self = super.updateFromJSON(json);
+    const { float } = json as Partial<SerializedInlineImageNode>;
+    if (typeof float === 'string') self.setFloat(float);
+    return self;
+  }
+
+  exportJSON(): SerializedInlineImageNode {
+    const json: SerializedInlineImageNode = super.exportJSON();
+    if (this.getFloat() !== 'none') json.float = this.getFloat();
+    return json;
+  }
+
+  createDOM(config: EditorConfig): HTMLElement {
+    const span = $getDocument().createElement('span');
+    span.className = (config.theme.inlineImage as string | undefined) ?? 'tei-inline-image';
+    span.contentEditable = 'false';
+    span.setAttribute('data-tei-image', '');
+    span.append(this.createImage());
+    this.#paint(span);
+    return span;
+  }
+
+  updateDOM(_prev: this, dom: HTMLElement): false {
+    this.#paint(dom);
+    return false;
+  }
+
+  #paint(span: HTMLElement): void {
+    const img = span.querySelector('img');
+    if (!img) return;
+    this.paintImage(img);
+    span.setAttribute('data-float', this.__float);
+  }
+
+  isInline(): true {
+    return true;
+  }
+
+  /** `<img data-inline>`, so it comes back inline even on a line of its own. */
+  exportDOM(): DOMExportOutput {
+    const img = this.exportImage();
+    img.setAttribute('data-inline', '');
+    if (this.getFloat() !== 'none') img.setAttribute('data-float', this.getFloat());
+    return { element: img };
+  }
+}
+
+export function $createInlineImageNode(data: {
+  src: string;
+  altText?: string;
+  width?: number | null;
+  height?: number | null;
+  float?: ImageFloat;
+}): InlineImageNode {
+  return $create(InlineImageNode)
+    .setSrc(data.src)
+    .setAltText(data.altText ?? '')
+    .setSize(data.width ?? null, data.height ?? null)
+    .setFloat(data.float ?? 'none');
+}
+
+export function $isInlineImageNode(node: LexicalNode | null | undefined): node is InlineImageNode {
+  return node instanceof InlineImageNode;
+}
+
+/** Either kind of image. */
+export function $isAnyImageNode(node: LexicalNode | null | undefined): node is BaseImageNode {
+  return node instanceof BaseImageNode;
 }

@@ -10,6 +10,7 @@ import {
   $getRoot,
   $getSelection,
   $isElementNode,
+  $isParagraphNode,
   $isRangeSelection,
   $isTextNode,
   $setSelection,
@@ -415,10 +416,7 @@ export class TeiEditor {
       const first = root.getFirstChild();
       return (
         root.getChildrenSize() === 0 ||
-        (root.getChildrenSize() === 1 &&
-          first !== null &&
-          first.getTextContentSize() === 0 &&
-          first.getType() === 'paragraph')
+        (root.getChildrenSize() === 1 && $isParagraphNode(first) && first.isEmpty())
       );
     });
   }

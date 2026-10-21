@@ -273,6 +273,29 @@ for (const scheme of ['light', 'dark'] as const) {
       await shootImage(tei, `image-caption-${scheme}.png`, 48);
     });
 
+    test('inline images: one in a line of text, one floated, selected', async ({ tei }) => {
+      await tei.page.setViewportSize({ width: 768, height: 600 });
+      const icon = '<img src="/photo.svg" alt="" width="40" height="24" data-inline="">';
+      const float =
+        '<img src="/photo.svg" alt="Hills" width="160" height="96" data-inline="" data-float="end">';
+      await tei.open({
+        content:
+          `<p>An icon ${icon} in a line of text, sitting on its baseline.</p>` +
+          `<p>${float}${'Text wraps round a picture floated to the side, line after line. '.repeat(4)}</p>`,
+        flags: ['image', 'plain'],
+      });
+      await theme(tei.page, scheme);
+      await tei.content.locator('.tei-inline-image[data-float="end"] img').click();
+      await expect(tei.page.locator('[data-tei-control="image-toolbar"]')).toBeVisible();
+      await tei.page.mouse.move(0, 0);
+      await settled(tei.page);
+      const box = await tei.content.boundingBox();
+      if (!box) throw new Error('no content');
+      await shoot(tei, tei.page, `image-inline-${scheme}.png`, {
+        clip: { x: box.x, y: box.y - 56, width: box.width, height: box.height + 64 },
+      });
+    });
+
     test('image insert popover: upload or link', async ({ tei }) => {
       await tei.page.setViewportSize({ width: 768, height: 600 });
       await tei.open({ flags: ['image', 'plain'] });

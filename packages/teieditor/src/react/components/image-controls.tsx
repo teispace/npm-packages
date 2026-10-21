@@ -13,82 +13,26 @@ import {
 import { getExtensionOptions } from '../../core/define.js';
 import type { TeiEditor } from '../../core/editor.js';
 import type { TeiItem } from '../../core/types.js';
-import {
-  $getImage,
-  Image,
-  type ImageAlign,
-  type ImageStorage,
-} from '../../extensions/image/index.js';
+import { $getImage, Image, type ImageAlign, minImageWidth } from '../../extensions/image/index.js';
 import { TeiEditorContext, useOptionalEditor } from '../context.js';
 import { useItemStates } from '../items.js';
-import { selectionAnchor } from '../selection-anchor.js';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/controls.js';
 import { DropdownMenu } from '../ui/dropdown.js';
-import type { FloatingAnchor } from '../ui/floating.js';
 import { Popover } from '../ui/popover.js';
 import { Separator } from '../ui/toolbar.js';
 import { useEditorFocus } from '../use-editor-focus.js';
 import { useEditorState } from '../use-editor-state.js';
 import { ItemButton, itemControl, type ToolbarControl } from './editor-toolbar.js';
-import { InsertImageForm, pickImages } from './image-insert.js';
-
-const storageOf = (editor: TeiEditor) =>
-  editor.extension(Image)?.output.storage as ImageStorage | undefined;
-
-/** The same form, opened by `openImageInsert` (the slash menu's Image) at the caret. */
-function ImageInsertPopover({ editor }: { editor: TeiEditor }) {
-  const storage = storageOf(editor);
-  const [anchor, setAnchor] = useState<FloatingAnchor | null>(null);
-
-  // Count as mounted, so `openImageInsert` asks here and not with the bare chooser.
-  useEffect(() => {
-    if (!storage) return;
-    storage.pickers.value++;
-    return () => {
-      storage.pickers.value--;
-    };
-  }, [storage]);
-
-  useEffect(() => {
-    if (!storage) return;
-    let first = true;
-    return storage.insertRequest.subscribe(() => {
-      if (first) {
-        first = false;
-        return;
-      }
-      setAnchor(selectionAnchor(editor) ?? editor.lexical.getRootElement());
-    });
-  }, [editor, storage]);
-
-  if (!anchor) return null;
-  const close = () => setAnchor(null);
-  return (
-    <Popover
-      open
-      anchor={anchor}
-      placement="bottom-start"
-      initialFocus="first"
-      restoreFocus={false}
-      onDismiss={(reason) => {
-        close();
-        if (reason === 'escape') editor.focus();
-      }}
-      role="dialog"
-      aria-label={editor.t('image.insert')}
-      data-tei-control="image-insert-popover"
-    >
-      <InsertImageForm editor={editor} onDone={close} />
-    </Popover>
-  );
-}
+import { ImageInsertPopover, pickImages } from './image-insert.js';
 
 // -- The selected image -------------------------------------------------------
 
 interface Selected {
   key: NodeKey;
-  align: ImageAlign;
+  /** `null` for an inline image in its line. */
+  align: ImageAlign | null;
+  inline: boolean;
   altText: string;
   /** The image itself is selected, not the caret in its caption. */
   whole: boolean;
@@ -100,6 +44,7 @@ const sameSelected = (a: Selected | null, b: Selected | null) =>
     b !== null &&
     a.key === b.key &&
     a.align === b.align &&
+    a.inline === b.inline &&
     a.altText === b.altText &&
     a.whole === b.whole);
 
@@ -112,6 +57,7 @@ function useSelectedImage(editor: TeiEditor): Selected | null {
         return {
           key: node.getKey(),
           align: node.getAlign(),
+          inline: node.isInline(),
           altText: node.getAltText(),
           whole: $isNodeSelection($getSelection()),
         };
@@ -332,11 +278,11 @@ function ImageResizer({
 
   /** The widest the image can be: its column. */
   const maxWidth = (img: HTMLImageElement) => {
-    const figure = img.closest('figure');
-    return figure?.parentElement?.clientWidth || Number.POSITIVE_INFINITY;
+    const host = img.closest('[data-tei-image]');
+    return host?.parentElement?.clientWidth || Number.POSITIVE_INFINITY;
   };
   const clampWidth = (img: HTMLImageElement, width: number) =>
-    Math.round(Math.min(maxWidth(img), Math.max(options.minWidth, width)));
+    Math.round(Math.min(maxWidth(img), Math.max(minImageWidth(options, selected.inline), width)));
 
   const commit = (img: HTMLImageElement, width: number) => {
     const ratio = img.naturalWidth > 0 ? img.naturalHeight / img.naturalWidth : null;
@@ -426,6 +372,8 @@ function ImageResizer({
 export interface ImageControlsProps {
   /** The editor; defaults to the one from context. */
   editor?: TeiEditor;
+  /** The insert popover that `openImageInsert` opens. Default true. */
+  insert?: boolean;
   /** The toolbar over a selected image. Default true. */
   toolbar?: boolean;
   /** Drag a corner to resize. Default: the Image extension's `resizable`. */
@@ -444,6 +392,7 @@ export interface ImageControlsProps {
  */
 export function ImageControls({
   editor: editorProp,
+  insert = true,
   toolbar = true,
   resizer = true,
   controls,
@@ -460,7 +409,7 @@ export function ImageControls({
   const shown = editable && focused && selected ? selected : null;
   return (
     <TeiEditorContext.Provider value={editor}>
-      <ImageInsertPopover editor={editor} />
+      {insert && <ImageInsertPopover editor={editor} />}
       {toolbar && shown && (
         <ImageToolbar editor={editor} selected={shown} hidden={resizing} controls={controls} />
       )}

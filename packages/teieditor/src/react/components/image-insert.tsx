@@ -1,13 +1,16 @@
 'use client';
 
-import { type DragEvent, type FormEvent, useId, useState } from 'react';
+import { type DragEvent, type FormEvent, useEffect, useId, useState } from 'react';
 import { getExtensionOptions } from '../../core/define.js';
 import type { TeiEditor } from '../../core/editor.js';
-import { Image } from '../../extensions/image/index.js';
+import { Image, type ImageStorage } from '../../extensions/image/index.js';
 import { chooseFiles } from '../../utils/files.js';
+import { selectionAnchor } from '../selection-anchor.js';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/controls.js';
 import { DropdownMenu } from '../ui/dropdown.js';
+import type { FloatingAnchor } from '../ui/floating.js';
+import { Popover } from '../ui/popover.js';
 import { useEditorState } from '../use-editor-state.js';
 
 /** Ask for files with the chooser, as the Image extension accepts them. */
@@ -123,5 +126,53 @@ export function InsertImageMenu({ editor }: { editor: TeiEditor }) {
       disabled={!enabled}
       content={(close) => <InsertImageForm editor={editor} onDone={close} />}
     />
+  );
+}
+
+/** The same form, opened by `openImageInsert` (the slash menu's Image) at the caret. */
+export function ImageInsertPopover({ editor }: { editor: TeiEditor }) {
+  const storage = editor.extension(Image)?.output.storage as ImageStorage | undefined;
+  const [anchor, setAnchor] = useState<FloatingAnchor | null>(null);
+
+  // Count as mounted, so `openImageInsert` asks here and not with the bare chooser.
+  useEffect(() => {
+    if (!storage) return;
+    storage.pickers.value++;
+    return () => {
+      storage.pickers.value--;
+    };
+  }, [storage]);
+
+  useEffect(() => {
+    if (!storage) return;
+    let first = true;
+    return storage.insertRequest.subscribe(() => {
+      if (first) {
+        first = false;
+        return;
+      }
+      setAnchor(selectionAnchor(editor) ?? editor.lexical.getRootElement());
+    });
+  }, [editor, storage]);
+
+  if (!anchor) return null;
+  const close = () => setAnchor(null);
+  return (
+    <Popover
+      open
+      anchor={anchor}
+      placement="bottom-start"
+      initialFocus="first"
+      restoreFocus={false}
+      onDismiss={(reason) => {
+        close();
+        if (reason === 'escape') editor.focus();
+      }}
+      role="dialog"
+      aria-label={editor.t('image.insert')}
+      data-tei-control="image-insert-popover"
+    >
+      <InsertImageForm editor={editor} onDone={close} />
+    </Popover>
   );
 }

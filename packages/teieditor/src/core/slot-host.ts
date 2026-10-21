@@ -13,11 +13,13 @@ import {
   $isParagraphNode,
   $isRangeSelection,
   $isRootOrShadowRoot,
+  $isTextNode,
   $setSelection,
   $splitNode,
   CLICK_COMMAND,
   COMMAND_PRIORITY_HIGH,
   COMMAND_PRIORITY_LOW,
+  type ElementNode,
   getActiveElement,
   getDOMSelection,
   isModifierMatch,
@@ -29,6 +31,7 @@ import {
   type LexicalNode,
   mergeRegister,
   type NodeKey,
+  type TextNode,
 } from 'lexical';
 
 /**
@@ -99,18 +102,48 @@ export function registerHostSelection<T extends LexicalNode>(
   // A click into a slot while the host is selected: Lexical turns the node
   // selection into a caret on the selectionchange that follows, which can
   // come after the first keys typed. They take the DOM's caret at once.
-  const onInput = () => {
+  const onInput = (event: Event) => {
     const root = editor.getRootElement();
     const dom = getDOMSelection(root?.ownerDocument.defaultView ?? null);
     const anchor = dom?.anchorNode;
-    if (!root || !dom || !anchor || !root.contains(anchor)) return;
-    const slot = (anchor instanceof Element ? anchor : anchor.parentElement)?.closest(
-      '[data-lexical-slot]',
-    );
-    if (!slot || !root.contains(slot)) return;
-    if (!editor.read(() => $isNodeSelection($getSelection()))) return;
-    editor.update(() => $setSelection($createRangeSelectionFromDom(dom, editor)), {
-      discrete: true,
+    const slot =
+      anchor &&
+      (anchor instanceof Element ? anchor : anchor.parentElement)?.closest('[data-lexical-slot]');
+    if (root && dom && slot && root.contains(slot)) {
+      if (!editor.read(() => $isNodeSelection($getSelection()))) return;
+      editor.update(() => $setSelection($createRangeSelectionFromDom(dom, editor)), {
+        discrete: true,
+      });
+      return;
+    }
+    // Typing with the host itself selected goes on after it. The browser's
+    // caret is elsewhere (at the line's start, or nowhere), and it inserts
+    // where its caret was when the event began, so the text goes in here.
+    // Firefox and Safari have no caret at all then, so no input event:
+    // a key that types a character is taken at keydown.
+    const key = event as KeyboardEvent;
+    const text =
+      event.type === 'keydown'
+        ? key.key.length === 1 && !key.ctrlKey && !key.metaKey && !key.altKey && !key.isComposing
+          ? key.key
+          : null
+        : (event as InputEvent).inputType === 'insertText'
+          ? (event as InputEvent).data
+          : null;
+    if (!text) return;
+    const $selected = () => {
+      const selection = $getSelection();
+      const nodes = $isNodeSelection(selection) ? selection.getNodes() : [];
+      return nodes.length === 1 && $isHost(nodes[0]) ? nodes[0] : null;
+    };
+    if (!editor.read($selected)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    editor.update(() => {
+      const host = $selected();
+      if (host?.isInline()) host.selectNext(0, 0);
+      else if (host) $caretAfter(host, true);
+      $getSelection()?.insertText(text);
     });
   };
   return mergeRegister(
@@ -301,17 +334,34 @@ export function registerSelectedAttribute<T extends LexicalNode>(
  * (list items import a block in them between two).
  */
 export function $liftBlock(node: LexicalNode): void {
-  let parent = node.getParent();
+  const parent = node.getParent();
   if (!parent || $isRootOrShadowRoot(parent)) return;
-  for (const side of [node.getPreviousSibling(), node.getNextSibling()]) {
-    if ($isLineBreakNode(side)) side.remove();
-  }
-  while (parent && !$isRootOrShadowRoot(parent)) {
-    const [left, right] = $splitNode(parent, node.getIndexWithinParent());
-    right.insertBefore(node);
-    if (left?.isEmpty()) left.remove();
-    if (right.isEmpty()) right.remove();
-    parent = node.getParent();
+  // The line break or space that kept it from the text either side.
+  const previous = node.getPreviousSibling();
+  const next = node.getNextSibling();
+  if ($isLineBreakNode(previous)) previous.remove();
+  else if ($isTextNode(previous)) $trimText(previous, previous.getTextContent().trimEnd());
+  if ($isLineBreakNode(next)) next.remove();
+  else if ($isTextNode(next)) $trimText(next, next.getTextContent().trimStart());
+  // Splits up to the root, the node's ancestors copied to the right.
+  const [left, right] = $splitNode(parent, node.getIndexWithinParent());
+  right.insertBefore(node);
+  $pruneEdge(left, 'getLastChild');
+  $pruneEdge(right, 'getFirstChild');
+}
+
+function $trimText(node: TextNode, text: string): void {
+  if (text === '') node.remove();
+  else if (text !== node.getTextContent()) node.setTextContent(text);
+}
+
+/** The empty elements a split leaves along one edge of a tree: a list item with nothing in it. */
+function $pruneEdge(tree: LexicalNode | null, edge: 'getFirstChild' | 'getLastChild'): void {
+  const chain: ElementNode[] = [];
+  for (let at = tree; $isElementNode(at); at = at[edge]()) chain.push(at);
+  for (const element of chain.reverse()) {
+    if (!element.isEmpty()) return;
+    element.remove();
   }
 }
 
