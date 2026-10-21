@@ -3,11 +3,14 @@ import { createRoot } from 'react-dom/client';
 import { setExtensionOptions } from '../../src/core/define';
 import type { TeiEditor } from '../../src/core/editor';
 import { Blocks } from '../../src/extensions/blocks/index';
+import { Callout } from '../../src/extensions/callout/index';
 import { Clipboard } from '../../src/extensions/clipboard/index';
 import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
 import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
 import { Html } from '../../src/extensions/html/index';
 import { Image, type ImageOptions } from '../../src/extensions/image/index';
+import { PageBreak } from '../../src/extensions/page-break/index';
+import { PullQuote } from '../../src/extensions/pull-quote/index';
 import { StarterKit } from '../../src/extensions/starter-kit/index';
 import { Table } from '../../src/extensions/table/index';
 import { TextStyle } from '../../src/extensions/text-style/index';
@@ -130,6 +133,8 @@ function App() {
       ...(params.has('file') ? [FileAttachment] : []),
       ...(params.has('embed') ? [Embed] : []),
       ...(params.has('blocks') ? [Blocks] : []),
+      // The document's own blocks: pull quotes, callouts, page breaks.
+      ...(params.has('extras') ? [PullQuote, Callout, PageBreak] : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });

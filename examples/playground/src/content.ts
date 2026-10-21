@@ -51,6 +51,12 @@ rename or replace it; in a read-only document, the card is a download link.</p>
 or insert one from the toolbar or <code>/embed</code>. Click an embed to align it, open its page or copy its link;
 once selected, it plays.</p>
 <div data-tei-embed="youtube" data-id="aqz-KE-bpKQ"></div>
+<h2>Callouts, pull quotes and page breaks</h2>
+<div data-tei-callout="tip"><p>Type <code>/callout</code> to set lines apart. Click the icon to change its kind;
+in markdown it is a GitHub alert, <code>&gt; [!TIP]</code>.</p></div>
+<aside data-tei-pull-quote>A pull quote sets a line of your own text large, to draw the eye.</aside>
+<p>Press <code>⌘↵</code> for a page break: printed, the page ends there.</p>
+<hr data-tei-page-break>
 <hr>
 <p>That is the whole document. Make it yours.</p>
 `;

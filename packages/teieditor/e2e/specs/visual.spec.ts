@@ -23,6 +23,17 @@ const DOCUMENT = [
 
 const WIDTHS = [375, 768, 1280] as const;
 
+/** The document's own blocks: a pull quote, a callout of each kind, a page break. */
+const EXTRAS = [
+  '<p>Intro</p>',
+  '<aside data-tei-pull-quote>Design is how it works, not how it looks.</aside>',
+  ...['note', 'tip', 'important', 'warning', 'caution'].map(
+    (kind) =>
+      `<div data-tei-callout="${kind}"><p>A ${kind} with <strong>bold</strong> text, long enough to wrap in a narrow frame.</p></div>`,
+  ),
+  '<p>Before the break</p><hr data-tei-page-break><p>After the break</p>',
+].join('');
+
 /** Nothing under the pointer, nothing focused, every animation done. */
 async function still(page: Page) {
   await page.mouse.move(0, 0);
@@ -551,6 +562,28 @@ for (const scheme of ['light', 'dark'] as const) {
       await expect(tei.page.getByRole('menu', { name: 'Table' })).toBeVisible();
       await settled(tei.page);
       await shoot(tei, tei.page, `context-menu-${scheme}.png`, {
+        clip: { x: 0, y: 0, width: 768, height: 720 },
+      });
+    });
+
+    for (const width of [375, 768] as const) {
+      test(`pull quote, callouts and a page break at ${width}px`, async ({ tei }) => {
+        await tei.page.setViewportSize({ width, height: 1100 });
+        await tei.open({ content: EXTRAS, flags: ['extras', 'plain'] });
+        await theme(tei.page, scheme);
+        await still(tei.page);
+        await shoot(tei, tei.page.getByTestId('editor'), `extras-${scheme}-${width}.png`);
+      });
+    }
+
+    test('a callout’s menu, from its icon', async ({ tei }) => {
+      await tei.page.setViewportSize({ width: 768, height: 720 });
+      await tei.open({ content: EXTRAS, flags: ['extras', 'plain'] });
+      await theme(tei.page, scheme);
+      await tei.content.locator('[data-variant="tip"] [data-tei-callout-icon]').click();
+      await expect(tei.page.locator('[data-tei-control="callout-menu"]')).toBeVisible();
+      await still(tei.page);
+      await shoot(tei, tei.page, `callout-menu-${scheme}.png`, {
         clip: { x: 0, y: 0, width: 768, height: 720 },
       });
     });

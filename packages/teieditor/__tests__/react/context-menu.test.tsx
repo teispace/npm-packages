@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { $getRoot } from 'lexical';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { Callout } from '../../src/extensions/callout/index.js';
 import { StarterKit } from '../../src/extensions/starter-kit/index.js';
 import { Table } from '../../src/extensions/table/index.js';
 import type { TeiEditor } from '../../src/index.js';
@@ -26,8 +27,8 @@ function App({ editor, groups }: { editor: TeiEditor; groups?: ContextMenuProps[
   );
 }
 
-function open(groups?: ContextMenuProps['groups']) {
-  const editor = createReactTeiEditor({ extensions: [StarterKit, Table], content: '<p>Hello</p>' });
+function open(groups?: ContextMenuProps['groups'], content = '<p>Hello</p>') {
+  const editor = createReactTeiEditor({ extensions: [StarterKit, Table, Callout], content });
   render(<App editor={editor} groups={groups} />);
   const root = screen.getByRole('textbox');
   return { editor, root };
@@ -86,6 +87,17 @@ describe('ContextMenu', () => {
     expect(sub.querySelector('[data-id="deleteTable"]')?.getAttribute('data-variant')).toBe(
       'danger',
     );
+  });
+
+  it('in a callout: its kinds in a submenu of their own, and no table’s', () => {
+    const { root } = open(undefined, '<div data-tei-callout="note"><p>Hi</p></div>');
+    rightClick(root.querySelector('.tei-callout p') as Element);
+    const menu = screen.getByRole('menu', { name: 'Edit' });
+    expect(menu.querySelector('[data-id="table"]')).toBeNull();
+    fireEvent.click(menu.querySelector('[data-id="calloutMenu"]') as Element);
+    const sub = screen.getByRole('menu', { name: 'Callout' });
+    expect(sub.querySelector('[data-id="callout-tip"]')).not.toBeNull();
+    expect(sub.querySelector('[data-id="deleteTable"]')).toBeNull();
   });
 
   it('is yours to change as it opens', () => {

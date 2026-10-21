@@ -13,28 +13,34 @@ import type { TeiEditor } from '../../core/editor.js';
 import type { TeiItem, TeiPlacement } from '../../core/types.js';
 import { TeiEditorContext, useOptionalEditor } from '../context.js';
 import { contextMenuOwners } from '../context-menu-owner.js';
-import { groupItems, useItemStates } from '../items.js';
 import { selectionAnchor } from '../selection-anchor.js';
 import type { VirtualElement } from '../ui/floating.js';
-import { Menu, type MenuGroupData, type MenuItemData } from '../ui/menu.js';
+import { Menu, type MenuGroupData } from '../ui/menu.js';
 import { Popover } from '../ui/popover.js';
 import { useEditorState } from '../use-editor-state.js';
 import { useRootListener } from '../use-hover.js';
 import { useBlockMenu } from './block-menu.js';
+import { useMenuEntries } from './menu-entries.js';
 
 export interface ContextMenuProps {
   /** The editor; defaults to the one from context. */
   editor?: TeiEditor;
   /**
    * Change the menu as it opens: add, drop, relabel or reorder its sections
-   * (`clipboard`, `link`, `format`, the selected node's, `table`, then the
+   * (`clipboard`, `link`, `format`, the selected node's, `table`, `calloutMenu`, then the
    * block's: `turnInto`, `block`, `delete`).
    */
   groups?: (groups: MenuGroupData[], editor: TeiEditor) => MenuGroupData[];
 }
 
-/** The toolbars of selected nodes and the table's menu: their actions come too, when they apply. */
+/** The toolbars of selected nodes: their actions come too, when they apply. */
 const NODE_MENUS: readonly TeiPlacement[] = ['imageMenu', 'fileMenu', 'embedMenu'];
+
+/** Menus that come in whole, as a submenu, when they apply. */
+const SUBMENUS = [
+  { menu: 'tableMenu', id: 'table', label: 'table.menu', icon: 'table' },
+  { menu: 'calloutMenu', id: 'calloutMenu', label: 'callout.menu', icon: 'callout' },
+] as const;
 
 /** Items a menu can run as they are: a command or a function, no control of their own. */
 const plain = (items: readonly TeiItem[]) =>
@@ -140,7 +146,10 @@ function ContextMenuList({
     onClose,
     () => 'hide',
   );
-  const table = useMenuEntries(editor, plain(editor.items('tableMenu')), onClose, () => 'hide');
+  // One hook for all of them; each group then goes to its menu.
+  const subItems = SUBMENUS.map((sub) => plain(editor.items(sub.menu)));
+  const menuOf = new Map(subItems.flatMap((items, i) => items.map((item) => [item.id, i])));
+  const subGroups = useMenuEntries(editor, subItems.flat(), onClose, () => 'hide');
   const block = useBlockMenu(editor, onClose);
 
   // The clipboard first, wherever its extension came in the list.
@@ -149,49 +158,15 @@ function ContextMenuList({
     ...own.filter((group) => group.id !== 'clipboard'),
     ...nodes,
   ];
-  if (table.length > 0) {
-    sections.push({
-      id: 'table',
-      items: [{ id: 'table', label: editor.t('table.menu'), icon: 'table', groups: table }],
-    });
-  }
+  SUBMENUS.forEach(({ id, label, icon }, i) => {
+    const groups = subGroups.filter((group) => menuOf.get(group.items[0]?.id ?? '') === i);
+    if (groups.length > 0) {
+      sections.push({ id, items: [{ id, label: editor.t(label), icon, groups }] });
+    }
+  });
   sections.push(...block);
   const shown = edit ? edit(sections, editor) : sections;
   return <Menu groups={shown} label={editor.t('contextMenu.label')} onClose={onClose} />;
-}
-
-/** Menu sections from items; per group, what to do with an item that cannot run here. */
-function useMenuEntries(
-  editor: TeiEditor,
-  items: readonly TeiItem[],
-  onDone: () => void,
-  unavailable: (group: string) => 'hide' | 'disable',
-): MenuGroupData[] {
-  const states = useItemStates(editor, items);
-  return groupItems(items, (item, index): MenuItemData => {
-    const state = states[index];
-    return {
-      id: item.id,
-      label: editor.t(item.label),
-      icon: item.icon,
-      shortcut: item.shortcut ? editor.shortcut(item.shortcut) : undefined,
-      // A choice among several (an alignment) shows which is on; an action does not.
-      checked: item.active && item.args?.length ? Boolean(state?.active) : undefined,
-      radio: item.active && item.args?.length ? true : undefined,
-      disabled: !state?.enabled,
-      variant: item.variant,
-      onSelect: () => {
-        onDone();
-        editor.focus();
-        editor.runItem(item);
-      },
-    };
-  })
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((entry) => !entry.disabled || unavailable(group.id) === 'disable'),
-    }))
-    .filter((group) => group.items.length > 0 && group.items.some((entry) => !entry.disabled));
 }
 
 /** A point in the document that moves with it as it scrolls. */

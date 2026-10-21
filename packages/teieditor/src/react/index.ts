@@ -6,6 +6,8 @@ export type { BlockHandleProps } from './components/block-handle.js';
 export { BlockHandle } from './components/block-handle.js';
 export type { BubbleMenuProps } from './components/bubble-menu.js';
 export { BubbleMenu } from './components/bubble-menu.js';
+export type { CalloutMenuProps } from './components/callout-menu.js';
+export { CalloutMenu } from './components/callout-menu.js';
 // Ready-made UI, built from what the installed extensions contribute.
 export type { CodeBlockBarProps } from './components/code-block-bar.js';
 export { CodeBlockBar } from './components/code-block-bar.js';

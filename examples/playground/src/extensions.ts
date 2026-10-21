@@ -1,7 +1,10 @@
 import { Blocks } from '@teispace/teieditor/extensions/blocks';
+import { Callout } from '@teispace/teieditor/extensions/callout';
 import { Embed } from '@teispace/teieditor/extensions/embed';
 import { FileAttachment } from '@teispace/teieditor/extensions/file';
 import { Image } from '@teispace/teieditor/extensions/image';
+import { PageBreak } from '@teispace/teieditor/extensions/page-break';
+import { PullQuote } from '@teispace/teieditor/extensions/pull-quote';
 import { StarterKit } from '@teispace/teieditor/extensions/starter-kit';
 import { Table } from '@teispace/teieditor/extensions/table';
 import { TextStyle } from '@teispace/teieditor/extensions/text-style';
@@ -41,4 +44,7 @@ export const EXTENSIONS = [
   FileAttachment.configure({ upload: demoUpload }),
   Embed,
   Blocks,
+  PullQuote,
+  Callout,
+  PageBreak,
 ];

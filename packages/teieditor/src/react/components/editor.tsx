@@ -13,11 +13,14 @@ import type { TeiEditorOptions } from '../../core/create.js';
 import type { ContentFormat, TeiEditor } from '../../core/editor.js';
 import { holdUi } from '../../core/ui-request.js';
 import { Blocks } from '../../extensions/blocks/index.js';
+import { Callout } from '../../extensions/callout/index.js';
 import { CodeBlock } from '../../extensions/code-block/index.js';
 import { Embed, type EmbedStorage } from '../../extensions/embed/index.js';
 import { FileAttachment } from '../../extensions/file/index.js';
 import { Image, type ImageStorage } from '../../extensions/image/index.js';
 import { Link, type LinkStorage } from '../../extensions/link/index.js';
+import { PageBreak } from '../../extensions/page-break/index.js';
+import { PullQuote } from '../../extensions/pull-quote/index.js';
 import { StarterKit } from '../../extensions/starter-kit/index.js';
 import { Table } from '../../extensions/table/index.js';
 import { TextStyle } from '../../extensions/text-style/index.js';
@@ -63,13 +66,16 @@ const BlockHandle = lazy(() =>
 const ContextMenu = lazy(() =>
   import('./context-menu.js').then((module) => ({ default: module.ContextMenu })),
 );
+const CalloutMenu = lazy(() =>
+  import('./callout-menu.js').then((module) => ({ default: module.CalloutMenu })),
+);
 const EmbedControls = lazy(() =>
   import('./embed-controls.js').then((module) => ({ default: module.EmbedControls })),
 );
 
 /**
  * Which UI comes with it.
- * - `full`: toolbar, bubble menu, slash menu, link popover, block handles, context menu, code block bar, table, image, file and embed controls.
+ * - `full`: toolbar, bubble menu, slash menu, link popover, block handles, context menu, code block bar, table, image, file and embed controls, the callout menu.
  * - `notion`: no toolbar; select text for the bubble menu, type `/` or press + for blocks, drag a block by its handle.
  * - `minimal`: a toolbar and links, nothing floating: comment boxes, forms.
  */
@@ -97,6 +103,8 @@ export interface EditorSlots {
   fileControls?: EditorSlot;
   /** The form to embed a link, the offer to embed a pasted one, the toolbar over a selected embed. */
   embedControls?: EditorSlot;
+  /** The menu a callout's icon opens: its kinds, and taking it away. */
+  calloutMenu?: EditorSlot;
   /** Below the document, inside the frame: a word count, a status line. */
   footer?: ReactNode;
 }
@@ -114,6 +122,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     imageControls: true,
     fileControls: true,
     embedControls: true,
+    calloutMenu: true,
   },
   notion: {
     toolbar: false,
@@ -127,6 +136,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     imageControls: true,
     fileControls: true,
     embedControls: true,
+    calloutMenu: true,
   },
   minimal: {
     toolbar: true,
@@ -140,13 +150,36 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     imageControls: false,
     fileControls: false,
     embedControls: false,
+    calloutMenu: false,
   },
 };
 
 /** What each preset installs when `<Editor>` makes its own editor. */
 const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = {
-  full: [StarterKit, TextStyle, Blocks, Table, Image, FileAttachment, Embed],
-  notion: [StarterKit, TextStyle, Blocks, Table, Image, FileAttachment, Embed],
+  full: [
+    StarterKit,
+    TextStyle,
+    Blocks,
+    PullQuote,
+    Callout,
+    PageBreak,
+    Table,
+    Image,
+    FileAttachment,
+    Embed,
+  ],
+  notion: [
+    StarterKit,
+    TextStyle,
+    Blocks,
+    PullQuote,
+    Callout,
+    PageBreak,
+    Table,
+    Image,
+    FileAttachment,
+    Embed,
+  ],
   minimal: [StarterKit],
 };
 
@@ -354,6 +387,7 @@ function EditorFrame({
               {editor.extension(Image) && slot(parts.imageControls, <LazyImageControls />)}
               {editor.extension(FileAttachment) && slot(parts.fileControls, <FileControls />)}
               {editor.extension(Embed) && slot(parts.embedControls, <EmbedControls />)}
+              {editor.extension(Callout) && slot(parts.calloutMenu, <CalloutMenu />)}
               <Ready onReady={setReady} />
             </Suspense>
           )}

@@ -34,8 +34,10 @@ const CASES = [
     code: `import { Editor } from '${dist('react/index.js')}'; use(Editor);`,
     // Grows with what the full preset installs, each feature on purpose:
     // tables, images, files (59.6 KB), embeds (+4.8 KB), block moves (+2.9 KB),
-    // clipboard commands (+0.9 KB; the context menu itself loads later).
-    budget: 70 * KB,
+    // clipboard commands (+0.9 KB; the context menu itself loads later),
+    // pull quotes, callouts and page breaks (+3.9 KB). Every M4 block adds
+    // to it; per-entry budgets replace this one case before 5.0.
+    budget: 76 * KB,
   },
   {
     name: 'headless React (useTeiEditor, EditorContent)',

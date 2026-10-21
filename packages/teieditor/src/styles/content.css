@@ -107,6 +107,133 @@
     border-radius: var(--tei-radius-sm);
   }
 
+  /* A pull quote: a line of the text set large between two rules. */
+  .tei-pull-quote,
+  :where(.tei-prose) aside[data-tei-pull-quote] {
+    margin: 1em 0;
+    padding: 0.75em 1em;
+    border-block: 2px solid var(--tei-border-strong);
+    color: var(--tei-fg);
+    font-size: 1.375em;
+    font-style: italic;
+    font-weight: 500;
+    line-height: 1.4;
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  /* A callout: a tinted box, its kind's icon at the start of its first line. */
+  .tei-callout,
+  :where(.tei-prose) [data-tei-callout] {
+    --tei-callout-fg: var(--tei-info);
+    --tei-callout-bg: var(--tei-info-subtle);
+    position: relative;
+    margin: 0 0 0.75em;
+    padding: 0.75em 1em;
+    padding-inline-start: 2.875em;
+    border: 1px solid color-mix(in oklab, var(--tei-callout-fg) 22%, transparent);
+    border-radius: var(--tei-radius);
+    background: var(--tei-callout-bg);
+  }
+
+  :is(.tei-callout, [data-tei-callout]) > :last-child {
+    margin-block-end: 0;
+  }
+
+  :is(.tei-callout, [data-tei-callout])[data-variant="tip"],
+  :where(.tei-prose) [data-tei-callout="tip"] {
+    --tei-callout-fg: var(--tei-success);
+    --tei-callout-bg: var(--tei-success-subtle);
+  }
+
+  :is(.tei-callout, [data-tei-callout])[data-variant="important"],
+  :where(.tei-prose) [data-tei-callout="important"] {
+    --tei-callout-fg: var(
+      --tei-callout-important,
+      light-dark(oklch(0.541 0.198 293), oklch(0.702 0.16 293))
+    );
+    --tei-callout-bg: light-dark(oklch(0.969 0.016 293.8), oklch(0.29 0.06 293));
+  }
+
+  :is(.tei-callout, [data-tei-callout])[data-variant="warning"],
+  :where(.tei-prose) [data-tei-callout="warning"] {
+    --tei-callout-fg: var(--tei-warning);
+    --tei-callout-bg: var(--tei-warning-subtle);
+  }
+
+  :is(.tei-callout, [data-tei-callout])[data-variant="caution"],
+  :where(.tei-prose) [data-tei-callout="caution"] {
+    --tei-callout-fg: var(--tei-danger);
+    --tei-callout-bg: var(--tei-danger-subtle);
+  }
+
+  /* Centred on the first line: its middle is the padding plus half a line
+   * down, less half the icon (as tall as the padding). */
+  .tei-callout-icon,
+  :where(.tei-prose) [data-tei-callout-icon] {
+    position: absolute;
+    inset-inline-start: 0.75em;
+    inset-block-start: 0.5lh;
+    display: grid;
+    place-items: center;
+    inline-size: 1.5em;
+    block-size: 1.5em;
+    border-radius: var(--tei-radius-sm);
+    color: var(--tei-callout-fg);
+    user-select: none;
+  }
+
+  :is(.tei-callout-icon, [data-tei-callout-icon]) svg {
+    inline-size: 1.125em;
+    block-size: 1.125em;
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-callout-icon {
+    cursor: pointer;
+    transition: background-color var(--tei-duration) ease;
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-callout-icon:hover {
+    background: color-mix(in oklab, var(--tei-callout-fg) 14%, transparent);
+  }
+
+  /* A page break: a dashed rule, labelled in the editor; on paper, a new page.
+   * Borders, not a gradient: a 1px gradient on a half pixel vanishes in Firefox. */
+  .tei-page-break,
+  :where(.tei-prose) hr[data-tei-page-break] {
+    display: flex;
+    align-items: center;
+    gap: var(--tei-space-2);
+    block-size: 1.5em;
+    margin: 0.75em 0;
+    border: 0;
+    break-after: page;
+    user-select: none;
+  }
+
+  .tei-page-break {
+    cursor: pointer;
+  }
+
+  /* Saved HTML has no label: one rule, as tall as the editor's, so a
+   * server-rendered document does not move as the editor takes over. */
+  .tei-page-break::before,
+  .tei-page-break::after,
+  :where(.tei-prose) hr[data-tei-page-break]::after {
+    content: "";
+    flex: 1;
+    border-block-start: 1px dashed var(--tei-border-strong);
+  }
+
+  .tei-page-break-label {
+    color: var(--tei-fg-subtle);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
   .tei-indent {
     --tei-indent: 1.75em;
   }
@@ -1244,6 +1371,14 @@
     .tei [data-tei-ui],
     [data-tei-content]::before {
       display: none;
+    }
+
+    /* Only the break itself, no rule on the page. */
+    .tei-page-break,
+    :where(.tei-prose) hr[data-tei-page-break] {
+      visibility: hidden;
+      block-size: 0;
+      margin: 0;
     }
   }
 }

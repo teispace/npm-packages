@@ -8,6 +8,7 @@ import type { EditorThemeClasses } from 'lexical';
 export const teiTheme: EditorThemeClasses = {
   autocomplete: 'tei-autocomplete',
   blockCursor: 'tei-block-cursor',
+  callout: 'tei-callout',
   characterLimit: 'tei-character-limit',
   code: 'tei-code-block',
   codeHighlight: {
@@ -73,7 +74,9 @@ export const teiTheme: EditorThemeClasses = {
   },
   mark: 'tei-mark',
   markOverlap: 'tei-mark-overlap',
+  pageBreak: 'tei-page-break',
   paragraph: 'tei-p',
+  pullQuote: 'tei-pull-quote',
   quote: 'tei-quote',
   ruby: 'tei-ruby',
   specialText: 'tei-special-text',

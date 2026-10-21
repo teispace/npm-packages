@@ -4,11 +4,9 @@ import { $isLinkNode, AutoLinkNode, LinkNode } from '@lexical/link';
 import type { ElementTransformer } from '@lexical/markdown';
 import {
   $getNodeByKey,
-  $getPreviousSelection,
   $getSelection,
   $isElementNode,
   $isNodeSelection,
-  $isRangeSelection,
   $isTextNode,
   type Klass,
   type LexicalEditor,
@@ -24,8 +22,10 @@ import {
 } from '../../core/define.js';
 import type { TeiEditor } from '../../core/editor.js';
 import {
+  $canInsertBlock,
   $caretAfter,
   $insertBlock,
+  $insertBlockAtSelection,
   $liftBlock,
   $removeBlockHost,
   registerHostSelection,
@@ -139,19 +139,6 @@ export function $getEmbed(key?: NodeKey): EmbedNode | null {
 }
 
 const $hasEmbed = () => $getEmbed() !== null;
-
-function $canInsert(): boolean {
-  const selection = $getSelection() ?? $getPreviousSelection();
-  return $isRangeSelection(selection) || $isNodeSelection(selection);
-}
-
-function $insertEmbedNode(node: EmbedNode): EmbedNode {
-  const selection = $getSelection() ?? $getPreviousSelection();
-  const selected = $isNodeSelection(selection) ? selection.getNodes().at(-1) : null;
-  if (selected && !selected.isInline()) selected.insertAfter(node);
-  else $insertBlock(node);
-  return node.getLatest();
-}
 
 /**
  * The link with this key embedded in its place: its paragraph becomes the
@@ -520,21 +507,23 @@ export const Embed = defineTeiExtension({
     insertEmbed: {
       run: ({ options }, url: string, align?: EmbedAlign) => {
         const found = typeof url === 'string' ? matchEmbed(options.providers, url) : null;
-        if (!found || !$canInsert()) return false;
-        $caretAfter($insertEmbedNode($createEmbedNode(found.provider.name, found.id, align)));
+        if (!found || !$canInsertBlock()) return false;
+        $caretAfter(
+          $insertBlockAtSelection($createEmbedNode(found.provider.name, found.id, align)),
+        );
       },
       can: ({ options }, url?: string) =>
-        $canInsert() &&
+        $canInsertBlock() &&
         (url === undefined ||
           (typeof url === 'string' && matchEmbed(options.providers, url) !== null)),
     },
     openEmbedInsert: {
       run: ({ storage }, provider?: string) => {
-        if (!$canInsert()) return false;
+        if (!$canInsertBlock()) return false;
         storage.insertProvider.value = typeof provider === 'string' ? provider : null;
         return requestUi(storage.insert);
       },
-      can: ({ storage }) => hasUi(storage.insert) && $canInsert(),
+      can: ({ storage }) => hasUi(storage.insert) && $canInsertBlock(),
     },
     embedLink: {
       run: ({ options, storage }, key?: NodeKey) => {

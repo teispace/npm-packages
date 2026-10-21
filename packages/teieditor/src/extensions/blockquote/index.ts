@@ -17,7 +17,8 @@ declare module '@teispace/teieditor' {
   }
 }
 
-const $isQuote = () => $everyBlock($isQuoteNode);
+// A pull quote is a quote too, but not this one.
+const $isQuote = () => $everyBlock((node) => $isQuoteNode(node) && node.getType() === 'quote');
 
 /** Block quotes. Markdown `> `, ⌃⇧Q (Lexical's key) or ⌘⇧B (Tiptap's). */
 export const Blockquote = defineTeiExtension({

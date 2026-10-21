@@ -4,10 +4,8 @@ import type { ElementTransformer } from '@lexical/markdown';
 import { DRAG_DROP_PASTE } from '@lexical/rich-text';
 import {
   $getNodeByKey,
-  $getPreviousSelection,
   $getSelection,
   $isNodeSelection,
-  $isRangeSelection,
   $onUpdate,
   COMMAND_PRIORITY_NORMAL,
   type LexicalEditor,
@@ -18,8 +16,9 @@ import {
 import { defineTeiExtension, getPeerOptions, type TeiExtensionContext } from '../../core/define.js';
 import type { TeiEditor } from '../../core/editor.js';
 import {
+  $canInsertBlock,
   $caretAfter,
-  $insertBlock,
+  $insertBlockAtSelection,
   $liftBlock,
   $removeBlockHost,
   registerHostSelection,
@@ -143,19 +142,6 @@ export function $getFile(key?: NodeKey): FileNode | null {
 
 const $hasFile = () => $getFile() !== null;
 
-function $canInsert(): boolean {
-  const selection = $getSelection() ?? $getPreviousSelection();
-  return $isRangeSelection(selection) || $isNodeSelection(selection);
-}
-
-function $insertFileNode(node: FileNode): FileNode {
-  const selection = $getSelection() ?? $getPreviousSelection();
-  const selected = $isNodeSelection(selection) ? selection.getNodes().at(-1) : null;
-  if (selected && !selected.isInline()) selected.insertAfter(node);
-  else $insertBlock(node);
-  return node.getLatest();
-}
-
 /** Images are the Image extension's, when it is there. */
 function isImageFile(lexical: LexicalEditor, file: File): boolean {
   const image = getPeerOptions<{ accept: string }>(lexical, '@teispace/teieditor/image');
@@ -213,7 +199,7 @@ function $attach(ctx: Ctx, files: readonly File[]): boolean {
       mimeType: file.type,
     });
     if (last) last.insertAfter(node);
-    else $insertFileNode(node);
+    else $insertBlockAtSelection(node);
     last = node;
     const key = node.getKey();
     $onUpdate(() => uploadFile(ctx, key, file));
@@ -306,7 +292,7 @@ export const FileAttachment = defineTeiExtension({
   commands: {
     openFileInsert: {
       run: ({ options, editor, lexical }) => {
-        if (!$canInsert()) return false;
+        if (!$canInsertBlock()) return false;
         const doc = lexical.getRootElement()?.ownerDocument;
         if (!doc) return false;
         void chooseFiles(doc, { accept: options.accept || undefined, multiple: true }).then(
@@ -315,25 +301,25 @@ export const FileAttachment = defineTeiExtension({
           },
         );
       },
-      can: $canInsert,
+      can: $canInsertBlock,
     },
     insertFile: {
       run: (_ctx, data: FileData) => {
         if (!data || typeof data.src !== 'string' || !isSafeFileUrl(data.src.trim())) return false;
-        if (!$canInsert()) return false;
-        const node = $insertFileNode($createFileNode({ ...data, src: data.src.trim() }));
+        if (!$canInsertBlock()) return false;
+        const node = $insertBlockAtSelection($createFileNode({ ...data, src: data.src.trim() }));
         $caretAfter(node);
       },
       can: (_ctx, data?: FileData) =>
-        $canInsert() && (data === undefined || isSafeFileUrl(String(data.src).trim())),
+        $canInsertBlock() && (data === undefined || isSafeFileUrl(String(data.src).trim())),
     },
     insertFiles: {
       run: (ctx, files: readonly File[]) => {
-        if (!$canInsert()) return false;
+        if (!$canInsertBlock()) return false;
         const mine = sortFiles(ctx as Ctx, files);
         return mine.length > 0 && $attach(ctx as Ctx, mine);
       },
-      can: $canInsert,
+      can: $canInsertBlock,
     },
     renameFile: {
       run: (_ctx, name: string, key?: NodeKey) => {

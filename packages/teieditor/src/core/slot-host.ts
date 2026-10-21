@@ -4,6 +4,7 @@ import {
   $createParagraphNode,
   $createRangeSelectionFromDom,
   $getNearestNodeFromDOMNode,
+  $getPreviousSelection,
   $getSelection,
   $getSlotHost,
   $getSlotNameWithinHost,
@@ -374,6 +375,24 @@ export function $insertBlock<T extends LexicalNode>(node: T): T {
   $insertNodeToNearestRoot(node);
   const before = node.getPreviousSibling();
   if ($isParagraphNode(before) && before.getChildrenSize() === 0) before.remove();
+  return node.getLatest();
+}
+
+/** Whether a block can go in where the selection is (or last was): a caret, a text selection or a selected node. */
+export function $canInsertBlock(): boolean {
+  const selection = $getSelection() ?? $getPreviousSelection();
+  return $isRangeSelection(selection) || $isNodeSelection(selection);
+}
+
+/**
+ * Insert a block node at the selection (or the last one, when the editor
+ * is not focused): after a selected block node, else as {@link $insertBlock}.
+ */
+export function $insertBlockAtSelection<T extends LexicalNode>(node: T): T {
+  const selection = $getSelection() ?? $getPreviousSelection();
+  const selected = $isNodeSelection(selection) ? selection.getNodes().at(-1) : null;
+  if (selected && !selected.isInline()) selected.insertAfter(node);
+  else $insertBlock(node);
   return node.getLatest();
 }
 

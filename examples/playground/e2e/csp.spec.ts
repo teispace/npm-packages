@@ -144,7 +144,8 @@ test('pasted script-running URLs never reach the page', async ({ page }) => {
 
 test('the link editor refuses a javascript: URL and accepts an https one', async ({ page }) => {
   const editor = await open(page, '/');
-  await editor.click();
+  // In the document's own text, not an image caption's editor.
+  await editor.locator('h1').click();
   await page.keyboard.press(`${MOD}+a`);
   await page.keyboard.type('click me');
   await page.keyboard.press(`${MOD}+a`);
@@ -462,5 +463,28 @@ test('context menu: copy and paste through it, reporting nothing', async ({
     await page.keyboard.press(`${MOD}+v`);
   }
   await expect(next).toContainText('Welcome to teieditor');
+  await expectNoViolations(page);
+});
+
+test('callouts, pull quotes and page breaks: from the server, edited, reporting nothing', async ({
+  page,
+}) => {
+  const editor = await open(page, '/');
+  await page.locator('[data-tei-ready]').waitFor();
+  const callout = editor.locator('.tei-callout');
+  await expect(callout).toHaveAttribute('data-variant', 'tip');
+  await expect(editor.locator('aside[data-tei-pull-quote]')).toBeVisible();
+  await expect(editor.locator('.tei-page-break')).toHaveText('Page break');
+  // The icon's menu changes its kind.
+  await callout.locator('[data-tei-callout-icon]').click();
+  await page
+    .locator('[data-tei-control="callout-menu"]')
+    .getByRole('menuitemradio', { name: 'Warning' })
+    .click();
+  await expect(callout).toHaveAttribute('data-variant', 'warning');
+  // Printed: the page breaks after it.
+  await page.emulateMedia({ media: 'print' });
+  await expect(editor.locator('.tei-page-break')).toHaveCSS('break-after', 'page');
+  await page.emulateMedia({ media: 'screen' });
   await expectNoViolations(page);
 });

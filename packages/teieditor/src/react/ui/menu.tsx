@@ -171,6 +171,8 @@ export interface MenuProps {
   onClose?: (reason: DismissReason | 'back') => void;
   /** Focus the menu on mount so arrows work at once. Default true. */
   autoFocus?: boolean;
+  /** The row highlighted first: `'checked'` for the checked one (a choice of kinds). Default the first. */
+  initial?: number | 'checked';
   /** Drive the highlight from outside (the slash menu). */
   navigation?: MenuNavigation;
   /** Shown when there are no items. */
@@ -202,6 +204,7 @@ export function Menu({
   onSelect,
   onClose,
   autoFocus = true,
+  initial,
   navigation,
   empty,
   renderItem,
@@ -237,6 +240,13 @@ export function Menu({
     count: flat.length,
     isDisabled: (index) => Boolean(flat[index]?.disabled),
     getText: (index) => textOf(flat[index] as MenuItemData),
+    initial:
+      initial === 'checked'
+        ? Math.max(
+            0,
+            flat.findIndex((item) => item.checked),
+          )
+        : initial,
     onSelect: select,
     onOpenSub: (index) => {
       if (!hasSubmenu(flat[index])) return false;
