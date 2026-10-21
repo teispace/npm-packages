@@ -15,7 +15,12 @@ export type {
   TeiExtensionOutput,
   TeiExtensionSpec,
 } from './core/define.js';
-export { defineTeiExtension, keymapToShortcuts, setExtensionOptions } from './core/define.js';
+export {
+  defineTeiExtension,
+  getExtensionOptions,
+  keymapToShortcuts,
+  setExtensionOptions,
+} from './core/define.js';
 export type {
   ContentFormat,
   FocusPosition,

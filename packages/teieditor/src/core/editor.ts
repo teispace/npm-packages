@@ -90,7 +90,9 @@ const handles = new WeakMap<LexicalEditor, TeiEditor>();
 export const ITEM_GROUPS: readonly string[] = [
   'history',
   'basic',
+  'style',
   'format',
+  'color',
   'list',
   'insert',
   'media',

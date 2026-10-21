@@ -132,6 +132,18 @@ export interface TeiItem {
   /** Active-state name (and arguments) that lights the item up. */
   active?: ActiveName;
   activeArgs?: readonly unknown[];
+  /**
+   * A UI control that stands for it where a plain button won't do (a font
+   * menu, a colour picker), by id. UIs that know the control render it; the
+   * rest fall back to a button running `command`.
+   */
+  control?: string;
+  /**
+   * How long it stays in a toolbar short of room: the lowest go into the
+   * "More" menu first. Default: by item and group (undo and bold stay
+   * longest; subscript goes early).
+   */
+  priority?: number;
   /** Whether to offer it at all, given the editor's current options. Default: always. */
   visible?: (editor: TeiEditor) => boolean;
 }

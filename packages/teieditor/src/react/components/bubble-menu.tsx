@@ -10,13 +10,15 @@ import { selectionAnchor } from '../selection-anchor.js';
 import type { Placement } from '../ui/floating.js';
 import { Popover } from '../ui/popover.js';
 import { useEditorState } from '../use-editor-state.js';
-import { ItemButton } from './editor-toolbar.js';
+import { ItemButton, itemControl, type ToolbarControl } from './editor-toolbar.js';
 
 export interface BubbleMenuProps {
   /** The editor; defaults to the one from context. */
   editor?: TeiEditor;
   /** Item ids to show, in order. Default: every `bubble` item the extensions contribute. */
   items?: readonly string[];
+  /** Controls by id for items that name one (`control`); they replace the built-ins. */
+  controls?: Record<string, ToolbarControl>;
   /** Your own controls, after the items. */
   children?: ReactNode;
   /**
@@ -50,6 +52,7 @@ function $selectedText(): string | null {
 export function BubbleMenu({
   editor: editorProp,
   items: ids,
+  controls,
   children,
   shouldShow,
   placement = 'top',
@@ -72,7 +75,6 @@ export function BubbleMenu({
   const [bar, setBar] = useState<HTMLDivElement | null>(null);
   const ready = useInteraction(editor, bar);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: a new selection is a new place
   const anchor = useMemo(
     () => (selected && ready ? selectionAnchor(editor) : null),
     [editor, selected, ready],
@@ -94,9 +96,14 @@ export function BubbleMenu({
       aria-label={editor.t('bubble.label')}
       data-tei-control="bubble-menu"
     >
-      {items.map((item, i) => (
-        <ItemButton key={item.id} editor={editor} item={item} state={states[i]} />
-      ))}
+      {items.map((item, i) => {
+        const Control = itemControl(item, controls);
+        return Control ? (
+          <Control key={item.id} editor={editor} />
+        ) : (
+          <ItemButton key={item.id} editor={editor} item={item} state={states[i]} />
+        );
+      })}
       {children}
     </Popover>
   );

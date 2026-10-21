@@ -4,6 +4,7 @@ import { type ComponentPropsWithoutRef, type ReactNode, useEffect, useRef } from
 import type { TeiEditorOptions } from '../../core/create.js';
 import type { ContentFormat, TeiEditor } from '../../core/editor.js';
 import { StarterKit } from '../../extensions/starter-kit/index.js';
+import { TextStyle } from '../../extensions/text-style/index.js';
 import { type ContentEditableProps, EditorContent, EditorProvider } from '../editor-content.js';
 import { cx } from '../ui/context.js';
 import { useTeiEditor } from '../use-tei-editor.js';
@@ -36,6 +37,13 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
   full: { toolbar: true, bubbleMenu: true, slashMenu: true, linkPopover: true },
   notion: { toolbar: false, bubbleMenu: true, slashMenu: true, linkPopover: true },
   minimal: { toolbar: true, bubbleMenu: false, slashMenu: false, linkPopover: true },
+};
+
+/** What each preset installs when `<Editor>` makes its own editor. */
+const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = {
+  full: [StarterKit, TextStyle],
+  notion: [StarterKit, TextStyle],
+  minimal: [StarterKit],
 };
 
 /** `data-*` attributes, which TypeScript only accepts in JSX otherwise. */
@@ -114,7 +122,7 @@ function OwnEditor(props: EditorProps) {
     colorScheme,
     className,
     children,
-    extensions = [StarterKit],
+    extensions = PRESET_EXTENSIONS[preset ?? 'full'],
     ...options
   } = props;
   const editor = useTeiEditor({ ...options, extensions, editable });

@@ -22,7 +22,10 @@ export default defineConfig({
   // Hiding the caret or stopping animations injects a style element, which the
   // strict CSP reports (WebKit); the specs wait for animations to end instead.
   expect: {
-    toHaveScreenshot: { maxDiffPixelRatio: 0.002, animations: 'allow', caret: 'initial' },
+    // Strict: the Linux image renders the same pixels every run, and a ratio
+    // of a large shot hid whole toolbar icons swapping (their thin grey
+    // strokes fall under a loose per-pixel threshold).
+    toHaveScreenshot: { maxDiffPixels: 20, threshold: 0.1, animations: 'allow', caret: 'initial' },
   },
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,

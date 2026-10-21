@@ -348,9 +348,9 @@ export function keymapToShortcuts(
 }
 
 /** Change an installed extension's options while the editor runs. */
-export function setExtensionOptions<Config>(
+export function setExtensionOptions<Config, Storage>(
   editor: TeiEditor,
-  extension: TeiExtension<string, Config & AnyConfig, unknown>,
+  extension: TeiExtension<string, Config & AnyConfig, Storage>,
   options: Partial<Config>,
 ): void {
   const found = editor.extension(extension);
@@ -362,4 +362,17 @@ export function setExtensionOptions<Config>(
       if (signal) signal.value = value;
     }
   });
+}
+
+/**
+ * An installed extension's options, live: each read gets the current value,
+ * so UI built on them follows `setExtensionOptions`. `undefined` when the
+ * extension is not installed.
+ */
+export function getExtensionOptions<Config, Storage>(
+  editor: TeiEditor,
+  extension: TeiExtension<string, Config & AnyConfig, Storage>,
+): Readonly<Config> | undefined {
+  const found = editor.extension(extension);
+  return found ? (liveOptions(found.output.options) as Readonly<Config>) : undefined;
 }

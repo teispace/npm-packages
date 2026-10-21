@@ -306,7 +306,7 @@ test.describe('toolbar', () => {
           end: Number.parseFloat(style.getPropertyValue('--tei-fade-end')),
         };
       });
-    await tei.open({ flags: ['scroll'] });
+    await tei.open({ flags: ['scroll', 'plain'] });
     test.skip(
       !(await tei.page.evaluate(() => CSS.supports('animation-timeline: scroll()'))),
       'no scroll-driven animations in this engine',
@@ -332,9 +332,16 @@ test.describe('toolbar overflow', () => {
     toolbar(tei).evaluate((el) => {
       const style = getComputedStyle(el);
       const box = el.getBoundingClientRect();
-      const shown = [
-        ...el.querySelectorAll(':scope > [data-tei-slot]:not([hidden]) > :not([popover])'),
-      ];
+      // The boxes laid out in the toolbar's row: through `display: contents` wrappers.
+      const shown: Element[] = [];
+      const visit = (parent: Element) => {
+        for (const child of Array.from(parent.children)) {
+          if (child.matches('[popover], [hidden]')) continue;
+          if (getComputedStyle(child).display === 'contents') visit(child);
+          else shown.push(child);
+        }
+      };
+      visit(el);
       return {
         left: box.left + Number.parseFloat(style.paddingLeft),
         right: box.right - Number.parseFloat(style.paddingRight),
@@ -355,7 +362,7 @@ test.describe('toolbar overflow', () => {
     });
 
   test('a wide toolbar shows everything and no More button', async ({ tei }) => {
-    await tei.open();
+    await tei.open({ flags: ['plain'] });
     await expect(more(tei)).toBeHidden();
     const { rows, moved } = await layout(tei);
     expect(rows).toHaveLength(1);
@@ -374,9 +381,10 @@ test.describe('toolbar overflow', () => {
         expect(end).toBeLessThanOrEqual(right + 0.5);
       }
       expect(moved.length).toBeGreaterThan(0);
-      // Nearly full: the next entry would not have fitted.
+      // Nearly full: what is left is narrower than the widest control (the
+      // font menu), so the next entry by priority would not have fitted.
       const last = boxes.at(-1)?.[1] ?? 0;
-      expect(right - last).toBeLessThan(80);
+      expect(right - last).toBeLessThan(160);
       // Everything moved is in the menu, under its own name (a menu control's, without its value).
       await more(tei).click();
       const menu = tei.page.getByRole('menu', { name: 'More' });
@@ -450,7 +458,7 @@ test.describe('toolbar overflow', () => {
     tei,
   }) => {
     await tei.page.setViewportSize({ width: 1280, height: 800 });
-    await tei.open();
+    await tei.open({ flags: ['plain'] });
     for (const width of [900, 600, 420, 360, 500, 1000, 1280]) {
       await tei.page.setViewportSize({ width, height: 800 });
       // Refits within a frame or two of the resize: one row, the last control inside.

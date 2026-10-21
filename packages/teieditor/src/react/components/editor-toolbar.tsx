@@ -19,6 +19,12 @@ import type { TeiIconLike } from '../ui/context.js';
 import { DropdownMenu } from '../ui/dropdown.js';
 import type { MenuGroupData, MenuItemData } from '../ui/menu.js';
 import { Separator, Toolbar, type ToolbarProps } from '../ui/toolbar.js';
+import {
+  BackgroundColorMenu,
+  FontFamilyMenu,
+  FontSizeStepper,
+  TextColorMenu,
+} from './text-style-controls.js';
 import { fitToolbar, type ToolbarSlot, visibleSlots } from './toolbar-fit.js';
 
 /**
@@ -36,6 +42,8 @@ export interface ToolbarSubmenu {
   label: string;
   icon?: string | TeiIconLike;
   items: readonly TeiItem[];
+  /** Change how an item shows in the submenu: a swatch for a colour, a font in its face. */
+  decorate?: (item: TeiItem) => Partial<MenuItemData>;
 }
 
 /**
@@ -45,6 +53,8 @@ export interface ToolbarSubmenu {
  */
 export type ToolbarControl = ComponentType<{ editor: TeiEditor }> & {
   overflowMenu?: (editor: TeiEditor) => ToolbarSubmenu;
+  /** How long it stays when room runs short, named in a layout; see `TeiItem.priority`. */
+  priority?: number;
 };
 
 export interface EditorToolbarProps extends Omit<ToolbarProps, 'children' | 'overflow'> {
@@ -64,6 +74,11 @@ export interface EditorToolbarProps extends Omit<ToolbarProps, 'children' | 'ove
    * scrolls sideways. Elements in the layout always stay in the toolbar.
    */
   overflow?: 'menu' | 'wrap' | 'scroll';
+  /**
+   * Which entries stay longest when room runs short, by id: the lowest move
+   * into "More" first. Overrides each item's `priority` and the defaults.
+   */
+  priorities?: Record<string, number>;
 }
 
 /** An entry that can move into the "More" menu. */
@@ -71,6 +86,7 @@ type Movable = { item: TeiItem } | { submenu: ToolbarSubmenu };
 
 interface Entry {
   key: string;
+  priority: number;
   render: (state?: ItemState) => ReactNode;
   item?: TeiItem;
   movable?: Movable;
@@ -88,6 +104,7 @@ export function EditorToolbar({
   layout,
   controls,
   overflow = 'menu',
+  priorities,
   ...rest
 }: EditorToolbarProps) {
   const contextEditor = useOptionalEditor();
@@ -106,13 +123,16 @@ export function EditorToolbar({
       .map((group, g) =>
         group.flatMap((entry, i): Entry[] => {
           if (entry === null || entry === undefined || entry === false || entry === '') return [];
-          if (typeof entry !== 'string') return [{ key: `${g}:node-${i}`, render: () => entry }];
+          if (typeof entry !== 'string') {
+            return [{ key: `${g}:node-${i}`, priority: 0, render: () => entry }];
+          }
           const Control = named[entry];
           if (Control) {
             const submenu = Control.overflowMenu?.(editor);
             return [
               {
                 key: `${g}:${entry}`,
+                priority: priorities?.[entry] ?? Control.priority ?? DEFAULT_PRIORITY[entry] ?? 0,
                 render: () => <Control editor={editor} />,
                 movable: submenu ? { submenu } : undefined,
               },
@@ -120,9 +140,23 @@ export function EditorToolbar({
           }
           const item = byId.get(entry);
           if (!item) return [];
+          // An item that names a control (a font menu, a colour picker) renders as it.
+          const ItemControl = itemControl(item, named);
+          if (ItemControl) {
+            const submenu = ItemControl.overflowMenu?.(editor);
+            return [
+              {
+                key: `${g}:${entry}`,
+                priority: priorityOf(item, priorities),
+                render: () => <ItemControl editor={editor} />,
+                movable: submenu ? { submenu } : undefined,
+              },
+            ];
+          }
           return [
             {
               key: `${g}:${entry}`,
+              priority: priorityOf(item, priorities),
               item,
               movable: { item },
               render: (state) => <ItemButton editor={editor} item={item} state={state} />,
@@ -131,7 +165,7 @@ export function EditorToolbar({
         }),
       )
       .filter((group) => group.length > 0);
-  }, [groups, named, all, editor]);
+  }, [groups, named, all, editor, priorities]);
 
   // Every item button shares one subscription.
   const buttons = useMemo(
@@ -145,19 +179,24 @@ export function EditorToolbar({
   const menu = overflow === 'menu';
   const slots = useMemo(() => {
     const list: (ToolbarSlot & { key: string; entry?: Entry })[] = [];
-    let order = 0;
     entries.forEach((group, g) => {
       if (g > 0) list.push({ kind: 'separator', group: g, key: `separator-${g}` });
-      for (const entry of group) {
-        list.push({
-          kind: 'entry',
-          group: g,
-          key: entry.key,
-          entry,
-          order: menu && entry.movable ? order++ : undefined,
-        });
-      }
+      for (const entry of group) list.push({ kind: 'entry', group: g, key: entry.key, entry });
     });
+    // Rank what can move: highest priority first, then earlier first. The
+    // lowest ranks are the first into "More".
+    if (menu) {
+      list
+        .map((slot, index) => ({ slot, index }))
+        .filter(({ slot }) => slot.entry?.movable)
+        .sort(
+          (a, b) =>
+            (b.slot.entry?.priority ?? 0) - (a.slot.entry?.priority ?? 0) || a.index - b.index,
+        )
+        .forEach(({ slot }, rank) => {
+          slot.order = rank;
+        });
+    }
     if (menu) list.push({ kind: 'more', group: entries.length, key: 'more' });
     return list;
   }, [entries, menu]);
@@ -231,17 +270,27 @@ export function EditorToolbar({
 /** A computed length in pixels; `normal` and unset are 0. */
 const px = (value: string) => Number.parseFloat(value) || 0;
 
-/** A slot's width with its margins; a slot is `display: contents`, so it is its children's span. */
+/**
+ * A slot's width with its margins. A slot is `display: contents` (and so
+ * may be what it holds), so it is the span of the boxes inside it.
+ */
 function extent(slot: HTMLElement): number {
   let start = Number.POSITIVE_INFINITY;
   let end = Number.NEGATIVE_INFINITY;
-  for (const child of Array.from(slot.children)) {
-    const box = child.getBoundingClientRect();
-    if (box.width === 0) continue;
-    const style = getComputedStyle(child);
-    start = Math.min(start, box.left - px(style.marginLeft));
-    end = Math.max(end, box.right + px(style.marginRight));
-  }
+  const visit = (el: Element) => {
+    for (const child of Array.from(el.children)) {
+      const style = getComputedStyle(child);
+      if (style.display === 'contents') {
+        visit(child);
+        continue;
+      }
+      const box = child.getBoundingClientRect();
+      if (box.width === 0) continue;
+      start = Math.min(start, box.left - px(style.marginLeft));
+      end = Math.max(end, box.right + px(style.marginRight));
+    }
+  };
+  visit(slot);
   return end > start ? end - start : 0;
 }
 
@@ -270,9 +319,11 @@ function MoreMenu({
       entries.push(itemMenuData(editor, item, state, item.active ? state?.active : undefined));
       continue;
     }
+    const { decorate } = movable.submenu;
     const sub = movable.submenu.items.map((item) => {
       const state = stateOf.get(item);
-      return itemMenuData(editor, item, state, state?.active ?? false);
+      const data = itemMenuData(editor, item, state, state?.active ?? false);
+      return decorate ? { ...data, ...decorate(item) } : data;
     });
     entries.push({
       id: key,
@@ -303,6 +354,56 @@ const MORE = [
   ['circle', { cx: '5', cy: '12', r: '1' }],
 ] as const;
 
+/** Defaults for {@link TeiItem.priority}, by id; anything else goes by its group. */
+const DEFAULT_PRIORITY: Readonly<Record<string, number>> = {
+  undo: 100,
+  redo: 100,
+  blockType: 90,
+  bold: 80,
+  italic: 80,
+  underline: 75,
+  link: 75,
+  bulletList: 70,
+  orderedList: 70,
+  checkList: 65,
+  fontSize: 50,
+  fontFamily: 45,
+  color: 40,
+  backgroundColor: 38,
+  strike: 35,
+  code: 32,
+  align: 30,
+  highlight: 25,
+  clearFormatting: 20,
+  indent: 15,
+  outdent: 15,
+  subscript: 10,
+  superscript: 10,
+};
+
+const GROUP_PRIORITY: Readonly<Record<string, number>> = {
+  history: 100,
+  basic: 60,
+  list: 60,
+  insert: 55,
+  media: 50,
+  style: 45,
+  format: 40,
+  color: 35,
+  align: 20,
+  advanced: 10,
+};
+
+function priorityOf(item: TeiItem, overrides?: Record<string, number>): number {
+  return (
+    overrides?.[item.id] ??
+    item.priority ??
+    DEFAULT_PRIORITY[item.id] ??
+    GROUP_PRIORITY[item.group ?? ''] ??
+    0
+  );
+}
+
 /** An item as a menu entry: label, icon, shortcut, and whether it can run. */
 function itemMenuData(
   editor: TeiEditor,
@@ -321,6 +422,18 @@ function itemMenuData(
     onSelect: () => editor.runItem(item),
   };
 }
+/**
+ * The control an item names (`control: 'color'`) from `controls` or the
+ * built-ins, if any: what every item-driven UI renders in place of a button.
+ */
+export function itemControl(
+  item: TeiItem,
+  controls?: Record<string, ToolbarControl>,
+): ToolbarControl | undefined {
+  if (!item.control) return undefined;
+  return controls?.[item.control] ?? BUILT_IN_CONTROLS[item.control];
+}
+
 /** A toolbar button for one item. */
 export function ItemButton({
   editor,
@@ -465,4 +578,8 @@ AlignMenu.overflowMenu = (editor: TeiEditor): ToolbarSubmenu => {
 const BUILT_IN_CONTROLS: Record<string, ToolbarControl> = {
   blockType: BlockTypeMenu,
   align: AlignMenu,
+  fontFamily: FontFamilyMenu,
+  fontSize: FontSizeStepper,
+  color: TextColorMenu,
+  backgroundColor: BackgroundColorMenu,
 };

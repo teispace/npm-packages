@@ -116,8 +116,10 @@ export function cleanExportedHTML(container: ParentNode): void {
       const text = Object.entries(keep)
         .map(([name, value]) => `${name}: ${value};`)
         .join(' ');
-      if (text) el.setAttribute('style', text);
-      else el.removeAttribute('style');
+      // Through the CSSOM, and only on a change: a strict style-src reports
+      // `setAttribute('style')`, even on an element no page shows.
+      if (!text) el.removeAttribute('style');
+      else if (text !== css) el.style.cssText = text;
     }
   }
   // Lexical writes plain text as <span>; with nothing left on it, it is just text.

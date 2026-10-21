@@ -104,6 +104,13 @@ export interface NumberStepperProps {
   label: string;
   decrementLabel?: string;
   incrementLabel?: string;
+  /**
+   * What the buttons do, instead of adding or taking `step`: for a scale
+   * (font sizes) that isn't evenly spaced.
+   */
+  onStep?: (direction: 1 | -1) => void;
+  /** Whether a field is disabled as a whole. */
+  disabled?: boolean;
   className?: string;
 }
 
@@ -122,6 +129,8 @@ export function NumberStepper({
   label,
   decrementLabel = 'Decrease',
   incrementLabel = 'Increase',
+  onStep,
+  disabled,
   className,
 }: NumberStepperProps) {
   const cls = usePartClass('stepper', 'tei-stepper', className);
@@ -136,8 +145,8 @@ export function NumberStepper({
         icon={MINUS}
         label={decrementLabel}
         size="sm"
-        disabled={value <= min}
-        onClick={() => commit(value - step)}
+        disabled={disabled || value <= min}
+        onClick={() => (onStep ? onStep(-1) : commit(value - step))}
       />
       <Input
         type="number"
@@ -146,6 +155,7 @@ export function NumberStepper({
         min={min}
         max={max}
         step={step}
+        disabled={disabled}
         value={draft ?? String(value)}
         onChange={(event) => setDraft(event.currentTarget.value)}
         onBlur={() => draft !== null && commit(Number(draft))}
@@ -163,8 +173,8 @@ export function NumberStepper({
         icon={PLUS}
         label={incrementLabel}
         size="sm"
-        disabled={value >= max}
-        onClick={() => commit(value + step)}
+        disabled={disabled || value >= max}
+        onClick={() => (onStep ? onStep(1) : commit(value + step))}
       />
     </div>
   );

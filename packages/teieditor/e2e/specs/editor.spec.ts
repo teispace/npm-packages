@@ -687,3 +687,101 @@ test.describe('slash menu', () => {
     await expect(slash(tei)).toHaveCount(0);
   });
 });
+
+test.describe('text style', () => {
+  const formatting = (tei: Harness) =>
+    tei.page.getByRole('toolbar', { name: 'Formatting', exact: true });
+  /** Select "world" with a real drag, as a user would. */
+  async function selectWorld(tei: Harness) {
+    const box = await tei.content.evaluate((el) => {
+      const text =
+        el.querySelector('p')?.firstChild?.firstChild ?? el.querySelector('p')?.firstChild;
+      const range = document.createRange();
+      const node = text as Text;
+      const start = (node.textContent ?? '').indexOf('world');
+      range.setStart(node, start);
+      range.setEnd(node, start + 5);
+      return range.getBoundingClientRect().toJSON();
+    });
+    await tei.page.mouse.move(box.left + 1, box.top + box.height / 2);
+    await tei.page.mouse.down();
+    await tei.page.mouse.move(box.right - 1, box.top + box.height / 2, { steps: 5 });
+    await tei.page.mouse.up();
+  }
+
+  test('a font from the menu, shown in its own face, names the selection', async ({ tei }) => {
+    await tei.open({ content: '<p>Hello world</p>' });
+    await selectWorld(tei);
+    const trigger = formatting(tei).locator('[data-tei-control="fontFamily"]');
+    await expect(trigger).toHaveAccessibleName('Font: Default font');
+    await trigger.click();
+    const menu = tei.page.getByRole('menu', { name: 'Font' });
+    const georgia = menu.getByRole('menuitemcheckbox', { name: 'Georgia' });
+    // The row shows the face itself (set through the CSSOM).
+    expect(
+      await georgia.evaluate((el) =>
+        [...el.querySelectorAll('span')].some((s) => s.style.fontFamily.includes('Georgia')),
+      ),
+    ).toBe(true);
+    await georgia.click();
+    expect(await tei.html()).toBe(
+      '<p>Hello <span style="font-family: Georgia, serif;">world</span></p>',
+    );
+    await expect(trigger).toHaveAccessibleName('Font: Georgia');
+    expect(await tei.problems()).toEqual([]);
+  });
+
+  test('the size steps along the scale, and takes a typed size', async ({ tei }) => {
+    await tei.open({ content: '<p>Hello world</p>' });
+    await selectWorld(tei);
+    const field = formatting(tei).getByRole('spinbutton', { name: 'Font size' });
+    await expect(field).toHaveValue('16');
+    await formatting(tei).getByRole('button', { name: 'Bigger text' }).click();
+    await expect(field).toHaveValue('18');
+    expect(await tei.html()).toBe('<p>Hello <span style="font-size: 18px;">world</span></p>');
+    await field.fill('30');
+    await field.press('Enter');
+    expect(await tei.html()).toBe('<p>Hello <span style="font-size: 30px;">world</span></p>');
+    await expect(field).toHaveValue('30');
+    // Enter hands the keyboard back to the document, selection intact.
+    await expect(tei.content).toBeFocused();
+    await tei.page.keyboard.press('ControlOrMeta+Shift+Comma');
+    await expect(field).toHaveValue('24');
+  });
+
+  test('colours from the bubble: a swatch, then back to the default', async ({ tei }) => {
+    await tei.open({ content: '<p>Hello world</p>' });
+    await selectWorld(tei);
+    const bubble = tei.page.locator('[data-tei-control="bubble-menu"]');
+    await bubble.getByRole('button', { name: 'Text colour' }).click();
+    await tei.page.getByRole('button', { name: 'Red', exact: true }).click();
+    expect(await tei.html()).toBe(
+      '<p>Hello <span style="color: rgb(220, 38, 38);">world</span></p>',
+    );
+    // The bar under the icon shows it.
+    await bubble.getByRole('button', { name: 'Text colour' }).click();
+    await expect(tei.page.getByRole('button', { name: 'Red', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await tei.page.getByRole('button', { name: 'Default', exact: true }).click();
+    expect(await tei.html()).toBe('<p>Hello world</p>');
+    expect(await tei.problems()).toEqual([]);
+  });
+
+  test('on a phone, sizes and colours are in More as submenus', async ({ tei }) => {
+    await tei.page.setViewportSize({ width: 375, height: 800 });
+    await tei.open({ content: '<p>Hello world</p>' });
+    await selectWorld(tei);
+    await formatting(tei).locator('[data-tei-control="more"]').click();
+    const more = tei.page.getByRole('menu', { name: 'More' });
+    await more.getByRole('menuitem', { name: /Highlight colour/ }).click();
+    await tei.page
+      .getByRole('menu', { name: 'Highlight colour' })
+      .getByRole('menuitemcheckbox', { name: 'Yellow' })
+      .click();
+    expect(await tei.html()).toBe(
+      '<p>Hello <span style="background-color: rgba(234, 179, 8, 0.35);">world</span></p>',
+    );
+  });
+});

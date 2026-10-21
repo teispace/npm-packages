@@ -307,8 +307,19 @@ describe('clipboard and strict-CSP HTML', () => {
     span.setAttribute('style', 'color: red; white-space: pre-wrap;');
     span.textContent = 'x';
     container.append(span);
-    // Chromium under style-src 'self': the attribute is kept, the CSSOM reads empty.
-    Object.defineProperty(span, 'style', { value: document.createElement('i').style });
+    // Chromium under style-src 'self': the attribute is kept, the CSSOM reads
+    // empty; a CSSOM write still lands on the element (CSP allows those).
+    Object.defineProperty(span, 'style', {
+      value: {
+        getPropertyValue: () => '',
+        get cssText() {
+          return '';
+        },
+        set cssText(value: string) {
+          span.setAttribute('style', value);
+        },
+      },
+    });
     cleanExportedHTML(container);
     expect(container.innerHTML).toBe('<span style="color: red;">x</span>');
   });

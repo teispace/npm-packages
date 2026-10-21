@@ -193,13 +193,37 @@ describe('EditorToolbar overflow', () => {
 
   const layout = [['bold', 'italic'], ['blockType'], ['strike', <span key="m" data-item="mine" />]];
 
-  it('moves what does not fit into a More menu, from the end, keeping elements', () => {
-    const restore = layOut(150);
+  it('moves the least important into a More menu first, keeping elements', () => {
+    const restore = layOut(180);
     try {
       const editor = make();
       render(<EditorToolbar editor={editor} layout={layout} />);
-      // bold, italic, | , mine, More: five 30px slots in 150px.
-      expect(ids(screen.getByRole('toolbar'))).toEqual(['bold', 'italic', '|', 'mine', 'more']);
+      // Six 30px slots: block type and bold outrank italic and strike.
+      expect(ids(screen.getByRole('toolbar'))).toEqual([
+        'bold',
+        '|',
+        'blockType',
+        '|',
+        'mine',
+        'more',
+      ]);
+    } finally {
+      restore();
+    }
+  });
+
+  it('takes priorities from the app', () => {
+    const restore = layOut(180);
+    try {
+      const editor = make();
+      render(<EditorToolbar editor={editor} layout={layout} priorities={{ strike: 100 }} />);
+      expect(ids(screen.getByRole('toolbar'))).toEqual([
+        'blockType',
+        '|',
+        'strike',
+        'mine',
+        'more',
+      ]);
     } finally {
       restore();
     }
@@ -209,7 +233,7 @@ describe('EditorToolbar overflow', () => {
     const restore = layOut(150);
     try {
       const editor = make();
-      render(<EditorToolbar editor={editor} layout={layout} />);
+      render(<EditorToolbar editor={editor} layout={layout} priorities={{ blockType: 0 }} />);
       selectFirstBlock(editor);
       act(() => fireEvent.click(screen.getByRole('button', { name: 'More' })));
       const menu = screen.getByRole('menu', { name: 'More' });
@@ -257,9 +281,10 @@ describe('EditorToolbar overflow', () => {
     try {
       const editor = make();
       render(<EditorToolbar editor={editor} layout={layout} />);
-      const italic = screen.getByRole('button', { name: /Italic/ });
-      italic.focus();
-      act(() => fireEvent.keyDown(italic, { key: 'ArrowRight' }));
+      // Only the block type and More show; the element between them takes no focus.
+      const block = screen.getByRole('button', { name: /Block type/ });
+      block.focus();
+      act(() => fireEvent.keyDown(block, { key: 'ArrowRight' }));
       expect(document.activeElement?.getAttribute('data-tei-control')).toBe('more');
     } finally {
       restore();

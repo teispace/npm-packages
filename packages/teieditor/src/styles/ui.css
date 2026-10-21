@@ -789,6 +789,61 @@
     -webkit-appearance: none;
   }
 
+  /* Toolbar text-style controls */
+  .tei-font-size {
+    display: contents;
+  }
+
+  .tei-control-label[data-tei-font] {
+    min-inline-size: 6.5em;
+    max-inline-size: 9em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The colour icon draws the current colour as a bar under the glyph. */
+  .tei-color-icon {
+    display: inline-grid;
+    justify-items: center;
+    gap: 1px;
+  }
+
+  .tei-color-icon > :not(.tei-color-bar) {
+    margin-block-end: -2px;
+  }
+
+  .tei-color-bar {
+    inline-size: 1rem;
+    block-size: 3px;
+    border-radius: 1px;
+    background: var(--tei-current-color, transparent);
+  }
+
+  .tei-color-bar[data-empty] {
+    background: currentColor;
+    opacity: 0.3;
+  }
+
+  /* A colour's swatch in a menu row, in the icon's place. */
+  .tei-menu-swatch {
+    flex: none;
+    inline-size: 1rem;
+    block-size: 1rem;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-swatch, transparent);
+  }
+
+  .tei-menu-swatch[data-empty] {
+    background: linear-gradient(
+      to top right,
+      transparent calc(50% - 0.75px),
+      var(--tei-fg-subtle) calc(50% - 0.75px) calc(50% + 0.75px),
+      transparent calc(50% + 0.75px)
+    );
+  }
+
   /* Colour picker */
   .tei-swatches {
     display: grid;

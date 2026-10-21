@@ -121,11 +121,12 @@ for (const scheme of ['light', 'dark'] as const) {
       await tei.page.setViewportSize({ width: 375, height: 700 });
       await tei.open({ content: DOCUMENT });
       await theme(tei.page, scheme);
+      // A caret in the text, so the style submenus have something to act on.
+      await tei.caretAtEnd();
       await tei.page.locator('[data-tei-control="more"]').click();
-      const sub = tei.page
-        .getByRole('menu', { name: 'More' })
-        .locator('[role="menuitem"][aria-haspopup="menu"]')
-        .first();
+      const sub = tei.page.getByRole('menu', { name: 'More' }).getByRole('menuitem', {
+        name: 'Text colour',
+      });
       // Hover once the menu has finished sliding in, or the pointer can land beside it.
       await settled(tei.page);
       await sub.hover();

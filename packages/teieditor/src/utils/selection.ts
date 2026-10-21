@@ -64,3 +64,10 @@ export function $canFormat(): boolean {
   const selection = $getSelection();
   return selection !== null && !$isNodeSelection(selection);
 }
+
+/** Whether inline styles can go on the selection: text, and none of it in code. */
+export function $canStyleText(): boolean {
+  return (
+    $isRangeSelection($getSelection()) && $selectedBlocks().every((b) => b.getType() !== 'code')
+  );
+}
