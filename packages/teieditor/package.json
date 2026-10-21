@@ -76,6 +76,7 @@
     "clean": "rm -rf dist",
     "prepublishOnly": "yarn clean && yarn build",
     "test:e2e": "playwright test -c e2e/playwright.config.ts",
+    "test:visual": "node e2e/visual.mjs",
     "test:types": "tsc -p type-tests/kit && tsc -p type-tests/single"
   },
   "engines": {

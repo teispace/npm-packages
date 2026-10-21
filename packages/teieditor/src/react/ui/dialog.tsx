@@ -150,21 +150,21 @@ export function Dialog({
         }}
       >
         <div className="tei-dialog-header">
-          <h2 id={`${id}-title`} className="tei-dialog-title">
-            {title}
-          </h2>
+          <div className="tei-dialog-heading">
+            <h2 id={`${id}-title`} className="tei-dialog-title">
+              {title}
+            </h2>
+            {description != null && (
+              <p id={`${id}-description`} className="tei-dialog-description">
+                {description}
+              </p>
+            )}
+          </div>
           {closeLabel && (
             <Button icon={CLOSE} label={closeLabel} size="sm" onClick={() => onOpenChange(false)} />
           )}
         </div>
-        <div className="tei-dialog-body">
-          {description != null && (
-            <p id={`${id}-description`} className="tei-hint">
-              {description}
-            </p>
-          )}
-          {open && children}
-        </div>
+        <div className="tei-dialog-body">{open && children}</div>
         {footer != null && <div className="tei-dialog-footer">{footer}</div>}
       </form>
     </dialog>

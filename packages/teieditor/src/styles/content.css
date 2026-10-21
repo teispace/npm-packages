@@ -106,7 +106,7 @@
     position: relative;
     display: block;
     margin: 0 0 0.75em;
-    padding: 2.25em 1em 1em 3.75em;
+    padding: 1em 1em 1em 3.75em;
     overflow-x: auto;
     border: 1px solid var(--tei-border);
     border-radius: var(--tei-radius);
@@ -127,7 +127,7 @@
     inset-block: 0;
     inset-inline-start: 0;
     min-inline-size: 2.75em;
-    padding: 2.25em 0.5em 1em;
+    padding: 1em 0.5em;
     border-inline-end: 1px solid var(--tei-border);
     background: var(--tei-bg-subtle);
     color: var(--tei-fg-subtle);

@@ -46,6 +46,8 @@ function hostFor(trigger: Element): TooltipHost {
 }
 
 function reveal(host: TooltipHost, trigger: Element, text: string, shortcut?: string): void {
+  // One tooltip on screen: another editor's or portal's goes away first.
+  if (visibleHost && visibleHost !== host) conceal(visibleHost);
   host.label.textContent = text;
   host.keys.textContent = shortcut ?? '';
   host.keys.hidden = !shortcut;
@@ -79,6 +81,10 @@ export function hideTooltip(trigger: Element): void {
   if (!host) return;
   clearTimeout(host.timer);
   if (host.owner !== trigger && host.owner !== undefined) return;
+  conceal(host);
+}
+
+function conceal(host: TooltipHost): void {
   host.stop?.();
   host.stop = undefined;
   host.owner = undefined;

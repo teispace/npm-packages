@@ -16,8 +16,9 @@
  * `@layer teieditor`, so app styles outside a layer always win.
  */
 @layer teieditor {
+  /* `:where` keeps this at one class, so the dark rules below win for portals too. */
   .tei,
-  .tei-portal:not(.tei *) {
+  .tei-portal:where(:not(.tei *)) {
     color-scheme: light;
 
     /* Surfaces */

@@ -202,3 +202,50 @@ jobs:
           name: teieditor-playwright-traces
           path: examples/playground/test-results
           retention-days: 7
+
+  teieditor-browser:
+    name: teieditor browsers and pixels
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [quality]
+    # The image `yarn test:visual` uses locally, so the pixel baselines match.
+    # Keep its tag on the @playwright/test version in yarn.lock.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
+    env:
+      # Firefox refuses a home directory owned by another user.
+      HOME: /root
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn workspaces focus @teispace/teieditor
+
+      - name: Check the image matches Playwright
+        working-directory: packages/teieditor
+        run: |
+          version=$(node -p "require('@playwright/test/package.json').version")
+          test "$version" = 1.64.1 || { echo "::error::@playwright/test is $version; update the container image tag"; exit 1; }
+
+      # Editor, UI and pixel specs in Chromium, Firefox, WebKit and two phones,
+      # under a strict CSP; every test asserts zero violations.
+      - name: Run Playwright
+        working-directory: packages/teieditor
+        env:
+          TEI_VISUAL: 1
+        run: yarn test:e2e
+
+      - name: Upload reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: teieditor-browser-results
+          path: packages/teieditor/test-results
+          retention-days: 7

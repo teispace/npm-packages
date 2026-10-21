@@ -65,7 +65,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   const cls = usePartClass('button', 'tei-button', className);
   const iconOnly = icon !== undefined && children == null;
   const keys = shortcutText(shortcut);
-  const tip = label ?? (typeof rest.title === 'string' ? rest.title : undefined);
+  const named = label ?? (typeof rest.title === 'string' ? rest.title : undefined);
+  // A tooltip that only repeats the visible text is noise.
+  const tip = named !== undefined && !keys && children === named ? undefined : named;
 
   return (
     <button

@@ -22,3 +22,6 @@ packages/teieditor/registry.json
 packages/teieditor/e2e/.out/
 packages/teieditor/test-results/
 packages/teieditor/playwright-report/
+# Pixel baselines come from the Linux image only (`yarn test:visual`).
+packages/teieditor/e2e/specs/__screenshots__/**/*-darwin.png
+packages/teieditor/e2e/specs/__screenshots__/**/*-win32.png

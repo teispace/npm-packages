@@ -12,8 +12,25 @@ export interface Harness {
   /** Select the document's text, as a user would with ⌘A. */
   selectAll(): Promise<void>;
   log(): Promise<string[]>;
+  /** Console errors and CSP reports so far. */
+  problems(): Promise<string[]>;
   /** Forget console errors and CSP reports so far (ones the test caused on purpose). */
   forgetProblems(): Promise<void>;
+}
+
+/**
+ * Wait for every running animation and transition to finish. Scroll-driven
+ * ones follow the scroll position and never finish, so they are left out.
+ */
+export async function settled(page: Page): Promise<void> {
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.timeline instanceof DocumentTimeline)
+        .map((a) => a.finished.catch(() => undefined)),
+    ),
+  );
 }
 
 /**
@@ -55,6 +72,10 @@ export const test = base.extend<{ tei: Harness }>({
         await page.keyboard.press('ControlOrMeta+a');
       },
       log: () => page.evaluate(() => [...window.__tei.log]),
+      async problems() {
+        const violations = await page.evaluate(() => [...window.__tei.violations]);
+        return [...problems, ...violations.map((v) => `csp: ${v}`)];
+      },
       async forgetProblems() {
         problems.length = 0;
         await page.evaluate(() => {

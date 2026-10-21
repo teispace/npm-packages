@@ -96,8 +96,8 @@
     content: none;
   }
 
-  .tei :focus-visible,
-  .tei-portal :focus-visible {
+  /* One pseudo-class of weight, so any part can restyle or drop its own ring. */
+  :where(.tei, .tei-portal) :focus-visible {
     outline: 2px solid var(--tei-ring);
     outline-offset: 1px;
   }

@@ -4,6 +4,19 @@
  * state is in ARIA attributes (`aria-pressed`, `aria-expanded`, …), so the
  * styles always match what assistive technology is told.
  */
+/* Animatable lengths for the scrolling toolbar's edge fades. */
+@property --tei-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --tei-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
 @layer teieditor {
   .tei-portal {
     font-family: var(--tei-font);
@@ -161,6 +174,48 @@
       flex-wrap: nowrap;
       overflow-x: auto;
       scrollbar-width: none;
+    }
+  }
+
+  /*
+   * A toolbar that scrolls fades out at each edge with more buttons beyond
+   * it. The fades follow the scroll position through a scroll timeline, with
+   * no listener; a toolbar that fits has no active timeline, so its fades
+   * stay at zero and the mask shows everything.
+   */
+  @supports (animation-timeline: scroll()) {
+    .tei-toolbar {
+      --tei-fade: 1.5rem;
+      mask-image: linear-gradient(
+        var(--tei-fade-angle, 90deg),
+        transparent,
+        #000 var(--tei-fade-start),
+        #000 calc(100% - var(--tei-fade-end)),
+        transparent
+      );
+      animation: tei-toolbar-fade linear both;
+      animation-timeline: scroll(self inline);
+    }
+
+    .tei-toolbar:dir(rtl) {
+      --tei-fade-angle: 270deg;
+    }
+  }
+
+  @keyframes tei-toolbar-fade {
+    from {
+      --tei-fade-start: 0px;
+      --tei-fade-end: var(--tei-fade);
+    }
+    8% {
+      --tei-fade-start: var(--tei-fade);
+    }
+    92% {
+      --tei-fade-end: var(--tei-fade);
+    }
+    to {
+      --tei-fade-start: var(--tei-fade);
+      --tei-fade-end: 0px;
     }
   }
 
@@ -450,10 +505,30 @@
 
   .tei-dialog-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: var(--tei-space-2);
     padding: var(--tei-space-4) var(--tei-space-4) 0;
+  }
+
+  .tei-dialog-heading {
+    display: grid;
+    gap: var(--tei-space-1);
+    min-inline-size: 0;
+  }
+
+  /* The close button centres on the title's line and sits in the corner. */
+  .tei-dialog-header > .tei-button {
+    flex: none;
+    margin-block: -2px;
+    margin-inline-end: -6px;
+  }
+
+  .tei-dialog-description {
+    margin: 0;
+    color: var(--tei-fg-muted);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
   }
 
   .tei-dialog-title {

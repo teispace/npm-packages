@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Locator, Page } from '@playwright/test';
-import { expect, type Harness, test } from './fixtures';
+import { expect, type Harness, settled, test } from './fixtures';
 
 type Box = { x: number; y: number; width: number; height: number };
 
@@ -17,13 +17,6 @@ async function expectInViewport(page: Page, b: Box, padding = 8) {
   expect(b.y).toBeGreaterThanOrEqual(padding - 1);
   expect(b.x + b.width).toBeLessThanOrEqual(width - padding + 1);
   expect(b.y + b.height).toBeLessThanOrEqual(height - padding + 1);
-}
-
-/** Wait for every running animation and transition to finish. */
-async function settled(page: Page) {
-  await page.evaluate(() =>
-    Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))),
-  );
 }
 
 const menu = (page: Page) =>
@@ -168,6 +161,33 @@ test.describe('dropdown menu', () => {
     await expect(popovers(tei.page)).toHaveAttribute('data-side', 'top');
   });
 
+  test('grows out of its button: the transform origin sits on the anchor side', async ({ tei }) => {
+    const origin = async () => {
+      const [x, y] = (
+        await popovers(tei.page).evaluate((el) => getComputedStyle(el).transformOrigin)
+      )
+        .split(' ')
+        .map(Number.parseFloat);
+      return { x: x as number, y: y as number };
+    };
+    await tei.open();
+    await openMenu(tei);
+    let trigger = await box(tei.page.getByTestId('menu-trigger'));
+    let popover = await box(popovers(tei.page));
+    let o = await origin();
+    expect(o.y).toBeCloseTo(0, 0);
+    expect(popover.x + o.x).toBeCloseTo(trigger.x + trigger.width / 2, 0);
+    await tei.page.keyboard.press('Escape');
+
+    // Flipped above its button: it grows upwards from its bottom edge.
+    await openMenu(tei, 'corner-trigger');
+    trigger = await box(tei.page.getByTestId('corner-trigger'));
+    popover = await box(popovers(tei.page));
+    o = await origin();
+    expect(o.y).toBeCloseTo(popover.height, 0);
+    expect(popover.x + o.x).toBeCloseTo(trigger.x + trigger.width / 2, 0);
+  });
+
   test('stays attached to its button while the page scrolls and resizes', async ({ tei }) => {
     await tei.open({ flags: ['tall'] });
     await openMenu(tei);
@@ -216,6 +236,17 @@ test.describe('dialog', () => {
     await expect(trigger).toBeFocused();
   });
 
+  test('the description sits right under the title', async ({ tei }) => {
+    await tei.open();
+    await tei.page.getByTestId('dialog-trigger').click();
+    await settled(tei.page);
+    const title = await box(tei.page.locator('dialog[open] h2'));
+    const description = await box(tei.page.locator('dialog[open] .tei-dialog-description'));
+    expect(description.y - (title.y + title.height)).toBeGreaterThanOrEqual(0);
+    expect(description.y - (title.y + title.height)).toBeLessThanOrEqual(8);
+    expect(description.x).toBeCloseTo(title.x, 0);
+  });
+
   test('Enter submits; it is centred and fits a phone', async ({ tei }) => {
     await tei.page.setViewportSize({ width: 360, height: 640 });
     await tei.open();
@@ -232,7 +263,88 @@ test.describe('dialog', () => {
   });
 });
 
+test.describe('theme', () => {
+  test('menus, dialogs and tooltips follow a dark ancestor, like the editor', async ({ tei }) => {
+    const scheme = (selector: string) =>
+      tei.page
+        .locator(selector)
+        .first()
+        .evaluate((el) => getComputedStyle(el).colorScheme);
+    await tei.open();
+    await tei.page.evaluate(() => {
+      document.documentElement.dataset.theme = 'dark';
+    });
+    expect(await scheme('[data-testid="editor"]')).toBe('dark');
+    await openMenu(tei);
+    expect(await scheme('[data-tei-part="popover"]:popover-open')).toBe('dark');
+    await tei.page.keyboard.press('Escape');
+    await tei.page.getByTestId('dialog-trigger').click();
+    expect(await scheme('dialog[open]')).toBe('dark');
+    await tei.page.keyboard.press('Escape');
+    await tei.page.locator('[data-item="bold"]').hover();
+    await expect(tei.page.locator('[data-tei-part="tooltip"]')).toBeVisible();
+    expect(await scheme('[data-tei-part="tooltip"]')).toBe('dark');
+  });
+
+  test('a menu list draws no ring of its own: its highlighted row shows focus', async ({ tei }) => {
+    await tei.open();
+    await tei.page.getByTestId('menu-trigger').focus();
+    await tei.page.keyboard.press('ArrowDown');
+    await expect(menu(tei.page)).toBeFocused();
+    expect(await menu(tei.page).evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none');
+    await expect(menu(tei.page).locator('[data-highlighted]')).toHaveCount(1);
+  });
+});
+
+test.describe('toolbar', () => {
+  test('a toolbar that scrolls fades out at the edge with more beyond it', async ({ tei }) => {
+    const fades = () =>
+      tei.page.locator('[data-tei-part="toolbar"]').evaluate((el) => {
+        const style = getComputedStyle(el);
+        return {
+          start: Number.parseFloat(style.getPropertyValue('--tei-fade-start')),
+          end: Number.parseFloat(style.getPropertyValue('--tei-fade-end')),
+        };
+      });
+    await tei.open();
+    test.skip(
+      !(await tei.page.evaluate(() => CSS.supports('animation-timeline: scroll()'))),
+      'no scroll-driven animations in this engine',
+    );
+    // Wide: everything fits, nothing fades.
+    expect(await fades()).toEqual({ start: 0, end: 0 });
+
+    await tei.page.setViewportSize({ width: 375, height: 700 });
+    await expect.poll(fades).toEqual({ start: 0, end: 24 });
+    await tei.page.locator('[data-tei-part="toolbar"]').evaluate((el) => {
+      el.scrollLeft = el.scrollWidth;
+    });
+    await expect.poll(fades).toEqual({ start: 24, end: 0 });
+  });
+});
+
 test.describe('tooltip', () => {
+  test('one tooltip on screen at a time, across editors and portals', async ({ tei }) => {
+    await tei.open();
+    const tips = tei.page.locator('[data-tei-part="tooltip"]:popover-open');
+    // Keyboard focus shows a tooltip that no pointer leave will hide.
+    // (Focus after a key press is keyboard focus everywhere; Safari's Tab skips buttons.)
+    await tei.page.keyboard.press('Shift');
+    await tei.page.getByTestId('color-trigger').focus();
+    await expect(tips).toHaveCount(1);
+    await expect(tips).toContainText('Colour');
+    await tei.page.locator('[data-item="bold"]').hover();
+    await expect(tips).toHaveCount(1);
+    await expect(tips).toContainText('Bold');
+  });
+
+  test('no tooltip that only repeats the visible text', async ({ tei }) => {
+    await tei.open();
+    await tei.page.getByTestId('menu-trigger').hover();
+    await tei.page.waitForTimeout(800);
+    await expect(tei.page.locator('[data-tei-part="tooltip"]:popover-open')).toHaveCount(0);
+  });
+
   test('shows the label and shortcut on hover, beside the button, and hides on leave', async ({
     tei,
   }) => {
