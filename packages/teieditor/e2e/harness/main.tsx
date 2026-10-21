@@ -2,6 +2,7 @@ import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { setExtensionOptions } from '../../src/core/define';
 import type { TeiEditor } from '../../src/core/editor';
+import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
 import { Html } from '../../src/extensions/html/index';
 import { Image, type ImageOptions } from '../../src/extensions/image/index';
 import { StarterKit } from '../../src/extensions/starter-kit/index';
@@ -31,6 +32,8 @@ declare global {
       trust: (html: string) => string;
       /** Change the Image extension's options (an upload handler, limits). */
       setImageOptions: (options: Partial<ImageOptions>) => void;
+      /** Change the FileAttachment extension's options. */
+      setFileOptions: (options: Partial<FileOptions>) => void;
     };
   }
 }
@@ -117,6 +120,7 @@ function App() {
       ...(params.has('raw') ? [Html.configure({ clean: false })] : []),
       ...(params.has('table') ? [Table] : []),
       ...(params.has('image') ? [Image] : []),
+      ...(params.has('file') ? [FileAttachment] : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
@@ -129,6 +133,7 @@ function App() {
     setClipSource,
     trust,
     setImageOptions: (options) => setExtensionOptions(editor, Image, options),
+    setFileOptions: (options) => setExtensionOptions(editor, FileAttachment, options),
   };
   return (
     <main data-testid="root">

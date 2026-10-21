@@ -21,13 +21,11 @@ import {
   $onUpdate,
   $setSlot,
   COMMAND_PRIORITY_LOW,
-  HISTORY_MERGE_TAG,
   isBlockDomNode,
   type LexicalEditor,
   type LexicalNode,
   mergeRegister,
   type NodeKey,
-  type NodeMutation,
 } from 'lexical';
 import {
   defineTeiExtension,
@@ -41,6 +39,7 @@ import {
   $findSlotHost,
   $insertBlock,
   $liftBlock,
+  $removeBlockHost,
   $selectNode,
   registerHostSelection,
   registerSelectedAttribute,
@@ -61,6 +60,14 @@ import {
   upload as uploadIcon,
 } from '../../icons/index.js';
 import { acceptsFile, chooseFiles, readAsDataURL } from '../../utils/files.js';
+import {
+  dropUpload,
+  paintUpload,
+  registerUploads,
+  startUpload,
+  type Upload,
+  type UploadProgress,
+} from '../../utils/upload.js';
 import { isSafeImageSrc } from '../../utils/url.js';
 import { RichText } from '../rich-text/index.js';
 import {
@@ -110,11 +117,7 @@ export interface ImageData {
 }
 
 /** What an upload handler gets besides the file. */
-export interface ImageUploadContext {
-  /** Report progress, 0 to 1; the image shows it while it uploads. */
-  onProgress: (fraction: number) => void;
-  /** Aborts when the image is removed before its upload finishes. */
-  signal: AbortSignal;
+export interface ImageUploadContext extends UploadProgress {
   editor: TeiEditor;
 }
 
@@ -218,13 +221,7 @@ declare module '@teispace/teieditor' {
   }
 }
 
-/** An upload in flight, by the key of the image it is for. */
-export interface Upload {
-  controller: AbortController;
-  /** The `blob:` URL the image shows until the upload is done. */
-  preview: string;
-  progress: number;
-}
+export type { Upload } from '../../utils/upload.js';
 
 export interface ImageStorage {
   /** Uploads in flight, by the key of their image. */
@@ -311,19 +308,6 @@ function $convertImage(node: BaseImageNode, inline: boolean): BaseImageNode {
   return next;
 }
 
-/** The upload's state on the image's DOM, for CSS: no document change, nothing to undo. */
-function paintUpload(lexical: LexicalEditor, key: NodeKey, upload: Upload | undefined): void {
-  const dom = lexical.getElementByKey(key);
-  if (!dom) return;
-  if (upload) {
-    dom.setAttribute('data-tei-uploading', '');
-    dom.style.setProperty('--tei-progress', String(upload.progress));
-  } else {
-    dom.removeAttribute('data-tei-uploading');
-    dom.style.removeProperty('--tei-progress');
-  }
-}
-
 /** Files the options accept, and an error for each that is too large. */
 function sortFiles(ctx: Ctx, files: readonly File[]): File[] {
   return files.filter((file) => {
@@ -335,59 +319,29 @@ function sortFiles(ctx: Ctx, files: readonly File[]): File[] {
 }
 
 /** Upload `file` for the image with `key`, which shows `preview` meanwhile. */
-function startUpload(ctx: Ctx, key: NodeKey, file: File, preview: string): void {
-  const { lexical, storage, editor } = ctx;
-  const upload: Upload = { controller: new AbortController(), preview, progress: 0 };
-  storage.uploads.get(key)?.controller.abort();
-  storage.uploads.set(key, upload);
-  paintUpload(lexical, key, upload);
-
-  const done = (): boolean => {
-    const current = storage.uploads.get(key) === upload;
-    if (current) storage.uploads.delete(key);
-    paintUpload(lexical, key, undefined);
-    return current;
-  };
-  const fail = (error: ImageUploadError) => {
-    if (!done()) return;
-    lexical.update(() => $getNodeByKey(key)?.remove(), { tag: HISTORY_MERGE_TAG });
-    URL.revokeObjectURL(preview);
-    ctx.options.onUploadError?.(error);
-  };
+function uploadImage(ctx: Ctx, key: NodeKey, file: File, preview: string): void {
+  const { options, editor } = ctx;
   const handler: ImageUploadHandler =
-    ctx.options.upload ?? ((f, { onProgress, signal }) => readAsDataURL(f, { onProgress, signal }));
-  const { signal } = upload.controller;
-  handler(file, {
-    signal,
-    editor,
-    onProgress: (fraction) => {
-      if (storage.uploads.get(key) !== upload || !Number.isFinite(fraction)) return;
-      upload.progress = Math.min(1, Math.max(0, fraction));
-      paintUpload(lexical, key, upload);
+    options.upload ?? ((f, { onProgress, signal }) => readAsDataURL(f, { onProgress, signal }));
+  startUpload({
+    lexical: ctx.lexical,
+    uploads: ctx.storage.uploads,
+    key,
+    preview,
+    run: (progress) => handler(file, { ...progress, editor }),
+    valid: (result) => {
+      const src = typeof result === 'string' ? result : result?.src;
+      return typeof src === 'string' && isSafeImageSrc(src);
     },
-  }).then(
-    // A result for an upload that is no longer this image's (aborted,
-    // replaced) is dropped by `done`.
-    (result) => {
+    $apply: (node, result) => {
+      if (!$isAnyImageNode(node)) return;
       const data = typeof result === 'string' ? { src: result } : result;
-      if (!data || typeof data.src !== 'string' || !isSafeImageSrc(data.src)) {
-        fail(new ImageUploadError('unsafe', file));
-        return;
-      }
-      if (!done()) return;
-      lexical.update(
-        () => {
-          const node = $getNodeByKey(key);
-          if (!$isAnyImageNode(node)) return;
-          node.setSrc(data.src);
-          if (node.getWidth() === null && data.width) node.setSize(data.width, data.height);
-          if (!node.getAltText() && data.altText) node.setAltText(data.altText);
-        },
-        { tag: HISTORY_MERGE_TAG, onUpdate: () => URL.revokeObjectURL(preview) },
-      );
+      node.setSrc(data.src);
+      if (node.getWidth() === null && data.width) node.setSize(data.width, data.height);
+      if (!node.getAltText() && data.altText) node.setAltText(data.altText);
     },
-    (cause) => fail(new ImageUploadError('upload', file, { cause })),
-  );
+    onError: (code, cause) => options.onUploadError?.(new ImageUploadError(code, file, { cause })),
+  });
 }
 
 /** Image nodes for `files`, showing each file until its upload is done. */
@@ -402,7 +356,7 @@ function $insertFiles(ctx: Ctx, files: readonly File[]): boolean {
     else $insertImageNode(node);
     last = node;
     const key = node.getKey();
-    $onUpdate(() => startUpload(ctx, key, file, preview));
+    $onUpdate(() => uploadImage(ctx, key, file, preview));
   }
   if (last) $caretAfter(last);
   return true;
@@ -682,24 +636,6 @@ export const Image = defineTeiExtension({
   markdown: { image: IMAGE, inlineImage: INLINE_IMAGE },
   register: (ctx) => {
     const { lexical, storage, editor } = ctx;
-    const onMutations = (mutations: Map<NodeKey, NodeMutation>) => {
-      for (const [key, kind] of mutations) {
-        if (kind === 'created') {
-          // What an empty caption shows, in the editor's language.
-          lexical
-            .getElementByKey(key)
-            ?.querySelector('figcaption')
-            ?.setAttribute('data-placeholder', editor.t('image.caption.placeholder'));
-        }
-        const upload = storage.uploads.get(key);
-        if (!upload) continue;
-        if (kind === 'destroyed') {
-          upload.controller.abort();
-          storage.uploads.delete(key);
-          URL.revokeObjectURL(upload.preview);
-        } else paintUpload(lexical, key, upload);
-      }
-    };
     return mergeRegister(
       registerHostSelection(lexical, $isAnyImageNode),
       registerSelectedAttribute(lexical, $isAnyImageNode),
@@ -711,15 +647,21 @@ export const Image = defineTeiExtension({
         (files) => $insertFiles(ctx, files),
         COMMAND_PRIORITY_LOW,
       ),
-      lexical.registerMutationListener(ImageNode, onMutations, { skipInitialization: false }),
-      lexical.registerMutationListener(InlineImageNode, onMutations),
-      () => {
-        for (const upload of storage.uploads.values()) {
-          upload.controller.abort();
-          URL.revokeObjectURL(upload.preview);
-        }
-        storage.uploads.clear();
-      },
+      registerUploads(lexical, storage.uploads, [ImageNode, InlineImageNode]),
+      // What an empty caption shows, in the editor's language.
+      lexical.registerMutationListener(
+        ImageNode,
+        (mutations) => {
+          for (const [key, kind] of mutations) {
+            if (kind !== 'created') continue;
+            lexical
+              .getElementByKey(key)
+              ?.querySelector('figcaption')
+              ?.setAttribute('data-placeholder', editor.t('image.caption.placeholder'));
+          }
+        },
+        { skipInitialization: false },
+      ),
     );
   },
   commands: {
@@ -764,12 +706,9 @@ export const Image = defineTeiExtension({
       run: ({ storage, lexical }, src: string, key?: NodeKey) => {
         const node = $getImage(key);
         if (!node || !isSafeImageSrc(src.trim())) return false;
-        const upload = storage.uploads.get(node.getKey());
-        if (upload) {
-          upload.controller.abort();
-          storage.uploads.delete(node.getKey());
-          URL.revokeObjectURL(upload.preview);
-          $onUpdate(() => paintUpload(lexical, node.getKey(), undefined));
+        if (storage.uploads.has(node.getKey())) {
+          dropUpload(storage.uploads, node.getKey());
+          $onUpdate(() => paintUpload(lexical, node.getKey()));
         }
         node.setSrc(src.trim());
       },
@@ -783,7 +722,7 @@ export const Image = defineTeiExtension({
         const preview = URL.createObjectURL(accepted);
         node.setSrc(preview).setSize(null);
         const nodeKey = node.getKey();
-        $onUpdate(() => startUpload(ctx as Ctx, nodeKey, accepted, preview));
+        $onUpdate(() => uploadImage(ctx as Ctx, nodeKey, accepted, preview));
       },
       can: $hasImage,
     },
@@ -873,12 +812,7 @@ export const Image = defineTeiExtension({
           node.remove();
           return;
         }
-        const next = node.getNextSibling();
-        const previous = node.getPreviousSibling();
-        node.remove();
-        if (next) next.selectStart();
-        else if (previous) previous.selectEnd();
-        else $caretAfter(node);
+        $removeBlockHost(node);
       },
       can: $hasImage,
     },

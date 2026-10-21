@@ -42,6 +42,10 @@ add alt text or a caption, and drag a corner to resize it.</p>
 sit in a line of text, <img src="/hills.svg" alt="" width="30" height="18" data-inline=""> like this one, or
 float to a side with the text wrapping round it, like the one here. Type <code>![alt](src)</code> after some
 text for one, or turn <em>In line with text</em> on in an image's toolbar.</p>
+<h2>Files</h2>
+<p>Drop any other file, or attach one from the toolbar or <code>/file</code>. Click a card to download,
+rename or replace it; in a read-only document, the card is a download link.</p>
+<a href="/release-notes.pdf" download="Release notes.pdf" data-tei-file="" data-ext="PDF" data-size="193" title="193 B" type="application/pdf">Release notes.pdf</a>
 <hr>
 <p>That is the whole document. Make it yours.</p>
 `;

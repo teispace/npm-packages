@@ -12,28 +12,43 @@ import {
 import type { TeiEditorOptions } from '../../core/create.js';
 import type { ContentFormat, TeiEditor } from '../../core/editor.js';
 import { CodeBlock } from '../../extensions/code-block/index.js';
+import { FileAttachment } from '../../extensions/file/index.js';
 import { Image } from '../../extensions/image/index.js';
+import { Link, type LinkStorage } from '../../extensions/link/index.js';
 import { StarterKit } from '../../extensions/starter-kit/index.js';
 import { Table } from '../../extensions/table/index.js';
 import { TextStyle } from '../../extensions/text-style/index.js';
 import { type ContentEditableProps, EditorContent, EditorProvider } from '../editor-content.js';
 import { cx } from '../ui/context.js';
 import { useTeiEditor } from '../use-tei-editor.js';
-import { BubbleMenu } from './bubble-menu.js';
 import { EditorToolbar, type EditorToolbarProps, type ToolbarLayout } from './editor-toolbar.js';
-import { ImageInsertPopover } from './image-insert.js';
-import { LinkPopover } from './link-popover.js';
-import { SlashMenu } from './slash-menu.js';
 
 /**
- * The parts that show only once there is something to act on (a table, an
- * image, a code block) load after the editor, so they cost nothing up front.
+ * The parts that show only once there is something to act on (a selection,
+ * a `/`, a table, an image, a code block) load after the editor, so they
+ * cost nothing up front.
  */
+const LinkPopover = lazy(() =>
+  import('./link-popover.js').then((module) => ({ default: module.LinkPopover })),
+);
+const BubbleMenu = lazy(() =>
+  import('./bubble-menu.js').then((module) => ({ default: module.BubbleMenu })),
+);
+const SlashMenu = lazy(() =>
+  import('./slash-menu.js').then((module) => ({ default: module.SlashMenu })),
+);
+// In the same boundary as the slash menu, so its Image always finds it.
+const ImageInsertPopover = lazy(() =>
+  import('./image-insert.js').then((module) => ({ default: module.ImageInsertPopover })),
+);
 const CodeBlockBar = lazy(() =>
   import('./code-block-bar.js').then((module) => ({ default: module.CodeBlockBar })),
 );
 const TableControls = lazy(() =>
   import('./table-controls.js').then((module) => ({ default: module.TableControls })),
+);
+const FileControls = lazy(() =>
+  import('./file-controls.js').then((module) => ({ default: module.FileControls })),
 );
 const ImageControls = lazy(() =>
   import('./image-controls.js').then((module) => ({ default: module.ImageControls })),
@@ -42,7 +57,7 @@ const LazyImageControls = () => <ImageControls insert={false} />;
 
 /**
  * Which UI comes with it.
- * - `full`: toolbar, bubble menu, slash menu, link popover, code block bar, table and image controls.
+ * - `full`: toolbar, bubble menu, slash menu, link popover, code block bar, table, image and file controls.
  * - `notion`: no toolbar; select text for the bubble menu, type `/` for blocks.
  * - `minimal`: a toolbar and links, nothing floating: comment boxes, forms.
  */
@@ -62,6 +77,8 @@ export interface EditorSlots {
   tableControls?: EditorSlot;
   /** The insert popover, the toolbar over a selected image and its resize handles. */
   imageControls?: EditorSlot;
+  /** The toolbar over a selected file: download, rename, replace. */
+  fileControls?: EditorSlot;
   /** Below the document, inside the frame: a word count, a status line. */
   footer?: ReactNode;
 }
@@ -75,6 +92,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     codeBlockBar: true,
     tableControls: true,
     imageControls: true,
+    fileControls: true,
   },
   notion: {
     toolbar: false,
@@ -84,6 +102,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     codeBlockBar: true,
     tableControls: true,
     imageControls: true,
+    fileControls: true,
   },
   minimal: {
     toolbar: true,
@@ -93,13 +112,14 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     codeBlockBar: false,
     tableControls: false,
     imageControls: false,
+    fileControls: false,
   },
 };
 
 /** What each preset installs when `<Editor>` makes its own editor. */
 const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = {
-  full: [StarterKit, TextStyle, Table, Image],
-  notion: [StarterKit, TextStyle, Table, Image],
+  full: [StarterKit, TextStyle, Table, Image, FileAttachment],
+  notion: [StarterKit, TextStyle, Table, Image, FileAttachment],
   minimal: [StarterKit],
 };
 
@@ -164,7 +184,7 @@ export interface EditorProps extends Partial<Omit<TeiEditorOptions, 'editable'>>
  * buttons, menu entries and shortcuts. For full control, build the same
  * thing from `useTeiEditor`, `EditorContent` and the parts it uses.
  *
- * The parts for tables, images and code blocks load just after the editor
+ * The parts for tables, images, files and code blocks load just after the editor
  * shows (they appear only once there is one to act on); the frame gets
  * `data-tei-ready` when they are in.
  */
@@ -223,8 +243,23 @@ function EditorFrame({
   }, [editor, editable]);
 
   // The latest callback, without re-subscribing on every render.
-  // `data-tei-ready` once the parts that load later are in.
+  // The parts that load later mount after hydration: a server has nothing
+  // to show for them, and `renderToString` cannot render lazy ones.
+  // `data-tei-ready` once they are in.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [ready, setReady] = useState(false);
+  // ⌘K before the link popover has loaded: hold its place, so the request
+  // stands, and the popover opens for it as it loads.
+  const linkStorage = editor.extension(Link)?.output.storage as LinkStorage | undefined;
+  const linkPopover = parts.linkPopover !== false && parts.linkPopover != null;
+  useEffect(() => {
+    if (ready || !linkPopover || !linkStorage) return;
+    linkStorage.editors.value++;
+    return () => {
+      linkStorage.editors.value--;
+    };
+  }, [ready, linkPopover, linkStorage]);
   const change = useRef({ onChange, format });
   change.current = { onChange, format };
   useEffect(
@@ -263,19 +298,21 @@ function EditorFrame({
           initialHTML={initialHTML}
           {...contentProps}
         >
-          {slot(parts.linkPopover, <LinkPopover />)}
-          {slot(parts.bubbleMenu, <BubbleMenu />)}
-          {slot(parts.slashMenu, <SlashMenu />)}
-          {/* Up front: the slash menu's Image opens it at once. */}
-          {editor.extension(Image) && parts.imageControls === true && (
-            <ImageInsertPopover editor={editor} />
+          {mounted && (
+            <Suspense fallback={null}>
+              {slot(parts.linkPopover, <LinkPopover />)}
+              {slot(parts.bubbleMenu, <BubbleMenu />)}
+              {slot(parts.slashMenu, <SlashMenu />)}
+              {editor.extension(Image) && parts.imageControls === true && (
+                <ImageInsertPopover editor={editor} />
+              )}
+              {editor.extension(CodeBlock) && slot(parts.codeBlockBar, <CodeBlockBar />)}
+              {editor.extension(Table) && slot(parts.tableControls, <TableControls />)}
+              {editor.extension(Image) && slot(parts.imageControls, <LazyImageControls />)}
+              {editor.extension(FileAttachment) && slot(parts.fileControls, <FileControls />)}
+              <Ready onReady={setReady} />
+            </Suspense>
           )}
-          <Suspense fallback={null}>
-            {editor.extension(CodeBlock) && slot(parts.codeBlockBar, <CodeBlockBar />)}
-            {editor.extension(Table) && slot(parts.tableControls, <TableControls />)}
-            {editor.extension(Image) && slot(parts.imageControls, <LazyImageControls />)}
-            <Ready onReady={setReady} />
-          </Suspense>
           {children}
         </EditorContent>
         {parts.footer}

@@ -376,3 +376,19 @@ export function $insertBlock<T extends LexicalNode>(node: T): T {
   if ($isParagraphNode(before) && before.getChildrenSize() === 0) before.remove();
   return node.getLatest();
 }
+
+/**
+ * Takes a block host out, the caret going to the block after it (or
+ * before); the last block becomes an empty line, so the caret has a home.
+ */
+export function $removeBlockHost(host: LexicalNode): void {
+  const next = host.getNextSibling();
+  const previous = host.getPreviousSibling();
+  if (next) next.selectStart();
+  else if (previous) previous.selectEnd();
+  else {
+    host.replace($createParagraphNode()).selectStart();
+    return;
+  }
+  host.remove();
+}

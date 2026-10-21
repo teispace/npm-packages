@@ -63,15 +63,12 @@ export function LinkPopover({ editor: editorProp, preview = true }: LinkPopoverP
     };
   }, [storage]);
 
-  // Open the editor on each request.
+  // Open the editor on each request, and for one made while this loaded.
   useEffect(() => {
     if (!storage) return;
-    let first = true;
-    return storage.editRequest.subscribe(() => {
-      if (first) {
-        first = false;
-        return;
-      }
+    return storage.editRequest.subscribe((request) => {
+      if (request <= storage.handled) return;
+      storage.handled = request;
       const link = editor.read(() => $getLinkAtSelection());
       const anchor = linkElement(editor, link) ?? selectionAnchor(editor);
       if (anchor) setEditing({ anchor, link });

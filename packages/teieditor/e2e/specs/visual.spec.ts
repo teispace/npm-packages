@@ -312,6 +312,60 @@ for (const scheme of ['light', 'dark'] as const) {
       });
     });
 
+    const FILES_SHOT =
+      '<p>Attached below.</p>' +
+      '<a href="/report.pdf" download="Q3 report.pdf" data-tei-file="" data-size="2516582">Q3 report.pdf</a>' +
+      '<a href="/a.zip" download="assets-final.zip" data-tei-file="" data-size="48234496">assets-final.zip</a>' +
+      '<a href="/notes" download="notes" data-tei-file="">notes</a>' +
+      '<a href="/l.docx" download="A file name too long for one line of its card, cut short.docx"' +
+      ' data-tei-file="" data-size="5000">A file name too long for one line of its card, cut short.docx</a>';
+
+    for (const width of [375, 768]) {
+      test(`files at ${width}px: one selected with its toolbar, one uploading`, async ({ tei }) => {
+        await tei.page.setViewportSize({ width, height: 600 });
+        await tei.open({ content: FILES_SHOT, flags: ['file', 'plain'] });
+        await theme(tei.page, scheme);
+        const cards = tei.content.locator('[data-tei-file]');
+        await cards.nth(1).click();
+        await expect(tei.page.locator('[data-tei-control="file-toolbar"]')).toBeVisible();
+        // The state an upload paints, set as the upload would: through the CSSOM.
+        await cards.nth(2).evaluate((el: HTMLElement) => {
+          el.setAttribute('data-tei-uploading', '');
+          el.style.setProperty('--tei-progress', '0.4');
+        });
+        await still(tei.page);
+        await shoot(tei, tei.page.getByTestId('editor'), `files-${scheme}-${width}.png`);
+      });
+    }
+
+    test('file rename form', async ({ tei }) => {
+      await tei.page.setViewportSize({ width: 768, height: 600 });
+      await tei.open({ content: FILES_SHOT, flags: ['file', 'plain'] });
+      await theme(tei.page, scheme);
+      await tei.content.locator('[data-tei-file]').first().click();
+      await tei.page
+        .locator('[data-tei-control="file-toolbar"]')
+        .getByRole('button', { name: 'Rename', exact: true })
+        .click();
+      const form = tei.page.locator('.tei-file-rename');
+      await expect(form).toBeVisible();
+      await still(tei.page);
+      // The form and the toolbar it opened from.
+      const box = await form.boundingBox();
+      const bar = await tei.page.locator('[data-tei-control="file-toolbar"]').boundingBox();
+      if (!box || !bar) throw new Error('no form');
+      const x = Math.min(box.x, bar.x) - 16;
+      const y = Math.min(box.y, bar.y) - 16;
+      await shoot(tei, tei.page, `file-rename-${scheme}.png`, {
+        clip: {
+          x,
+          y,
+          width: Math.max(box.x + box.width, bar.x + bar.width) + 16 - x,
+          height: Math.max(box.y + box.height, bar.y + bar.height) + 16 - y,
+        },
+      });
+    });
+
     test('tooltip on a toolbar button', async ({ tei }) => {
       await tei.open();
       await theme(tei.page, scheme);

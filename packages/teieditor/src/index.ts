@@ -18,6 +18,7 @@ export type {
 export {
   defineTeiExtension,
   getExtensionOptions,
+  getPeerOptions,
   keymapToShortcuts,
   setExtensionOptions,
 } from './core/define.js';

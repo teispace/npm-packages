@@ -747,6 +747,143 @@
     margin-inline-start: 1em;
   }
 
+  /* Files: a card with the file's kind, name and size, which downloads it.
+   * The editor's are .tei-file; saved HTML's a[data-tei-file] draws the same
+   * card from attributes, to the pixel, so server HTML doesn't shift. */
+  :where(.tei-prose) a[data-tei-file],
+  .tei-file {
+    --tei-file-badge: 2.5rem;
+    position: relative;
+    max-inline-size: 28rem;
+    margin: 0 0 0.75em;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius);
+    background: var(--tei-bg-subtle);
+    color: var(--tei-fg);
+    line-height: 1.35;
+    text-decoration: none;
+    transition: border-color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-file {
+    display: grid;
+    grid-template-columns: var(--tei-file-badge) minmax(0, 1fr);
+    column-gap: var(--tei-space-3);
+    align-items: center;
+    padding: var(--tei-space-2) var(--tei-space-3) var(--tei-space-2) var(--tei-space-2);
+  }
+
+  :where(.tei-prose) a[data-tei-file]::before,
+  .tei-file::before {
+    content: attr(data-ext);
+    display: grid;
+    place-items: center;
+    block-size: var(--tei-file-badge);
+    overflow: hidden;
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-accent-subtle);
+    color: var(--tei-accent);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  /* Saved HTML: one line of name, cut short like the editor's, the badge
+   * and the size (from `title`) placed round it; padding centres the stack
+   * in the badge's height. */
+  :where(.tei-prose) a[data-tei-file] {
+    --tei-file-gap: calc((var(--tei-file-badge) - 1.35em) / 2);
+    display: block;
+    overflow: hidden;
+    padding-block: calc(var(--tei-space-2) + var(--tei-file-gap));
+    padding-inline: calc(var(--tei-space-2) + var(--tei-file-badge) + var(--tei-space-3))
+      var(--tei-space-3);
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :where(.tei-prose) a[data-tei-file][title] {
+    /* Name and size: 1.35em + 1.35 × 0.8125em. */
+    --tei-file-gap: calc((var(--tei-file-badge) - 2.446875em) / 2);
+    padding-block-end: calc(var(--tei-space-2) + var(--tei-file-gap) + 1.096875em);
+  }
+
+  :where(.tei-prose) a[data-tei-file]::before {
+    position: absolute;
+    inset-block-start: var(--tei-space-2);
+    inset-inline-start: var(--tei-space-2);
+    inline-size: var(--tei-file-badge);
+  }
+
+  :where(.tei-prose) a[data-tei-file][title]::after {
+    content: attr(title);
+    position: absolute;
+    inset-block-end: calc(var(--tei-space-2) + var(--tei-file-gap));
+    inset-inline-start: calc(var(--tei-space-2) + var(--tei-file-badge) + var(--tei-space-3));
+    color: var(--tei-fg-muted);
+    font-size: 0.8125em;
+    font-weight: 400;
+  }
+
+  :where(.tei-prose) a[data-tei-file]:hover,
+  .tei-file:hover {
+    border-color: var(--tei-border-strong);
+  }
+
+  .tei-file {
+    user-select: none;
+  }
+
+  .tei-file-link {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* The link covers the card; while editing, a click selects the card. */
+  .tei-file-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .tei-file-name {
+    overflow: hidden;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tei-file-meta {
+    color: var(--tei-fg-muted);
+    font-size: 0.8125em;
+  }
+
+  .tei-file-meta:empty {
+    display: none;
+  }
+
+  /* Uploading: the card fills as it goes. */
+  .tei-file[data-tei-uploading] {
+    background: linear-gradient(
+      to right,
+      var(--tei-accent-subtle) calc(var(--tei-progress, 0) * 100%),
+      var(--tei-bg-subtle) 0
+    );
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-file {
+    cursor: pointer;
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-file-link {
+    pointer-events: none;
+  }
+
   /* Columns */
   .tei-columns {
     display: grid;

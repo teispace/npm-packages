@@ -1,4 +1,5 @@
-import { Image, type ImageUploadHandler } from '@teispace/teieditor/extensions/image';
+import { FileAttachment } from '@teispace/teieditor/extensions/file';
+import { Image } from '@teispace/teieditor/extensions/image';
 import { StarterKit } from '@teispace/teieditor/extensions/starter-kit';
 import { Table } from '@teispace/teieditor/extensions/table';
 import { TextStyle } from '@teispace/teieditor/extensions/text-style';
@@ -8,8 +9,11 @@ import { TextStyle } from '@teispace/teieditor/extensions/text-style';
  * comes back as a data URL, its progress paced so you can see it. A real
  * handler sends the file and resolves with its URL.
  */
-const demoUpload: ImageUploadHandler = (file, { onProgress, signal }) =>
-  new Promise((resolve, reject) => {
+const demoUpload = (
+  file: File,
+  { onProgress, signal }: { onProgress: (fraction: number) => void; signal: AbortSignal },
+) =>
+  new Promise<string>((resolve, reject) => {
     let step = 0;
     const timer = setInterval(() => {
       onProgress(++step / 10);
@@ -27,4 +31,10 @@ const demoUpload: ImageUploadHandler = (file, { onProgress, signal }) =>
   });
 
 /** What the showcase installs, on the server (for its first HTML) and in the browser alike. */
-export const EXTENSIONS = [StarterKit, TextStyle, Table, Image.configure({ upload: demoUpload })];
+export const EXTENSIONS = [
+  StarterKit,
+  TextStyle,
+  Table,
+  Image.configure({ upload: demoUpload }),
+  FileAttachment.configure({ upload: demoUpload }),
+];

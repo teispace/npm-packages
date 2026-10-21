@@ -31,24 +31,9 @@ export interface SerializedImageNode extends SerializedLexicalNode {
   align?: ImageAlign;
 }
 
-/** A size from saved JSON: 4.x wrote `'inherit'`, the Lexical playground `0`, for none. */
+/** A size in px from saved JSON; anything else is none. */
 const size = (value: unknown): number | null =>
   typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.round(value) : null;
-
-/** Every `text` in a saved Lexical document, joined: the playground's caption editor, as text. */
-function textOf(value: unknown): string {
-  if (!value || typeof value !== 'object') return '';
-  const node = value as {
-    text?: unknown;
-    children?: unknown;
-    root?: unknown;
-    editorState?: unknown;
-  };
-  if (typeof node.text === 'string') return node.text;
-  if (node.editorState) return textOf(node.editorState);
-  if (node.root) return textOf(node.root);
-  return Array.isArray(node.children) ? node.children.map(textOf).join('') : '';
-}
 
 /**
  * What both kinds of image hold: a source, alt text and a size. Not a node
@@ -112,10 +97,9 @@ export class BaseImageNode extends DecoratorNode<null> {
 
   updateFromJSON(json: LexicalUpdateJSON<SerializedImageNode>): this {
     const self = super.updateFromJSON(json);
-    const data = json as Partial<SerializedImageNode> & { alt?: unknown };
+    const data = json as Partial<SerializedImageNode>;
     if (typeof data.src === 'string') self.setSrc(data.src);
-    const alt = typeof data.altText === 'string' ? data.altText : data.alt;
-    if (typeof alt === 'string') self.setAltText(alt);
+    if (typeof data.altText === 'string') self.setAltText(data.altText);
     self.setSize(size(data.width), size(data.height));
     return self;
   }
@@ -222,17 +206,8 @@ export class ImageNode extends BaseImageNode {
 
   updateFromJSON(json: LexicalUpdateJSON<SerializedImageNode>): this {
     const self = super.updateFromJSON(json);
-    const data = json as Partial<SerializedImageNode> & {
-      caption?: unknown;
-      showCaption?: unknown;
-    };
-    if (typeof data.align === 'string') self.setAlign(data.align as ImageAlign);
-    // 4.x kept the caption as a string; the Lexical playground in an editor
-    // of its own. Both become this image's caption.
-    if (!self.getCaption()) {
-      if (typeof data.caption === 'string' && data.caption) self.setCaption(data.caption);
-      else if (data.showCaption === true) self.setCaption(textOf(data.caption));
-    }
+    const { align } = json as Partial<SerializedImageNode>;
+    if (typeof align === 'string') self.setAlign(align);
     return self;
   }
 

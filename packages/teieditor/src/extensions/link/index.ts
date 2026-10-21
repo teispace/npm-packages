@@ -76,8 +76,13 @@ export interface LinkOptions {
 export interface LinkStorage {
   /** Bumped by `openLinkEditor`; link UIs watch it. */
   editRequest: Signal<number>;
-  /** How many link UIs are mounted (they register themselves). */
+  /**
+   * How many link UIs are mounted, or on their way (they register
+   * themselves; one that loads later is held a place for).
+   */
   editors: Signal<number>;
+  /** The last request a link UI took: one that loads later opens for a newer one. */
+  handled: number;
 }
 
 export interface LinkAtSelection {
@@ -137,7 +142,7 @@ export const Link = defineTeiExtension({
     target: null,
   } as LinkOptions,
   dependencies: [RichText, LinkExtension],
-  storage: (): LinkStorage => ({ editRequest: signal(0), editors: signal(0) }),
+  storage: (): LinkStorage => ({ editRequest: signal(0), editors: signal(0), handled: 0 }),
   commands: {
     setLink: {
       run: ({ options }, input: string | LinkInput) => {

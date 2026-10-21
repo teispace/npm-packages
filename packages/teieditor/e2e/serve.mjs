@@ -12,6 +12,7 @@ const TYPES = {
   '.css': 'text/css; charset=utf-8',
   '.map': 'application/json',
   '.svg': 'image/svg+xml',
+  '.pdf': 'application/pdf',
 };
 export const CSP = [
   "default-src 'none'",

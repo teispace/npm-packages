@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { $createParagraphNode, $createTextNode, $getRoot } from 'lexical';
 import { StrictMode } from 'react';
 import { hydrateRoot } from 'react-dom/client';
@@ -112,7 +112,7 @@ describe('Editor', () => {
 });
 
 describe('LinkPopover', () => {
-  it('does not open on mount, only on a request', () => {
+  it('does not open on mount, only on a request', async () => {
     const editor = createReactTeiEditor({
       extensions: [StarterKit],
       content: '<p><a href="https://example.com">link</a></p>',
@@ -120,7 +120,8 @@ describe('LinkPopover', () => {
     render(<Editor editor={editor} />);
     act(() => editor.update(() => $getRoot().selectEnd()));
     // A remount with a selection in place: the request signal's current value is old news.
-    const { unmount } = render(<Editor editor={editor} slots={{ toolbar: false }} />);
+    const { container, unmount } = render(<Editor editor={editor} slots={{ toolbar: false }} />);
+    await waitFor(() => expect(container.querySelector('[data-tei-ready]')).not.toBeNull());
     expect(document.querySelector('[data-tei-control="link-editor"]')).toBeNull();
     unmount();
     editor.destroy();
@@ -156,6 +157,11 @@ describe('hydration', () => {
     );
     const container = document.createElement('div');
     container.innerHTML = renderToString(app);
+    // The parts that load later are the browser's: none in the server's markup
+    // (`renderToString` cannot render a lazy part not loaded yet).
+    expect(container.querySelector('[data-tei-preset]')?.hasAttribute('data-tei-ready')).toBe(
+      false,
+    );
     document.body.append(container);
     const errors: unknown[] = [];
     const root = await act(async () =>
@@ -165,6 +171,11 @@ describe('hydration', () => {
     expect(container.querySelector('[data-tei-content] h1')?.textContent).toBe('Title');
     expect(container.querySelector('output')?.textContent).toBe('2 words');
     expect(screen.getByRole('toolbar', { name: 'Formatting' })).toBeTruthy();
+    await waitFor(() =>
+      expect(container.querySelector('[data-tei-preset]')?.hasAttribute('data-tei-ready')).toBe(
+        true,
+      ),
+    );
     act(() => root.unmount());
   });
 });

@@ -96,64 +96,26 @@ describe('image: JSON', () => {
     expect(images(make(json, 'json'))).toEqual(images(editor));
   });
 
-  it('reads 4.x images: a string caption and "inherit" for no size', () => {
+  it('a size that is not a positive number of px is none', () => {
+    const image = (width: unknown) => ({
+      type: 'image',
+      version: 1,
+      src: 'https://x.test/a.png',
+      altText: '',
+      width,
+      height: width,
+    });
     const editor = make(
       {
         root: {
           type: 'root',
           version: 1,
-          children: [
-            {
-              type: 'image',
-              version: 1,
-              src: 'https://x.test/a.png',
-              altText: 'Old',
-              width: 'inherit',
-              height: 'inherit',
-              caption: 'From 4.x',
-            },
-          ],
+          children: [image('wide'), image(0), image(-5), image(120.4)],
         },
       },
       'json',
     );
-    expect(images(editor)).toEqual([
-      {
-        src: 'https://x.test/a.png',
-        alt: 'Old',
-        width: null,
-        height: null,
-        align: 'center',
-        caption: 'From 4.x',
-      },
-    ]);
-  });
-
-  it("reads the Lexical playground's images: a nested caption editor, shown or not", () => {
-    const caption = {
-      editorState: {
-        root: { children: [{ children: [{ text: 'Shown', type: 'text' }], type: 'paragraph' }] },
-      },
-    };
-    const image = (showCaption: boolean) => ({
-      type: 'image',
-      version: 1,
-      src: 'https://x.test/a.png',
-      altText: 'P',
-      width: 0,
-      height: 0,
-      maxWidth: 500,
-      showCaption,
-      caption,
-    });
-    const editor = make(
-      { root: { type: 'root', version: 1, children: [image(true), image(false)] } },
-      'json',
-    );
-    expect(images(editor).map((i) => [i.width, i.caption])).toEqual([
-      [null, 'Shown'],
-      [null, null],
-    ]);
+    expect(images(editor).map((i) => i.width)).toEqual([null, null, null, 120]);
   });
 
   it('refuses a script URL however it arrives', () => {

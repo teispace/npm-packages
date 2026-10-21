@@ -310,3 +310,40 @@ test('images: a dropped file uploads, resizes and aligns, reporting nothing', as
   await expect(demo).toHaveAttribute('width', /^3\d\d$/);
   await expectNoViolations(page);
 });
+
+test('files: a dropped file uploads, renames and downloads, reporting nothing', async ({ page }) => {
+  const editor = await open(page, '/');
+  const cards = editor.locator('[data-tei-file]');
+  await expect(cards).toHaveCount(1);
+  await editor.locator('p').first().evaluate((el) => {
+    const data = new DataTransfer();
+    data.items.add(new File(['a,b\n1,2\n'], 'numbers.csv', { type: 'text/csv' }));
+    const rect = el.getBoundingClientRect();
+    el.dispatchEvent(
+      new DragEvent('drop', {
+        dataTransfer: data,
+        bubbles: true,
+        cancelable: true,
+        clientX: rect.right - 1,
+        clientY: rect.top + rect.height / 2,
+      }),
+    );
+  });
+  await expect(cards).toHaveCount(2);
+  await expect(editor.locator('[data-tei-file][data-tei-uploading]')).toHaveCount(1);
+  await expect(editor.locator('[data-tei-file][data-tei-uploading]')).toHaveCount(0);
+  await expect(cards.first()).toHaveAttribute('data-ext', 'CSV');
+  // The demo file: rename it, then download it.
+  const demo = cards.last();
+  await demo.click();
+  await page.getByRole('button', { name: 'Rename', exact: true }).click();
+  const input = page.locator('[data-tei-control="file-rename-input"]');
+  await input.fill('Notes.pdf');
+  await input.press('Enter');
+  await expect(demo.locator('.tei-file-name')).toHaveText('Notes.pdf');
+  await demo.click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download', exact: true }).click();
+  expect((await download).suggestedFilename()).toBe('Notes.pdf');
+  await expectNoViolations(page);
+});

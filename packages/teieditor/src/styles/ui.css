@@ -1043,9 +1043,10 @@
     }
   }
 
-  /* Images: the insert form, alt text, and the resize handles. */
+  /* Images and files: the insert form, alt text, renaming, and the resize handles. */
   .tei-image-insert,
-  .tei-image-alt {
+  .tei-image-alt,
+  .tei-file-rename {
     display: flex;
     flex-direction: column;
     gap: var(--tei-space-2);
@@ -1053,7 +1054,8 @@
   }
 
   .tei-image-insert .tei-link-form,
-  .tei-image-alt .tei-link-form {
+  .tei-image-alt .tei-link-form,
+  .tei-file-rename .tei-link-form {
     inline-size: auto;
   }
 

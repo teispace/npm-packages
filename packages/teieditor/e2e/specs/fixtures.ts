@@ -45,6 +45,11 @@ export const test = base.extend<{ tei: Harness }>({
       if (message.type() === 'error') problems.push(`console: ${message.text()}`);
     });
     const content = page.getByTestId('content');
+    // The editor takes the caret on the selectionchange that follows a key.
+    const frames = () =>
+      page.evaluate(
+        () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+      );
     const harness: Harness = {
       page,
       content,
@@ -71,15 +76,14 @@ export const test = base.extend<{ tei: Harness }>({
           if (root && selection) selection.selectAllChildren(root);
           selection?.collapseToEnd();
         });
-        // The editor takes the caret on the selectionchange that follows.
-        await page.evaluate(
-          () =>
-            new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-        );
+        await frames();
       },
       async selectAll() {
         await content.click();
         await page.keyboard.press('ControlOrMeta+a');
+        // A selectionchange still to come makes the editor take focus back
+        // (Lexical's way) if a test moves focus first.
+        await frames();
       },
       log: () => page.evaluate(() => [...window.__tei.log]),
       async problems() {

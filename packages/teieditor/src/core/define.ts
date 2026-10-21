@@ -1,6 +1,7 @@
 import {
   batch,
   getExtensionDependencyFromEditor,
+  getPeerDependencyFromEditor,
   KeyboardShortcutsExtension,
   namedSignals,
 } from '@lexical/extension';
@@ -362,6 +363,21 @@ export function setExtensionOptions<Config, Storage>(
       if (signal) signal.value = value;
     }
   });
+}
+
+/**
+ * An installed extension's live options by its name, without importing it
+ * (which would put it in the bundle): how one extension defers to another
+ * that may or may not be there.
+ */
+export function getPeerOptions<Config>(
+  lexical: LexicalEditor,
+  name: string,
+): Readonly<Config> | undefined {
+  const found = getPeerDependencyFromEditor(lexical, name as never) as
+    | { output: TeiExtensionOutput<Config & AnyConfig, unknown> }
+    | undefined;
+  return found ? (liveOptions(found.output.options) as Readonly<Config>) : undefined;
 }
 
 /**

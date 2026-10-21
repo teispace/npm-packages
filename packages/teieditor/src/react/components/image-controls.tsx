@@ -12,19 +12,16 @@ import {
 } from 'react';
 import { getExtensionOptions } from '../../core/define.js';
 import type { TeiEditor } from '../../core/editor.js';
-import type { TeiItem } from '../../core/types.js';
 import { $getImage, Image, type ImageAlign, minImageWidth } from '../../extensions/image/index.js';
 import { TeiEditorContext, useOptionalEditor } from '../context.js';
-import { useItemStates } from '../items.js';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/controls.js';
 import { DropdownMenu } from '../ui/dropdown.js';
-import { Popover } from '../ui/popover.js';
-import { Separator } from '../ui/toolbar.js';
 import { useEditorFocus } from '../use-editor-focus.js';
 import { useEditorState } from '../use-editor-state.js';
-import { ItemButton, itemControl, type ToolbarControl } from './editor-toolbar.js';
+import type { ToolbarControl } from './editor-toolbar.js';
 import { ImageInsertPopover, pickImages } from './image-insert.js';
+import { NodeToolbar } from './node-toolbar.js';
 
 // -- The selected image -------------------------------------------------------
 
@@ -165,36 +162,6 @@ const IMAGE_CONTROLS: Record<string, ToolbarControl> = {
 };
 
 /** The `imageMenu` items, by group, as buttons and the controls they name. */
-function ImageToolbarItems({
-  editor,
-  controls,
-}: {
-  editor: TeiEditor;
-  controls?: Record<string, ToolbarControl>;
-}) {
-  const items = useMemo(() => editor.items('imageMenu'), [editor]);
-  const states = useItemStates(editor, items);
-  const named = useMemo(() => ({ ...IMAGE_CONTROLS, ...controls }), [controls]);
-  const out: React.ReactNode[] = [];
-  let group: string | undefined;
-  items.forEach((item: TeiItem, i) => {
-    const state = states[i];
-    if (out.length > 0 && item.group !== group) {
-      out.push(<Separator key={`sep-${item.id}`} />);
-    }
-    group = item.group;
-    const Control = itemControl(item, named);
-    out.push(
-      Control ? (
-        <Control key={item.id} editor={editor} />
-      ) : (
-        <ItemButton key={item.id} editor={editor} item={item} state={state} />
-      ),
-    );
-  });
-  return <>{out}</>;
-}
-
 function ImageToolbar({
   editor,
   selected,
@@ -206,22 +173,19 @@ function ImageToolbar({
   hidden: boolean;
   controls?: Record<string, ToolbarControl>;
 }) {
+  const named = useMemo(() => ({ ...IMAGE_CONTROLS, ...controls }), [controls]);
   const element = imageElement(editor, selected.key);
   if (!element) return null;
   return (
-    <Popover
-      open={!hidden}
+    <NodeToolbar
+      editor={editor}
       anchor={element}
-      placement="top"
-      offset={8}
-      variant="bar"
-      dismissOnOutside={false}
-      role="toolbar"
-      aria-label={editor.t('image.menu')}
-      data-tei-control="image-toolbar"
-    >
-      <ImageToolbarItems editor={editor} controls={controls} />
-    </Popover>
+      placement="imageMenu"
+      label={editor.t('image.menu')}
+      control="image-toolbar"
+      hidden={hidden}
+      controls={named}
+    />
   );
 }
 

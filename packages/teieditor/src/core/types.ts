@@ -102,7 +102,9 @@ export type TeiPlacement =
   /** The menu on a table cell: rows, columns, cells and the table. */
   | 'tableMenu'
   /** The toolbar over a selected image. */
-  | 'imageMenu';
+  | 'imageMenu'
+  /** The toolbar over a selected file. */
+  | 'fileMenu';
 
 /**
  * A UI entry an extension contributes — a toolbar button, a slash-menu row,
