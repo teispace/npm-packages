@@ -8,15 +8,11 @@ import {
   ColorPicker,
   Dialog,
   DropdownMenu,
-  EditorContent,
-  EditorProvider,
+  Editor,
   Field,
   GridPicker,
   Input,
   type MenuGroupData,
-  Separator,
-  Toolbar,
-  useEditorState,
   useTeiEditor,
 } from '../../src/react/index';
 import { neutralizeAttributes, restoreStyles } from '../../src/utils/html-attributes';
@@ -106,42 +102,6 @@ const SWATCHES = [
   { value: '#f08c00', label: 'Orange' },
 ];
 
-function EditorToolbar({ editor }: { editor: TeiEditor }) {
-  const items = editor.items('toolbar');
-  const state = useEditorState(
-    (e) =>
-      items.map((item) => ({
-        active: item.active
-          ? (e.isActive as (name: string, ...args: unknown[]) => boolean)(
-              item.active,
-              ...(item.activeArgs ?? []),
-            )
-          : false,
-        enabled: item.command
-          ? e.can().command(item.command, ...((item.args ?? []) as unknown[]))
-          : true,
-      })),
-    { editor, equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) },
-  );
-  return (
-    <Toolbar aria-label="Formatting">
-      {items.map((item, i) => [
-        i > 0 && items[i - 1]?.group !== item.group ? <Separator key={`sep-${item.id}`} /> : null,
-        <Button
-          key={item.id}
-          data-item={item.id}
-          icon={item.icon}
-          label={editor.t(item.label)}
-          shortcut={item.shortcut ? editor.shortcut(item.shortcut) : undefined}
-          pressed={item.active ? state[i]?.active : undefined}
-          disabled={!state[i]?.enabled}
-          onClick={() => editor.runItem(item)}
-        />,
-      ])}
-    </Toolbar>
-  );
-}
-
 function App() {
   const editor = useTeiEditor({
     extensions: [StarterKit, ...(params.has('raw') ? [Html.configure({ clean: false })] : [])],
@@ -152,13 +112,12 @@ function App() {
   window.__tei = { editor, violations, log, setClipSource, trust };
   return (
     <main data-testid="root">
-      {/* The editor root, as <Editor> renders it: tokens, container queries, containment. */}
-      <section className="tei" data-tei-bordered="" data-testid="editor">
-        <EditorProvider editor={editor}>
-          <EditorToolbar editor={editor} />
-        </EditorProvider>
-        <EditorContent editor={editor} placeholder="Write something…" data-testid="content" />
-      </section>
+      <Editor
+        editor={editor}
+        placeholder="Write something…"
+        frameProps={{ 'data-testid': 'editor' }}
+        contentProps={{ 'data-testid': 'content' }}
+      />
       {/* UI outside an editor takes the tokens from .tei-portal. */}
       <section className="tei-portal gallery" data-testid="gallery">
         <DropdownMenu label="Menu" groups={GROUPS} data-testid="menu-trigger">

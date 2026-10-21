@@ -219,6 +219,12 @@
     }
   }
 
+  /* The block-type menu's name; a minimum width keeps the toolbar still as it changes. */
+  .tei-control-label {
+    min-inline-size: 5.25em;
+    text-align: start;
+  }
+
   .tei-separator {
     flex: none;
     align-self: stretch;
@@ -290,6 +296,37 @@
 
   .tei-popover[data-variant="bar"]:not(:popover-open):not([data-open]) {
     display: none;
+  }
+
+  /* Link popover: the link under the caret, and the form that edits it. */
+  .tei-link-url {
+    max-inline-size: 16rem;
+    padding-inline: var(--tei-space-2);
+    overflow: hidden;
+    color: var(--tei-accent);
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tei-link-url:hover {
+    text-decoration: underline;
+  }
+
+  .tei-link-form {
+    display: flex;
+    align-items: center;
+    gap: var(--tei-space-1);
+    inline-size: min(22rem, calc(100vw - 2rem));
+  }
+
+  .tei-link-form > .tei-input {
+    flex: 1;
+    min-inline-size: 0;
+  }
+
+  [data-tei-control="link-editor"] > .tei-hint {
+    margin: var(--tei-space-1) var(--tei-space-1) 0;
   }
 
   /* Menu */

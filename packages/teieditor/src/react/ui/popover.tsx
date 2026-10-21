@@ -87,6 +87,7 @@ export const Popover = forwardRef<HTMLDivElement, PopoverProps>(function Popover
     padding,
     matchWidth,
     noFlip,
+    flipBoundary,
     className,
     children,
     ...rest
@@ -106,7 +107,7 @@ export const Popover = forwardRef<HTMLDivElement, PopoverProps>(function Popover
     [ref],
   );
 
-  useFloating(anchor, el, open, { placement, offset, padding, matchWidth, noFlip });
+  useFloating(anchor, el, open, { placement, offset, padding, matchWidth, noFlip, flipBoundary });
 
   // Into the top layer, and focus where asked; on close, focus back to the anchor.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the anchor only says where focus returns; re-running on it would re-focus

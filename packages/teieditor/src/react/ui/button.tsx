@@ -79,7 +79,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       data-variant={variant}
       data-size={size}
       data-icon-only={iconOnly ? '' : undefined}
-      aria-label={iconOnly ? label : rest['aria-label']}
+      // An explicit aria-label wins; an icon-only button is named by its label.
+      aria-label={rest['aria-label'] ?? (iconOnly ? label : undefined)}
       aria-pressed={pressed}
       aria-keyshortcuts={rest['aria-keyshortcuts']}
       title={undefined}

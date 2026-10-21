@@ -29,6 +29,11 @@ export interface FloatingOptions {
   matchWidth?: boolean;
   /** Stay on the given side instead of flipping when there is no room. */
   noFlip?: boolean;
+  /**
+   * Flip when there is no room inside this element, not just the viewport:
+   * a bubble over the first line goes below it rather than over a toolbar.
+   */
+  flipBoundary?: Element | null;
 }
 
 /**
@@ -44,10 +49,10 @@ export function positionFloating(
   floating: HTMLElement,
   options: FloatingOptions = {},
 ): () => void {
-  const { placement = 'bottom-start', padding = 8, matchWidth, noFlip } = options;
+  const { placement = 'bottom-start', padding = 8, matchWidth, noFlip, flipBoundary } = options;
   const middleware: Middleware[] = [
     offset(options.offset ?? 6),
-    noFlip ? false : flip({ padding }),
+    noFlip ? false : flip(flipBoundary ? { padding, boundary: flipBoundary } : { padding }),
     shift({ padding }),
     size({
       padding,
@@ -106,10 +111,17 @@ export function useFloating(
   active: boolean,
   options: FloatingOptions = {},
 ): void {
-  const { placement, offset: gap, padding, matchWidth, noFlip } = options;
+  const { placement, offset: gap, padding, matchWidth, noFlip, flipBoundary } = options;
   useLayoutEffect(() => {
     const el = floating.current;
     if (!active || !anchor || !el) return;
-    return positionFloating(anchor, el, { placement, offset: gap, padding, matchWidth, noFlip });
-  }, [anchor, floating, active, placement, gap, padding, matchWidth, noFlip]);
+    return positionFloating(anchor, el, {
+      placement,
+      offset: gap,
+      padding,
+      matchWidth,
+      noFlip,
+      flipBoundary,
+    });
+  }, [anchor, floating, active, placement, gap, padding, matchWidth, noFlip, flipBoundary]);
 }

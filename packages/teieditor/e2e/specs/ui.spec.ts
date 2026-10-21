@@ -417,7 +417,10 @@ test.describe('responsive @mobile', () => {
       const root = document.querySelector('[data-tei-content]') as HTMLElement;
       getSelection()?.selectAllChildren(root);
     });
-    await tei.page.locator('[data-item="bold"]').tap();
+    await tei.page
+      .getByRole('toolbar', { name: 'Formatting', exact: true })
+      .locator('[data-item="bold"]')
+      .tap();
     expect(await tei.html()).toBe('<p><strong>word</strong></p>');
     await expect(tei.page.locator('[data-tei-part="tooltip"]')).toBeHidden();
   });

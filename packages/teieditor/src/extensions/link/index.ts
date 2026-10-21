@@ -23,7 +23,12 @@ import {
   mergeRegister,
 } from 'lexical';
 import { defineTeiExtension } from '../../core/define.js';
-import { link as linkIcon, unlink as unlinkIcon } from '../../icons/index.js';
+import {
+  externalLink as externalLinkIcon,
+  link as linkIcon,
+  pencil as pencilIcon,
+  unlink as unlinkIcon,
+} from '../../icons/index.js';
 import { isSafeUrl, LINK_PROTOCOLS, withDefaultScheme } from '../../utils/url.js';
 import { RichText } from '../rich-text/index.js';
 
@@ -187,7 +192,7 @@ export const Link = defineTeiExtension({
     link: { key: 'Mod-k', command: 'openLinkEditor', description: 'Link' },
   },
   markdown: { link: LINK },
-  icons: { link: linkIcon, unlink: unlinkIcon },
+  icons: { link: linkIcon, unlink: unlinkIcon, externalLink: externalLinkIcon, pencil: pencilIcon },
   messages: {
     'link.add': 'Link',
     'link.remove': 'Remove link',
