@@ -346,6 +346,34 @@ describe('HTML a page can use as it is', () => {
     expect(make('<ul><li>a</li><li>b</li></ul>').getHTML()).toBe('<ul><li>a</li><li>b</li></ul>');
   });
 
+  it('writes check lists as task lists: a disabled checkbox, no widget roles', () => {
+    const editor = make(
+      '<ul data-lexical-list-type="check"><li aria-checked="true">Done</li>' +
+        '<li aria-checked="false">To do<ul data-lexical-list-type="check"><li aria-checked="false">Sub</li></ul></li></ul>',
+    );
+    const html = editor.getHTML();
+    expect(html).toBe(
+      '<ul class="contains-task-list">' +
+        '<li class="task-list-item"><input type="checkbox" disabled="" checked="">Done</li>' +
+        '<li class="task-list-item"><input type="checkbox" disabled="">To do' +
+        '<ul class="contains-task-list"><li class="task-list-item"><input type="checkbox" disabled="">Sub</li></ul>' +
+        '</li></ul>',
+    );
+    expect(html).not.toMatch(/role=|tabindex|aria-checked|__lexical/);
+    // A first item indented on its own sits in an item with no box of its own.
+    expect(
+      make(
+        '<ul data-lexical-list-type="check"><li aria-checked="false"><ul data-lexical-list-type="check">' +
+          '<li aria-checked="true">Deep</li></ul></li></ul>',
+      ).getHTML(),
+    ).toBe(
+      '<ul class="contains-task-list"><li><ul class="contains-task-list">' +
+        '<li class="task-list-item"><input type="checkbox" disabled="" checked="">Deep</li></ul></li></ul>',
+    );
+    // And reads back as the same check list.
+    expect(make(html).getJSON()).toEqual(editor.getJSON());
+  });
+
   it('reads back what it wrote, unchanged', () => {
     const html =
       '<h2>T</h2><ol><li>a<ol><li>b</li></ol></li><li>c</li></ol>' +

@@ -2,8 +2,8 @@
 
 import { ReactExtension } from '@lexical/react/ReactExtension';
 import { ReactProviderExtension } from '@lexical/react/ReactProviderExtension';
-import { configExtension } from 'lexical';
-import { type DependencyList, useEffect, useRef, useState } from 'react';
+import { configExtension, HISTORY_MERGE_TAG } from 'lexical';
+import { type DependencyList, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createTeiEditor, type TeiEditorOptions } from '../core/create.js';
 import type { TeiEditor } from '../core/editor.js';
 
@@ -34,13 +34,22 @@ export function createReactTeiEditor(options: TeiEditorOptions): TeiEditor {
 export function useTeiEditor(options: TeiEditorOptions, deps: DependencyList = []): TeiEditor {
   const optionsRef = useRef(options);
   optionsRef.current = options;
-  const [state, setState] = useState(() => ({ editor: createReactTeiEditor(options), deps }));
+  const [state, setState] = useState(() => ({ editor: create(options), deps }));
 
   let { editor } = state;
   if (!sameDeps(state.deps, deps)) {
-    editor = createReactTeiEditor(optionsRef.current);
+    editor = create(optionsRef.current);
     setState({ editor, deps });
   }
+
+  // HTML content goes in once the component mounts, before the browser
+  // paints (see `create`).
+  useMountLayoutEffect(() => {
+    const { content, contentFormat } = optionsRef.current;
+    if (!readsHTML(content, contentFormat) || filled.has(editor)) return;
+    filled.add(editor);
+    editor.setContent(content, 'html', { tag: HISTORY_MERGE_TAG });
+  }, [editor]);
 
   useEffect(() => {
     mounts.set(editor, (mounts.get(editor) ?? 0) + 1);
@@ -57,6 +66,31 @@ export function useTeiEditor(options: TeiEditorOptions, deps: DependencyList = [
 
   return editor;
 }
+
+const readsHTML = (content: unknown, format: string | undefined) =>
+  content !== undefined &&
+  content !== null &&
+  (format ?? (typeof content === 'string' ? 'html' : 'json')) === 'html';
+
+/**
+ * JSON, Markdown and text content go in at once, server included. HTML
+ * needs a DOM to read, which a server does not have: there the document
+ * starts empty, and so it does in the browser's first render too, so
+ * hydration sees what the server rendered. The content follows on mount.
+ */
+function create(options: TeiEditorOptions): TeiEditor {
+  return createReactTeiEditor(
+    readsHTML(options.content, options.contentFormat)
+      ? { ...options, content: undefined }
+      : options,
+  );
+}
+
+/** Editors whose initial content is in (StrictMode runs effects twice). */
+const filled = new WeakSet<TeiEditor>();
+
+// `useLayoutEffect` warns on a server before React 19; there it never runs anyway.
+const useMountLayoutEffect = typeof document === 'undefined' ? useEffect : useLayoutEffect;
 
 /** How many mounted components use each editor. */
 const mounts = new WeakMap<TeiEditor, number>();

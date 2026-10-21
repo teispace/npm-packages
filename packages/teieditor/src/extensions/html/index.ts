@@ -150,6 +150,26 @@ export function cleanExportedHTML(container: ParentNode): void {
       expected = Number(value) + 1;
     }
   }
+  // Check lists in GitHub's task-list markup, which Markdown renderers, other
+  // editors and this one read back. Lexical's own form is a widget (role,
+  // tabindex) that a static page cannot operate; a disabled checkbox says
+  // what it is.
+  for (const list of Array.from(container.querySelectorAll('ul[__lexicallisttype="check"]'))) {
+    list.removeAttribute('__lexicallisttype');
+    list.classList.add('contains-task-list');
+    // An item that only holds a nested list has no aria-checked, and no box.
+    for (const li of Array.from(list.children)) {
+      if (li.tagName !== 'LI' || !li.hasAttribute('aria-checked')) continue;
+      const checked = li.getAttribute('aria-checked') === 'true';
+      for (const name of ['role', 'tabindex', 'aria-checked']) li.removeAttribute(name);
+      li.classList.add('task-list-item');
+      const box = li.ownerDocument.createElement('input');
+      box.type = 'checkbox';
+      box.setAttribute('disabled', '');
+      if (checked) box.setAttribute('checked', '');
+      li.prepend(box);
+    }
+  }
   for (const [outer, inner] of Object.entries(REDUNDANT_WRAPPERS)) {
     for (const el of Array.from(container.querySelectorAll(outer.toLowerCase()))) {
       const only = el.firstElementChild;
@@ -333,6 +353,9 @@ export const Html = defineTeiExtension({
         if (root.getChildrenSize() === 0) root.append($createParagraphNode());
       },
       serialize: ({ editor, lexical }) => {
+        // Nothing written is nothing: what a form checks for, and the same
+        // answer on a server (no DOM) as in the browser.
+        if (editor.isEmpty) return '';
         if (typeof document === 'undefined') {
           throw new Error(
             'teieditor: getHTML() needs a DOM. On a server, use renderToHTML from @teispace/teieditor/server.',

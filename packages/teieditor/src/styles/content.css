@@ -1,11 +1,14 @@
 /*
- * Document styles: one rule set per class in `teiTheme`. Spacing is in `em`
+ * Document styles: one rule set per class in `teiTheme`, which also styles
+ * the same elements in saved HTML under `.tei-prose` (the export carries no
+ * classes), so a document looks the same in the editor and on the page. Spacing is in `em`
  * so a different `--tei-font-size` scales the whole document; physical
  * directions are logical, so RTL documents need nothing extra.
  */
 @layer teieditor {
   /* Blocks */
-  .tei-p {
+  .tei-p,
+  :where(.tei-prose) p {
     margin: 0 0 0.75em;
   }
 
@@ -14,7 +17,8 @@
   .tei-h3,
   .tei-h4,
   .tei-h5,
-  .tei-h6 {
+  .tei-h6,
+  :where(.tei-prose) :is(h1, h2, h3, h4, h5, h6) {
     margin: 1.4em 0 0.5em;
     color: var(--tei-fg);
     font-weight: 650;
@@ -23,44 +27,53 @@
     text-wrap: balance;
   }
 
-  .tei-h1 {
+  .tei-h1,
+  :where(.tei-prose) h1 {
     font-size: 2.125em;
     letter-spacing: -0.022em;
   }
 
-  .tei-h2 {
+  .tei-h2,
+  :where(.tei-prose) h2 {
     font-size: 1.625em;
     letter-spacing: -0.018em;
   }
 
-  .tei-h3 {
+  .tei-h3,
+  :where(.tei-prose) h3 {
     font-size: 1.3125em;
   }
 
-  .tei-h4 {
+  .tei-h4,
+  :where(.tei-prose) h4 {
     font-size: 1.125em;
   }
 
-  .tei-h5 {
+  .tei-h5,
+  :where(.tei-prose) h5 {
     font-size: 1em;
   }
 
-  .tei-h6 {
+  .tei-h6,
+  :where(.tei-prose) h6 {
     font-size: 0.875em;
     color: var(--tei-fg-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
 
-  [data-tei-content] > :first-child {
+  [data-tei-content] > :first-child,
+  .tei-prose > :first-child {
     margin-block-start: 0;
   }
 
-  [data-tei-content] > :last-child {
+  [data-tei-content] > :last-child,
+  .tei-prose > :last-child {
     margin-block-end: 0;
   }
 
-  .tei-quote {
+  .tei-quote,
+  :where(.tei-prose) blockquote {
     margin: 0 0 0.75em;
     padding-inline-start: 1em;
     border-inline-start: 3px solid var(--tei-quote-border);
@@ -93,7 +106,8 @@
   }
 
   /* Inline code and the code block */
-  .tei-code {
+  .tei-code,
+  :where(.tei-prose) :not(pre) > code {
     padding: 0.125em 0.3em;
     border-radius: var(--tei-radius-sm);
     background: var(--tei-code-bg);
@@ -102,7 +116,8 @@
     font-size: 0.875em;
   }
 
-  .tei-code-block {
+  .tei-code-block,
+  :where(.tei-prose) pre {
     position: relative;
     display: block;
     margin: 0 0 0.75em;
@@ -192,42 +207,51 @@
   /* Lists */
   .tei-ul,
   .tei-ol,
-  .tei-checklist {
+  .tei-checklist,
+  :where(.tei-prose) :is(ul, ol) {
     margin: 0 0 0.75em;
     padding: 0;
     padding-inline-start: 1.625em;
   }
 
-  .tei-ul-2 {
+  .tei-ul-2,
+  :where(.tei-prose) ul ul {
     list-style-type: circle;
   }
 
-  .tei-ul-3 {
+  .tei-ul-3,
+  :where(.tei-prose) ul ul ul {
     list-style-type: square;
   }
 
-  .tei-ol-2 {
+  .tei-ol-2,
+  :where(.tei-prose) ol ol {
     list-style-type: lower-alpha;
   }
 
-  .tei-ol-3 {
+  .tei-ol-3,
+  :where(.tei-prose) ol ol ol {
     list-style-type: lower-roman;
   }
 
-  .tei-ol-4 {
+  .tei-ol-4,
+  :where(.tei-prose) ol ol ol ol {
     list-style-type: upper-alpha;
   }
 
-  .tei-ol-5 {
+  .tei-ol-5,
+  :where(.tei-prose) ol ol ol ol ol {
     list-style-type: upper-roman;
   }
 
-  .tei-li {
+  .tei-li,
+  :where(.tei-prose) li {
     margin: 0.2em 0;
     padding-inline-start: 0.25em;
   }
 
-  .tei-li::marker {
+  .tei-li::marker,
+  :where(.tei-prose) li::marker {
     color: var(--tei-fg-muted);
   }
 
@@ -241,7 +265,8 @@
     display: none;
   }
 
-  .tei-li > :where(.tei-ul, .tei-ol, .tei-checklist) {
+  .tei-li > :where(.tei-ul, .tei-ol, .tei-checklist),
+  :where(.tei-prose) li > :is(ul, ol) {
     margin-block-end: 0;
   }
 
@@ -253,7 +278,8 @@
   }
 
   .tei-li-checked,
-  .tei-li-unchecked {
+  .tei-li-unchecked,
+  :where(.tei-prose) li.task-list-item {
     position: relative;
     padding-inline-start: 1.75em;
     list-style: none;
@@ -261,7 +287,8 @@
   }
 
   .tei-li-checked::before,
-  .tei-li-unchecked::before {
+  .tei-li-unchecked::before,
+  :where(.tei-prose) li.task-list-item::before {
     content: "";
     position: absolute;
     inset-inline-start: 0.125em;
@@ -281,12 +308,14 @@
     border-color: var(--tei-accent);
   }
 
-  .tei-li-checked::before {
+  .tei-li-checked::before,
+  :where(.tei-prose) li.task-list-item:has(> input:checked)::before {
     border-color: var(--tei-accent);
     background: var(--tei-accent);
   }
 
-  .tei-li-checked::after {
+  .tei-li-checked::after,
+  :where(.tei-prose) li.task-list-item:has(> input:checked)::after {
     content: "";
     position: absolute;
     inset-inline-start: calc(0.125em + 0.36em);
@@ -299,7 +328,8 @@
     pointer-events: none;
   }
 
-  .tei-li-checked {
+  .tei-li-checked,
+  :where(.tei-prose) li.task-list-item:has(> input:checked) {
     color: var(--tei-fg-muted);
     text-decoration: line-through;
     text-decoration-color: var(--tei-fg-subtle);
@@ -312,7 +342,8 @@
   }
 
   /* Text formats. Combined decorations share one rule so they never fight. */
-  .tei-bold {
+  .tei-bold,
+  :where(.tei-prose) :is(strong, b) {
     font-weight: 650;
   }
 
@@ -320,7 +351,8 @@
     font-style: italic;
   }
 
-  .tei-underline {
+  .tei-underline,
+  :where(.tei-prose) u {
     text-decoration: underline;
     text-underline-offset: 0.15em;
   }
@@ -334,17 +366,20 @@
     text-underline-offset: 0.15em;
   }
 
-  .tei-sub {
+  .tei-sub,
+  :where(.tei-prose) sub {
     font-size: 0.75em;
     vertical-align: sub;
   }
 
-  .tei-sup {
+  .tei-sup,
+  :where(.tei-prose) sup {
     font-size: 0.75em;
     vertical-align: super;
   }
 
-  .tei-highlight {
+  .tei-highlight,
+  :where(.tei-prose) mark {
     padding: 0.05em 0;
     border-radius: 0.15em;
     background: var(--tei-highlight-bg);
@@ -363,7 +398,8 @@
     text-transform: capitalize;
   }
 
-  .tei-link {
+  .tei-link,
+  :where(.tei-prose) a {
     color: var(--tei-link);
     text-decoration: underline;
     text-decoration-color: color-mix(in oklch, var(--tei-link) 40%, transparent);
@@ -372,7 +408,8 @@
     transition: text-decoration-color var(--tei-duration) var(--tei-ease);
   }
 
-  .tei-link:hover {
+  .tei-link:hover,
+  :where(.tei-prose) a:hover {
     text-decoration-color: currentColor;
   }
 
@@ -434,6 +471,47 @@
     to {
       visibility: hidden;
     }
+  }
+
+  /* Saved HTML only: what the export writes differently from the editor. */
+  :where(.tei-prose) pre {
+    padding-inline-start: 1em;
+  }
+
+  :where(.tei-prose) pre > code {
+    font: inherit;
+  }
+
+  :where(.tei-prose) hr {
+    margin: 1.25em 0;
+    border: 0;
+    border-block-start: 1px solid var(--tei-border-strong);
+  }
+
+  /* Check lists, written as task lists (a disabled checkbox per item). */
+  :where(.tei-prose) ul.contains-task-list {
+    padding-inline-start: 0;
+    list-style: none;
+  }
+
+  :where(.tei-prose) ul.contains-task-list ul.contains-task-list {
+    padding-inline-start: 1.75em;
+  }
+
+  /* The box is drawn as the editor draws it (a disabled checkbox ignores
+   * accent-color); the real one sits on top, unseen, for assistive tech. */
+  :where(.tei-prose) li.task-list-item::before {
+    cursor: default;
+  }
+
+  :where(.tei-prose) li.task-list-item > input[type="checkbox"] {
+    position: absolute;
+    inset-inline-start: 0.125em;
+    inset-block-start: calc((1lh - 1.05em) / 2);
+    inline-size: 1.05em;
+    block-size: 1.05em;
+    margin: 0;
+    opacity: 0;
   }
 
   /* Decorator blocks (images, embeds, …) */

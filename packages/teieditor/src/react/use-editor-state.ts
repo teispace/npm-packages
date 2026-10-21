@@ -1,5 +1,6 @@
 'use client';
 
+import type { EditorState } from 'lexical';
 import { useCallback, useContext, useRef, useSyncExternalStore } from 'react';
 import type { TeiEditor } from '../core/editor.js';
 import { TeiEditorContext } from './context.js';
@@ -53,23 +54,21 @@ export function useEditorState<T>(
   const equal = options.equal ?? shallowEqual;
 
   // The last selection, and the inputs it came from, so getSnapshot returns
-  // the same reference until something actually changed.
+  // the same reference until something actually changed. Keyed on the
+  // committed state itself, not on notifications: a change made before
+  // React subscribed (content set on mount) still counts.
   const cache = useRef<{
     editor: TeiEditor;
     selector: typeof selector;
-    version: number;
+    state: EditorState;
+    editable: boolean;
     value: T;
   } | null>(null);
-  const version = useRef(0);
 
   const subscribe = useCallback(
     (notify: () => void) => {
-      const bump = () => {
-        version.current++;
-        notify();
-      };
-      const offUpdate = editor.lexical.registerUpdateListener(bump);
-      const offEditable = editor.lexical.registerEditableListener(bump);
+      const offUpdate = editor.lexical.registerUpdateListener(notify);
+      const offEditable = editor.lexical.registerEditableListener(notify);
       return () => {
         offUpdate();
         offEditable();
@@ -80,10 +79,13 @@ export function useEditorState<T>(
 
   const getSnapshot = (): T => {
     const cached = cache.current;
+    const state = editor.lexical.getEditorState();
+    const editable = editor.isEditable;
     if (
       cached &&
       cached.editor === editor &&
-      cached.version === version.current &&
+      cached.state === state &&
+      cached.editable === editable &&
       cached.selector === selector
     ) {
       return cached.value;
@@ -91,7 +93,7 @@ export function useEditorState<T>(
     const next = selector(editor);
     const value =
       cached && cached.editor === editor && equal(cached.value, next) ? cached.value : next;
-    cache.current = { editor, selector, version: version.current, value };
+    cache.current = { editor, selector, state, editable, value };
     return value;
   };
 

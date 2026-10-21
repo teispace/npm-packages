@@ -30,7 +30,9 @@ export const ContentEditable = forwardRef<
   ContentEditableProps & { editor: TeiEditor }
 >(function ContentEditable({ editor, placeholder, className, role = 'textbox', ...rest }, ref) {
   const [editable, setEditable] = useState(() => editor.isEditable);
-  const [empty, setEmpty] = useState(() => editor.isEmpty);
+  // Unknown until mounted: server markup never shows the placeholder over
+  // content that is about to arrive. The layout effect sets it before paint.
+  const [empty, setEmpty] = useState(false);
 
   useLayoutEffect(() => {
     setEditable(editor.isEditable);

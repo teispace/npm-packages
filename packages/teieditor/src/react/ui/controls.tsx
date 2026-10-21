@@ -18,6 +18,12 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
   },
 );
 
+/**
+ * The native `<select>`: the platform's own picker, best on phones. Under a
+ * strict `style-src`, Safari reports a `style-src-attr` violation for each
+ * one it renders (from styles in its own control, not the page); where
+ * reports must stay empty, use `DropdownMenu`.
+ */
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
   function Select({ className, ...rest }, ref) {
     const cls = usePartClass('select', 'tei-select', className);

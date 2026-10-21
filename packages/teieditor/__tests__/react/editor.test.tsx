@@ -1,6 +1,8 @@
 import { act, render, screen } from '@testing-library/react';
 import { $createParagraphNode, $createTextNode, $getRoot } from 'lexical';
 import { StrictMode } from 'react';
+import { hydrateRoot } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Bold } from '../../src/extensions/formatting/index.js';
 import { RichText } from '../../src/extensions/rich-text/index.js';
@@ -11,6 +13,7 @@ import {
   Editor,
   EditorToolbar,
   useCurrentEditor,
+  useEditorState,
 } from '../../src/react/index.js';
 
 afterEach(() => document.body.replaceChildren());
@@ -143,3 +146,30 @@ describe('context for the parts', () => {
     expect(seen).not.toBeNull();
   });
 });
+
+describe('hydration', () => {
+  it('hydrates server markup without a mismatch, then shows the HTML content', async () => {
+    const app = (
+      <Editor content="<h1>Title</h1><p>Body</p>" placeholder="Write…">
+        <WordCount />
+      </Editor>
+    );
+    const container = document.createElement('div');
+    container.innerHTML = renderToString(app);
+    document.body.append(container);
+    const errors: unknown[] = [];
+    const root = await act(async () =>
+      hydrateRoot(container, app, { onRecoverableError: (error) => errors.push(error) }),
+    );
+    expect(errors).toEqual([]);
+    expect(container.querySelector('[data-tei-content] h1')?.textContent).toBe('Title');
+    expect(container.querySelector('output')?.textContent).toBe('2 words');
+    expect(screen.getByRole('toolbar', { name: 'Formatting' })).toBeTruthy();
+    act(() => root.unmount());
+  });
+});
+
+function WordCount() {
+  const words = useEditorState((e) => e.getText().split(/\s+/).filter(Boolean).length);
+  return <output>{words} words</output>;
+}

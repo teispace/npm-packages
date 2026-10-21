@@ -119,19 +119,49 @@
     "@excalidraw/excalidraw": {
       "optional": true
     },
+    "@lexical/a11y": {
+      "optional": true
+    },
     "@lexical/code-shiki": {
       "optional": true
     },
     "@lexical/devtools-core": {
       "optional": true
     },
+    "@lexical/file": {
+      "optional": true
+    },
+    "@lexical/hashtag": {
+      "optional": true
+    },
     "@lexical/headless": {
+      "optional": true
+    },
+    "@lexical/mark": {
+      "optional": true
+    },
+    "@lexical/overflow": {
+      "optional": true
+    },
+    "@lexical/react": {
+      "optional": true
+    },
+    "@lexical/table": {
+      "optional": true
+    },
+    "@lexical/text": {
       "optional": true
     },
     "@lexical/yjs": {
       "optional": true
     },
     "katex": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
       "optional": true
     },
     "yjs": {

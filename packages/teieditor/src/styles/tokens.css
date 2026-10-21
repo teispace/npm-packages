@@ -9,8 +9,8 @@
  * `[data-theme="dark"]`, or with that on the editor itself; the system's
  * choice with `data-theme="system"`.
  *
- * Scope: `.tei` (the editor), and `.tei-portal` for UI rendered outside
- * one (a toolbar in the page header). Menus and dialogs stay inside `.tei`
+ * Scope: `.tei` (the editor), `.tei-prose` for saved HTML shown on a page,
+ * and `.tei-portal` for UI rendered outside one (a toolbar in the page header). Menus and dialogs stay inside `.tei`
  * in the DOM and reach the top layer through `popover`/`<dialog>`, so they
  * inherit whatever the app set on `.tei`. Everything is in
  * `@layer teieditor`, so app styles outside a layer always win.
@@ -18,6 +18,7 @@
 @layer teieditor {
   /* `:where` keeps this at one class, so the dark rules below win for portals too. */
   .tei,
+  .tei-prose:where(:not(.tei *)),
   .tei-portal:where(:not(.tei *)) {
     color-scheme: light;
 
@@ -127,16 +128,16 @@
     --tei-ease: cubic-bezier(0.2, 0, 0, 1);
   }
 
-  :where(.dark, [data-theme="dark"]) :is(.tei, .tei-portal),
-  :is(.tei, .tei-portal):is(.dark, [data-theme="dark"]) {
+  :where(.dark, [data-theme="dark"]) :is(.tei, .tei-prose, .tei-portal),
+  :is(.tei, .tei-prose, .tei-portal):is(.dark, [data-theme="dark"]) {
     color-scheme: dark;
   }
 
-  :is(.tei, .tei-portal)[data-theme="light"] {
+  :is(.tei, .tei-prose, .tei-portal)[data-theme="light"] {
     color-scheme: light;
   }
 
-  :is(.tei, .tei-portal)[data-theme="system"] {
+  :is(.tei, .tei-prose, .tei-portal)[data-theme="system"] {
     color-scheme: light dark;
   }
 
@@ -144,7 +145,7 @@
    * full colours): data-tei-theme="shadcn". Opt-in, because apps on the
    * older HSL-channel format would get invalid colours, and an invalid
    * colour unsets the property rather than falling back. */
-  :is(.tei, .tei-portal)[data-tei-theme="shadcn"] {
+  :is(.tei, .tei-prose, .tei-portal)[data-tei-theme="shadcn"] {
     --tei-bg: var(--background);
     --tei-bg-subtle: var(--background);
     --tei-bg-muted: var(--muted);
