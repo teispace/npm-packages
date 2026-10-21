@@ -11,7 +11,7 @@ import {
   LinkExtension,
   LinkNode,
 } from '@lexical/link';
-import { LINK } from '@lexical/markdown';
+import { LINK, type TextMatchTransformer } from '@lexical/markdown';
 import { $findMatchingParent } from '@lexical/utils';
 import {
   $createTextNode,
@@ -109,6 +109,14 @@ export function $getLinkAtSelection(): LinkAtSelection | null {
   };
 }
 
+/** Markdown's `![alt](src)` is an image, never a link: not with `!` before the `[`. */
+const notAfterBang = (re: RegExp) => new RegExp(`(?<!!)${re.source}`, re.flags);
+export const MARKDOWN_LINK: TextMatchTransformer = {
+  ...LINK,
+  regExp: notAfterBang(LINK.regExp),
+  importRegExp: LINK.importRegExp && notAfterBang(LINK.importRegExp),
+};
+
 function isAllowed(options: LinkOptions, url: string): boolean {
   return isSafeUrl(url, { protocols: options.protocols }) && (options.validate?.(url) ?? true);
 }
@@ -191,7 +199,7 @@ export const Link = defineTeiExtension({
   keymap: {
     link: { key: 'Mod-k', command: 'openLinkEditor', description: 'Link' },
   },
-  markdown: { link: LINK },
+  markdown: { link: MARKDOWN_LINK },
   icons: { link: linkIcon, unlink: unlinkIcon, externalLink: externalLinkIcon, pencil: pencilIcon },
   messages: {
     'link.add': 'Link',

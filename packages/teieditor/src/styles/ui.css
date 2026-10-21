@@ -436,11 +436,12 @@
     text-decoration: underline;
   }
 
+  /* 21rem: with the popover's padding and border, inside its 22rem. */
   .tei-link-form {
     display: flex;
     align-items: center;
     gap: var(--tei-space-1);
-    inline-size: min(22rem, calc(100vw - 2rem));
+    inline-size: min(21rem, calc(100vw - 2rem));
   }
 
   .tei-link-form > .tei-input {
@@ -1040,5 +1041,107 @@
       --tei-control-size: 2.5rem;
       --tei-control-size-sm: 2.25rem;
     }
+  }
+
+  /* Images: the insert form, alt text, and the resize handles. */
+  .tei-image-insert,
+  .tei-image-alt {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tei-space-2);
+    inline-size: min(21rem, calc(100vw - 2rem));
+  }
+
+  .tei-image-insert .tei-link-form,
+  .tei-image-alt .tei-link-form {
+    inline-size: auto;
+  }
+
+  .tei-image-alt > .tei-hint {
+    margin: 0 var(--tei-space-1);
+  }
+
+  .tei-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tei-space-1);
+    padding: var(--tei-space-4) var(--tei-space-3);
+    border: 1px dashed var(--tei-border-strong);
+    border-radius: var(--tei-radius);
+    transition:
+      border-color var(--tei-duration) var(--tei-ease),
+      background-color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-dropzone[data-over] {
+    border-color: var(--tei-accent);
+    background: var(--tei-accent-subtle);
+  }
+
+  .tei-image-resizer {
+    position: fixed;
+    inset: 0 auto auto 0;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .tei-image-handle {
+    --tei-handle: 12px;
+    position: absolute;
+    inline-size: var(--tei-handle);
+    block-size: var(--tei-handle);
+    margin: calc(var(--tei-handle) / -2);
+    padding: 0;
+    border: 2px solid var(--tei-bg);
+    border-radius: 50%;
+    background: var(--tei-accent);
+    box-shadow: var(--tei-shadow-sm);
+    pointer-events: auto;
+    touch-action: none;
+  }
+
+  @media (pointer: coarse) {
+    .tei-image-handle {
+      --tei-handle: 20px;
+    }
+  }
+
+  .tei-image-handle:focus-visible {
+    outline: 2px solid var(--tei-ring);
+    outline-offset: 2px;
+  }
+
+  /* Physical corners: the image does not mirror in right-to-left text. */
+  .tei-image-handle[data-corner="nw"] {
+    top: 0;
+    left: 0;
+    cursor: nwse-resize;
+  }
+
+  .tei-image-handle[data-corner="ne"] {
+    top: 0;
+    right: 0;
+    cursor: nesw-resize;
+  }
+
+  .tei-image-handle[data-corner="sw"] {
+    bottom: 0;
+    left: 0;
+    cursor: nesw-resize;
+  }
+
+  .tei-image-handle[data-corner="se"] {
+    right: 0;
+    bottom: 0;
+    cursor: nwse-resize;
+  }
+
+  .tei-image-resizer[data-active] .tei-image-handle {
+    transform: scale(1.15);
   }
 }

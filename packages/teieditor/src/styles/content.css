@@ -552,11 +552,46 @@
     border-radius: var(--tei-radius-sm);
   }
 
+  /* Images: <img>, or <figure> with a caption. A figure is a table box as
+   * wide as its image, so the caption wraps to that width; data-align places
+   * it. The editor's are .tei-image, saved HTML's plain figures. Rules are in
+   * order of specificity, saved HTML's and the editor's interleaved. */
+  :where(.tei-prose) figure,
   .tei-image {
-    display: inline-block;
+    display: table;
     position: relative;
+    margin: 0 auto 0.75em;
+  }
+
+  :where(.tei-prose) figure[data-align="start"],
+  .tei-image[data-align="start"] {
+    margin-inline-start: 0;
+  }
+
+  :where(.tei-prose) figure[data-align="end"],
+  .tei-image[data-align="end"] {
+    margin-inline-end: 0;
+  }
+
+  :where(.tei-prose) figure[data-align="full"],
+  .tei-image[data-align="full"] {
+    inline-size: 100%;
+  }
+
+  .tei-image {
+    user-select: none;
+  }
+
+  :where(.tei-prose) img {
+    display: block;
     max-inline-size: 100%;
-    vertical-align: bottom;
+    block-size: auto;
+    margin: 0 auto 0.75em;
+    border-radius: var(--tei-radius-sm);
+  }
+
+  :where(.tei-prose) figure img {
+    margin: 0;
   }
 
   .tei-image img {
@@ -564,6 +599,106 @@
     max-inline-size: 100%;
     block-size: auto;
     border-radius: var(--tei-radius-sm);
+  }
+
+  :where(.tei-prose) figure[data-align="full"] img {
+    inline-size: 100%;
+  }
+
+  .tei-image[data-align="full"] img {
+    inline-size: 100%;
+  }
+
+  /* Uploading: the file shows dimmed, with a bar filling across its top. */
+  .tei-image[data-tei-uploading] img {
+    opacity: 0.6;
+  }
+
+  .tei-image[data-tei-uploading]::after {
+    content: "";
+    position: absolute;
+    inset-block-start: var(--tei-space-2);
+    inset-inline: var(--tei-space-2);
+    block-size: 4px;
+    border-radius: 2px;
+    background:
+      linear-gradient(
+        to right,
+        var(--tei-accent) calc(var(--tei-progress, 0) * 100%),
+        transparent 0
+      ),
+      var(--tei-bg-overlay);
+    box-shadow: var(--tei-shadow-sm);
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-image img {
+    cursor: pointer;
+  }
+
+  /* Selected: the outline goes round the image, not its caption. */
+  [data-tei-content] .tei-image[data-tei-selected] {
+    outline: none;
+  }
+
+  [data-tei-content] .tei-image[data-tei-selected] img {
+    outline: 2px solid var(--tei-accent);
+    outline-offset: 2px;
+  }
+
+  :where(.tei-prose) figcaption {
+    display: table-caption;
+    caption-side: bottom;
+    padding-block-start: var(--tei-space-2);
+    color: var(--tei-fg-muted);
+    font-size: 0.875em;
+    text-align: center;
+  }
+
+  .tei-image figcaption {
+    display: table-caption;
+    position: relative;
+    caption-side: bottom;
+    padding-block-start: var(--tei-space-2);
+    color: var(--tei-fg-muted);
+    font-size: 0.875em;
+    text-align: center;
+    user-select: text;
+  }
+
+  :where(.tei-prose) figure[data-align="start"] figcaption {
+    text-align: start;
+  }
+
+  :where(.tei-prose) figure[data-align="end"] figcaption {
+    text-align: end;
+  }
+
+  .tei-image[data-align="start"] figcaption {
+    text-align: start;
+  }
+
+  .tei-image[data-align="end"] figcaption {
+    text-align: end;
+  }
+
+  .tei-image figcaption:empty,
+  [data-tei-readonly] .tei-image figcaption:has(p > br:only-child) {
+    display: none;
+  }
+
+  .tei-image figcaption p {
+    margin: 0;
+  }
+
+  /* An empty caption says what it is for while it can be typed in. */
+  [data-tei-content]:not([data-tei-readonly])
+    .tei-image
+    figcaption[data-placeholder]:has(p > br:only-child)::before {
+    content: attr(data-placeholder);
+    position: absolute;
+    inset-inline: 0;
+    color: var(--tei-fg-placeholder);
+    pointer-events: none;
   }
 
   /* Columns */

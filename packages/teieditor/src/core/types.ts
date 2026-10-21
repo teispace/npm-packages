@@ -100,7 +100,9 @@ export type TeiPlacement =
   | 'blockMenu'
   | 'contextMenu'
   /** The menu on a table cell: rows, columns, cells and the table. */
-  | 'tableMenu';
+  | 'tableMenu'
+  /** The toolbar over a selected image. */
+  | 'imageMenu';
 
 /**
  * A UI entry an extension contributes — a toolbar button, a slash-menu row,

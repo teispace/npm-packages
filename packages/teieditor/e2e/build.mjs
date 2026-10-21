@@ -32,4 +32,6 @@ await Promise.all([
   copyFile(new URL('index.html', harness), new URL('index.html', out)),
   copyFile(new URL('bare.html', harness), new URL('bare.html', out)),
   copyFile(new URL('harness.css', harness), new URL('harness.css', out)),
+  // An image from the page's own origin, which the CSP allows.
+  copyFile(new URL('photo.svg', harness), new URL('photo.svg', out)),
 ]);

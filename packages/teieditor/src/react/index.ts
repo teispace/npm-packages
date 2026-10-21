@@ -23,6 +23,9 @@ export {
   ItemButton,
   ItemMenu,
 } from './components/editor-toolbar.js';
+export type { ImageControlsProps } from './components/image-controls.js';
+export { ImageControls } from './components/image-controls.js';
+export { InsertImageForm, InsertImageMenu } from './components/image-insert.js';
 export type { LinkPopoverProps } from './components/link-popover.js';
 export { LinkPopover } from './components/link-popover.js';
 export type { SlashMenuProps } from './components/slash-menu.js';

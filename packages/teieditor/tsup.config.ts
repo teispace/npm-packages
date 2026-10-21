@@ -20,11 +20,15 @@ export default defineConfig({
   // Declarations come from `tsc -p tsconfig.build.json` (see there).
   dts: false,
   clean: true,
-  minify: true,
   sourcemap: false,
   target: 'es2022',
   outDir: 'dist',
   esbuildOptions(options) {
     options.jsx = 'automatic';
+    // Minified, but not its whitespace: that pass also strips the
+    // `@__PURE__` and `@__NO_SIDE_EFFECTS__` notes an app's bundler needs to
+    // drop unused icons and components. The app's own minifier does the rest.
+    options.minifySyntax = true;
+    options.minifyIdentifiers = true;
   },
 });

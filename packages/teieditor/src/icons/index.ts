@@ -7,11 +7,19 @@
  */
 import type { TeiIconNode } from '../core/types.js';
 
+// Marked free of side effects, so a bundler drops every icon nobody imports.
 /** Paths from `d` strings. */
-const p = (...d: string[]): TeiIconNode => d.map((path) => ['path', { d: path }] as const);
-const circle = (cx: number, cy: number, r: number) =>
+const p = /* @__NO_SIDE_EFFECTS__ */ (...d: string[]): TeiIconNode =>
+  d.map((path) => ['path', { d: path }] as const);
+const circle = /* @__NO_SIDE_EFFECTS__ */ (cx: number, cy: number, r: number) =>
   ['circle', { cx: String(cx), cy: String(cy), r: String(r) }] as const;
-const rect = (x: number, y: number, width: number, height: number, rx = 2) =>
+const rect = /* @__NO_SIDE_EFFECTS__ */ (
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  rx = 2,
+) =>
   [
     'rect',
     { x: String(x), y: String(y), width: String(width), height: String(height), rx: String(rx) },
@@ -182,6 +190,31 @@ export const upload = /* @__PURE__ */ p(
 export const download = /* @__PURE__ */ p(
   'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4',
   'm7 10 5 5 5-5M12 15V3',
+);
+export const imageStart: TeiIconNode = [
+  rect(3, 4, 9, 9, 1.5),
+  ['path', { d: 'M15 6h6M15 10h6M3 17h18M3 21h12' }],
+];
+export const imageCenter: TeiIconNode = [
+  rect(7, 3, 10, 10, 1.5),
+  ['path', { d: 'M3 17h18M6 21h12' }],
+];
+export const imageEnd: TeiIconNode = [
+  rect(12, 4, 9, 9, 1.5),
+  ['path', { d: 'M3 6h6M3 10h6M3 17h18M9 21h12' }],
+];
+export const imageFull: TeiIconNode = [rect(3, 3, 18, 12, 1.5), ['path', { d: 'M3 19h18' }]];
+export const caption: TeiIconNode = [
+  rect(3, 5, 18, 14),
+  ['path', { d: 'M7 15h4M15 15h2M7 11h2M13 11h4' }],
+];
+export const altText = /* @__PURE__ */ p(
+  'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2',
+  'M7 8h8M7 12h10M7 16h6',
+);
+export const replace = /* @__PURE__ */ p(
+  'M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5',
+  'M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M8 16H3v5',
 );
 
 // Tables

@@ -11,12 +11,14 @@ const TYPES = {
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.map': 'application/json',
+  '.svg': 'image/svg+xml',
 };
 export const CSP = [
   "default-src 'none'",
   "script-src 'self'",
   "style-src 'self'",
-  "img-src 'self' data:",
+  // blob: for an upload's preview, which shows while the file uploads.
+  "img-src 'self' data: blob:",
   "connect-src 'self'",
   "base-uri 'none'",
   "form-action 'none'",

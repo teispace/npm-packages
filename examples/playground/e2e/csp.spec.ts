@@ -266,3 +266,47 @@ for (const theme of ['light', 'dark'] as const) {
     await expectNoViolations(page);
   });
 }
+
+test('images: a dropped file uploads, resizes and aligns, reporting nothing', async ({ page }) => {
+  const editor = await open(page, '/');
+  const figures = editor.locator('[data-tei-image]');
+  const before = await figures.count();
+  // A dropped picture: the upload preview is a blob: URL, which img-src allows.
+  await editor.locator('p').first().evaluate((el) => {
+    const data = new DataTransfer();
+    const png = Uint8Array.from(
+      atob(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+      ),
+      (c) => c.charCodeAt(0),
+    );
+    data.items.add(new File([png], 'dot.png', { type: 'image/png' }));
+    const rect = el.getBoundingClientRect();
+    el.dispatchEvent(
+      new DragEvent('drop', {
+        dataTransfer: data,
+        bubbles: true,
+        cancelable: true,
+        clientX: rect.right - 1,
+        clientY: rect.top + rect.height / 2,
+      }),
+    );
+  });
+  await expect(figures).toHaveCount(before + 1);
+  await expect(editor.locator('[data-tei-uploading]')).toHaveCount(1);
+  await expect(editor.locator('[data-tei-uploading]')).toHaveCount(0);
+  // The demo image: select, align, resize.
+  const demo = editor.locator('img[src="/hills.svg"]');
+  await demo.click();
+  await page.getByRole('button', { name: 'Align left', exact: true }).click();
+  await expect(demo.locator('xpath=..')).toHaveAttribute('data-align', 'start');
+  const handle = page.locator('.tei-image-handle[data-corner="se"]');
+  const box = await handle.boundingBox();
+  if (!box) throw new Error('no handle');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x - 60, box.y, { steps: 5 });
+  await page.mouse.up();
+  await expect(demo).toHaveAttribute('width', /^3\d\d$/);
+  await expectNoViolations(page);
+});

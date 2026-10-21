@@ -40,6 +40,12 @@ const CASES = [
       use(useTeiEditor, EditorContent);`,
   },
   {
+    // Every icon is its own export: one costs its path data, not the set's.
+    name: 'one icon',
+    code: `import { bold } from '${dist('icons/index.js')}'; use(bold);`,
+    budget: 0.5 * KB,
+  },
+  {
     name: 'server (renderToHTML)',
     code: `import { renderToHTML } from '${dist('server/index.js')}'; use(renderToHTML);`,
   },

@@ -432,7 +432,9 @@ export class TeiEditor {
 
   #focusDOM(): void {
     const root = this.lexical.getRootElement();
-    if (root && root.ownerDocument.activeElement !== root) root.focus({ preventScroll: true });
+    // Focus in the editor already (in it, or in a slot such as a caption) stays.
+    if (root && !root.contains(root.ownerDocument.activeElement))
+      root.focus({ preventScroll: true });
   }
 
   blur(): void {

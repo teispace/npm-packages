@@ -34,6 +34,10 @@ drag a column edge to resize it, and open a cell's menu from its corner or a rig
   <tr><td>Select cells</td><td><code>Shift</code> + arrows</td><td style="background-color: rgba(59, 130, 246, 0.16);">Then merge them</td></tr>
   <tr><td colspan="2">Markdown and HTML, both ways</td><td>GFM tables</td></tr>
 </table>
+<h2>Images</h2>
+<p>Drop or paste a picture, or insert one from the toolbar or <code>/image</code>. Click it to align it,
+add alt text or a caption, and drag a corner to resize it.</p>
+<figure><img src="/hills.svg" alt="Green hills under a summer sun" width="400" height="240"><figcaption>A caption is part of the document: type in it, undo it, copy it.</figcaption></figure>
 <hr>
 <p>That is the whole document. Make it yours.</p>
 `;

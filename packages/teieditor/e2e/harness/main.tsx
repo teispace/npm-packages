@@ -1,7 +1,9 @@
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { setExtensionOptions } from '../../src/core/define';
 import type { TeiEditor } from '../../src/core/editor';
 import { Html } from '../../src/extensions/html/index';
+import { Image, type ImageOptions } from '../../src/extensions/image/index';
 import { StarterKit } from '../../src/extensions/starter-kit/index';
 import { Table } from '../../src/extensions/table/index';
 import { TextStyle } from '../../src/extensions/text-style/index';
@@ -27,6 +29,8 @@ declare global {
       log: string[];
       setClipSource: (html: string, raw?: boolean) => void;
       trust: (html: string) => string;
+      /** Change the Image extension's options (an upload handler, limits). */
+      setImageOptions: (options: Partial<ImageOptions>) => void;
     };
   }
 }
@@ -112,12 +116,20 @@ function App() {
       ...(params.has('plain') ? [] : [TextStyle]),
       ...(params.has('raw') ? [Html.configure({ clean: false })] : []),
       ...(params.has('table') ? [Table] : []),
+      ...(params.has('image') ? [Image] : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
   const [dialog, setDialog] = useState(false);
   const [color, setColor] = useState<string | null>(null);
-  window.__tei = { editor, violations, log, setClipSource, trust };
+  window.__tei = {
+    editor,
+    violations,
+    log,
+    setClipSource,
+    trust,
+    setImageOptions: (options) => setExtensionOptions(editor, Image, options),
+  };
   return (
     <main data-testid="root">
       <Editor

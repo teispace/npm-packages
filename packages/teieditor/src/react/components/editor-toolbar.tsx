@@ -19,6 +19,7 @@ import type { TeiIconLike } from '../ui/context.js';
 import { DropdownMenu } from '../ui/dropdown.js';
 import type { MenuGroupData, MenuItemData } from '../ui/menu.js';
 import { Separator, Toolbar, type ToolbarProps } from '../ui/toolbar.js';
+import { InsertImageMenu } from './image-insert.js';
 import { InsertTableMenu } from './table-controls.js';
 import {
   BackgroundColorMenu,
@@ -582,6 +583,7 @@ AlignMenu.overflowMenu = (editor: TeiEditor): ToolbarSubmenu => {
 };
 
 const BUILT_IN_CONTROLS: Record<string, ToolbarControl> = {
+  insertImage: InsertImageMenu,
   insertTable: InsertTableMenu,
   blockType: BlockTypeMenu,
   align: AlignMenu,

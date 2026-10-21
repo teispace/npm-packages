@@ -216,6 +216,79 @@ for (const scheme of ['light', 'dark'] as const) {
       });
     });
 
+    const IMAGE_SHOT =
+      '<p>Before</p><figure><img src="/photo.svg" alt="Hills" width="300" height="180">' +
+      '<figcaption>Hills under a summer sun</figcaption></figure><p>After</p>';
+
+    /** The figure and what floats round it. */
+    async function shootImage(tei: Harness, name: string, below = 24) {
+      await settled(tei.page);
+      const box = await tei.content.locator('[data-tei-image]').boundingBox();
+      if (!box) throw new Error('no image');
+      await shoot(tei, tei.page, name, {
+        clip: {
+          x: box.x - 40,
+          y: box.y - 64,
+          width: box.width + 80,
+          height: box.height + 64 + below,
+        },
+      });
+    }
+
+    test('selected image with its toolbar and resize handles', async ({ tei }) => {
+      await tei.page.setViewportSize({ width: 768, height: 600 });
+      await tei.open({ content: IMAGE_SHOT, flags: ['image', 'plain'] });
+      await theme(tei.page, scheme);
+      await tei.content.locator('[data-tei-image] img').click();
+      await expect(tei.page.locator('[data-tei-control="image-toolbar"]')).toBeVisible();
+      await tei.page.mouse.move(0, 0);
+      await shootImage(tei, `image-selected-${scheme}.png`);
+    });
+
+    test('image uploading, with its progress', async ({ tei }) => {
+      await tei.page.setViewportSize({ width: 768, height: 600 });
+      await tei.open({ content: IMAGE_SHOT, flags: ['image', 'plain'] });
+      await theme(tei.page, scheme);
+      // The state an upload paints, set as the upload would: through the CSSOM.
+      await tei.content.locator('[data-tei-image]').evaluate((el: HTMLElement) => {
+        el.setAttribute('data-tei-uploading', '');
+        el.style.setProperty('--tei-progress', '0.4');
+      });
+      await still(tei.page);
+      await shootImage(tei, `image-uploading-${scheme}.png`);
+    });
+
+    test('empty caption, with its placeholder', async ({ tei }) => {
+      await tei.page.setViewportSize({ width: 768, height: 600 });
+      await tei.open({
+        content: '<p>Before</p><img src="/photo.svg" alt="Hills" width="300" height="180">',
+        flags: ['image', 'plain'],
+      });
+      await theme(tei.page, scheme);
+      await tei.content.locator('[data-tei-image] img').click();
+      await tei.page.getByRole('button', { name: 'Caption', exact: true }).click();
+      // Out of the caption, so no caret blinks in the shot; the placeholder stays.
+      await tei.content.getByText('Before').click();
+      await still(tei.page);
+      await shootImage(tei, `image-caption-${scheme}.png`, 48);
+    });
+
+    test('image insert popover: upload or link', async ({ tei }) => {
+      await tei.page.setViewportSize({ width: 768, height: 600 });
+      await tei.open({ flags: ['image', 'plain'] });
+      await theme(tei.page, scheme);
+      await tei.page.locator('[data-tei-control="insertImage"]').click();
+      const form = tei.page.locator('[data-tei-control="image-insert"]');
+      await expect(form).toBeVisible();
+      await tei.page.mouse.move(0, 0);
+      await settled(tei.page);
+      const box = await form.boundingBox();
+      if (!box) throw new Error('no form');
+      await shoot(tei, tei.page, `image-insert-${scheme}.png`, {
+        clip: { x: box.x - 16, y: box.y - 56, width: box.width + 32, height: box.height + 72 },
+      });
+    });
+
     test('tooltip on a toolbar button', async ({ tei }) => {
       await tei.open();
       await theme(tei.page, scheme);
