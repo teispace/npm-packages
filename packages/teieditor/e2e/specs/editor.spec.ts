@@ -123,6 +123,35 @@ test.describe('markdown shortcuts', () => {
     });
   }
 
+  test('line numbers stay put while a long line scrolls sideways', async ({ tei }) => {
+    await tei.page.setViewportSize({ width: 500, height: 800 });
+    await tei.open({ content: `<pre><code>short\n${'a long line '.repeat(30)}\nend</code></pre>` });
+    const code = tei.content.locator('.tei-code-block');
+    /** What is drawn just inside the start edge, on line 2: the gutter is the block itself. */
+    const atEdge = () =>
+      code.evaluate((el) => {
+        const box = el.getBoundingClientRect();
+        const line = box.top + box.height / 2;
+        const hit = document.elementFromPoint(box.left + 12, line);
+        const gutter = getComputedStyle(el, '::before');
+        return {
+          gutter: hit === el,
+          width: gutter.width,
+          height: Number.parseFloat(gutter.height),
+        };
+      });
+    const before = await atEdge();
+    expect(before.gutter).toBe(true);
+    await code.evaluate((el) => {
+      el.scrollLeft = 300;
+    });
+    expect(await code.evaluate((el) => el.scrollLeft)).toBe(300);
+    expect(await atEdge()).toEqual(before);
+    // As tall as the block inside its border: every line has its number.
+    const inner = await code.evaluate((el) => el.clientHeight);
+    expect(Math.abs(before.height - inner)).toBeLessThan(1);
+  });
+
   test('``` makes a code block, and --- a divider', async ({ tei }) => {
     await tei.open({ content: '' });
     await tei.content.click();
