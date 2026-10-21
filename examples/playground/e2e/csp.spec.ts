@@ -183,6 +183,8 @@ test('the editor is in the server HTML, and stays put as it mounts', async ({ br
     content.evaluate((el) =>
       [...el.children].map((child) => ({
         height: Math.round(child.getBoundingClientRect().height),
+        // The block handle's gutter is there before the handle loads.
+        left: Math.round(child.getBoundingClientRect().left),
         sized: child.querySelector('[data-tei-style*="font-size"]') !== null,
       })),
     );
@@ -195,6 +197,8 @@ test('the editor is in the server HTML, and stays put as it mounts', async ({ br
   await expect(server.getByRole('heading', { level: 1 })).toHaveText('Welcome to teieditor');
   await expect(server).toHaveClass(/tei-prose/);
   const served = await layout(server);
+  const font = (code: Locator) => code.evaluate((el) => getComputedStyle(el).fontFamily);
+  const servedCode = await font(server.locator('p code').first());
   await still.close();
 
   const editor = await open(page, '/');
@@ -203,12 +207,15 @@ test('the editor is in the server HTML, and stays put as it mounts', async ({ br
   await expect(editor).not.toHaveClass(/tei-prose/);
   await expect(editor.getByText('colour', { exact: true })).toHaveCSS('color', 'rgb(220, 38, 38)');
   const mounted = await layout(editor);
+  // Inline code in the editor's monospace before it mounts too.
+  expect(servedCode).toBe(await font(editor.locator('.tei-code').first()));
   expect(mounted).toHaveLength(served.length);
   // Every block is as tall as the server drew it, but one whose font size
   // waited for the editor (a strict CSP blocks style attributes).
   expect(served.filter((block) => block.sized)).toHaveLength(1);
   for (const [i, block] of served.entries()) {
     if (!block.sized) expect(Math.abs((mounted[i]?.height ?? 0) - block.height)).toBeLessThanOrEqual(1);
+    expect(mounted[i]?.left).toBe(block.left);
   }
   await expectNoViolations(page);
 });
@@ -376,9 +383,15 @@ test('embeds: the demo video loads, a pasted link embeds, reporting nothing', as
     getSelection()?.selectAllChildren(source);
   });
   await page.keyboard.press(`${MOD}+c`);
-  // A new line after the title (one line, so End is its end in every browser).
+  // A new line after the title. Not with End: on macOS it scrolls the page instead.
   await editor.locator('h1').click();
-  await page.keyboard.press('End');
+  await editor.locator('h1').evaluate((h1) => {
+    const walker = document.createTreeWalker(h1, NodeFilter.SHOW_TEXT);
+    let last: Node | null = null;
+    while (walker.nextNode()) last = walker.currentNode;
+    getSelection()?.collapse(last ?? h1, last?.textContent?.length ?? 0);
+  });
+  await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
   await page.keyboard.press('Enter');
   await page.keyboard.press(`${MOD}+v`);
   await expect(page.locator('[data-tei-control="embed-suggestion"]')).toBeVisible();
@@ -388,5 +401,34 @@ test('embeds: the demo video loads, a pasted link embeds, reporting nothing', as
     'src',
     /^https:\/\/platform\.twitter\.com\/embed\/Tweet\.html\?id=20&/,
   );
+  await expectNoViolations(page);
+});
+
+test('blocks: the handle drags a block and opens its menu, reporting nothing', async ({ page }) => {
+  const editor = await open(page, '/');
+  // The handle loads after the editor shows.
+  await page.locator('[data-tei-ready]').waitFor();
+  const title = editor.locator('h1');
+  const box = await title.boundingBox();
+  if (!box) throw new Error('not rendered');
+  await page.mouse.move(box.x + 24, box.y + box.height / 2);
+  const grip = page.locator('[data-tei-control="block-grip"]');
+  await expect(grip).toBeVisible();
+  const at = await grip.boundingBox();
+  const next = await editor.locator(':scope > *').nth(1).boundingBox();
+  if (!at || !next) throw new Error('not rendered');
+  // The title below the block after it.
+  await page.mouse.move(at.x + at.width / 2, at.y + at.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(at.x + 40, next.y + next.height * 0.75, { steps: 8 });
+  await expect(page.locator('[data-tei-control="block-drop"]')).toBeVisible();
+  await page.mouse.up();
+  await expect(editor.locator(':scope > *').nth(1)).toHaveText('Welcome to teieditor');
+  // Its menu: back to the top.
+  await editor.locator('h1').hover();
+  await grip.click();
+  const menu = page.locator('[data-tei-control="block-menu"]');
+  await menu.getByRole('menuitem', { name: 'Move up' }).click();
+  await expect(editor.locator(':scope > *').first()).toHaveText('Welcome to teieditor');
   await expectNoViolations(page);
 });

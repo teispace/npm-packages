@@ -2,6 +2,7 @@ import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { setExtensionOptions } from '../../src/core/define';
 import type { TeiEditor } from '../../src/core/editor';
+import { Blocks } from '../../src/extensions/blocks/index';
 import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
 import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
 import { Html } from '../../src/extensions/html/index';
@@ -125,6 +126,7 @@ function App() {
       ...(params.has('image') ? [Image] : []),
       ...(params.has('file') ? [FileAttachment] : []),
       ...(params.has('embed') ? [Embed] : []),
+      ...(params.has('blocks') ? [Blocks] : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
@@ -146,7 +148,7 @@ function App() {
         editor={editor}
         placeholder="Write something…"
         toolbarOverflow={params.has('scroll') ? 'scroll' : params.has('wrap') ? 'wrap' : undefined}
-        frameProps={{ 'data-testid': 'editor' }}
+        frameProps={{ 'data-testid': 'editor', dir: params.has('rtl') ? 'rtl' : undefined }}
         contentProps={{ 'data-testid': 'content' }}
       />
       {/* UI outside an editor takes the tokens from .tei-portal. */}

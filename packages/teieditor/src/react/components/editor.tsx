@@ -12,6 +12,7 @@ import {
 import type { TeiEditorOptions } from '../../core/create.js';
 import type { ContentFormat, TeiEditor } from '../../core/editor.js';
 import { holdUi } from '../../core/ui-request.js';
+import { Blocks } from '../../extensions/blocks/index.js';
 import { CodeBlock } from '../../extensions/code-block/index.js';
 import { Embed, type EmbedStorage } from '../../extensions/embed/index.js';
 import { FileAttachment } from '../../extensions/file/index.js';
@@ -56,14 +57,17 @@ const ImageControls = lazy(() =>
   import('./image-controls.js').then((module) => ({ default: module.ImageControls })),
 );
 const LazyImageControls = () => <ImageControls insert={false} />;
+const BlockHandle = lazy(() =>
+  import('./block-handle.js').then((module) => ({ default: module.BlockHandle })),
+);
 const EmbedControls = lazy(() =>
   import('./embed-controls.js').then((module) => ({ default: module.EmbedControls })),
 );
 
 /**
  * Which UI comes with it.
- * - `full`: toolbar, bubble menu, slash menu, link popover, code block bar, table, image, file and embed controls.
- * - `notion`: no toolbar; select text for the bubble menu, type `/` for blocks.
+ * - `full`: toolbar, bubble menu, slash menu, link popover, block handles, code block bar, table, image, file and embed controls.
+ * - `notion`: no toolbar; select text for the bubble menu, type `/` or press + for blocks, drag a block by its handle.
  * - `minimal`: a toolbar and links, nothing floating: comment boxes, forms.
  */
 export type EditorPreset = 'full' | 'notion' | 'minimal';
@@ -76,6 +80,8 @@ export interface EditorSlots {
   bubbleMenu?: EditorSlot;
   slashMenu?: EditorSlot;
   linkPopover?: EditorSlot;
+  /** The handle beside each block (drag it, or click for its menu) and its + button. */
+  blockHandle?: EditorSlot;
   /** The language picker and copy button on code blocks. */
   codeBlockBar?: EditorSlot;
   /** The cell menu, + bars and column resizing on tables. */
@@ -96,6 +102,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     bubbleMenu: true,
     slashMenu: true,
     linkPopover: true,
+    blockHandle: true,
     codeBlockBar: true,
     tableControls: true,
     imageControls: true,
@@ -107,6 +114,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     bubbleMenu: true,
     slashMenu: true,
     linkPopover: true,
+    blockHandle: true,
     codeBlockBar: true,
     tableControls: true,
     imageControls: true,
@@ -118,6 +126,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     bubbleMenu: false,
     slashMenu: false,
     linkPopover: true,
+    blockHandle: false,
     codeBlockBar: false,
     tableControls: false,
     imageControls: false,
@@ -128,8 +137,8 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
 
 /** What each preset installs when `<Editor>` makes its own editor. */
 const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = {
-  full: [StarterKit, TextStyle, Table, Image, FileAttachment, Embed],
-  notion: [StarterKit, TextStyle, Table, Image, FileAttachment, Embed],
+  full: [StarterKit, TextStyle, Blocks, Table, Image, FileAttachment, Embed],
+  notion: [StarterKit, TextStyle, Blocks, Table, Image, FileAttachment, Embed],
   minimal: [StarterKit],
 };
 
@@ -281,6 +290,8 @@ function EditorFrame({
       for (const release of releases) release();
     };
   }, [ready, linkEdit, imageInsert, embedInsert]);
+  // The gutter the handles sit in, from the first render (the server's too).
+  const handles = editor.extension(Blocks) !== undefined && slot(parts.blockHandle, true) !== null;
   const change = useRef({ onChange, format });
   change.current = { onChange, format };
   useEffect(
@@ -302,6 +313,7 @@ function EditorFrame({
         data-tei-bordered={bordered ? '' : undefined}
         data-theme={colorScheme}
         data-tei-preset={preset}
+        data-tei-handles={handles ? '' : undefined}
         data-tei-ready={ready ? '' : undefined}
       >
         {slot(
@@ -324,6 +336,7 @@ function EditorFrame({
               {slot(parts.linkPopover, <LinkPopover />)}
               {slot(parts.bubbleMenu, <BubbleMenu />)}
               {slot(parts.slashMenu, <SlashMenu />)}
+              {editor.extension(Blocks) && slot(parts.blockHandle, <BlockHandle />)}
               {editor.extension(Image) && parts.imageControls === true && (
                 <ImageInsertPopover editor={editor} />
               )}

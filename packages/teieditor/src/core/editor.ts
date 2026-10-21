@@ -121,6 +121,13 @@ function groupRank(group: string | undefined): number {
 const isProbe = (name: string | symbol): name is symbol | 'then' | 'toJSON' =>
   typeof name === 'symbol' || name === 'then' || name === 'toJSON';
 
+const ARROWS: Record<string, string> = {
+  ArrowUp: '↑',
+  ArrowDown: '↓',
+  ArrowLeft: '←',
+  ArrowRight: '→',
+};
+
 /**
  * The editor handle: what an app and its UI talk to. One per Lexical
  * editor, built by the core extension; reach the Lexical editor underneath
@@ -524,7 +531,10 @@ export class TeiEditor {
     const table = this.extension(KeyboardShortcutsExtension)?.config.shortcuts[name];
     const first = Array.isArray(table) ? table[0] : table;
     return first
-      ? formatKeyboardShortcut(first as Parameters<typeof formatKeyboardShortcut>[0])
+      ? formatKeyboardShortcut(first as Parameters<typeof formatKeyboardShortcut>[0]).map(
+          // Lexical draws arrows only on Apple platforms; `ArrowUp` reads badly anywhere.
+          (key) => ARROWS[key] ?? key,
+        )
       : undefined;
   }
 

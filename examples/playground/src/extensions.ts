@@ -1,3 +1,4 @@
+import { Blocks } from '@teispace/teieditor/extensions/blocks';
 import { Embed } from '@teispace/teieditor/extensions/embed';
 import { FileAttachment } from '@teispace/teieditor/extensions/file';
 import { Image } from '@teispace/teieditor/extensions/image';
@@ -39,4 +40,5 @@ export const EXTENSIONS = [
   Image.configure({ upload: demoUpload }),
   FileAttachment.configure({ upload: demoUpload }),
   Embed,
+  Blocks,
 ];

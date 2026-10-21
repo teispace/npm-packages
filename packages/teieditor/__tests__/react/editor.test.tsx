@@ -55,6 +55,23 @@ describe('Editor', () => {
     expect(frame.dataset.theme).toBe('dark');
   });
 
+  it('reserves the block handle gutter where the handle will show, from the first HTML', () => {
+    const gutter = (html: string) => {
+      const box = document.createElement('div');
+      box.innerHTML = html;
+      return box.querySelector('.tei')?.hasAttribute('data-tei-handles');
+    };
+    // Server HTML, before any part loads: the frame says the gutter is there.
+    expect(gutter(renderToString(<Editor preset="full" />))).toBe(true);
+    expect(gutter(renderToString(<Editor preset="notion" />))).toBe(true);
+    expect(gutter(renderToString(<Editor preset="minimal" />))).toBe(false);
+    // No handle, no gutter: turned off, or without Blocks.
+    expect(gutter(renderToString(<Editor preset="full" slots={{ blockHandle: false }} />))).toBe(
+      false,
+    );
+    expect(gutter(renderToString(<Editor extensions={[StarterKit]} />))).toBe(false);
+  });
+
   it('reports changes in the chosen format, and not selection moves', () => {
     const onChange = vi.fn();
     const editor = createReactTeiEditor({ extensions: [RichText, Bold] });

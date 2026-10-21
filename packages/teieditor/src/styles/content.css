@@ -126,9 +126,9 @@
    * Lexical wraps inline code in a <code> around the styled span. The
    * wrapper takes the paragraph's font, so its monospace metrics do not
    * stretch the line: a line with code is as tall as one without, and as
-   * in saved HTML.
+   * in saved HTML. Saved HTML's <code> is the styled one: it keeps its font.
    */
-  [data-tei-content] code:not(.tei-code-block) {
+  [data-tei-content]:not(.tei-prose) code:not(.tei-code-block) {
     font: inherit;
   }
 
@@ -1218,6 +1218,17 @@
   .tei-table-add-rows:hover {
     background: var(--tei-bg-active);
     opacity: 1;
+  }
+
+  /* Blocks being moved, or with their menu open. */
+  [data-tei-content] [data-tei-dragging] {
+    opacity: 0.35;
+  }
+
+  [data-tei-content] [data-tei-block-selected] {
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-selection);
+    box-shadow: 0 0 0 2px var(--tei-selection);
   }
 
   /* Print: the document only, in black on white. */

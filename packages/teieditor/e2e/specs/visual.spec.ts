@@ -61,6 +61,25 @@ async function openPopover(tei: Harness, trigger: string) {
   return popover;
 }
 
+async function openBlocks(tei: Harness, scheme: 'light' | 'dark', width: number) {
+  await tei.page.setViewportSize({ width, height: 720 });
+  await tei.open({ content: DOCUMENT, flags: ['blocks', 'plain'] });
+  await theme(tei.page, scheme);
+}
+
+/** Point at a block and wait for its handle; the pointer stays there for the shot. */
+async function hoverBlock(tei: Harness, block: Locator) {
+  const box = await block.boundingBox();
+  if (!box) throw new Error('not rendered');
+  await tei.page.mouse.move(box.x + 24, box.y + Math.min(box.height / 2, 10));
+  const grip = tei.page.locator('[data-tei-control="block-grip"]');
+  await expect(async () => {
+    const at = await grip.boundingBox();
+    expect(Math.abs((at?.y ?? 0) + (at?.height ?? 0) / 2 - (box.y + 12))).toBeLessThan(12);
+  }).toPass();
+  return grip;
+}
+
 for (const scheme of ['light', 'dark'] as const) {
   test.describe(`${scheme} @visual`, () => {
     test.use({ colorScheme: scheme });
@@ -477,6 +496,43 @@ for (const scheme of ['light', 'dark'] as const) {
         await shoot(tei, tei.page.getByTestId('editor'), `embeds-consent-${scheme}-${width}.png`);
       });
     }
+
+    for (const width of [375, 768] as const) {
+      test(`block handle at ${width}px, beside a nested list item`, async ({ tei }) => {
+        await openBlocks(tei, scheme, width);
+        await hoverBlock(tei, tei.content.locator('li', { hasText: /^Nested point$/ }).last());
+        await settled(tei.page);
+        await shoot(tei, tei.page.getByTestId('editor'), `blocks-handle-${scheme}-${width}.png`);
+      });
+    }
+
+    test('a block dragged: dimmed, its copy under the pointer, the line where it lands', async ({
+      tei,
+    }) => {
+      await openBlocks(tei, scheme, 768);
+      const grip = await hoverBlock(tei, tei.content.locator('h2'));
+      const at = await grip.boundingBox();
+      const target = await tei.content.locator('ol > li').first().boundingBox();
+      if (!at || !target) throw new Error('not rendered');
+      await tei.page.mouse.move(at.x + at.width / 2, at.y + at.height / 2);
+      await tei.page.mouse.down();
+      await tei.page.mouse.move(at.x + 120, target.y + target.height * 0.75, { steps: 8 });
+      await expect(tei.page.locator('[data-tei-control="block-drop"]')).toBeVisible();
+      await settled(tei.page);
+      await shoot(tei, tei.page.getByTestId('editor'), `blocks-drag-${scheme}.png`);
+      await tei.page.keyboard.press('Escape');
+      await tei.page.mouse.up();
+    });
+
+    test('block menu with its turn-into submenu', async ({ tei }) => {
+      await openBlocks(tei, scheme, 768);
+      const grip = await hoverBlock(tei, tei.content.locator('p').first());
+      await grip.click();
+      await tei.page.locator('[data-tei-control="block-menu"] [data-id="turnInto"]').click();
+      await expect(tei.page.getByRole('menu', { name: 'Turn into' })).toBeVisible();
+      await settled(tei.page);
+      await shoot(tei, tei.page.getByTestId('editor'), `blocks-menu-${scheme}.png`);
+    });
 
     test('tooltip on a toolbar button', async ({ tei }) => {
       await tei.open();

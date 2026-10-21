@@ -63,6 +63,18 @@
     tab-size: 4;
   }
 
+  /* Room for the block handle in the start gutter, from the first HTML on
+   * (the server's too), so nothing moves as the handle loads. */
+  .tei[data-tei-handles] [data-tei-content] {
+    padding-inline-start: var(--tei-handle-gutter, 3.5rem);
+  }
+
+  @container tei (max-width: 40rem) {
+    .tei[data-tei-handles] [data-tei-content] {
+      padding-inline-start: var(--tei-handle-gutter-narrow, 1.75rem);
+    }
+  }
+
   [data-tei-content]::selection,
   [data-tei-content] *::selection {
     background: var(--tei-selection);
@@ -88,6 +100,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .tei[data-tei-handles] [data-tei-content][data-tei-empty][data-placeholder]::before {
+    padding-inline-start: inherit;
   }
 
   /* Per-block placeholders ("Heading 1", "Type / for commands"), set by the

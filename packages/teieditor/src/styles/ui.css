@@ -349,6 +349,86 @@
     padding: 0;
   }
 
+  /* Block handle: + and the grip, in the gutter level with a block's first
+   * line. Quiet until hovered; the grip takes drags (touch too). */
+  .tei-popover.tei-block-handle {
+    --tei-enter-offset: 0px;
+    gap: 0;
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .tei-block-handle > .tei-button {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    min-inline-size: 0;
+    padding: 0;
+    color: var(--tei-fg-subtle);
+  }
+
+  .tei-block-handle > .tei-button:hover {
+    color: var(--tei-fg);
+  }
+
+  .tei-block-handle > .tei-block-grip {
+    inline-size: 1.125rem;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .tei-block-handle[data-dragging] > .tei-block-grip {
+    cursor: grabbing;
+  }
+
+  /* A finger needs a target of 24px at least; the narrow gutter holds it. */
+  @media (pointer: coarse) {
+    .tei-block-handle > .tei-block-grip {
+      inline-size: 1.5rem;
+      block-size: 1.75rem;
+    }
+  }
+
+  /* No room for + in a narrow editor: the slash menu adds blocks there. */
+  @container tei (max-width: 40rem) {
+    .tei-block-add {
+      display: none;
+    }
+  }
+
+  /* Where a dragged block will land. */
+  .tei-popover.tei-block-drop {
+    block-size: 2px;
+    min-block-size: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 1px;
+    background: var(--tei-accent);
+    box-shadow: none;
+    overflow: visible;
+    pointer-events: none;
+    transition: none;
+  }
+
+  /* A copy of the dragged block under the pointer. */
+  .tei-popover.tei-block-ghost {
+    inline-size: min(var(--tei-ghost-width, 20rem), 28rem);
+    max-inline-size: calc(100vw - 2rem);
+    max-block-size: 9rem;
+    padding: var(--tei-space-2) var(--tei-space-3);
+    overflow: hidden;
+    opacity: 0.85;
+    pointer-events: none;
+    transition: none;
+    mask-image: linear-gradient(to bottom, #000 70%, transparent);
+  }
+
+  .tei-block-ghost > * {
+    margin: 0;
+  }
+
   .tei-popover.tei-table-add {
     display: flex;
     padding: 0;
