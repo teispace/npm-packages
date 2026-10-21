@@ -26,7 +26,7 @@ export default defineConfig({
     // Rebuild the package first: the app consumes its dist/, and testing a
     // stale build would prove nothing about the source.
     command: `yarn workspace @teispace/teieditor build && yarn build && yarn start --hostname 127.0.0.1 --port ${PORT}`,
-    url: `http://127.0.0.1:${PORT}/basic`,
+    url: `http://127.0.0.1:${PORT}/`,
     timeout: 600_000,
     reuseExistingServer: !process.env.CI,
   },

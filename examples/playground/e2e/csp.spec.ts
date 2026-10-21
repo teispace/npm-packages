@@ -55,7 +55,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('the page really is under the strict policy', async ({ page }) => {
-  const response = await page.goto(`/basic?run=${runId()}`);
+  const response = await page.goto(`/?run=${runId()}`);
   const policy = response?.headers()['content-security-policy'] ?? '';
   expect(policy).toMatch(/style-src 'self' 'nonce-[^']+'/);
   expect(policy).not.toContain('unsafe-inline');
@@ -70,23 +70,34 @@ test('the page really is under the strict policy', async ({ page }) => {
   await expect.poll(() => page.evaluate(() => window.__violations.length)).toBeGreaterThan(1);
 });
 
-for (const path of ['/basic', '/notion', '/playground']) {
+const PAGES = [
+  { path: '/', slash: true },
+  { path: '/notion', slash: true },
+  { path: '/comments', slash: false },
+  { path: '/customize', slash: true },
+  { path: '/headless', slash: false },
+];
+
+for (const { path, slash } of PAGES) {
   test(`${path}: typing, formatting and theme switching report nothing`, async ({ page }) => {
     const editor = await open(page, path);
     await editor.click();
+    await page.keyboard.press(`${MOD}+a`);
     await page.keyboard.type('Hello CSP');
     await page.keyboard.press(`${MOD}+a`);
     await page.keyboard.press(`${MOD}+b`);
+    await expect(editor.locator('strong').first()).toBeVisible();
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');
     await page.keyboard.type('second line');
-    await expect(editor.locator('strong, b, .font-bold, [class*="bold"]').first()).toBeVisible();
-    // Floating menus position themselves with inline styles set through the
-    // CSSOM, which style-src-attr does not cover; setAttribute('style') would be.
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('/');
-    await expect(page.getByRole('listbox', { name: 'Slash commands' })).toBeVisible();
-    await page.keyboard.press('Escape');
+    // Floating UI places itself through the CSSOM, which style-src does not
+    // cover; setAttribute('style') would be reported.
+    if (slash) {
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('/');
+      await expect(page.locator('[data-tei-control="slash-menu"]')).toBeVisible();
+      await page.keyboard.press('Escape');
+    }
     await page.getByRole('button', { name: 'Switch to dark theme' }).click();
     await page.getByRole('button', { name: 'Switch to light theme' }).click();
     await expectNoViolations(page);
@@ -107,7 +118,7 @@ async function pasteHtml(editor: Locator, html: string): Promise<void> {
 }
 
 test('pasted script-running URLs never reach the page', async ({ page }) => {
-  const editor = await open(page, '/playground');
+  const editor = await open(page, '/');
   await editor.click();
   await pasteHtml(
     editor,
@@ -127,21 +138,37 @@ test('pasted script-running URLs never reach the page', async ({ page }) => {
 });
 
 test('the link editor refuses a javascript: URL and accepts an https one', async ({ page }) => {
-  const editor = await open(page, '/playground');
+  const editor = await open(page, '/');
   await editor.click();
+  await page.keyboard.press(`${MOD}+a`);
   await page.keyboard.type('click me');
   await page.keyboard.press(`${MOD}+a`);
-  await page.getByRole('button', { name: 'Insert Link (Ctrl+K)' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Edit link' });
-  const input = dialog.getByPlaceholder('https://...');
+  await page.keyboard.press(`${MOD}+k`);
+  const form = page.locator('[data-tei-control="link-editor"]');
+  const input = form.getByPlaceholder('Paste or type a link');
   await input.fill('javascript:alert(1)');
   await input.press('Enter');
-  await expect(dialog.getByText('Please enter a valid URL')).toBeVisible();
+  await expect(form.getByRole('alert')).toHaveText('This link is not allowed');
   await expect(editor.locator('a')).toHaveCount(0);
 
   await input.fill('example.com/docs');
   await input.press('Enter');
   await expect(editor.locator('a')).toHaveAttribute('href', 'https://example.com/docs');
+  await expectNoViolations(page);
+});
+
+test('server-rendered content: styled, static, and nothing reported', async ({ page }) => {
+  await page.goto(`/server?run=${runId()}`);
+  const article = page.getByTestId('server-html');
+  await expect(article.locator('h1')).toHaveText('Welcome to teieditor');
+  // Check lists as task lists: a box a static page cannot pretend to operate.
+  const boxes = article.locator('li.task-list-item > input[type="checkbox"]');
+  await expect(boxes).toHaveCount(2);
+  await expect(boxes.first()).toBeDisabled();
+  await expect(boxes.first()).toBeChecked();
+  await expect(article.locator('[role="checkbox"], [contenteditable]')).toHaveCount(0);
+  // The prose styles reach it: headings in the editor's weight.
+  expect(await article.locator('h1').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('650');
   await expectNoViolations(page);
 });
 
@@ -164,11 +191,11 @@ function contrast(fg: string, bg: string): number {
 
 for (const theme of ['light', 'dark'] as const) {
   test(`per-block placeholders show, legibly, in ${theme} mode`, async ({ page }) => {
-    // The kitchen sink is the page with the per-block Placeholder extension.
-    const editor = await open(page, '/playground');
+    // The Notion-style page labels each empty block.
+    const editor = await open(page, '/notion');
     await page.getByRole('button', { name: `Switch to ${theme} theme` }).click();
-    await editor.click();
-    await page.keyboard.type('First');
+    await editor.locator('h1').click();
+    await page.keyboard.press('End');
     await page.keyboard.press('Enter');
 
     const empty = editor.locator('[data-tei-placeholder]').last();

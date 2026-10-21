@@ -1,38 +1,281 @@
-@import "tailwindcss";
-
-/* Pick up utility classes from the drop-in components' compiled bundle */
-@source "../../../../packages/teieditor/dist";
-@source "../../../../packages/teieditor/src/registry";
-
-@theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* The playground's own chrome. The editor's look is all in its stylesheet. */
+:root {
+  color-scheme: light;
+  --bg: light-dark(oklch(0.985 0 0), oklch(0.17 0.005 286));
+  --surface: light-dark(oklch(1 0 0), oklch(0.21 0.006 286));
+  --fg: light-dark(oklch(0.21 0.006 286), oklch(0.96 0 0));
+  --muted: light-dark(oklch(0.55 0.014 286), oklch(0.7 0.012 286));
+  --border: light-dark(oklch(0.92 0.004 286), oklch(0.3 0.007 286));
+  --accent: light-dark(oklch(0.55 0.2 264), oklch(0.7 0.16 264));
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Also support prefers-color-scheme for auto detection */
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --tei-bg: 0 0% 3.9%;
-    --tei-fg: 0 0% 98%;
-    --tei-border: 0 0% 14.9%;
-    --tei-ring: 0 0% 83.1%;
-    --tei-muted: 0 0% 14.9%;
-    --tei-muted-fg: 0 0% 63.9%;
-    --tei-accent: 0 0% 14.9%;
-    --tei-accent-fg: 0 0% 98%;
-    --tei-popover: 0 0% 3.9%;
-    --tei-popover-fg: 0 0% 98%;
-    --tei-primary: 0 0% 98%;
-    --tei-primary-fg: 0 0% 9%;
-    --tei-bubble-bg: 0 0% 14.9%;
-    --tei-bubble-fg: 0 0% 98%;
-    --tei-highlight: 48 40% 30%;
-    --tei-selection: 214 40% 25%;
-  }
+:root.dark {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: hsl(var(--tei-bg));
-  color: hsl(var(--tei-fg));
-  transition: background-color 0.2s, color 0.2s;
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--accent);
+}
+
+.nav {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.625rem 1rem;
+  border-block-end: 1px solid var(--border);
+  background: color-mix(in oklch, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.brand {
+  color: var(--fg);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.links {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  flex: 1;
+  scrollbar-width: none;
+}
+
+/* Narrow screens: the brand and the theme switch on one row, the links under them. */
+@media (max-width: 40rem) {
+  .nav {
+    justify-content: space-between;
+  }
+
+  .links {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+.links a,
+.segmented button {
+  flex-shrink: 0;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.375rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.links a:hover,
+.segmented button:hover {
+  color: var(--fg);
+}
+
+.links a[aria-current="page"],
+.segmented button[aria-pressed="true"] {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.segmented {
+  display: flex;
+  gap: 2px;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.segmented button {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.page {
+  max-inline-size: 72rem;
+  margin-inline: auto;
+  padding: 2rem 1rem 4rem;
+}
+
+.page > h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.75rem;
+  letter-spacing: -0.02em;
+}
+
+.lead {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+  max-inline-size: 48rem;
+}
+
+.split {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 64rem) {
+  .split {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+  }
+}
+
+.panel {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  font-size: 0.875rem;
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.panel label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+
+.output {
+  margin: 0;
+  max-block-size: 24rem;
+  overflow: auto;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--bg);
+  font: 0.75rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.button {
+  justify-self: start;
+  padding: 0.375rem 0.875rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: var(--fg);
+  color: var(--bg);
+  font: inherit;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Customize: a theme is a few tokens. Outside any layer, so it wins over the editor's. */
+.brand-editor {
+  --tei-accent: oklch(0.55 0.22 300);
+  --tei-accent-hover: oklch(0.5 0.22 300);
+  --tei-ring: oklch(0.55 0.22 300 / 0.5);
+  --tei-radius: 0.25rem;
+  --tei-radius-lg: 0.75rem;
+}
+
+
+/* Headless: the page's own chrome round the editor's document. */
+.headless {
+  border: 2px dashed var(--border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.headless-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem;
+  border-block-end: 2px dashed var(--border);
+}
+
+.headless-bar button {
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.headless-bar button[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.headless-bar button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.headless-count {
+  margin-inline-start: auto;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.choice {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.choice .segmented {
+  justify-self: start;
+}
+
+/* Saved content shown on the page: a frame only, the type is the editor's. */
+.card {
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
 }

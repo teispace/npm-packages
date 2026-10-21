@@ -1832,23 +1832,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@lexical/code@npm:^0.49.0":
-  version: 0.49.0
-  resolution: "@lexical/code@npm:0.49.0"
-  dependencies:
-    "@lexical/code-core": "npm:0.49.0"
-    "@lexical/code-prism": "npm:0.49.0"
-    "@lexical/extension": "npm:0.49.0"
-    lexical: "npm:0.49.0"
-  peerDependencies:
-    typescript: ">=5.2"
-  peerDependenciesMeta:
-    typescript:
-      optional: true
-  checksum: 10c0/1df5ab91b1ad06041a7d0285f4b7e049ade947491aba077e4891f1704a2b58e421950c9f2e800be17b0ef3fa3c81d05171752b7d25cd9acaada43d33eda95473
-  languageName: node
-  linkType: hard
-
 "@lexical/devtools-core@npm:0.52.0":
   version: 0.52.0
   resolution: "@lexical/devtools-core@npm:0.52.0"
@@ -3248,15 +3231,35 @@ __metadata:
   peerDependenciesMeta:
     "@excalidraw/excalidraw":
       optional: true
+    "@lexical/a11y":
+      optional: true
     "@lexical/code-shiki":
       optional: true
     "@lexical/devtools-core":
       optional: true
+    "@lexical/file":
+      optional: true
+    "@lexical/hashtag":
+      optional: true
     "@lexical/headless":
+      optional: true
+    "@lexical/mark":
+      optional: true
+    "@lexical/overflow":
+      optional: true
+    "@lexical/react":
+      optional: true
+    "@lexical/table":
+      optional: true
+    "@lexical/text":
       optional: true
     "@lexical/yjs":
       optional: true
     katex:
+      optional: true
+    react:
+      optional: true
+    react-dom:
       optional: true
     yjs:
       optional: true
@@ -7254,25 +7257,30 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "teieditor-playground@workspace:examples/playground"
   dependencies:
-    "@lexical/code": "npm:^0.49.0"
-    "@lexical/link": "npm:^0.49.0"
-    "@lexical/list": "npm:^0.49.0"
-    "@lexical/react": "npm:^0.49.0"
-    "@lexical/rich-text": "npm:^0.49.0"
-    "@lexical/selection": "npm:^0.49.0"
-    "@lexical/table": "npm:^0.49.0"
-    "@lexical/utils": "npm:^0.49.0"
+    "@lexical/clipboard": "npm:^0.52.0"
+    "@lexical/code-core": "npm:^0.52.0"
+    "@lexical/code-prism": "npm:^0.52.0"
+    "@lexical/extension": "npm:^0.52.0"
+    "@lexical/headless": "npm:^0.52.0"
+    "@lexical/history": "npm:^0.52.0"
+    "@lexical/html": "npm:^0.52.0"
+    "@lexical/link": "npm:^0.52.0"
+    "@lexical/list": "npm:^0.52.0"
+    "@lexical/markdown": "npm:^0.52.0"
+    "@lexical/react": "npm:^0.52.0"
+    "@lexical/rich-text": "npm:^0.52.0"
+    "@lexical/selection": "npm:^0.52.0"
+    "@lexical/utils": "npm:^0.52.0"
     "@playwright/test": "npm:^1.64.1"
-    "@tailwindcss/postcss": "npm:^4.3.3"
+    "@teispace/next-themes": "workspace:^"
     "@teispace/teieditor": "workspace:^"
     "@types/node": "npm:^26.6.5"
     "@types/react": "npm:^19.3.0"
     "@types/react-dom": "npm:^19.3.0"
-    lexical: "npm:^0.49.0"
+    lexical: "npm:^0.52.0"
     next: "npm:^16.4.2"
     react: "npm:^19.3.1"
     react-dom: "npm:^19.3.1"
-    tailwindcss: "npm:^4.3.3"
     typescript: "npm:^6.0.3"
   languageName: unknown
   linkType: soft
