@@ -165,6 +165,27 @@
     overscroll-behavior-x: contain;
   }
 
+  /* One line; what doesn't fit is in the "More" menu. Clipped, so a frame
+   * between a resize and the refit never spills past the edge. */
+  .tei-toolbar[data-overflow="menu"] {
+    flex-wrap: nowrap;
+    overflow-x: clip;
+  }
+
+  /* Each entry's slot takes no box of its own, so the layout is the entries'. */
+  .tei-toolbar-slot {
+    display: contents;
+  }
+
+  .tei-toolbar-slot[hidden] {
+    display: none;
+  }
+
+  /* Everything out for one measurement, within a single synchronous read. */
+  .tei-toolbar[data-measuring] > .tei-toolbar-slot {
+    display: contents;
+  }
+
   .tei-toolbar[data-overflow="scroll"]::-webkit-scrollbar {
     display: none;
   }

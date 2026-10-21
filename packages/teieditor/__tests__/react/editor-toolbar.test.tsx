@@ -21,10 +21,15 @@ function make(options: Partial<TeiEditorOptions> = {}): TeiEditor {
   return editor;
 }
 
+/** What the toolbar shows, in order: entry ids, `|` for separators. */
 const ids = (toolbar: HTMLElement) =>
-  Array.from(toolbar.children).map((el) =>
-    el.getAttribute('role') === 'separator' ? '|' : (el.getAttribute('data-item') ?? '?'),
-  );
+  Array.from(toolbar.querySelectorAll(':scope > [data-tei-slot]:not([hidden]) > *'))
+    .filter((el) => !el.matches('[popover]'))
+    .map((el) =>
+      el.getAttribute('role') === 'separator'
+        ? '|'
+        : (el.getAttribute('data-item') ?? el.getAttribute('data-tei-control') ?? '?'),
+    );
 
 function selectFirstBlock(editor: TeiEditor) {
   act(() => {
@@ -165,5 +170,99 @@ describe('EditorToolbar', () => {
     render(<EditorToolbar editor={editor} />);
     expect(screen.getByRole('toolbar', { name: 'Format' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Style: Body' })).toBeTruthy();
+  });
+});
+
+describe('EditorToolbar overflow', () => {
+  /** Lay every box out 30px wide, in a toolbar `width` wide. */
+  function layOut(width: number) {
+    const rect = Element.prototype.getBoundingClientRect;
+    const client = Object.getOwnPropertyDescriptor(Element.prototype, 'clientWidth');
+    Element.prototype.getBoundingClientRect = () => new DOMRect(0, 0, 30, 30);
+    Object.defineProperty(Element.prototype, 'clientWidth', {
+      configurable: true,
+      get(this: Element) {
+        return this.getAttribute('role') === 'toolbar' ? width : 0;
+      },
+    });
+    return () => {
+      Element.prototype.getBoundingClientRect = rect;
+      if (client) Object.defineProperty(Element.prototype, 'clientWidth', client);
+    };
+  }
+
+  const layout = [['bold', 'italic'], ['blockType'], ['strike', <span key="m" data-item="mine" />]];
+
+  it('moves what does not fit into a More menu, from the end, keeping elements', () => {
+    const restore = layOut(150);
+    try {
+      const editor = make();
+      render(<EditorToolbar editor={editor} layout={layout} />);
+      // bold, italic, | , mine, More: five 30px slots in 150px.
+      expect(ids(screen.getByRole('toolbar'))).toEqual(['bold', 'italic', '|', 'mine', 'more']);
+    } finally {
+      restore();
+    }
+  });
+
+  it('runs the moved items from the menu, with their state, and controls as submenus', () => {
+    const restore = layOut(150);
+    try {
+      const editor = make();
+      render(<EditorToolbar editor={editor} layout={layout} />);
+      selectFirstBlock(editor);
+      act(() => fireEvent.click(screen.getByRole('button', { name: 'More' })));
+      const menu = screen.getByRole('menu', { name: 'More' });
+      const block = within(menu).getByRole('menuitem', { name: /Block type/ });
+      expect(block.getAttribute('aria-haspopup')).toBe('menu');
+      const strike = within(menu).getByRole('menuitemcheckbox', { name: /Strikethrough/ });
+      expect(strike.getAttribute('aria-checked')).toBe('false');
+      act(() => fireEvent.click(strike));
+      expect(editor.getHTML()).toBe('<p><s>Hello</s></p>');
+      act(() => fireEvent.click(screen.getByRole('button', { name: 'More' })));
+      expect(
+        within(screen.getByRole('menu', { name: 'More' }))
+          .getByRole('menuitemcheckbox', { name: /Strikethrough/ })
+          .getAttribute('aria-checked'),
+      ).toBe('true');
+    } finally {
+      restore();
+    }
+  });
+
+  it('shows everything, with no More, when it all fits or another overflow is chosen', () => {
+    const restore = layOut(1000);
+    try {
+      const editor = make();
+      const { unmount } = render(<EditorToolbar editor={editor} layout={layout} />);
+      expect(ids(screen.getByRole('toolbar'))).toEqual([
+        'bold',
+        'italic',
+        '|',
+        'blockType',
+        '|',
+        'strike',
+        'mine',
+      ]);
+      unmount();
+      render(<EditorToolbar editor={editor} layout={layout} overflow="wrap" />);
+      expect(screen.getByRole('toolbar').querySelector('[data-tei-slot="more"]')).toBeNull();
+    } finally {
+      restore();
+    }
+  });
+
+  it('skips moved buttons in the arrow-key order', () => {
+    const restore = layOut(150);
+    try {
+      const editor = make();
+      render(<EditorToolbar editor={editor} layout={layout} />);
+      const italic = screen.getByRole('button', { name: /Italic/ });
+      italic.focus();
+      act(() => fireEvent.keyDown(italic, { key: 'ArrowRight' }));
+      expect(document.activeElement?.getAttribute('data-tei-control')).toBe('more');
+    } finally {
+      restore();
+    }
   });
 });

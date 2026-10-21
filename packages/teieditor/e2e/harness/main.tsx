@@ -115,6 +115,7 @@ function App() {
       <Editor
         editor={editor}
         placeholder="Write something…"
+        toolbarOverflow={params.has('scroll') ? 'scroll' : params.has('wrap') ? 'wrap' : undefined}
         frameProps={{ 'data-testid': 'editor' }}
         contentProps={{ 'data-testid': 'content' }}
       />

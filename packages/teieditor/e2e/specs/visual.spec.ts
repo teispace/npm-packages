@@ -117,6 +117,23 @@ for (const scheme of ['light', 'dark'] as const) {
       await shoot(tei, tei.page, `dialog-${scheme}.png`);
     });
 
+    test("the toolbar's More menu on a phone, with a submenu", async ({ tei }) => {
+      await tei.page.setViewportSize({ width: 375, height: 700 });
+      await tei.open({ content: DOCUMENT });
+      await theme(tei.page, scheme);
+      await tei.page.locator('[data-tei-control="more"]').click();
+      const sub = tei.page
+        .getByRole('menu', { name: 'More' })
+        .locator('[role="menuitem"][aria-haspopup="menu"]')
+        .first();
+      // Hover once the menu has finished sliding in, or the pointer can land beside it.
+      await settled(tei.page);
+      await sub.hover();
+      await expect(tei.page.locator('[data-tei-part="popover"]:popover-open')).toHaveCount(2);
+      await settled(tei.page);
+      await shoot(tei, tei.page, `more-menu-${scheme}.png`);
+    });
+
     test('tooltip on a toolbar button', async ({ tei }) => {
       await tei.open();
       await theme(tei.page, scheme);

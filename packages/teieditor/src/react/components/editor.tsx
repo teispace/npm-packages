@@ -8,7 +8,7 @@ import { type ContentEditableProps, EditorContent, EditorProvider } from '../edi
 import { cx } from '../ui/context.js';
 import { useTeiEditor } from '../use-tei-editor.js';
 import { BubbleMenu } from './bubble-menu.js';
-import { EditorToolbar, type ToolbarLayout } from './editor-toolbar.js';
+import { EditorToolbar, type EditorToolbarProps, type ToolbarLayout } from './editor-toolbar.js';
 import { LinkPopover } from './link-popover.js';
 import { SlashMenu } from './slash-menu.js';
 
@@ -56,6 +56,8 @@ export interface EditorProps extends Partial<Omit<TeiEditorOptions, 'editable'>>
   toolbar?: ToolbarLayout;
   /** Keep the toolbar in view while the page scrolls. */
   stickyToolbar?: boolean;
+  /** What the toolbar does with what doesn't fit; see `EditorToolbar`. Default `menu`. */
+  toolbarOverflow?: EditorToolbarProps['overflow'];
   /** Read-only with `false`. This one may change after mount. */
   editable?: boolean;
   /** Called after each change to the document, with it in `format`. */
@@ -101,6 +103,7 @@ function OwnEditor(props: EditorProps) {
     slots,
     toolbar,
     stickyToolbar,
+    toolbarOverflow,
     editable,
     onChange,
     format,
@@ -124,6 +127,7 @@ function EditorFrame({
   slots,
   toolbar,
   stickyToolbar,
+  toolbarOverflow,
   editable,
   onChange,
   format = 'json',
@@ -166,7 +170,12 @@ function EditorFrame({
       >
         {slot(
           parts.toolbar,
-          <EditorToolbar editor={editor} layout={toolbar} sticky={stickyToolbar} />,
+          <EditorToolbar
+            editor={editor}
+            layout={toolbar}
+            sticky={stickyToolbar}
+            overflow={toolbarOverflow}
+          />,
         )}
         <EditorContent editor={editor} placeholder={placeholder} {...contentProps}>
           {slot(parts.linkPopover, <LinkPopover />)}

@@ -306,7 +306,7 @@ test.describe('toolbar', () => {
           end: Number.parseFloat(style.getPropertyValue('--tei-fade-end')),
         };
       });
-    await tei.open();
+    await tei.open({ flags: ['scroll'] });
     test.skip(
       !(await tei.page.evaluate(() => CSS.supports('animation-timeline: scroll()'))),
       'no scroll-driven animations in this engine',
@@ -320,6 +320,149 @@ test.describe('toolbar', () => {
       el.scrollLeft = el.scrollWidth;
     });
     await expect.poll(fades).toEqual({ start: 24, end: 0 });
+  });
+});
+
+test.describe('toolbar overflow', () => {
+  const toolbar = (tei: Harness) =>
+    tei.page.getByRole('toolbar', { name: 'Formatting', exact: true });
+  const more = (tei: Harness) => toolbar(tei).locator('[data-tei-control="more"]');
+  /** Each shown control's box, and the toolbar's content box. */
+  const layout = (tei: Harness) =>
+    toolbar(tei).evaluate((el) => {
+      const style = getComputedStyle(el);
+      const box = el.getBoundingClientRect();
+      const shown = [
+        ...el.querySelectorAll(':scope > [data-tei-slot]:not([hidden]) > :not([popover])'),
+      ];
+      return {
+        left: box.left + Number.parseFloat(style.paddingLeft),
+        right: box.right - Number.parseFloat(style.paddingRight),
+        // One line: every control centred on the same row (separators have margins).
+        rows: [
+          ...new Set(
+            shown.map((c) => {
+              const r = c.getBoundingClientRect();
+              return Math.round((r.top + r.bottom) / 2);
+            }),
+          ),
+        ],
+        boxes: shown.map((c) => c.getBoundingClientRect()).map((r) => [r.left, r.right]),
+        moved: [...el.querySelectorAll(':scope > [data-tei-slot][hidden] [data-item]')].map((c) =>
+          c.getAttribute('data-item'),
+        ),
+      };
+    });
+
+  test('a wide toolbar shows everything and no More button', async ({ tei }) => {
+    await tei.open();
+    await expect(more(tei)).toBeHidden();
+    const { rows, moved } = await layout(tei);
+    expect(rows).toHaveLength(1);
+    expect(moved).toEqual([]);
+  });
+
+  for (const width of [320, 375, 768]) {
+    test(`at ${width}px: one line, inside the frame, the rest in More`, async ({ tei }) => {
+      await tei.page.setViewportSize({ width, height: 800 });
+      await tei.open();
+      await expect(more(tei)).toBeVisible();
+      const { left, right, rows, boxes, moved } = await layout(tei);
+      expect(rows).toHaveLength(1);
+      for (const [start, end] of boxes) {
+        expect(start).toBeGreaterThanOrEqual(left - 0.5);
+        expect(end).toBeLessThanOrEqual(right + 0.5);
+      }
+      expect(moved.length).toBeGreaterThan(0);
+      // Nearly full: the next entry would not have fitted.
+      const last = boxes.at(-1)?.[1] ?? 0;
+      expect(right - last).toBeLessThan(80);
+      // Everything moved is in the menu, under its own name (a menu control's, without its value).
+      await more(tei).click();
+      const menu = tei.page.getByRole('menu', { name: 'More' });
+      await expect(menu).toBeVisible();
+      for (const id of moved) {
+        const label = await toolbar(tei).locator(`[data-item="${id}"]`).getAttribute('aria-label');
+        const name = (label ?? '').split(':')[0] ?? '';
+        await expect(
+          menu.locator('[role^="menuitem"]').filter({ hasText: name }).first(),
+        ).toBeVisible();
+      }
+      expect(await tei.problems()).toEqual([]);
+    });
+  }
+
+  test('a moved item runs from the menu on the selection, which keeps its state', async ({
+    tei,
+  }) => {
+    await tei.page.setViewportSize({ width: 320, height: 800 });
+    await tei.open({ content: '<p>word</p>' });
+    expect((await layout(tei)).moved).toContain('strike');
+    await tei.selectAll();
+    await more(tei).click();
+    const menu = tei.page.getByRole('menu', { name: 'More' });
+    await menu.getByRole('menuitemcheckbox', { name: /Strikethrough/ }).click();
+    expect(await tei.html()).toBe('<p><s>word</s></p>');
+    await more(tei).click();
+    await expect(menu.getByRole('menuitemcheckbox', { name: /Strikethrough/ })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+  });
+
+  test('the keyboard reaches More last, skipping what moved, and opens it', async ({ tei }) => {
+    await tei.page.setViewportSize({ width: 375, height: 800 });
+    await tei.open();
+    await toolbar(tei).locator('[data-item="bold"]').focus();
+    await tei.page.keyboard.press('End');
+    await expect(more(tei)).toBeFocused();
+    await tei.page.keyboard.press('ArrowRight');
+    await expect(more(tei)).not.toBeFocused();
+    await tei.page.keyboard.press('ArrowLeft');
+    await expect(more(tei)).toBeFocused();
+    await tei.page.keyboard.press('ArrowDown');
+    await expect(tei.page.getByRole('menu', { name: 'More' })).toBeVisible();
+    await tei.page.keyboard.press('Escape');
+    await expect(more(tei)).toBeFocused();
+  });
+
+  test('on a phone, the menu and a submenu stay on the screen', async ({ tei }) => {
+    await tei.page.setViewportSize({ width: 320, height: 640 });
+    await tei.open();
+    await more(tei).click();
+    const menu = tei.page.getByRole('menu', { name: 'More' });
+    await settled(tei.page);
+    await menu.locator('[role="menuitem"][aria-haspopup="menu"]').last().hover();
+    const open = tei.page.locator('[data-tei-part="popover"]:popover-open');
+    await expect(open).toHaveCount(2);
+    await settled(tei.page);
+    for (const box of await open.evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect().toJSON()),
+    )) {
+      expect(box.left).toBeGreaterThanOrEqual(0);
+      expect(box.right).toBeLessThanOrEqual(320);
+      expect(box.top).toBeGreaterThanOrEqual(0);
+      expect(box.bottom).toBeLessThanOrEqual(640);
+    }
+  });
+
+  test('growing gives entries back, shrinking takes them, with no wrap on the way', async ({
+    tei,
+  }) => {
+    await tei.page.setViewportSize({ width: 1280, height: 800 });
+    await tei.open();
+    for (const width of [900, 600, 420, 360, 500, 1000, 1280]) {
+      await tei.page.setViewportSize({ width, height: 800 });
+      // Refits within a frame or two of the resize: one row, the last control inside.
+      await expect
+        .poll(async () => {
+          const { right, rows, boxes } = await layout(tei);
+          return rows.length === 1 && (boxes.at(-1)?.[1] ?? 0) <= right + 0.5;
+        })
+        .toBe(true);
+    }
+    await expect(more(tei)).toBeHidden();
+    expect((await layout(tei)).moved).toEqual([]);
   });
 });
 

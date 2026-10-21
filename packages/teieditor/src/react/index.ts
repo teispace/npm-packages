@@ -12,6 +12,7 @@ export type {
   ToolbarControl,
   ToolbarEntry,
   ToolbarLayout,
+  ToolbarSubmenu,
 } from './components/editor-toolbar.js';
 export {
   AlignMenu,

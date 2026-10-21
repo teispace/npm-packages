@@ -16,15 +16,19 @@ const ITEMS = 'button,input,select,[data-tei-roving]';
 function itemsOf(toolbar: HTMLElement): HTMLElement[] {
   return Array.from(toolbar.querySelectorAll<HTMLElement>(ITEMS)).filter(
     (el) =>
-      !el.closest('.tei-popover, [popover], dialog') &&
+      !el.closest('.tei-popover, [popover], dialog, [hidden]') &&
       !(el as HTMLButtonElement).disabled &&
       el.closest('[role="toolbar"]') === toolbar,
   );
 }
 
 export interface ToolbarProps extends HTMLAttributes<HTMLDivElement> {
-  /** `wrap` onto more lines, or `scroll` sideways. Default: wrap, scroll in narrow editors. */
-  overflow?: 'wrap' | 'scroll';
+  /**
+   * `wrap` onto more lines, or `scroll` sideways. Default: wrap, scroll in
+   * narrow editors. `menu` keeps one line for a toolbar that moves what
+   * doesn't fit elsewhere, as `EditorToolbar` does.
+   */
+  overflow?: 'wrap' | 'scroll' | 'menu';
   /** Stick to the top of the scrolling container. */
   sticky?: boolean;
 }

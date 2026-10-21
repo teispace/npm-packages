@@ -103,6 +103,7 @@ export const TeiCoreExtension = defineExtension({
       'toolbar.label': 'Formatting',
       'toolbar.blockType': 'Block type',
       'toolbar.align': 'Align',
+      'toolbar.more': 'More',
       'bubble.label': 'Text formatting',
       'slash.label': 'Insert block',
       'slash.empty': 'No matches',
