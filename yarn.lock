@@ -3252,6 +3252,8 @@ __metadata:
       optional: true
     "@lexical/devtools-core":
       optional: true
+    "@lexical/headless":
+      optional: true
     "@lexical/yjs":
       optional: true
     katex:

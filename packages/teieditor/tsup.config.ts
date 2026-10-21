@@ -142,7 +142,8 @@ function entries(): Record<string, string> {
 export default defineConfig({
   entry: entries(),
   format: ['esm'],
-  dts: true,
+  // Declarations come from `tsc -p tsconfig.build.json` (see there).
+  dts: false,
   clean: true,
   splitting: true,
   treeshake: true,

@@ -101,8 +101,8 @@ test.describe('markdown shortcuts', () => {
     ['# Title', '<h1>Title</h1>'],
     ['### Third', '<h3>Third</h3>'],
     ['> Quote', '<blockquote>Quote</blockquote>'],
-    ['- Item', '<ul><li value="1">Item</li></ul>'],
-    ['1. Item', '<ol><li value="1">Item</li></ol>'],
+    ['- Item', '<ul><li>Item</li></ul>'],
+    ['1. Item', '<ol><li>Item</li></ol>'],
     // A space at the end of a block survives only with pre-wrap.
     ['**bold** ', '<p><strong>bold</strong><span style="white-space: pre-wrap;"> </span></p>'],
     ['*it* ', '<p><em>it</em><span style="white-space: pre-wrap;"> </span></p>'],
@@ -142,15 +142,13 @@ test.describe('lists', () => {
     await tei.page.keyboard.press('Enter');
     await tei.page.keyboard.type('Two');
     await tei.page.keyboard.press('Tab');
-    expect(await tei.html()).toBe('<ul><li value="1">One<ul><li value="1">Two</li></ul></li></ul>');
+    expect(await tei.html()).toBe('<ul><li>One<ul><li>Two</li></ul></li></ul>');
     await tei.page.keyboard.press('Shift+Tab');
-    expect(await tei.html()).toBe('<ul><li value="1">One</li><li value="2">Two</li></ul>');
+    expect(await tei.html()).toBe('<ul><li>One</li><li>Two</li></ul>');
     await tei.page.keyboard.press('Enter');
     await tei.page.keyboard.press('Enter');
     await tei.page.keyboard.type('After');
-    expect(await tei.html()).toBe(
-      '<ul><li value="1">One</li><li value="2">Two</li></ul><p>After</p>',
-    );
+    expect(await tei.html()).toBe('<ul><li>One</li><li>Two</li></ul><p>After</p>');
   });
 
   test('Tab outside a list moves focus on, as in any form', async ({ tei }) => {

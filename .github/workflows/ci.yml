@@ -240,6 +240,8 @@ jobs:
         working-directory: packages/teieditor
         env:
           TEI_VISUAL: 1
+          # The image's default sans has no bold face; see e2e/fonts.conf.
+          FONTCONFIG_FILE: ${{ github.workspace }}/packages/teieditor/e2e/fonts.conf
         run: yarn test:e2e
 
       - name: Upload reports on failure

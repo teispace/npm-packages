@@ -9,6 +9,7 @@ import {
   CodePrismExtension,
   getCodeLanguageOptions,
   normalizeCodeLanguage,
+  PrismTokenizer,
 } from '@lexical/code-prism';
 import { CODE } from '@lexical/markdown';
 import { $setBlocksType } from '@lexical/selection';
@@ -18,6 +19,7 @@ import {
   $createTextNode,
   $getSelection,
   $isRangeSelection,
+  configExtension,
   type LexicalNode,
 } from 'lexical';
 import { defineTeiExtension } from '../../core/define.js';
@@ -153,7 +155,16 @@ export const CodeBlock = defineTeiExtension({
  */
 export const CodeHighlight = defineTeiExtension({
   name: '@teispace/teieditor/code-highlight',
-  dependencies: [CodeBlock, CodePrismExtension],
+  dependencies: [
+    CodeBlock,
+    // Prism's own fallback is JavaScript, which would stamp a language on
+    // every block without one (and on its Markdown fence). A block keeps
+    // the language it was given; `CodeBlock`'s `defaultLanguage` picks one
+    // for new blocks.
+    configExtension(CodePrismExtension, {
+      tokenizer: { ...PrismTokenizer, defaultLanguage: null },
+    }),
+  ],
 });
 
 /** Every language Prism knows, as [id, label] for a picker. */

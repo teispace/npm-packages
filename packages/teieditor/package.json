@@ -67,7 +67,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup && node scripts/build-css.mjs",
+    "build": "tsup && tsc -p tsconfig.build.json && node scripts/build-css.mjs",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -122,6 +122,9 @@
       "optional": true
     },
     "@lexical/devtools-core": {
+      "optional": true
+    },
+    "@lexical/headless": {
       "optional": true
     },
     "@lexical/yjs": {

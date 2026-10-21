@@ -43,6 +43,8 @@ const script = [
   'yarn workspaces focus @teispace/teieditor > /tmp/install.log 2>&1 || { cat /tmp/install.log; exit 1; }',
   `cd ${quote(inRepo)}`,
   'status=0',
+  // A desktop's fonts: the image's default sans has no bold face (see fonts.conf).
+  'export FONTCONFIG_FILE="$PWD/e2e/fonts.conf"',
   `TEI_VISUAL=1 CI= npx playwright test -c e2e/playwright.config.ts ${update ? '--update-snapshots ' : ''}${extra.map(quote).join(' ')} || status=$?`,
   // On update the container's set replaces the old one, so renamed shots leave nothing behind.
   update ? 'find /shots -mindepth 1 -delete && cp -R e2e/specs/__screenshots__/. /shots/' : ':',

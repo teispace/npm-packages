@@ -164,11 +164,11 @@ describe('blocks', () => {
       const list = $getRoot().getFirstChild() as ElementNode;
       (list.getLastChild() as ElementNode).selectEnd();
     });
-    const nested = '<ul><li value="1">One<ul><li value="1">Two</li></ul></li></ul>';
+    const nested = '<ul><li>One<ul><li>Two</li></ul></li></ul>';
     press(editor, 'Tab');
     expect(editor.getHTML()).toBe(nested);
     press(editor, 'Tab', { shiftKey: true });
-    expect(editor.getHTML()).toBe('<ul><li value="1">One</li><li value="2">Two</li></ul>');
+    expect(editor.getHTML()).toBe('<ul><li>One</li><li>Two</li></ul>');
   });
 
   it('makes code blocks from blocks and back, keeping lines', () => {
@@ -311,6 +311,48 @@ describe('clipboard and strict-CSP HTML', () => {
     Object.defineProperty(span, 'style', { value: document.createElement('i').style });
     cleanExportedHTML(container);
     expect(container.innerHTML).toBe('<span style="color: red;">x</span>');
+  });
+});
+
+describe('HTML a page can use as it is', () => {
+  it('writes code as <pre><code class="language-x"> with real newlines', () => {
+    const editor = make('<pre data-language="ts">let a = 1;<br>let  b = 2;</pre>');
+    expect(editor.getHTML()).toBe(
+      '<pre data-language="ts"><code class="language-ts">let a = 1;\nlet  b = 2;</code></pre>',
+    );
+  });
+
+  it('reads the language from a class, as GitHub and Markdown renderers write it', () => {
+    for (const html of [
+      '<pre><code class="language-python">x = 1</code></pre>',
+      '<pre class="language-python"><code>x = 1</code></pre>',
+      '<pre><code class="hljs lang-python">x = 1</code></pre>',
+    ]) {
+      const editor = make(html);
+      expect(editor.getMarkdown()).toBe('```python\nx = 1\n```');
+    }
+  });
+
+  it('keeps a code block without a language plain', () => {
+    const editor = make('<pre><code>a\nb</code></pre>');
+    expect(editor.getHTML()).toBe('<pre><code>a\nb</code></pre>');
+    expect(editor.getMarkdown()).toBe('```\na\nb\n```');
+  });
+
+  it('numbers list items only where the number says something', () => {
+    expect(make('<ol start="3"><li>x</li><li>y</li></ol>').getHTML()).toBe(
+      '<ol start="3"><li>x</li><li>y</li></ol>',
+    );
+    expect(make('<ul><li>a</li><li>b</li></ul>').getHTML()).toBe('<ul><li>a</li><li>b</li></ul>');
+  });
+
+  it('reads back what it wrote, unchanged', () => {
+    const html =
+      '<h2>T</h2><ol><li>a<ol><li>b</li></ol></li><li>c</li></ol>' +
+      '<pre data-language="ts"><code class="language-ts">x\n  y</code></pre><p>end</p>';
+    const once = make(html).getHTML();
+    expect(make(once).getHTML()).toBe(once);
+    expect(make(once).getJSON()).toEqual(make(html).getJSON());
   });
 });
 

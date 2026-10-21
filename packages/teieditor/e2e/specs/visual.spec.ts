@@ -17,7 +17,7 @@ const DOCUMENT = [
   '<ol><li>Step one</li><li>Step two</li></ol>',
   '<ul data-lexical-list-type="check"><li aria-checked="true">Done</li>',
   '<li aria-checked="false">To do</li></ul>',
-  '<pre><code>const editor = createEditor();\neditor.focus();</code></pre>',
+  '<pre><code class="language-ts">const editor = createEditor();\neditor.focus();</code></pre>',
   '<hr><p>The end.</p>',
 ].join('');
 

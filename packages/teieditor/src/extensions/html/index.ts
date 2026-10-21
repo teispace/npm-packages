@@ -109,7 +109,8 @@ export function cleanExportedHTML(container: ParentNode): void {
     if (css !== null) {
       const { 'white-space': whiteSpace, ...rest } = getStyleObjectFromCSS(css);
       const keep =
-        whiteSpace === undefined || (whiteSpace === 'pre-wrap' && !needsPreWrap(el))
+        whiteSpace === undefined ||
+        (whiteSpace === 'pre-wrap' && (el.closest('pre') !== null || !needsPreWrap(el)))
           ? rest
           : { ...rest, 'white-space': whiteSpace };
       const text = Object.entries(keep)
@@ -124,6 +125,31 @@ export function cleanExportedHTML(container: ParentNode): void {
     if (span.attributes.length === 0) span.replaceWith(...Array.from(span.childNodes));
   }
   container.normalize();
+  // Code as `<pre><code class="language-x">` with real newlines, as
+  // highlighters, Markdown renderers and copy-paste expect. `data-language`
+  // stays for the editor to read back; the highlight copy of it goes.
+  for (const pre of Array.from(container.querySelectorAll('pre'))) {
+    for (const br of Array.from(pre.querySelectorAll('br'))) br.replaceWith('\n');
+    pre.removeAttribute('data-highlight-language');
+    const code = pre.ownerDocument.createElement('code');
+    const language = pre.getAttribute('data-language');
+    if (language) code.className = `language-${language}`;
+    code.append(...Array.from(pre.childNodes));
+    pre.append(code);
+  }
+  // Lexical numbers every list item; only a number that differs from the
+  // count the list would give it says anything.
+  for (const list of Array.from(container.querySelectorAll('ol, ul'))) {
+    const ordered = list.tagName === 'OL';
+    let expected = Number(list.getAttribute('start') ?? 1);
+    for (const li of Array.from(list.children)) {
+      if (li.tagName !== 'LI') continue;
+      const value = li.getAttribute('value');
+      if (value === null) continue;
+      if (!ordered || Number(value) === expected) li.removeAttribute('value');
+      expected = Number(value) + 1;
+    }
+  }
   for (const [outer, inner] of Object.entries(REDUNDANT_WRAPPERS)) {
     for (const el of Array.from(container.querySelectorAll(outer.toLowerCase()))) {
       const only = el.firstElementChild;
@@ -191,6 +217,14 @@ const BLOCK_SELECTOR =
  * selection with, which would paste as an empty paragraph.
  */
 function normalizeImported(body: HTMLElement): void {
+  // `<pre><code class="language-ts">`, as GitHub, Markdown renderers and
+  // highlighters write it: the language goes where the code block reads it.
+  for (const el of Array.from(body.querySelectorAll('pre[class], pre > code[class]'))) {
+    const pre = el.closest('pre');
+    const language = /(?:^|\s)lang(?:uage)?-([\w#+.-]+)/.exec(el.getAttribute('class') ?? '')?.[1];
+    if (pre && language && !pre.hasAttribute('data-language'))
+      pre.setAttribute('data-language', language);
+  }
   for (const br of Array.from(body.querySelectorAll('br.Apple-interchange-newline'))) br.remove();
   for (const el of Array.from(body.querySelectorAll<HTMLElement>('[style]'))) {
     if (el.style.textAlign === 'start') el.style.removeProperty('text-align');
@@ -202,7 +236,7 @@ function normalizeImported(body: HTMLElement): void {
   // code keep theirs. Neighbours are looked up across text nodes, since
   // WebKit puts the NBSP right before or after an inline tag.
   const texts: Text[] = [];
-  const walker = body.ownerDocument.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+  const walker = body.ownerDocument.createTreeWalker(body, SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) texts.push(node as Text);
   const blockOf = (text: Text) => text.parentElement?.closest(BLOCK_SELECTOR) ?? null;
   const isWordChar = (c: string | undefined) => c !== undefined && !/\s/.test(c);
@@ -224,6 +258,9 @@ function normalizeImported(body: HTMLElement): void {
       .join('');
   });
 }
+
+/** `NodeFilter.SHOW_TEXT`; the `NodeFilter` global exists in browsers only, not in a server DOM. */
+const SHOW_TEXT = 4;
 
 /** Parse HTML into an inert document, through the app's policy or the editor's own. */
 function parseHTML(editor: TeiEditor, html: string): Document {
