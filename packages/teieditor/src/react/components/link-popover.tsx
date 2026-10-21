@@ -17,6 +17,7 @@ import type { FloatingAnchor } from '../ui/floating.js';
 import { Popover } from '../ui/popover.js';
 import { useEditorFocus } from '../use-editor-focus.js';
 import { useEditorState } from '../use-editor-state.js';
+import { useUiRequest } from '../use-ui-request.js';
 
 export interface LinkPopoverProps {
   /** The editor; defaults to the one from context. */
@@ -54,26 +55,16 @@ export function LinkPopover({ editor: editorProp, preview = true }: LinkPopoverP
     link: LinkAtSelection | null;
   }>();
 
-  // Count as mounted, so `openLinkEditor` (and ⌘K) know there is a UI.
-  useEffect(() => {
-    if (!storage) return;
-    storage.editors.value++;
-    return () => {
-      storage.editors.value--;
-    };
-  }, [storage]);
+  // A link something else is asking about (Embed's offer to embed it) has
+  // that UI under it instead, until the question goes.
+  const offered = useOffered(preview && focused && current ? linkElement(editor, current) : null);
 
   // Open the editor on each request, and for one made while this loaded.
-  useEffect(() => {
-    if (!storage) return;
-    return storage.editRequest.subscribe((request) => {
-      if (request <= storage.handled) return;
-      storage.handled = request;
-      const link = editor.read(() => $getLinkAtSelection());
-      const anchor = linkElement(editor, link) ?? selectionAnchor(editor);
-      if (anchor) setEditing({ anchor, link });
-    });
-  }, [editor, storage]);
+  useUiRequest(storage?.edit, () => {
+    const link = editor.read(() => $getLinkAtSelection());
+    const anchor = linkElement(editor, link) ?? selectionAnchor(editor);
+    if (anchor) setEditing({ anchor, link });
+  });
 
   if (!storage) {
     if (process.env.NODE_ENV !== 'production') {
@@ -92,7 +83,7 @@ export function LinkPopover({ editor: editorProp, preview = true }: LinkPopoverP
   }
 
   const element = preview && focused && current ? linkElement(editor, current) : null;
-  if (!element || !current) return null;
+  if (!element || !current || offered) return null;
   return (
     <Popover
       open
@@ -228,4 +219,16 @@ function linkElement(editor: TeiEditor, link: LinkAtSelection | null): HTMLEleme
 /** A URL as people read it: no scheme, no trailing slash. */
 function displayUrl(url: string): string {
   return url.replace(/^(https?:)?\/\//, '').replace(/\/$/, '');
+}
+
+/** Whether `element` carries `data-tei-offer`, read as it renders and kept in step. */
+function useOffered(element: HTMLElement | null): boolean {
+  const [, changed] = useState(0);
+  useEffect(() => {
+    if (!element) return;
+    const observer = new MutationObserver(() => changed((n) => n + 1));
+    observer.observe(element, { attributes: true, attributeFilter: ['data-tei-offer'] });
+    return () => observer.disconnect();
+  }, [element]);
+  return element?.hasAttribute('data-tei-offer') ?? false;
 }

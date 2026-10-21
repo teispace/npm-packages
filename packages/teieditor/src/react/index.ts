@@ -23,6 +23,13 @@ export {
   ItemButton,
   ItemMenu,
 } from './components/editor-toolbar.js';
+export type { EmbedControlsProps } from './components/embed-controls.js';
+export {
+  EmbedControls,
+  EmbedInsertPopover,
+  EmbedSuggestionMenu,
+  InsertEmbedForm,
+} from './components/embed-controls.js';
 export type { FileControlsProps } from './components/file-controls.js';
 export { FileControls } from './components/file-controls.js';
 export type { ImageControlsProps } from './components/image-controls.js';
@@ -87,3 +94,4 @@ export { useEditorFocus } from './use-editor-focus.js';
 export type { UseEditorStateOptions } from './use-editor-state.js';
 export { shallowEqual, useEditorState } from './use-editor-state.js';
 export { createReactTeiEditor, useTeiEditor } from './use-tei-editor.js';
+export { useUiRequest } from './use-ui-request.js';

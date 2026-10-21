@@ -1,6 +1,6 @@
 'use client';
 
-import { type DragEvent, type FormEvent, useEffect, useId, useState } from 'react';
+import { type DragEvent, type FormEvent, useId, useState } from 'react';
 import { getExtensionOptions } from '../../core/define.js';
 import type { TeiEditor } from '../../core/editor.js';
 import { Image, type ImageStorage } from '../../extensions/image/index.js';
@@ -12,6 +12,7 @@ import { DropdownMenu } from '../ui/dropdown.js';
 import type { FloatingAnchor } from '../ui/floating.js';
 import { Popover } from '../ui/popover.js';
 import { useEditorState } from '../use-editor-state.js';
+import { useUiRequest } from '../use-ui-request.js';
 
 /** Ask for files with the chooser, as the Image extension accepts them. */
 export function pickImages(editor: TeiEditor, multiple: boolean): Promise<File[]> {
@@ -134,26 +135,10 @@ export function ImageInsertPopover({ editor }: { editor: TeiEditor }) {
   const storage = editor.extension(Image)?.output.storage as ImageStorage | undefined;
   const [anchor, setAnchor] = useState<FloatingAnchor | null>(null);
 
-  // Count as mounted, so `openImageInsert` asks here and not with the bare chooser.
-  useEffect(() => {
-    if (!storage) return;
-    storage.pickers.value++;
-    return () => {
-      storage.pickers.value--;
-    };
-  }, [storage]);
-
-  useEffect(() => {
-    if (!storage) return;
-    let first = true;
-    return storage.insertRequest.subscribe(() => {
-      if (first) {
-        first = false;
-        return;
-      }
-      setAnchor(selectionAnchor(editor) ?? editor.lexical.getRootElement());
-    });
-  }, [editor, storage]);
+  // Open at the caret on each request, and for one made while this loaded.
+  useUiRequest(storage?.insert, () =>
+    setAnchor(selectionAnchor(editor) ?? editor.lexical.getRootElement()),
+  );
 
   if (!anchor) return null;
   const close = () => setAnchor(null);

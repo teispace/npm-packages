@@ -46,6 +46,11 @@ text for one, or turn <em>In line with text</em> on in an image's toolbar.</p>
 <p>Drop any other file, or attach one from the toolbar or <code>/file</code>. Click a card to download,
 rename or replace it; in a read-only document, the card is a download link.</p>
 <a href="/release-notes.pdf" download="Release notes.pdf" data-tei-file="" data-ext="PDF" data-size="193" title="193 B" type="application/pdf">Release notes.pdf</a>
+<h2>Embeds</h2>
+<p>Paste a YouTube, Vimeo, Loom, X or Figma link on a line of its own and press <code>Enter</code> to embed it,
+or insert one from the toolbar or <code>/embed</code>. Click an embed to align it, open its page or copy its link;
+once selected, it plays.</p>
+<div data-tei-embed="youtube" data-id="aqz-KE-bpKQ"></div>
 <hr>
 <p>That is the whole document. Make it yours.</p>
 `;

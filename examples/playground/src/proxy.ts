@@ -24,7 +24,8 @@ export function proxy(request: NextRequest) {
     dev ? "style-src 'self' 'unsafe-inline'" : `style-src 'self' 'nonce-${nonce}'`,
     "img-src 'self' data: blob: https:",
     "font-src 'self'",
-    "frame-src https://www.youtube-nocookie.com https://www.youtube.com https://www.figma.com",
+    // The embed providers' frames (Embed's defaults), and nothing else.
+    'frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://platform.twitter.com https://www.figma.com https://www.loom.com',
     `connect-src 'self'${dev ? ' ws:' : ''}`,
     "object-src 'none'",
     "base-uri 'self'",

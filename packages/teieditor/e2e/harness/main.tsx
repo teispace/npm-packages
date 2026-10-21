@@ -2,6 +2,7 @@ import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { setExtensionOptions } from '../../src/core/define';
 import type { TeiEditor } from '../../src/core/editor';
+import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
 import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
 import { Html } from '../../src/extensions/html/index';
 import { Image, type ImageOptions } from '../../src/extensions/image/index';
@@ -34,6 +35,8 @@ declare global {
       setImageOptions: (options: Partial<ImageOptions>) => void;
       /** Change the FileAttachment extension's options. */
       setFileOptions: (options: Partial<FileOptions>) => void;
+      /** Change the Embed extension's options. */
+      setEmbedOptions: (options: Partial<EmbedOptions>) => void;
     };
   }
 }
@@ -121,6 +124,7 @@ function App() {
       ...(params.has('table') ? [Table] : []),
       ...(params.has('image') ? [Image] : []),
       ...(params.has('file') ? [FileAttachment] : []),
+      ...(params.has('embed') ? [Embed] : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
@@ -134,6 +138,7 @@ function App() {
     trust,
     setImageOptions: (options) => setExtensionOptions(editor, Image, options),
     setFileOptions: (options) => setExtensionOptions(editor, FileAttachment, options),
+    setEmbedOptions: (options) => setExtensionOptions(editor, Embed, options),
   };
   return (
     <main data-testid="root">

@@ -104,7 +104,9 @@ export type TeiPlacement =
   /** The toolbar over a selected image. */
   | 'imageMenu'
   /** The toolbar over a selected file. */
-  | 'fileMenu';
+  | 'fileMenu'
+  /** The toolbar over a selected embed. */
+  | 'embedMenu';
 
 /**
  * A UI entry an extension contributes — a toolbar button, a slash-menu row,

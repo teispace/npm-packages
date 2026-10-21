@@ -32,7 +32,9 @@ const CASES = [
   {
     name: '<Editor> (full preset, StarterKit)',
     code: `import { Editor } from '${dist('react/index.js')}'; use(Editor);`,
-    budget: 60 * KB,
+    // Grows with what the full preset installs, each feature on purpose:
+    // tables, images, files (59.6 KB), embeds (+4.8 KB).
+    budget: 66 * KB,
   },
   {
     name: 'headless React (useTeiEditor, EditorContent)',

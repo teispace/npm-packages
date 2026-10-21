@@ -544,11 +544,133 @@
     opacity: 0;
   }
 
-  /* Decorator blocks (images, embeds, …) */
-  .tei-embed {
-    position: relative;
+  /* Lexical's own block decorators (DecoratorBlockNode), for nodes of yours built on them. */
+  .tei-embed-block {
     margin: 0 0 0.75em;
     user-select: none;
+  }
+
+  /* Embeds: a frame from another site. The editor's are .tei-embed around
+   * the frame, saved HTML's the iframe alone; both are as wide as the text
+   * (or the provider's widest), at its ratio (16/9 unless it says) or a
+   * height it reports, placed by data-align. */
+  .tei-embed {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 0.75em;
+    user-select: none;
+  }
+
+  .tei-embed[data-align="start"] {
+    justify-content: flex-start;
+  }
+
+  .tei-embed[data-align="end"] {
+    justify-content: flex-end;
+  }
+
+  :where(.tei-prose) iframe[data-tei-embed],
+  .tei-embed-frame {
+    display: block;
+    position: relative;
+    inline-size: 100%;
+    max-inline-size: var(--tei-embed-max, 100%);
+    block-size: auto;
+    aspect-ratio: var(--tei-embed-ratio, 16 / 9);
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--tei-radius);
+    background: var(--tei-bg-muted);
+  }
+
+  :where(.tei-prose) iframe[data-tei-embed] {
+    margin: 0 auto 0.75em;
+  }
+
+  :where(.tei-prose) iframe[data-tei-embed][data-align="start"] {
+    margin-inline-start: 0;
+  }
+
+  :where(.tei-prose) iframe[data-tei-embed][data-align="end"] {
+    margin-inline-end: 0;
+  }
+
+  /* X posts: as tall as the post says, no wider than X draws them. */
+  :where(.tei-prose) iframe[data-tei-embed="x"],
+  [data-tei-embed="x"] .tei-embed-frame {
+    max-inline-size: 550px;
+    block-size: var(--tei-embed-height, 320px);
+    aspect-ratio: auto;
+  }
+
+  .tei-embed-frame iframe {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    border: 0;
+  }
+
+  /* While editing, a click selects the embed; once selected, it plays. */
+  [data-tei-content]:not([data-tei-readonly]) .tei-embed:not([data-tei-selected]) iframe {
+    pointer-events: none;
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-embed {
+    cursor: pointer;
+  }
+
+  /* With consent: a button in the frame's place until the reader asks. */
+  .tei-embed-load {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: var(--tei-space-1);
+    position: absolute;
+    inset: 0;
+    padding: var(--tei-space-4);
+    border: 1px dashed var(--tei-border-strong);
+    border-radius: inherit;
+    background: var(--tei-bg-subtle);
+    color: var(--tei-fg);
+    font: inherit;
+    text-align: center;
+    cursor: pointer;
+    transition:
+      background-color var(--tei-duration) var(--tei-ease),
+      border-color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-embed-load:hover {
+    border-color: var(--tei-accent);
+    background: var(--tei-bg-hover);
+  }
+
+  .tei-embed-load:focus-visible {
+    outline: 2px solid var(--tei-accent);
+    outline-offset: -2px;
+  }
+
+  .tei-embed-load-title {
+    font-weight: 500;
+  }
+
+  .tei-embed-load-host,
+  .tei-embed-missing {
+    color: var(--tei-fg-muted);
+    font-size: 0.875em;
+  }
+
+  /* With no provider for it, a short note, not a frame's worth of nothing. */
+  [data-unknown] > .tei-embed-frame {
+    aspect-ratio: auto;
+  }
+
+  .tei-embed-missing {
+    display: block;
+    padding: var(--tei-space-3) var(--tei-space-4);
+    text-align: center;
   }
 
   /* A node is selected, not a place in the text: no caret (Chromium draws
@@ -659,6 +781,16 @@
 
   [data-tei-content] .tei-image[data-tei-selected] img,
   [data-tei-content] .tei-inline-image[data-tei-selected] img {
+    outline: 2px solid var(--tei-accent);
+    outline-offset: 2px;
+  }
+
+  /* An embed's outline goes round its frame, which may be narrower. */
+  [data-tei-content] .tei-embed[data-tei-selected] {
+    outline: none;
+  }
+
+  [data-tei-content] .tei-embed[data-tei-selected] .tei-embed-frame {
     outline: 2px solid var(--tei-accent);
     outline-offset: 2px;
   }

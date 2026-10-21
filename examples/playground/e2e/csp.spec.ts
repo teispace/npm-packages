@@ -45,6 +45,11 @@ async function expectNoViolations(page: Page): Promise<void> {
 }
 
 test.beforeEach(async ({ page }) => {
+  // The embed providers' frames, stood in for: tests stay off the network.
+  await page.context().route(
+    /^https:\/\/(www\.youtube-nocookie\.com|player\.vimeo\.com|platform\.twitter\.com|www\.figma\.com|www\.loom\.com)\//,
+    (route) => route.fulfill({ contentType: 'text/html', body: '<!doctype html><p>Embedded</p>' }),
+  );
   // Init scripts are injected by the browser driver, outside the page's CSP.
   await page.addInitScript(() => {
     window.__violations = [];
@@ -345,5 +350,43 @@ test('files: a dropped file uploads, renames and downloads, reporting nothing', 
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download', exact: true }).click();
   expect((await download).suggestedFilename()).toBe('Notes.pdf');
+  await expectNoViolations(page);
+});
+
+test('embeds: the demo video loads, a pasted link embeds, reporting nothing', async ({ page }) => {
+  const editor = await open(page, '/');
+  const embeds = editor.locator('.tei-embed');
+  await expect(embeds).toHaveCount(1);
+  const video = embeds.first().locator('iframe');
+  await expect(video).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/aqz-KE-bpKQ');
+  // Lazy: the frame loads as it comes into view.
+  await video.scrollIntoViewIfNeeded();
+  await expect(video.contentFrame().locator('p')).toHaveText('Embedded');
+  // Select it, and align it to the start.
+  await embeds.first().locator('.tei-embed-frame').click();
+  await page.getByRole('button', { name: 'Align left', exact: true }).click();
+  await expect(embeds.first()).toHaveAttribute('data-align', 'start');
+  // Paste a link to a post on a line of its own, and take the offer.
+  // Copied from another page: the editor has let go of focus.
+  await page.evaluate(() => {
+    (document.activeElement as HTMLElement | null)?.blur();
+    const source = document.createElement('div');
+    source.innerHTML = '<a href="https://x.com/jack/status/20">https://x.com/jack/status/20</a>';
+    document.body.append(source);
+    getSelection()?.selectAllChildren(source);
+  });
+  await page.keyboard.press(`${MOD}+c`);
+  // A new line after the title (one line, so End is its end in every browser).
+  await editor.locator('h1').click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press(`${MOD}+v`);
+  await expect(page.locator('[data-tei-control="embed-suggestion"]')).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(embeds).toHaveCount(2);
+  await expect(editor.locator('.tei-embed[data-tei-embed="x"] iframe')).toHaveAttribute(
+    'src',
+    /^https:\/\/platform\.twitter\.com\/embed\/Tweet\.html\?id=20&/,
+  );
   await expectNoViolations(page);
 });

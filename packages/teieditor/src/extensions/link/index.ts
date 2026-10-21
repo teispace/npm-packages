@@ -1,4 +1,3 @@
-import { type Signal, signal } from '@lexical/extension';
 import {
   $isAutoLinkNode,
   $isLinkNode,
@@ -23,6 +22,7 @@ import {
   mergeRegister,
 } from 'lexical';
 import { defineTeiExtension } from '../../core/define.js';
+import { hasUi, requestUi, type UiRequest, uiRequest } from '../../core/ui-request.js';
 import {
   externalLink as externalLinkIcon,
   link as linkIcon,
@@ -74,15 +74,8 @@ export interface LinkOptions {
 }
 
 export interface LinkStorage {
-  /** Bumped by `openLinkEditor`; link UIs watch it. */
-  editRequest: Signal<number>;
-  /**
-   * How many link UIs are mounted, or on their way (they register
-   * themselves; one that loads later is held a place for).
-   */
-  editors: Signal<number>;
-  /** The last request a link UI took: one that loads later opens for a newer one. */
-  handled: number;
+  /** `openLinkEditor`'s requests, to the link editor (`<LinkPopover>`). */
+  edit: UiRequest;
 }
 
 export interface LinkAtSelection {
@@ -142,7 +135,7 @@ export const Link = defineTeiExtension({
     target: null,
   } as LinkOptions,
   dependencies: [RichText, LinkExtension],
-  storage: (): LinkStorage => ({ editRequest: signal(0), editors: signal(0), handled: 0 }),
+  storage: (): LinkStorage => ({ edit: uiRequest() }),
   commands: {
     setLink: {
       run: ({ options }, input: string | LinkInput) => {
@@ -193,11 +186,8 @@ export const Link = defineTeiExtension({
       can: () => $getLinkAtSelection() !== null,
     },
     openLinkEditor: {
-      run: ({ storage }) => {
-        if (storage.editors.peek() === 0) return false;
-        storage.editRequest.value++;
-      },
-      can: ({ storage }) => storage.editors.peek() > 0 && $isRangeSelection($getSelection()),
+      run: ({ storage }) => requestUi(storage.edit),
+      can: ({ storage }) => hasUi(storage.edit) && $isRangeSelection($getSelection()),
     },
   },
   active: { link: () => $getLinkAtSelection() !== null },

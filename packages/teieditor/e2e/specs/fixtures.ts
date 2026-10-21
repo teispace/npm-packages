@@ -34,6 +34,33 @@ export async function settled(page: Page): Promise<void> {
 }
 
 /**
+ * The embed providers' frames, stood in for: nothing leaves the machine,
+ * and each looks the same every run. X's posts its height, as the real one
+ * does.
+ */
+export async function stubEmbedFrames(page: Page, height = 480): Promise<void> {
+  const hosts = [
+    'www.youtube-nocookie.com',
+    'player.vimeo.com',
+    'platform.twitter.com',
+    'www.figma.com',
+    'www.loom.com',
+  ];
+  for (const host of hosts) {
+    const resize =
+      host === 'platform.twitter.com'
+        ? `<script>parent.postMessage(JSON.stringify({"twttr.embed":{"method":"twttr.private.resize","params":[{"height":${height}}]}}),"*")</script>`
+        : '';
+    await page.route(`https://${host}/**`, (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: `<!doctype html><style>html{background:#5b6b7f;color:#fff;font:600 16px/1 sans-serif}p{margin:16px}</style><p>${host}</p>${resize}`,
+      }),
+    );
+  }
+}
+
+/**
  * Every test fails on a page error, a console error or a CSP violation:
  * the editor must work under the strict policy with nothing logged.
  */

@@ -7,6 +7,7 @@ import type { Transformer } from '@lexical/markdown';
 import {
   $addUpdateTag,
   $createRangeSelection,
+  $getEditor,
   $getRoot,
   $getSelection,
   $isElementNode,
@@ -301,13 +302,18 @@ export class TeiEditor {
   /**
    * Whether this editor is inside an update callback right now (a key
    * handler, a command), where Lexical would queue a nested update instead of
-   * running it. Update listeners also run with `_updating` set, but after the
-   * commit, with no pending state — those get a fresh update.
+   * running it. Listeners also run with `_updating` set, after the commit,
+   * and with a pending state when one of them queued an update; but with no
+   * active editor, so they get a fresh read or update.
    */
   get #updating(): boolean {
-    return (
-      (this.lexical as LexicalEditor & { _updating: boolean })._updating && this.#pending !== null
-    );
+    if (!(this.lexical as LexicalEditor & { _updating: boolean })._updating) return false;
+    if (this.#pending === null) return false;
+    try {
+      return $getEditor() === this.lexical;
+    } catch {
+      return false;
+    }
   }
 
   get #pending(): EditorState | null {

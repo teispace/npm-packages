@@ -11,9 +11,11 @@ import {
 } from 'react';
 import type { TeiEditorOptions } from '../../core/create.js';
 import type { ContentFormat, TeiEditor } from '../../core/editor.js';
+import { holdUi } from '../../core/ui-request.js';
 import { CodeBlock } from '../../extensions/code-block/index.js';
+import { Embed, type EmbedStorage } from '../../extensions/embed/index.js';
 import { FileAttachment } from '../../extensions/file/index.js';
-import { Image } from '../../extensions/image/index.js';
+import { Image, type ImageStorage } from '../../extensions/image/index.js';
 import { Link, type LinkStorage } from '../../extensions/link/index.js';
 import { StarterKit } from '../../extensions/starter-kit/index.js';
 import { Table } from '../../extensions/table/index.js';
@@ -54,10 +56,13 @@ const ImageControls = lazy(() =>
   import('./image-controls.js').then((module) => ({ default: module.ImageControls })),
 );
 const LazyImageControls = () => <ImageControls insert={false} />;
+const EmbedControls = lazy(() =>
+  import('./embed-controls.js').then((module) => ({ default: module.EmbedControls })),
+);
 
 /**
  * Which UI comes with it.
- * - `full`: toolbar, bubble menu, slash menu, link popover, code block bar, table, image and file controls.
+ * - `full`: toolbar, bubble menu, slash menu, link popover, code block bar, table, image, file and embed controls.
  * - `notion`: no toolbar; select text for the bubble menu, type `/` for blocks.
  * - `minimal`: a toolbar and links, nothing floating: comment boxes, forms.
  */
@@ -79,6 +84,8 @@ export interface EditorSlots {
   imageControls?: EditorSlot;
   /** The toolbar over a selected file: download, rename, replace. */
   fileControls?: EditorSlot;
+  /** The form to embed a link, the offer to embed a pasted one, the toolbar over a selected embed. */
+  embedControls?: EditorSlot;
   /** Below the document, inside the frame: a word count, a status line. */
   footer?: ReactNode;
 }
@@ -93,6 +100,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     tableControls: true,
     imageControls: true,
     fileControls: true,
+    embedControls: true,
   },
   notion: {
     toolbar: false,
@@ -103,6 +111,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     tableControls: true,
     imageControls: true,
     fileControls: true,
+    embedControls: true,
   },
   minimal: {
     toolbar: true,
@@ -113,13 +122,14 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     tableControls: false,
     imageControls: false,
     fileControls: false,
+    embedControls: false,
   },
 };
 
 /** What each preset installs when `<Editor>` makes its own editor. */
 const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = {
-  full: [StarterKit, TextStyle, Table, Image, FileAttachment],
-  notion: [StarterKit, TextStyle, Table, Image, FileAttachment],
+  full: [StarterKit, TextStyle, Table, Image, FileAttachment, Embed],
+  notion: [StarterKit, TextStyle, Table, Image, FileAttachment, Embed],
   minimal: [StarterKit],
 };
 
@@ -249,17 +259,28 @@ function EditorFrame({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const [ready, setReady] = useState(false);
-  // ⌘K before the link popover has loaded: hold its place, so the request
-  // stands, and the popover opens for it as it loads.
-  const linkStorage = editor.extension(Link)?.output.storage as LinkStorage | undefined;
-  const linkPopover = parts.linkPopover !== false && parts.linkPopover != null;
+  // A request before its UI has loaded (⌘K, the slash menu's Image): hold
+  // the UI's place, so the request stands and the UI takes it as it loads.
+  const linkEdit = slot(parts.linkPopover, true)
+    ? (editor.extension(Link)?.output.storage as LinkStorage | undefined)?.edit
+    : undefined;
+  const imageInsert =
+    parts.imageControls === true
+      ? (editor.extension(Image)?.output.storage as ImageStorage | undefined)?.insert
+      : undefined;
+  const embedInsert =
+    parts.embedControls === true
+      ? (editor.extension(Embed)?.output.storage as EmbedStorage | undefined)?.insert
+      : undefined;
   useEffect(() => {
-    if (ready || !linkPopover || !linkStorage) return;
-    linkStorage.editors.value++;
+    if (ready) return;
+    const releases = [linkEdit, imageInsert, embedInsert].flatMap((request) =>
+      request ? [holdUi(request)] : [],
+    );
     return () => {
-      linkStorage.editors.value--;
+      for (const release of releases) release();
     };
-  }, [ready, linkPopover, linkStorage]);
+  }, [ready, linkEdit, imageInsert, embedInsert]);
   const change = useRef({ onChange, format });
   change.current = { onChange, format };
   useEffect(
@@ -310,6 +331,7 @@ function EditorFrame({
               {editor.extension(Table) && slot(parts.tableControls, <TableControls />)}
               {editor.extension(Image) && slot(parts.imageControls, <LazyImageControls />)}
               {editor.extension(FileAttachment) && slot(parts.fileControls, <FileControls />)}
+              {editor.extension(Embed) && slot(parts.embedControls, <EmbedControls />)}
               <Ready onReady={setReady} />
             </Suspense>
           )}

@@ -14,13 +14,14 @@ import {
   IMAGE,
   Image,
   type ImageNode,
+  type ImageStorage,
   type ImageUploadError,
   type ImageUploadHandler,
   INLINE_IMAGE,
 } from '../../src/extensions/image/index.js';
 import { MARKDOWN_LINK } from '../../src/extensions/link/index.js';
 import { StarterKit } from '../../src/extensions/starter-kit/index.js';
-import { createTeiEditor, setExtensionOptions, type TeiEditor } from '../../src/index.js';
+import { createTeiEditor, holdUi, setExtensionOptions, type TeiEditor } from '../../src/index.js';
 import { acceptsFile, readAsDataURL } from '../../src/utils/files.js';
 
 const editors: TeiEditor[] = [];
@@ -296,16 +297,13 @@ describe('image: commands', () => {
   it('openImageInsert asks a mounted UI, else the browser for files', () => {
     const editor = make();
     endOf(editor);
-    const storage = editor.extension(Image)?.output.storage as {
-      pickers: { value: number };
-      insertRequest: { value: number };
-    };
+    const { insert } = editor.extension(Image)!.output.storage as ImageStorage;
     const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
     editor.commands.openImageInsert();
     expect(click).toHaveBeenCalledTimes(1);
-    storage.pickers.value = 1;
+    holdUi(insert);
     editor.commands.openImageInsert();
-    expect(storage.insertRequest.value).toBe(1);
+    expect(insert.requests.peek()).toBe(1);
     expect(click).toHaveBeenCalledTimes(1);
     click.mockRestore();
   });

@@ -28,9 +28,20 @@ export function rangeAnchor(range: Range, context: Element): VirtualElement {
     getBoundingClientRect() {
       const rect = range.getBoundingClientRect();
       if (rect.width || rect.height) return rect;
-      // A caret on an empty line has no box; its line's element does.
+      // A caret on an empty line has no box; its line's element does. One
+      // between blocks (an offset in the root) takes the block beside it,
+      // not the whole document.
       const node = range.startContainer;
-      const element = node.nodeType === 1 ? (node as Element) : node.parentElement;
+      const beside =
+        node.nodeType === 1
+          ? (node.childNodes[range.startOffset] ?? node.childNodes[range.startOffset - 1])
+          : null;
+      const element =
+        beside instanceof Element
+          ? beside
+          : node.nodeType === 1
+            ? (node as Element)
+            : node.parentElement;
       return element?.getBoundingClientRect() ?? (EMPTY as DOMRect);
     },
     getClientRects: () => range.getClientRects(),

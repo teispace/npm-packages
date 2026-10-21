@@ -43,7 +43,7 @@ export const teiTheme: EditorThemeClasses = {
     url: 'tei-token-operator',
     variable: 'tei-token-variable',
   },
-  embedBlock: { base: 'tei-embed', focus: 'tei-embed-focus' },
+  embedBlock: { base: 'tei-embed-block', focus: 'tei-embed-focus' },
   hashtag: 'tei-hashtag',
   heading: {
     h1: 'tei-h1',

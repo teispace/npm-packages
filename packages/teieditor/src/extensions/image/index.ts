@@ -1,4 +1,4 @@
-import { configExtension, type Signal, signal } from '@lexical/extension';
+import { configExtension } from '@lexical/extension';
 import {
   DOMImportExtension,
   DOMRenderExtension,
@@ -46,6 +46,7 @@ import {
   registerSlotKeys,
 } from '../../core/slot-host.js';
 import type { TeiItem } from '../../core/types.js';
+import { requestUi, type UiRequest, uiRequest } from '../../core/ui-request.js';
 import {
   altText,
   caption,
@@ -226,10 +227,8 @@ export type { Upload } from '../../utils/upload.js';
 export interface ImageStorage {
   /** Uploads in flight, by the key of their image. */
   uploads: Map<NodeKey, Upload>;
-  /** Bumped by `openImageInsert`; image UIs watch it. */
-  insertRequest: Signal<number>;
-  /** How many image UIs are mounted; with none, `openImageInsert` opens the file chooser. */
-  pickers: Signal<number>;
+  /** `openImageInsert`'s requests, to an insert form; with none, it opens the file chooser. */
+  insert: UiRequest;
 }
 
 type Ctx = TeiExtensionContext<ImageOptions, ImageStorage> & {
@@ -630,8 +629,7 @@ export const Image = defineTeiExtension({
   ],
   storage: (): ImageStorage => ({
     uploads: new Map(),
-    insertRequest: signal(0),
-    pickers: signal(0),
+    insert: uiRequest(),
   }),
   markdown: { image: IMAGE, inlineImage: INLINE_IMAGE },
   register: (ctx) => {
@@ -668,10 +666,7 @@ export const Image = defineTeiExtension({
     openImageInsert: {
       run: ({ storage, options, editor, lexical }) => {
         if (!$canInsert()) return false;
-        if (storage.pickers.peek() > 0) {
-          storage.insertRequest.value++;
-          return;
-        }
+        if (requestUi(storage.insert)) return;
         const doc = lexical.getRootElement()?.ownerDocument;
         if (!doc) return false;
         void chooseFiles(doc, { accept: options.accept, multiple: true }).then((files) => {

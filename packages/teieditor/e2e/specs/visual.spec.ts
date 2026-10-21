@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
-import { expect, type Harness, settled, test } from './fixtures';
+import { expect, type Harness, settled, stubEmbedFrames, test } from './fixtures';
 
 /**
  * Pixel baselines. Fonts and anti-aliasing differ by platform, so these run
@@ -365,6 +365,118 @@ for (const scheme of ['light', 'dark'] as const) {
         },
       });
     });
+
+    const EMBEDS_SHOT =
+      '<p>A video, selected:</p>' +
+      '<div data-tei-embed="youtube" data-id="dQw4w9WgXcQ"></div>' +
+      '<p>A post on X:</p>' +
+      '<div data-tei-embed="x" data-id="20" data-align="start"></div>' +
+      '<p>From a provider not installed:</p>' +
+      '<div data-tei-embed="gone" data-id="1"></div>';
+
+    /** The caret at the end of the first line's text, where a click and End put it. */
+    async function caretInText(tei: Harness) {
+      await tei.content.locator('p').first().click();
+      await tei.page.keyboard.press('End');
+      await expect
+        .poll(() => tei.page.evaluate(() => getSelection()?.anchorNode?.nodeType))
+        .toBe(3); // a text node
+    }
+
+    async function openEmbeds(tei: Harness, width: number, content = EMBEDS_SHOT) {
+      await tei.page.setViewportSize({ width, height: 900 });
+      await stubEmbedFrames(tei.page, 240);
+      await tei.open({ content, flags: ['embed', 'plain'] });
+      await theme(tei.page, scheme);
+    }
+
+    for (const width of [375, 768]) {
+      test(`embeds at ${width}px: a video selected with its toolbar, a post, an unknown one`, async ({
+        tei,
+      }) => {
+        await openEmbeds(tei, width);
+        // The post has grown to the height its frame reported.
+        await expect
+          .poll(() =>
+            tei.content.locator('[data-tei-embed="x"] iframe').evaluate((el) => el.clientHeight),
+          )
+          .toBe(240);
+        await tei.content.locator('[data-tei-embed="youtube"] .tei-embed-frame').click();
+        await expect(tei.page.locator('[data-tei-control="embed-toolbar"]')).toBeVisible();
+        await still(tei.page);
+        await shoot(tei, tei.page.getByTestId('editor'), `embeds-${scheme}-${width}.png`);
+      });
+    }
+
+    test('embed insert form, naming what the link embeds', async ({ tei }) => {
+      await openEmbeds(tei, 768, '<p>Hello</p>');
+      await caretInText(tei);
+      await tei.page.locator('[data-item="insertEmbed"]').click();
+      const form = tei.page.locator('[data-tei-control="embed-insert"]');
+      await form.locator('input').fill('https://www.figma.com/design/abcdefghij1234/Plan');
+      await expect(form.locator('.tei-hint')).toHaveText('Figma file');
+      // A link longer than the field: its start, not wherever it scrolled to.
+      await form.locator('input').evaluate((el: HTMLInputElement) => {
+        el.setSelectionRange(0, 0);
+        el.scrollLeft = 0;
+      });
+      await still(tei.page);
+      const box = await form.boundingBox();
+      if (!box) throw new Error('no form');
+      await shoot(tei, tei.page, `embed-insert-${scheme}.png`, {
+        clip: { x: box.x - 16, y: box.y - 56, width: box.width + 32, height: box.height + 72 },
+      });
+    });
+
+    test('embed insert form with a link it cannot embed', async ({ tei }) => {
+      await openEmbeds(tei, 375, '<p>Hello</p>');
+      await caretInText(tei);
+      // On a phone, Embed is in the toolbar's More menu: ask for the form directly.
+      await tei.page.evaluate(() => window.__tei.editor.commands.openEmbedInsert());
+      const form = tei.page.locator('[data-tei-control="embed-insert"]');
+      await form.locator('input').fill('https://example.com/watch');
+      await form.locator('input').press('Enter');
+      await expect(form.getByRole('alert')).toBeVisible();
+      await still(tei.page);
+      await shoot(tei, tei.page, `embed-insert-invalid-${scheme}.png`);
+    });
+
+    test('the offer to embed a pasted link', async ({ tei }) => {
+      await openEmbeds(tei, 768, '<p>Watch this:</p>');
+      const url = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+      await tei.page.evaluate(
+        (href) => window.__tei.setClipSource(`<a href="${href}">${href}</a>`),
+        url,
+      );
+      await tei.page.keyboard.press('ControlOrMeta+c');
+      await tei.caretAtEnd();
+      await tei.page.keyboard.press('Enter');
+      await tei.page.keyboard.press('ControlOrMeta+v');
+      const offer = tei.page.locator('[data-tei-control="embed-suggestion"]');
+      await expect(offer).toBeVisible();
+      await still(tei.page);
+      const box = await offer.boundingBox();
+      if (!box) throw new Error('no offer');
+      await shoot(tei, tei.page, `embed-suggestion-${scheme}.png`, {
+        clip: { x: 0, y: box.y - 80, width: 768, height: box.height + 96 },
+      });
+    });
+
+    for (const width of [375, 768]) {
+      test(`embeds with consent at ${width}px: a button to load each`, async ({ tei }) => {
+        await openEmbeds(tei, width, '<p>Hello</p>');
+        await tei.page.evaluate(() => window.__tei.setEmbedOptions({ consent: true }));
+        await tei.caretAtEnd();
+        await tei.page.evaluate(() => {
+          window.__tei.editor.commands.insertEmbed('https://vimeo.com/76979871');
+          window.__tei.editor.commands.insertEmbed('https://x.com/jack/status/20');
+        });
+        await expect(tei.page.locator('[data-tei-embed-load]')).toHaveCount(2);
+        await tei.page.evaluate(() => window.__tei.editor.blur());
+        await still(tei.page);
+        await shoot(tei, tei.page.getByTestId('editor'), `embeds-consent-${scheme}-${width}.png`);
+      });
+    }
 
     test('tooltip on a toolbar button', async ({ tei }) => {
       await tei.open();

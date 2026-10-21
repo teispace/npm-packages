@@ -1,3 +1,4 @@
+import { Embed } from '@teispace/teieditor/extensions/embed';
 import { FileAttachment } from '@teispace/teieditor/extensions/file';
 import { Image } from '@teispace/teieditor/extensions/image';
 import { StarterKit } from '@teispace/teieditor/extensions/starter-kit';
@@ -37,4 +38,5 @@ export const EXTENSIONS = [
   Table,
   Image.configure({ upload: demoUpload }),
   FileAttachment.configure({ upload: demoUpload }),
+  Embed,
 ];

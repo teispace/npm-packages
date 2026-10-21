@@ -21,6 +21,8 @@ export const CSP = [
   // blob: for an upload's preview, which shows while the file uploads.
   "img-src 'self' data: blob:",
   "connect-src 'self'",
+  // The embed providers' frames, which the tests stand in for.
+  'frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://platform.twitter.com https://www.figma.com https://www.loom.com',
   "base-uri 'none'",
   "form-action 'none'",
   "frame-ancestors 'none'",
