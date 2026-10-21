@@ -34,6 +34,11 @@ export interface FloatingOptions {
    * a bubble over the first line goes below it rather than over a toolbar.
    */
   flipBoundary?: Element | null;
+  /**
+   * Sit just inside the anchor's edge instead of next to it: a bar in a
+   * block's corner. Implies `noFlip`.
+   */
+  inside?: boolean;
 }
 
 /**
@@ -49,10 +54,27 @@ export function positionFloating(
   floating: HTMLElement,
   options: FloatingOptions = {},
 ): () => void {
-  const { placement = 'bottom-start', padding = 8, matchWidth, noFlip, flipBoundary } = options;
+  const {
+    placement = 'bottom-start',
+    padding = 8,
+    matchWidth,
+    noFlip,
+    flipBoundary,
+    inside,
+  } = options;
+  const gap = options.offset ?? 6;
   const middleware: Middleware[] = [
-    offset(options.offset ?? 6),
-    noFlip ? false : flip(flipBoundary ? { padding, boundary: flipBoundary } : { padding }),
+    offset(
+      inside
+        ? ({ rects, placement: side }) =>
+            -(side.startsWith('top') || side.startsWith('bottom')
+              ? rects.floating.height
+              : rects.floating.width) - gap
+        : gap,
+    ),
+    noFlip || inside
+      ? false
+      : flip(flipBoundary ? { padding, boundary: flipBoundary } : { padding }),
     // Both axes: a submenu with no room on either side (a phone) slides over
     // its parent instead of off the screen.
     shift({ padding, crossAxis: true }),
@@ -113,7 +135,7 @@ export function useFloating(
   active: boolean,
   options: FloatingOptions = {},
 ): void {
-  const { placement, offset: gap, padding, matchWidth, noFlip, flipBoundary } = options;
+  const { placement, offset: gap, padding, matchWidth, noFlip, flipBoundary, inside } = options;
   useLayoutEffect(() => {
     const el = floating.current;
     if (!active || !anchor || !el) return;
@@ -124,6 +146,7 @@ export function useFloating(
       matchWidth,
       noFlip,
       flipBoundary,
+      inside,
     });
-  }, [anchor, floating, active, placement, gap, padding, matchWidth, noFlip, flipBoundary]);
+  }, [anchor, floating, active, placement, gap, padding, matchWidth, noFlip, flipBoundary, inside]);
 }

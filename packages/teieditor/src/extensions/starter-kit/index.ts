@@ -1,7 +1,8 @@
 import type { TeiExtensionInput } from '../../core/create.js';
 import { Indent, TextAlign } from '../alignment/index.js';
 import { Blockquote } from '../blockquote/index.js';
-import { CodeBlock, CodeHighlight } from '../code-block/index.js';
+import { CodeBlock } from '../code-block/index.js';
+import { CodeHighlight } from '../code-highlight/index.js';
 import {
   Bold,
   ClearFormatting,
@@ -92,7 +93,8 @@ export const StarterKit: readonly TeiExtensionInput[] & {
 // for an app that imports only the kit.
 export { Indent, TextAlign } from '../alignment/index.js';
 export { Blockquote } from '../blockquote/index.js';
-export { CodeBlock, CodeHighlight } from '../code-block/index.js';
+export { CodeBlock } from '../code-block/index.js';
+export { CodeHighlight } from '../code-highlight/index.js';
 export {
   Bold,
   ClearFormatting,

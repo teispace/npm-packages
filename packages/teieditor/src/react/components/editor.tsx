@@ -9,13 +9,14 @@ import { type ContentEditableProps, EditorContent, EditorProvider } from '../edi
 import { cx } from '../ui/context.js';
 import { useTeiEditor } from '../use-tei-editor.js';
 import { BubbleMenu } from './bubble-menu.js';
+import { CodeBlockBar } from './code-block-bar.js';
 import { EditorToolbar, type EditorToolbarProps, type ToolbarLayout } from './editor-toolbar.js';
 import { LinkPopover } from './link-popover.js';
 import { SlashMenu } from './slash-menu.js';
 
 /**
  * Which UI comes with it.
- * - `full`: toolbar, bubble menu, slash menu, link popover.
+ * - `full`: toolbar, bubble menu, slash menu, link popover, code block bar.
  * - `notion`: no toolbar; select text for the bubble menu, type `/` for blocks.
  * - `minimal`: a toolbar and links, nothing floating: comment boxes, forms.
  */
@@ -29,14 +30,28 @@ export interface EditorSlots {
   bubbleMenu?: EditorSlot;
   slashMenu?: EditorSlot;
   linkPopover?: EditorSlot;
+  /** The language picker and copy button on code blocks. */
+  codeBlockBar?: EditorSlot;
   /** Below the document, inside the frame: a word count, a status line. */
   footer?: ReactNode;
 }
 
 const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
-  full: { toolbar: true, bubbleMenu: true, slashMenu: true, linkPopover: true },
-  notion: { toolbar: false, bubbleMenu: true, slashMenu: true, linkPopover: true },
-  minimal: { toolbar: true, bubbleMenu: false, slashMenu: false, linkPopover: true },
+  full: { toolbar: true, bubbleMenu: true, slashMenu: true, linkPopover: true, codeBlockBar: true },
+  notion: {
+    toolbar: false,
+    bubbleMenu: true,
+    slashMenu: true,
+    linkPopover: true,
+    codeBlockBar: true,
+  },
+  minimal: {
+    toolbar: true,
+    bubbleMenu: false,
+    slashMenu: false,
+    linkPopover: true,
+    codeBlockBar: false,
+  },
 };
 
 /** What each preset installs when `<Editor>` makes its own editor. */
@@ -189,6 +204,7 @@ function EditorFrame({
           {slot(parts.linkPopover, <LinkPopover />)}
           {slot(parts.bubbleMenu, <BubbleMenu />)}
           {slot(parts.slashMenu, <SlashMenu />)}
+          {slot(parts.codeBlockBar, <CodeBlockBar />)}
           {children}
         </EditorContent>
         {parts.footer}

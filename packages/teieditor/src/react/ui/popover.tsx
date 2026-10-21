@@ -36,16 +36,19 @@ export interface PopoverProps
 
 /** Open layers in the order they opened. */
 const layers: HTMLElement[] = [];
+/** Each layer's dismiss handler; a layer without one (a passive bar) never takes Escape. */
+const handlers = new WeakMap<HTMLElement, { current: PopoverProps['onDismiss'] }>();
 
 /**
- * The layer Escape belongs to: the latest one with no open layer inside it.
- * Nesting decides first because a nested popover's effect runs, and so
- * registers, before its parent's.
+ * The layer Escape belongs to: the latest dismissable one with no open
+ * dismissable layer inside it. Nesting decides first because a nested
+ * popover's effect runs, and so registers, before its parent's.
  */
 function innermost(): HTMLElement | undefined {
-  for (let i = layers.length - 1; i >= 0; i--) {
-    const layer = layers[i] as HTMLElement;
-    if (!layers.some((other) => other !== layer && layer.contains(other))) return layer;
+  const open = layers.filter((layer) => handlers.get(layer)?.current);
+  for (let i = open.length - 1; i >= 0; i--) {
+    const layer = open[i] as HTMLElement;
+    if (!open.some((other) => other !== layer && layer.contains(other))) return layer;
   }
   return undefined;
 }
@@ -88,6 +91,7 @@ export const Popover = forwardRef<HTMLDivElement, PopoverProps>(function Popover
     matchWidth,
     noFlip,
     flipBoundary,
+    inside,
     className,
     children,
     ...rest
@@ -107,7 +111,15 @@ export const Popover = forwardRef<HTMLDivElement, PopoverProps>(function Popover
     [ref],
   );
 
-  useFloating(anchor, el, open, { placement, offset, padding, matchWidth, noFlip, flipBoundary });
+  useFloating(anchor, el, open, {
+    placement,
+    offset,
+    padding,
+    matchWidth,
+    noFlip,
+    flipBoundary,
+    inside,
+  });
 
   // Into the top layer, and focus where asked; on close, focus back to the anchor.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the anchor only says where focus returns; re-running on it would re-focus
@@ -118,6 +130,7 @@ export const Popover = forwardRef<HTMLDivElement, PopoverProps>(function Popover
       node.showPopover();
     }
     layers.push(node);
+    handlers.set(node, dismiss);
     const doc = node.ownerDocument;
     const previous = doc.activeElement as HTMLElement | null;
     if (initialFocus === 'container') node.focus({ preventScroll: true });

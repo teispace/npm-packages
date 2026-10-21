@@ -319,6 +319,22 @@
     display: none;
   }
 
+  /* Code block bar: in the block's corner, so smaller and quieter than a menu. */
+  .tei-popover[data-tei-control="code-bar"] {
+    padding: 2px;
+    box-shadow: var(--tei-shadow-sm);
+  }
+
+  .tei-popover[data-tei-control="code-bar"] .tei-control-label,
+  .tei-code-language {
+    color: var(--tei-fg-muted);
+    font-size: 0.75rem;
+  }
+
+  .tei-code-language {
+    padding-inline: var(--tei-space-2);
+  }
+
   /* Link popover: the link under the caret, and the form that edits it. */
   .tei-link-url {
     max-inline-size: 16rem;

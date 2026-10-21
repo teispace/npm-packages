@@ -5,25 +5,21 @@ import {
   CodeIndentExtension,
   type CodeNode,
 } from '@lexical/code-core';
-import {
-  CodePrismExtension,
-  getCodeLanguageOptions,
-  normalizeCodeLanguage,
-  PrismTokenizer,
-} from '@lexical/code-prism';
 import { CODE } from '@lexical/markdown';
 import { $setBlocksType } from '@lexical/selection';
 import { $findMatchingParent } from '@lexical/utils';
 import {
   $createParagraphNode,
   $createTextNode,
+  $getNodeByKey,
   $getSelection,
   $isRangeSelection,
-  configExtension,
   type LexicalNode,
+  type NodeKey,
 } from 'lexical';
 import { defineTeiExtension } from '../../core/define.js';
-import { codeBlock } from '../../icons/index.js';
+import { check, codeBlock, copy } from '../../icons/index.js';
+import { CODE_LANGUAGES, type CodeLanguage } from '../../utils/code-language.js';
 import { $everyBlock } from '../../utils/selection.js';
 import { RichText } from '../rich-text/index.js';
 
@@ -31,8 +27,11 @@ declare module '@teispace/teieditor' {
   interface TeiCommands {
     setCodeBlock: [language?: string];
     toggleCodeBlock: [language?: string];
-    /** Change the language of the code block at the selection. */
-    setCodeLanguage: [language: string];
+    /**
+     * Change the language of the code block at the selection, or of the
+     * one with `key`; `null` for plain text.
+     */
+    setCodeLanguage: [language: string | null, key?: NodeKey];
   }
   interface TeiActiveStates {
     codeBlock: [language?: string];
@@ -42,8 +41,16 @@ declare module '@teispace/teieditor' {
 export interface CodeBlockOptions {
   /** Language for new blocks; `null` for plain text. Default `null`. */
   defaultLanguage: string | null;
-  /** Languages the language picker offers, as [id, label]. */
-  languages: ReadonlyArray<readonly [string, string]>;
+  /** Languages the language picker offers, as [id, label]. Default: what Prism colours. */
+  languages: readonly CodeLanguage[];
+  /** Show a copy button on code blocks. Default true. */
+  copyButton: boolean;
+}
+
+/** The code block with this key, if it still is one. */
+export function $getCodeBlock(key: NodeKey): CodeNode | null {
+  const node = $getNodeByKey(key);
+  return $isCodeNode(node) ? node : null;
 }
 
 /** The code block holding the selection's anchor. */
@@ -97,7 +104,11 @@ function $fromCode(): boolean {
  */
 export const CodeBlock = defineTeiExtension({
   name: '@teispace/teieditor/code-block',
-  config: { defaultLanguage: null, languages: [] } as CodeBlockOptions,
+  config: {
+    defaultLanguage: null,
+    languages: CODE_LANGUAGES,
+    copyButton: true,
+  } as CodeBlockOptions,
   dependencies: [RichText, CodeExtension, CodeIndentExtension],
   commands: {
     setCodeBlock: {
@@ -110,12 +121,13 @@ export const CodeBlock = defineTeiExtension({
       can: () => $isRangeSelection($getSelection()),
     },
     setCodeLanguage: {
-      run: (_ctx, language: string) => {
-        const code = $getCodeBlockAtSelection();
+      run: (_ctx, language: string | null, key?: NodeKey) => {
+        const code = key ? $getCodeBlock(key) : $getCodeBlockAtSelection();
         if (!code) return false;
         code.setLanguage(language);
       },
-      can: () => $getCodeBlockAtSelection() !== null,
+      can: (_ctx, _language: string | null, key?: NodeKey) =>
+        (key ? $getCodeBlock(key) : $getCodeBlockAtSelection()) !== null,
     },
   },
   active: { codeBlock: (_ctx, language?: string) => $inCode(language) },
@@ -123,13 +135,14 @@ export const CodeBlock = defineTeiExtension({
     codeBlock: { key: 'Mod-Alt-c', command: 'toggleCodeBlock', description: 'Code block' },
   },
   markdown: { codeBlock: CODE },
-  icons: { codeBlock },
+  icons: { codeBlock, copy, check },
   messages: {
     'block.codeBlock': 'Code',
     'block.codeBlock.description': 'Capture a code snippet',
     'code.language': 'Language',
     'code.copy': 'Copy code',
     'code.copied': 'Copied',
+    'code.toolbar': 'Code block',
     'code.plain': 'Plain text',
   },
   items: [
@@ -149,26 +162,9 @@ export const CodeBlock = defineTeiExtension({
   ],
 });
 
-/**
- * Syntax colours for code blocks, with Prism. Separate from `CodeBlock` so
- * an app that wants plain blocks (or Shiki) does not ship Prism.
- */
-export const CodeHighlight = defineTeiExtension({
-  name: '@teispace/teieditor/code-highlight',
-  dependencies: [
-    CodeBlock,
-    // Prism's own fallback is JavaScript, which would stamp a language on
-    // every block without one (and on its Markdown fence). A block keeps
-    // the language it was given; `CodeBlock`'s `defaultLanguage` picks one
-    // for new blocks.
-    configExtension(CodePrismExtension, {
-      tokenizer: { ...PrismTokenizer, defaultLanguage: null },
-    }),
-  ],
-});
-
-/** Every language Prism knows, as [id, label] for a picker. */
-export const prismLanguages = (): ReadonlyArray<readonly [string, string]> =>
-  getCodeLanguageOptions();
-
-export { normalizeCodeLanguage };
+export {
+  CODE_LANGUAGES,
+  type CodeLanguage,
+  codeLanguageLabel,
+  normalizeLanguage,
+} from '../../utils/code-language.js';

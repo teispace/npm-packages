@@ -135,6 +135,26 @@ for (const scheme of ['light', 'dark'] as const) {
       await shoot(tei, tei.page, `more-menu-${scheme}.png`);
     });
 
+    test('code block bar with its language menu', async ({ tei }) => {
+      await tei.page.setViewportSize({ width: 768, height: 900 });
+      await tei.open({
+        content:
+          '<pre><code class="language-ts">const editor = createEditor();\neditor.focus();</code></pre><p>After</p>',
+      });
+      await theme(tei.page, scheme);
+      const code = tei.content.locator('.tei-code-block');
+      await code.hover();
+      await tei.page.getByRole('button', { name: 'Language: TypeScript' }).click();
+      await expect(tei.page.getByRole('menu', { name: 'Language' })).toBeVisible();
+      // The pointer stays on the trigger: moving it off would let the bar go.
+      await settled(tei.page);
+      const box = await code.boundingBox();
+      if (!box) throw new Error('no code block');
+      await shoot(tei, tei.page, `code-bar-${scheme}.png`, {
+        clip: { x: box.x - 8, y: box.y - 8, width: box.width + 16, height: 640 },
+      });
+    });
+
     test('tooltip on a toolbar button', async ({ tei }) => {
       await tei.open();
       await theme(tei.page, scheme);

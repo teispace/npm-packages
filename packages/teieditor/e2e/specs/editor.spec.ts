@@ -163,6 +163,101 @@ test.describe('markdown shortcuts', () => {
   });
 });
 
+test.describe('code block bar', () => {
+  const CODE = '<p>Intro</p><pre><code>def answer():\n    return 42</code></pre><p>After</p>';
+
+  test('shows in the corner of the block under the pointer, and goes when it leaves', async ({
+    tei,
+  }) => {
+    await tei.open({ content: CODE });
+    const code = tei.content.locator('.tei-code-block');
+    const bar = tei.page.getByRole('toolbar', { name: 'Code block' });
+    await expect(bar).toBeHidden();
+    await code.hover();
+    await expect(bar).toBeVisible();
+    const [b, c] = [await bar.boundingBox(), await code.boundingBox()];
+    if (!b || !c) throw new Error('no boxes');
+    // Inside the block, against its top end corner.
+    expect(b.x + b.width).toBeLessThanOrEqual(c.x + c.width);
+    expect(b.x + b.width).toBeGreaterThan(c.x + c.width - 12);
+    expect(b.y).toBeGreaterThanOrEqual(c.y);
+    expect(b.y).toBeLessThan(c.y + 12);
+    await tei.content.getByText('After').hover();
+    await expect(bar).toBeHidden();
+    await code.hover();
+    await expect(bar).toBeVisible();
+    await tei.page.mouse.move(2, 2);
+    await expect(bar).toBeHidden();
+  });
+
+  test('the pointer can reach it, and its menu changes the language', async ({ tei }) => {
+    await tei.open({ content: CODE });
+    const code = tei.content.locator('.tei-code-block');
+    await code.hover();
+    const language = tei.page.getByRole('button', { name: 'Language: Plain text' });
+    await language.hover();
+    await language.click();
+    const menu = tei.page.getByRole('menu', { name: 'Language' });
+    await menu.getByRole('menuitemcheckbox', { name: 'Python' }).click();
+    await expect(menu).toBeHidden();
+    await expect(tei.page.getByRole('button', { name: 'Language: Python' })).toBeVisible();
+    await expect(code.locator('.tei-token-keyword').first()).toHaveText('def');
+    expect(await tei.html()).toContain('data-language="py"');
+  });
+
+  test('the caret shows it too, for keyboard and touch', async ({ tei }) => {
+    await tei.open({ content: CODE });
+    const bar = tei.page.getByRole('toolbar', { name: 'Code block' });
+    await tei.content.getByText('Intro').click();
+    await tei.page.mouse.move(2, 2);
+    await expect(bar).toBeHidden();
+    await tei.page.keyboard.press('ArrowDown');
+    await expect(bar).toBeVisible();
+    await tei.page.keyboard.press('ArrowDown');
+    await tei.page.keyboard.press('ArrowDown');
+    await expect(bar).toBeHidden();
+    // Escape stays the editor's (which lets focus go): the bar takes no key.
+    await tei.page.keyboard.press('ArrowUp');
+    await expect(bar).toBeVisible();
+    await tei.page.keyboard.press('Escape');
+    await expect(tei.content).not.toBeFocused();
+    await expect(bar).toBeHidden();
+  });
+
+  test('copies the code, and says so', async ({ tei, browserName, context }) => {
+    if (browserName === 'chromium') {
+      await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    }
+    await tei.open({ content: CODE });
+    await tei.content.locator('.tei-code-block').hover();
+    const copy = tei.page.getByRole('button', { name: 'Copy code' });
+    await copy.hover();
+    await copy.click();
+    await expect(tei.page.getByRole('button', { name: 'Copied' })).toBeVisible();
+    await expect(tei.page.getByRole('status').filter({ hasText: 'Copied' })).toHaveCount(1);
+    if (browserName === 'chromium') {
+      expect(await tei.page.evaluate(() => navigator.clipboard.readText())).toBe(
+        'def answer():\n    return 42',
+      );
+    }
+    await expect(tei.page.getByRole('button', { name: 'Copy code' })).toBeVisible();
+  });
+
+  test('stays in view while a tall block scrolls', async ({ tei }) => {
+    await tei.page.setViewportSize({ width: 800, height: 400 });
+    const lines = Array.from({ length: 60 }, (_, i) => `line ${i + 1}`).join('\n');
+    await tei.open({ content: `<p>Intro</p><pre><code>${lines}</code></pre>`, flags: ['tall'] });
+    const code = tei.content.locator('.tei-code-block');
+    await code.hover({ position: { x: 100, y: 20 } });
+    const bar = tei.page.getByRole('toolbar', { name: 'Code block' });
+    await expect(bar).toBeVisible();
+    await tei.page.mouse.wheel(0, 600);
+    await expect.poll(async () => (await bar.boundingBox())?.y ?? -1).toBeGreaterThanOrEqual(0);
+    const box = await bar.boundingBox();
+    expect(box && box.y + box.height).toBeLessThanOrEqual(400);
+  });
+});
+
 test.describe('lists', () => {
   test('Tab nests an item, Shift-Tab lifts it, Enter on an empty item leaves the list', async ({
     tei,
