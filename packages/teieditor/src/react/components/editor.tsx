@@ -4,6 +4,7 @@ import { type ComponentPropsWithoutRef, type ReactNode, useEffect, useRef } from
 import type { TeiEditorOptions } from '../../core/create.js';
 import type { ContentFormat, TeiEditor } from '../../core/editor.js';
 import { StarterKit } from '../../extensions/starter-kit/index.js';
+import { Table } from '../../extensions/table/index.js';
 import { TextStyle } from '../../extensions/text-style/index.js';
 import { type ContentEditableProps, EditorContent, EditorProvider } from '../editor-content.js';
 import { cx } from '../ui/context.js';
@@ -13,10 +14,11 @@ import { CodeBlockBar } from './code-block-bar.js';
 import { EditorToolbar, type EditorToolbarProps, type ToolbarLayout } from './editor-toolbar.js';
 import { LinkPopover } from './link-popover.js';
 import { SlashMenu } from './slash-menu.js';
+import { TableControls } from './table-controls.js';
 
 /**
  * Which UI comes with it.
- * - `full`: toolbar, bubble menu, slash menu, link popover, code block bar.
+ * - `full`: toolbar, bubble menu, slash menu, link popover, code block bar, table controls.
  * - `notion`: no toolbar; select text for the bubble menu, type `/` for blocks.
  * - `minimal`: a toolbar and links, nothing floating: comment boxes, forms.
  */
@@ -32,18 +34,28 @@ export interface EditorSlots {
   linkPopover?: EditorSlot;
   /** The language picker and copy button on code blocks. */
   codeBlockBar?: EditorSlot;
+  /** The cell menu, + bars and column resizing on tables. */
+  tableControls?: EditorSlot;
   /** Below the document, inside the frame: a word count, a status line. */
   footer?: ReactNode;
 }
 
 const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
-  full: { toolbar: true, bubbleMenu: true, slashMenu: true, linkPopover: true, codeBlockBar: true },
+  full: {
+    toolbar: true,
+    bubbleMenu: true,
+    slashMenu: true,
+    linkPopover: true,
+    codeBlockBar: true,
+    tableControls: true,
+  },
   notion: {
     toolbar: false,
     bubbleMenu: true,
     slashMenu: true,
     linkPopover: true,
     codeBlockBar: true,
+    tableControls: true,
   },
   minimal: {
     toolbar: true,
@@ -51,13 +63,14 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     slashMenu: false,
     linkPopover: true,
     codeBlockBar: false,
+    tableControls: false,
   },
 };
 
 /** What each preset installs when `<Editor>` makes its own editor. */
 const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = {
-  full: [StarterKit, TextStyle],
-  notion: [StarterKit, TextStyle],
+  full: [StarterKit, TextStyle, Table],
+  notion: [StarterKit, TextStyle, Table],
   minimal: [StarterKit],
 };
 
@@ -218,6 +231,7 @@ function EditorFrame({
           {slot(parts.bubbleMenu, <BubbleMenu />)}
           {slot(parts.slashMenu, <SlashMenu />)}
           {slot(parts.codeBlockBar, <CodeBlockBar />)}
+          {slot(parts.tableControls, <TableControls />)}
           {children}
         </EditorContent>
         {parts.footer}

@@ -1,10 +1,19 @@
 // @vitest-environment node
+import { Window } from 'happy-dom';
 import { createTeiEditor } from '../../src/core/create.js';
 import { Html } from '../../src/extensions/html/index.js';
 import { StarterKit } from '../../src/extensions/starter-kit/index.js';
+import { Table } from '../../src/extensions/table/index.js';
 import { convert, renderToHTML, toJSON, toMarkdown, toText } from '../../src/server/index.js';
 
 const options = { extensions: [StarterKit] };
+
+// happy-dom's windows share their element classes: a fix left in place by
+// one render would stay for every page after it.
+const REPLACE_WITH = new Window().Element.prototype.replaceWith;
+afterEach(() => {
+  expect(new Window().Element.prototype.replaceWith).toBe(REPLACE_WITH);
+});
 
 const HTML =
   '<h1>Title</h1><p>Some <strong>bold</strong> and <a href="https://example.com">a link</a>.</p>' +
@@ -126,5 +135,37 @@ describe('server rendering', () => {
     expect(editor.getMarkdown()).toBe(toMarkdown(HTML, options));
     expect(editor.getJSON()).toEqual(toJSON(HTML, options));
     editor.destroy();
+  });
+
+  it('renders tables, from HTML and from Markdown, and leaves the DOM as it found it', () => {
+    const tables = { extensions: [StarterKit, Table] };
+    const html =
+      '<p>a</p><table><tbody><tr><th><p>A</p></th><th><p>B</p></th></tr>' +
+      '<tr><td colspan="2"><p>wide</p></td></tr></tbody></table><p>b</p>';
+    // happy-dom removed a node replaced with itself, which Lexical's
+    // export does to every table: none reached the page.
+    expect(renderToHTML(html, tables)).toBe(html);
+    expect(
+      renderToHTML('| A | B |\n| --- | --- |\n| 1 | 2 |', { ...tables, from: 'markdown' }),
+    ).toBe(
+      '<table><tbody><tr><th><p>A</p></th><th><p>B</p></th></tr>' +
+        '<tr><td><p>1</p></td><td><p>2</p></td></tr></tbody></table>',
+    );
+    expect(toMarkdown(html, tables)).toBe('a\n\n| A | B |\n| --- | --- |\n| wide |  |\n\nb');
+  });
+
+  it('fixes the DOM of a page that has its own only for the call', async () => {
+    const page = new Window();
+    const globals = { window: page, document: page.document, DOMParser: page.DOMParser };
+    Object.assign(globalThis, globals);
+    try {
+      expect(
+        renderToHTML('<table><tr><td>x</td></tr></table>', { extensions: [StarterKit, Table] }),
+      ).toContain('<table>');
+      expect(page.Element.prototype.replaceWith).toBe(REPLACE_WITH);
+    } finally {
+      for (const name of Object.keys(globals)) Reflect.deleteProperty(globalThis, name);
+      await page.happyDOM.close();
+    }
   });
 });

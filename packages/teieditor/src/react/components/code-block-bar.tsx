@@ -168,12 +168,19 @@ function LanguageMenu({
   const choose = (language: string | null) => () =>
     editor.commands.setCodeLanguage(language, block.key);
   const items: MenuItemData[] = [
-    { id: 'plain', label: plain, checked: block.language === null, onSelect: choose(null) },
+    {
+      id: 'plain',
+      label: plain,
+      checked: block.language === null,
+      radio: true,
+      onSelect: choose(null),
+    },
     ...languages.map(
       ([id, name]): MenuItemData => ({
         id,
         label: name,
         checked: current?.[0] === id,
+        radio: true,
         onSelect: choose(id),
       }),
     ),

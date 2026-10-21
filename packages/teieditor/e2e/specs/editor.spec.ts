@@ -198,7 +198,7 @@ test.describe('code block bar', () => {
     await language.hover();
     await language.click();
     const menu = tei.page.getByRole('menu', { name: 'Language' });
-    await menu.getByRole('menuitemcheckbox', { name: 'Python' }).click();
+    await menu.getByRole('menuitemradio', { name: 'Python' }).click();
     await expect(menu).toBeHidden();
     await expect(tei.page.getByRole('button', { name: 'Language: Python' })).toBeVisible();
     await expect(code.locator('.tei-token-keyword').first()).toHaveText('def');
@@ -811,7 +811,7 @@ test.describe('text style', () => {
     await expect(trigger).toHaveAccessibleName('Font: Default font');
     await trigger.click();
     const menu = tei.page.getByRole('menu', { name: 'Font' });
-    const georgia = menu.getByRole('menuitemcheckbox', { name: 'Georgia' });
+    const georgia = menu.getByRole('menuitemradio', { name: 'Georgia' });
     // The row shows the face itself (set through the CSSOM).
     expect(
       await georgia.evaluate((el) =>
@@ -873,10 +873,249 @@ test.describe('text style', () => {
     await more.getByRole('menuitem', { name: /Highlight colour/ }).click();
     await tei.page
       .getByRole('menu', { name: 'Highlight colour' })
-      .getByRole('menuitemcheckbox', { name: 'Yellow' })
+      .getByRole('menuitemradio', { name: 'Yellow' })
       .click();
     expect(await tei.html()).toBe(
       '<p>Hello <span style="background-color: rgba(234, 179, 8, 0.35);">world</span></p>',
     );
+  });
+});
+
+test.describe('tables', () => {
+  const TABLE =
+    '<p>Intro</p><table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table><p>After</p>';
+  /** The table's text, row by row. */
+  const cells = (tei: Harness) =>
+    tei.content
+      .locator('table')
+      .first()
+      .evaluate((table) =>
+        [...(table as HTMLTableElement).rows].map((row) =>
+          [...row.cells].map((cell) => cell.textContent ?? ''),
+        ),
+      );
+
+  test('the toolbar grid inserts the size picked, the caret in its first cell', async ({ tei }) => {
+    // `plain`: no text styles, so the table button fits in the toolbar.
+    await tei.open({ content: '<p>Hello</p>', flags: ['table', 'plain'] });
+    await tei.caretAtEnd();
+    await tei.page.locator('[data-tei-control="insertTable"]').first().click();
+    const grid = tei.page.getByRole('group').filter({ has: tei.page.getByLabel('3 × 4') });
+    await grid.getByLabel('3 × 4').hover();
+    await expect(tei.page.locator('.tei-grid-caption')).toHaveText('3 × 4');
+    await grid.getByLabel('3 × 4').click();
+    await expect(tei.content.locator('table tr')).toHaveCount(3);
+    await expect(tei.content.locator('table tr').first().locator('th, td')).toHaveCount(4);
+    await tei.page.keyboard.type('Name');
+    await tei.page.keyboard.press('Tab');
+    await tei.page.keyboard.type('Age');
+    expect((await cells(tei))[0]?.slice(0, 2)).toEqual(['Name', 'Age']);
+    expect(await tei.problems()).toEqual([]);
+  });
+
+  test('when it does not fit, More offers a few sizes', async ({ tei }) => {
+    await tei.open({ content: '<p>Hello</p>', flags: ['table'] });
+    await tei.caretAtEnd();
+    await tei.page.locator('[data-tei-control="more"]').first().click();
+    const more = tei.page.getByRole('menu', { name: 'More' });
+    await more.getByRole('menuitem', { name: 'Table' }).click();
+    await tei.page.getByRole('menuitem', { name: '4 × 4' }).click();
+    await expect(tei.content.locator('table tr')).toHaveCount(4);
+    await expect(tei.content.locator('table tr').first().locator('th, td')).toHaveCount(4);
+    expect(await tei.problems()).toEqual([]);
+  });
+
+  test('`/table` inserts one too', async ({ tei }) => {
+    await tei.open({ content: '<p>Hello</p>', flags: ['table'] });
+    await tei.caretAtEnd();
+    await tei.page.keyboard.press('Enter');
+    await tei.page.keyboard.type('/table');
+    await tei.page.keyboard.press('Enter');
+    await expect(tei.content.locator('table tr')).toHaveCount(3);
+    expect(await tei.problems()).toEqual([]);
+  });
+
+  test('the cell menu adds and deletes rows and columns, and toggles the header', async ({
+    tei,
+  }) => {
+    await tei.open({ content: TABLE, flags: ['table'] });
+    await tei.content.getByText('1', { exact: true }).click();
+    const handle = tei.page.getByRole('button', { name: 'Cell options' });
+    await expect(handle).toBeVisible();
+    // It sits inside the cell, against its top end corner.
+    const [h, c] = [
+      await handle.boundingBox(),
+      await tei.content.getByText('1', { exact: true }).locator('xpath=ancestor::td').boundingBox(),
+    ];
+    if (!h || !c) throw new Error('no boxes');
+    expect(h.x + h.width).toBeLessThanOrEqual(c.x + c.width);
+    expect(h.y).toBeGreaterThanOrEqual(c.y);
+    await handle.click();
+    const menu = tei.page.getByRole('menu', { name: 'Table' });
+    await menu.getByRole('menuitem', { name: 'Insert row below' }).click();
+    expect(await cells(tei)).toEqual([
+      ['A', 'B'],
+      ['1', '2'],
+      ['', ''],
+    ]);
+    await handle.click();
+    await menu.getByRole('menuitem', { name: 'Insert column left' }).click();
+    expect(await cells(tei)).toEqual([
+      ['', 'A', 'B'],
+      ['', '1', '2'],
+      ['', '', ''],
+    ]);
+    // The caret stayed in "1": its column goes.
+    await handle.click();
+    await menu.getByRole('menuitem', { name: 'Delete column' }).click();
+    expect(await cells(tei)).toEqual([
+      ['', 'B'],
+      ['', '2'],
+      ['', ''],
+    ]);
+    await handle.click();
+    await menu.getByRole('menuitemcheckbox', { name: 'Header row' }).click();
+    await expect(tei.content.locator('th')).toHaveCount(0);
+    expect(await tei.problems()).toEqual([]);
+  });
+
+  test('right-click in a cell opens the menu at the pointer; Escape closes it', async ({ tei }) => {
+    await tei.open({ content: TABLE, flags: ['table'] });
+    const cell = tei.content.getByText('2', { exact: true });
+    await cell.click({ button: 'right' });
+    const menu = tei.page.getByRole('menu', { name: 'Table' });
+    await expect(menu).toBeVisible();
+    const [m, c] = [await menu.boundingBox(), await cell.boundingBox()];
+    if (!m || !c) throw new Error('no boxes');
+    expect(Math.abs(m.y - (c.y + c.height / 2))).toBeLessThan(24);
+    await tei.page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    expect(await tei.problems()).toEqual([]);
+  });
+
+  test('a cell colour and vertical alignment from their submenus', async ({ tei }) => {
+    await tei.open({ content: TABLE, flags: ['table'] });
+    await tei.content.getByText('1', { exact: true }).click();
+    const handle = tei.page.getByRole('button', { name: 'Cell options' });
+    await handle.click();
+    const menu = tei.page.getByRole('menu', { name: 'Table' });
+    await menu.getByRole('menuitem', { name: 'Cell colour' }).click();
+    await tei.page.getByRole('menuitemradio', { name: 'Blue' }).click();
+    expect(await tei.html()).toMatch(/<td style="background-color: rgb[^"]*">\s*<p>1<\/p>/);
+    await handle.click();
+    await menu.getByRole('menuitem', { name: 'Vertical align' }).click();
+    await tei.page.getByRole('menuitemradio', { name: 'Middle' }).click();
+    expect(await tei.html()).toContain('vertical-align: middle');
+    expect(await tei.problems()).toEqual([]);
+  });
+
+  test('the + bars add a row and a column at the end', async ({ tei }) => {
+    await tei.open({ content: TABLE, flags: ['table'] });
+    await tei.content.locator('table').hover();
+    const row = tei.page.getByRole('button', { name: 'Add a row' });
+    const column = tei.page.getByRole('button', { name: 'Add a column' });
+    await expect(row).toBeVisible();
+    await settled(tei.page);
+    const [r, t] = [await row.boundingBox(), await tei.content.locator('table').boundingBox()];
+    if (!r || !t) throw new Error('no boxes');
+    // Under the table, as wide as it.
+    expect(r.y).toBeGreaterThanOrEqual(t.y + t.height - 1);
+    expect(Math.abs(r.width - t.width)).toBeLessThanOrEqual(2);
+    await row.click();
+    expect(await cells(tei)).toEqual([
+      ['A', 'B'],
+      ['1', '2'],
+      ['', ''],
+    ]);
+    await tei.content.locator('table').hover();
+    await column.click();
+    expect(await cells(tei)).toEqual([
+      ['A', 'B', ''],
+      ['1', '2', ''],
+      ['', '', ''],
+    ]);
+    expect(await tei.problems()).toEqual([]);
+  });
+
+  test('dragging a column edge resizes it, saved as the column width', async ({ tei }) => {
+    await tei.open({ content: TABLE, flags: ['table'] });
+    const first = tei.content.locator('th').first();
+    const box = await first.boundingBox();
+    if (!box) throw new Error('no box');
+    const edge = box.x + box.width;
+    // Below the cell's menu handle, which sits in its top corner.
+    const y = box.y + box.height * 0.8;
+    await tei.page.mouse.move(edge - 10, y);
+    await tei.page.mouse.move(edge - 1, y, { steps: 3 });
+    const handle = tei.page.getByRole('separator', { name: 'Resize column' });
+    await expect(handle).toBeVisible();
+    const h = await handle.boundingBox();
+    if (!h) throw new Error('no handle');
+    expect(Math.abs(h.x + h.width / 2 - edge)).toBeLessThanOrEqual(2);
+    await tei.page.mouse.move(h.x + h.width / 2, y);
+    await tei.page.mouse.down();
+    await tei.page.mouse.move(h.x + h.width / 2 + 80, y, { steps: 6 });
+    await tei.page.mouse.up();
+    const after = await first.boundingBox();
+    expect(Math.abs((after?.width ?? 0) - (box.width + 80))).toBeLessThanOrEqual(2);
+    expect(await tei.html()).toMatch(/<col style="width: \d+px;?">/);
+    expect(await tei.problems()).toEqual([]);
+  });
+
+  test('the controls stay over the resize handle, and go once the pointer leaves', async ({
+    tei,
+  }) => {
+    await tei.open({ content: TABLE, flags: ['table'] });
+    const box = await tei.content.locator('th').first().boundingBox();
+    if (!box) throw new Error('no box');
+    // Onto the column edge: the resize handle shows right under the pointer.
+    await tei.page.mouse.move(box.x + box.width - 8, box.y + box.height * 0.8);
+    await tei.page.mouse.move(box.x + box.width, box.y + box.height * 0.8, { steps: 3 });
+    await expect(tei.page.getByRole('separator', { name: 'Resize column' })).toBeVisible();
+    const row = tei.page.getByRole('button', { name: 'Add a row' });
+    await tei.page.waitForTimeout(400);
+    await expect(row).toBeVisible();
+    // Straight off the handle and out of the table.
+    await tei.page.mouse.move(box.x + box.width, 2);
+    await expect(row).toBeHidden();
+    await expect(tei.page.getByRole('separator', { name: 'Resize column' })).toBeHidden();
+    expect(await tei.problems()).toEqual([]);
+  });
+
+  test('Tab walks the cells and adds a row past the last one', async ({ tei }) => {
+    await tei.open({ content: TABLE, flags: ['table'] });
+    await tei.content.getByText('2', { exact: true }).click();
+    await tei.page.keyboard.press('End');
+    await tei.page.keyboard.press('Tab');
+    await tei.page.keyboard.type('x');
+    expect(await cells(tei)).toEqual([
+      ['A', 'B'],
+      ['1', '2'],
+      ['x', ''],
+    ]);
+    await tei.page.keyboard.press('Shift+Tab');
+    await tei.page.keyboard.type('y');
+    expect((await cells(tei))[1]).toEqual(['1', '2y']);
+    expect(await tei.problems()).toEqual([]);
+  });
+
+  test('a wide table scrolls inside its box and fades the edge with more', async ({ tei }) => {
+    const wide = `<table><tr>${'<td>wide cell content</td>'.repeat(14)}</tr></table>`;
+    await tei.open({ content: wide, flags: ['table'] });
+    const box = tei.content.locator('.tei-table-scroll');
+    await expect(box).toHaveAttribute('data-tei-overflow', 'right');
+    await box.evaluate((el) => {
+      el.scrollLeft = 120;
+    });
+    await expect(box).toHaveAttribute('data-tei-overflow', 'left right');
+    await box.evaluate((el) => {
+      el.scrollLeft = el.scrollWidth;
+    });
+    await expect(box).toHaveAttribute('data-tei-overflow', 'left');
+    // The page itself never scrolls sideways.
+    expect(await tei.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    expect(await tei.problems()).toEqual([]);
   });
 });

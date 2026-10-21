@@ -27,6 +27,8 @@ export type { LinkPopoverProps } from './components/link-popover.js';
 export { LinkPopover } from './components/link-popover.js';
 export type { SlashMenuProps } from './components/slash-menu.js';
 export { rankSlashItem, SlashMenu } from './components/slash-menu.js';
+export type { TableControlsProps } from './components/table-controls.js';
+export { InsertTableMenu, TableControls } from './components/table-controls.js';
 export { TeiEditorContext, useCurrentEditor, useOptionalEditor } from './context.js';
 export type { ContentEditableProps, EditorContentProps } from './editor-content.js';
 export { ContentEditable, EditorContent, EditorProvider } from './editor-content.js';

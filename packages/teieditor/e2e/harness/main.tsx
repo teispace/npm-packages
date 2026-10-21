@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { TeiEditor } from '../../src/core/editor';
 import { Html } from '../../src/extensions/html/index';
 import { StarterKit } from '../../src/extensions/starter-kit/index';
+import { Table } from '../../src/extensions/table/index';
 import { TextStyle } from '../../src/extensions/text-style/index';
 import {
   Button,
@@ -110,6 +111,7 @@ function App() {
       // `plain`: no text styles, for a toolbar that fits the frame.
       ...(params.has('plain') ? [] : [TextStyle]),
       ...(params.has('raw') ? [Html.configure({ clean: false })] : []),
+      ...(params.has('table') ? [Table] : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });

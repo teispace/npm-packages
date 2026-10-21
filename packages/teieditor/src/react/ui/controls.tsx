@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { Button } from './button.js';
 import { usePartClass } from './context.js';
+import { keepFocus } from './pointer.js';
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...rest }, ref) {
@@ -262,7 +263,7 @@ export function ColorPicker({
             ref={(el) => {
               if (el && swatch.value) el.style.setProperty('--tei-swatch', swatch.value);
             }}
-            onPointerDown={(event) => event.preventDefault()}
+            onPointerDown={keepFocus}
             onClick={() => onChange(swatch.value)}
           />
         ))}
@@ -316,7 +317,7 @@ export function GridPicker({
           aria-label={formatCaption(r, c)}
           onPointerEnter={() => setSize({ rows: r, columns: c })}
           onFocus={() => setSize({ rows: r, columns: c })}
-          onPointerDown={(event) => event.preventDefault()}
+          onPointerDown={keepFocus}
           onClick={() => onPick(r, c)}
         />,
       );

@@ -124,6 +124,20 @@ describe('Menu', () => {
     render(<Menu items={[{ id: 'x', label: 'Wrap', checked: true }]} />);
     expect(screen.getByRole('menuitemcheckbox').getAttribute('aria-checked')).toBe('true');
   });
+
+  it('marks one-of choices as radio items', () => {
+    render(
+      <Menu
+        items={[
+          { id: 'a', label: 'Serif', checked: true, radio: true },
+          { id: 'b', label: 'Sans', checked: false, radio: true },
+        ]}
+      />,
+    );
+    const [serif, sans] = screen.getAllByRole('menuitemradio');
+    expect(serif?.getAttribute('aria-checked')).toBe('true');
+    expect(sans?.getAttribute('aria-checked')).toBe('false');
+  });
 });
 
 describe('Popover', () => {

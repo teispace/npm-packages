@@ -68,6 +68,7 @@ export function FontFamilyMenu({ editor }: { editor: TeiEditor }) {
       label: text,
       ...fontRow(item.args?.[0], text),
       checked: i === current || (current < 0 && i === 0),
+      radio: true,
       disabled: !states[i]?.enabled,
       onSelect: () => editor.runItem(item),
     };

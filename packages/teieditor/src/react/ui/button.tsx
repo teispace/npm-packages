@@ -10,6 +10,7 @@ import {
 import type { TeiIconLike } from './context.js';
 import { usePartClass } from './context.js';
 import { Icon } from './icon.js';
+import { keepFocus } from './pointer.js';
 import { hideTooltip, showTooltip } from './tooltip.js';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -85,8 +86,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       aria-keyshortcuts={rest['aria-keyshortcuts']}
       title={undefined}
       onPointerDown={(event: PointerEvent<HTMLButtonElement>) => {
-        // Keep focus (and the selection) in the editor on mouse and pen presses.
-        if (event.pointerType !== 'touch' && event.button === 0) event.preventDefault();
+        keepFocus(event);
         if (tip) hideTooltip(event.currentTarget);
         onPointerDown?.(event);
       }}

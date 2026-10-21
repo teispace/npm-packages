@@ -98,7 +98,9 @@ export type TeiPlacement =
   | 'insert'
   | 'blockType'
   | 'blockMenu'
-  | 'contextMenu';
+  | 'contextMenu'
+  /** The menu on a table cell: rows, columns, cells and the table. */
+  | 'tableMenu';
 
 /**
  * A UI entry an extension contributes — a toolbar button, a slash-menu row,

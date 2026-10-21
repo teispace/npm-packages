@@ -16,6 +16,7 @@ import { defineTeiExtension } from '../../core/define.js';
 import type { TeiItem } from '../../core/types.js';
 import { backgroundColor, fontFamily, fontSize, textColor } from '../../icons/index.js';
 import { $canStyleText } from '../../utils/selection.js';
+import { isSafeStyleValue } from '../../utils/style-values.js';
 import { RichText } from '../rich-text/index.js';
 
 declare module '@teispace/teieditor' {
@@ -74,25 +75,7 @@ export const TEXT_STYLE_PROPERTIES = [
 
 export type TextStyleProperty = (typeof TEXT_STYLE_PROPERTIES)[number];
 
-const COLOR =
-  /^(#[\da-f]{3,8}|(rgb|hsl|hwb|lab|lch|oklab|oklch|color)a?\([\d\s.,%/+a-z-]*\)|[a-z]+)$/i;
-const LENGTH = /^\d+(\.\d+)?(px|pt|em|rem|%)$/;
-const FAMILY = /^[\w\s,'"-]+$/;
-/** Values that say "no style" and only add noise (Google Docs writes them on everything). */
-const NOISE = new Set(['transparent', 'inherit', 'initial', 'unset', 'currentcolor', 'normal']);
-
-/**
- * Whether a value is safe and meaningful for a property: no `url()`, no
- * `expression()`, no declarations smuggled in after a `;`.
- */
-export function isSafeStyleValue(property: TextStyleProperty, value: string): boolean {
-  const v = value.trim();
-  if (!v || v.length > 200 || NOISE.has(v.toLowerCase())) return false;
-  if (property === 'font-size') return LENGTH.test(v);
-  if (property === 'font-family') return FAMILY.test(v);
-  // A colour function takes no nested parentheses, so no `url(` or `expression(`.
-  return COLOR.test(v);
-}
+export { isSafeStyleValue };
 
 /** The text style of the selection for one property: `''` when unset or mixed. */
 export function $getTextStyle(property: TextStyleProperty): string {

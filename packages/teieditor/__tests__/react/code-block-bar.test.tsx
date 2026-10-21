@@ -88,14 +88,14 @@ describe('CodeBlockBar', () => {
     render(<CodeBlockBar editor={editor} />);
     hover(editor);
     fireEvent.click(screen.getByRole('button', { name: 'Language: Plain text' }));
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Python' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Python' }));
     expect(language(editor)).toBe('py');
     expect(screen.getByRole('button', { name: 'Language: Python' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Language: Python' }));
-    expect(
-      screen.getByRole('menuitemcheckbox', { name: 'Python' }).getAttribute('aria-checked'),
-    ).toBe('true');
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Plain text' }));
+    expect(screen.getByRole('menuitemradio', { name: 'Python' }).getAttribute('aria-checked')).toBe(
+      'true',
+    );
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Plain text' }));
     expect(language(editor)).toBeNull();
   });
 
@@ -176,7 +176,7 @@ describe('CodeBlockBar', () => {
     hover(editor);
     expect(screen.queryByRole('button', { name: 'Copy code' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Language: Plain text' }));
-    expect(screen.getAllByRole('menuitemcheckbox').map((item) => item.textContent)).toEqual([
+    expect(screen.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
       'Plain text',
       'JS',
     ]);

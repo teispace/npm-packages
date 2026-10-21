@@ -141,9 +141,9 @@ describe('EditorToolbar', () => {
     const trigger = screen.getByRole('button', { name: 'Block type: Text' });
     act(() => fireEvent.click(trigger));
     const menu = screen.getByRole('menu', { name: 'Block type' });
-    const current = within(menu).getByRole('menuitemcheckbox', { name: /Text/ });
+    const current = within(menu).getByRole('menuitemradio', { name: /Text/ });
     expect(current.getAttribute('aria-checked')).toBe('true');
-    act(() => fireEvent.click(within(menu).getByRole('menuitemcheckbox', { name: /Heading 2/ })));
+    act(() => fireEvent.click(within(menu).getByRole('menuitemradio', { name: /Heading 2/ })));
     expect(editor.getHTML()).toBe('<h2>Hello</h2>');
     expect(screen.getByRole('button', { name: 'Block type: Heading 2' })).toBeTruthy();
   });
@@ -154,7 +154,7 @@ describe('EditorToolbar', () => {
     selectFirstBlock(editor);
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Align: Align left' })));
     const menu = screen.getByRole('menu', { name: 'Align' });
-    act(() => fireEvent.click(within(menu).getByRole('menuitemcheckbox', { name: /center/i })));
+    act(() => fireEvent.click(within(menu).getByRole('menuitemradio', { name: /center/i })));
     expect(editor.getHTML()).toBe('<p style="text-align: center;">Hello</p>');
     expect(screen.getByRole('button', { name: 'Align: Align center' })).toBeTruthy();
   });

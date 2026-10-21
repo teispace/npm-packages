@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { type TeiIconLike, usePartClass } from './context.js';
 import { Icon } from './icon.js';
+import { keepFocus } from './pointer.js';
 import { type DismissReason, Popover } from './popover.js';
 
 export interface MenuItemData {
@@ -27,6 +28,8 @@ export interface MenuItemData {
   shortcut?: readonly string[] | string;
   /** A checkable item: `true`/`false` makes it a checkbox item. */
   checked?: boolean;
+  /** With `checked`: one choice of several (a font, a colour), a radio item. */
+  radio?: boolean;
   disabled?: boolean;
   variant?: 'danger';
   /** A submenu. */
@@ -308,7 +311,13 @@ export function Menu({
                     rowRefs.current[i] = el;
                   }}
                   id={rowId(i)}
-                  role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+                  role={
+                    item.checked === undefined
+                      ? 'menuitem'
+                      : item.radio
+                        ? 'menuitemradio'
+                        : 'menuitemcheckbox'
+                  }
                   aria-checked={item.checked}
                   aria-disabled={item.disabled || undefined}
                   aria-haspopup={hasSub ? 'menu' : undefined}
@@ -318,13 +327,15 @@ export function Menu({
                   data-highlighted={isHighlighted ? '' : undefined}
                   data-variant={item.variant}
                   data-id={item.id}
-                  onPointerMove={() => {
+                  onPointerMove={(event) => {
+                    // A finger scrolling the menu does not light up each row it passes.
+                    if (event.pointerType === 'touch') return;
                     if (item.disabled || isHighlighted) return;
                     nav.setHighlighted(i);
                     clearTimeout(hoverTimer.current);
                     hoverTimer.current = setTimeout(() => setOpenSub(hasSub ? i : -1), 120);
                   }}
-                  onPointerDown={(event) => event.preventDefault()}
+                  onPointerDown={keepFocus}
                   onClick={() => select(i)}
                 >
                   {renderItem ? (

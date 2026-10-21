@@ -198,6 +198,58 @@ export const splitCells: TeiIconNode = [
   ['path', { d: 'M12 15V9M3 15h18M3 9h18' }],
   rect(3, 3, 18, 18),
 ];
+const band = (x: number, y: number, width: number, height: number) =>
+  [
+    'rect',
+    {
+      x: String(x),
+      y: String(y),
+      width: String(width),
+      height: String(height),
+      fill: 'currentColor',
+      'fill-opacity': '0.25',
+      stroke: 'none',
+    },
+  ] as const;
+export const rowAbove: TeiIconNode = [rect(3, 10, 18, 11), ['path', { d: 'M12 2v6M9 5h6' }]];
+export const rowBelow: TeiIconNode = [rect(3, 3, 18, 11), ['path', { d: 'M12 16v6M9 19h6' }]];
+export const columnLeft: TeiIconNode = [rect(10, 3, 11, 18), ['path', { d: 'M2 12h6M5 9v6' }]];
+export const columnRight: TeiIconNode = [rect(3, 3, 11, 18), ['path', { d: 'M16 12h6M19 9v6' }]];
+export const deleteRow: TeiIconNode = [
+  rect(3, 7, 18, 10),
+  ['path', { d: 'm10 10 4 4M14 10l-4 4' }],
+];
+export const deleteColumn: TeiIconNode = [
+  rect(7, 3, 10, 18),
+  ['path', { d: 'm10 10 4 4M14 10l-4 4' }],
+];
+export const headerRow: TeiIconNode = [
+  band(3, 3, 18, 6),
+  rect(3, 3, 18, 18),
+  ['path', { d: 'M3 9h18M3 15h18M12 9v12' }],
+];
+export const headerColumn: TeiIconNode = [
+  band(3, 3, 6, 18),
+  rect(3, 3, 18, 18),
+  ['path', { d: 'M9 3v18M15 3v18M9 12h12' }],
+];
+export const stripes: TeiIconNode = [
+  band(3, 9, 18, 6),
+  rect(3, 3, 18, 18),
+  ['path', { d: 'M3 9h18M3 15h18' }],
+];
+export const freeze = /* @__PURE__ */ p(
+  'M2 12h20M12 2v20',
+  'm20 16-4-4 4-4M4 8l4 4-4 4M16 4l-4 4-4-4M8 20l4-4 4 4',
+);
+export const paintBucket = /* @__PURE__ */ p(
+  'm19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z',
+  'm5 2 5 5M2 13h15',
+  'M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z',
+);
+export const alignTop: TeiIconNode = [['path', { d: 'M4 3h16' }], rect(7, 7, 10, 12)];
+export const alignMiddle: TeiIconNode = [['path', { d: 'M3 12h4M17 12h4' }], rect(7, 6, 10, 12)];
+export const alignBottom: TeiIconNode = [['path', { d: 'M4 21h16' }], rect(7, 5, 10, 12)];
 
 // Alignment and indentation
 export const alignLeft = /* @__PURE__ */ p('M15 12H3M17 18H3M21 6H3');

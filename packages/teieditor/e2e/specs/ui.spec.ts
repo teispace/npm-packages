@@ -559,6 +559,9 @@ test.describe('responsive @mobile', () => {
     await tei.page.getByTestId('menu-trigger').tap();
     await expect(menu(tei.page)).toBeVisible();
     await expectInViewport(tei.page, await box(popovers(tei.page)));
+    // A tap picks: WebKit drops the click of a cancelled touch press.
+    await menu(tei.page).getByRole('menuitem', { name: 'One' }).tap();
+    expect(await tei.log()).toEqual(['one']);
   });
 
   test('touch: tapping a toolbar button formats without a tooltip in the way', async ({ tei }) => {
@@ -574,5 +577,33 @@ test.describe('responsive @mobile', () => {
       .tap();
     expect(await tei.html()).toBe('<p><strong>word</strong></p>');
     await expect(tei.page.locator('[data-tei-part="tooltip"]')).toBeHidden();
+  });
+
+  test('touch: a tapped cell gets its menu, which fits the screen; a wide table scrolls in place', async ({
+    tei,
+  }) => {
+    const row = (cells: string) => `<tr>${cells}</tr>`;
+    const wide = `<table>${row('<th>Name</th><th>Team</th><th>Role</th><th>City</th><th>Started</th>')}${row(
+      '<td>Ada</td><td>Platform</td><td>Engineer</td><td>London</td><td>2021</td>',
+    )}</table>`;
+    await tei.open({ content: wide, flags: ['table'] });
+    // The page never scrolls sideways; the table does, inside its box.
+    expect(await tei.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await tei.content.getByText('Ada').tap();
+    const handle = tei.page.getByRole('button', { name: 'Cell options' });
+    await expect(handle).toBeVisible();
+    // No hover UI on touch: no + bars.
+    await expect(tei.page.getByRole('button', { name: 'Add a row' })).toBeHidden();
+    await handle.tap();
+    const table = tei.page.getByRole('menu', { name: 'Table' });
+    await expect(table).toBeVisible();
+    await settled(tei.page);
+    // The surface fits; a menu taller than the room scrolls inside it.
+    await expectInViewport(tei.page, await box(popovers(tei.page).filter({ has: table })));
+    await table.getByRole('menuitem', { name: 'Insert row below' }).tap();
+    await expect(tei.content.locator('tr')).toHaveCount(3);
+    expect(await tei.problems()).toEqual([]);
   });
 });

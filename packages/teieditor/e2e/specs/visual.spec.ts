@@ -155,6 +155,67 @@ for (const scheme of ['light', 'dark'] as const) {
       });
     });
 
+    // A table with a header row, a merged cell, a colour and a striped body;
+    // the pointer on it shows the + bars, the caret the cell's handle.
+    const TABLE_SHOT =
+      '<table><tr><th>Plan</th><th>Seats</th><th>Price</th></tr>' +
+      '<tr><td>Starter</td><td>1</td><td style="background-color: rgba(34, 197, 94, 0.18)">Free</td></tr>' +
+      '<tr><td>Team</td><td>10</td><td>$8 a seat</td></tr>' +
+      '<tr><td colspan="2">Enterprise, any size</td><td>Talk to us</td></tr></table><p>After</p>';
+
+    test('table with its + bars and cell handle', async ({ tei }) => {
+      await tei.page.setViewportSize({ width: 768, height: 600 });
+      await tei.open({ content: TABLE_SHOT, flags: ['table'] });
+      await theme(tei.page, scheme);
+      await tei.content.getByText('Seats').click();
+      await tei.content.getByText('Starter').hover();
+      await expect(tei.page.getByRole('button', { name: 'Add a row' })).toBeVisible();
+      await expect(tei.page.getByRole('button', { name: 'Cell options' }).first()).toBeVisible();
+      await settled(tei.page);
+      const box = await tei.content.locator('table').boundingBox();
+      if (!box) throw new Error('no table');
+      await shoot(tei, tei.page, `table-${scheme}.png`, {
+        clip: { x: box.x - 12, y: box.y - 12, width: box.width + 48, height: box.height + 48 },
+      });
+    });
+
+    test('table cell menu with its colour submenu', async ({ tei }) => {
+      await tei.page.setViewportSize({ width: 768, height: 900 });
+      await tei.open({ content: TABLE_SHOT, flags: ['table'] });
+      await theme(tei.page, scheme);
+      await tei.content.getByText('Starter').click();
+      await tei.page.getByRole('button', { name: 'Cell options' }).click();
+      const menu = tei.page.getByRole('menu', { name: 'Table' });
+      await menu.getByRole('menuitem', { name: 'Cell colour' }).click();
+      await expect(tei.page.getByRole('menu', { name: 'Cell colour' })).toBeVisible();
+      await settled(tei.page);
+      const box = await tei.content.locator('table').boundingBox();
+      if (!box) throw new Error('no table');
+      await shoot(tei, tei.page, `table-menu-${scheme}.png`, {
+        clip: { x: box.x - 12, y: box.y - 12, width: 560, height: 820 },
+      });
+    });
+
+    test('table wider than the page, faded at the edge with more', async ({ tei }) => {
+      await tei.page.setViewportSize({ width: 375, height: 500 });
+      const cells = (tag: string, text: string) => `<${tag}>${text}</${tag}>`.repeat(6);
+      await tei.open({
+        content: `<table><tr>${cells('th', 'Heading')}</tr><tr>${cells('td', 'Some cell text')}</tr></table>`,
+        flags: ['table'],
+      });
+      await theme(tei.page, scheme);
+      await expect(tei.content.locator('.tei-table-scroll')).toHaveAttribute(
+        'data-tei-overflow',
+        'right',
+      );
+      await settled(tei.page);
+      const box = await tei.content.locator('.tei-table-scroll').boundingBox();
+      if (!box) throw new Error('no table');
+      await shoot(tei, tei.page, `table-wide-${scheme}.png`, {
+        clip: { x: 0, y: box.y - 8, width: 375, height: box.height + 16 },
+      });
+    });
+
     test('tooltip on a toolbar button', async ({ tei }) => {
       await tei.open();
       await theme(tei.page, scheme);

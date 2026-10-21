@@ -1,4 +1,4 @@
-/** The document most pages start from: a bit of everything StarterKit does. */
+/** The document most pages start from: a bit of everything the showcase installs. */
 export const DEMO = `
 <h1>Welcome to teieditor</h1>
 <p>A rich text editor on <a href="https://lexical.dev">Lexical</a>. Select text for the
@@ -25,6 +25,15 @@ export const DEMO = `
 </ul>
 <pre><code class="language-ts">const editor = useTeiEditor({ extensions: [StarterKit] });
 editor.chain().focus().toggleBold().run();</code></pre>
+<h2>Tables</h2>
+<p>Insert one from the toolbar or <code>/table</code>. Hover for the <strong>+</strong> bars,
+drag a column edge to resize it, and open a cell's menu from its corner or a right-click.</p>
+<table>
+  <tr><th>Feature</th><th>Keys</th><th>Notes</th></tr>
+  <tr><td>Next cell</td><td><code>Tab</code></td><td>Adds a row past the last cell</td></tr>
+  <tr><td>Select cells</td><td><code>Shift</code> + arrows</td><td style="background-color: rgba(59, 130, 246, 0.16);">Then merge them</td></tr>
+  <tr><td colspan="2">Markdown and HTML, both ways</td><td>GFM tables</td></tr>
+</table>
 <hr>
 <p>That is the whole document. Make it yours.</p>
 `;

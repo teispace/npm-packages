@@ -19,6 +19,7 @@ import type { TeiIconLike } from '../ui/context.js';
 import { DropdownMenu } from '../ui/dropdown.js';
 import type { MenuGroupData, MenuItemData } from '../ui/menu.js';
 import { Separator, Toolbar, type ToolbarProps } from '../ui/toolbar.js';
+import { InsertTableMenu } from './table-controls.js';
 import {
   BackgroundColorMenu,
   FontFamilyMenu,
@@ -322,7 +323,9 @@ function MoreMenu({
     const { decorate } = movable.submenu;
     const sub = movable.submenu.items.map((item) => {
       const state = stateOf.get(item);
-      const data = itemMenuData(editor, item, state, state?.active ?? false);
+      // A choice (a font, a colour) is a radio item; an action (a table size) is plain.
+      const checked = item.active ? (state?.active ?? false) : undefined;
+      const data = { ...itemMenuData(editor, item, state, checked), radio: true };
       return decorate ? { ...data, ...decorate(item) } : data;
     });
     entries.push({
@@ -546,7 +549,10 @@ export function ItemMenu({
   const current = states.findIndex((state) => state.active);
   const shown = items[current >= 0 ? current : (fallback ?? 0)];
   const enabled = states.some((state) => state.enabled);
-  const menu = items.map((item, i) => itemMenuData(editor, item, states[i], i === current));
+  const menu = items.map((item, i) => ({
+    ...itemMenuData(editor, item, states[i], i === current),
+    radio: true,
+  }));
   if (!shown) return null;
   const shownLabel = editor.t(shown.label);
   return (
@@ -576,6 +582,7 @@ AlignMenu.overflowMenu = (editor: TeiEditor): ToolbarSubmenu => {
 };
 
 const BUILT_IN_CONTROLS: Record<string, ToolbarControl> = {
+  insertTable: InsertTableMenu,
   blockType: BlockTypeMenu,
   align: AlignMenu,
   fontFamily: FontFamilyMenu,

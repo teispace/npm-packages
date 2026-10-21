@@ -335,6 +335,92 @@
     padding-inline: var(--tei-space-2);
   }
 
+  /* Table: the handle on the cell with the caret, the + bars, the column resizer. */
+  .tei-popover[data-tei-control="table-cell-handle"] {
+    padding: 0;
+    border-radius: var(--tei-radius-sm);
+    box-shadow: var(--tei-shadow-sm);
+  }
+
+  .tei-button[data-tei-control="table-cell-menu"] {
+    --tei-control-size: 1.25rem;
+    inline-size: 1.25rem;
+    min-inline-size: 0;
+    padding: 0;
+  }
+
+  .tei-popover.tei-table-add {
+    display: flex;
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  /* The bar is the size; its button fills it. */
+  .tei-popover.tei-table-add[data-kind="row"] {
+    block-size: 1.125rem;
+  }
+
+  .tei-popover.tei-table-add[data-kind="column"] {
+    inline-size: 1.125rem;
+  }
+
+  .tei-popover.tei-table-add:not(:popover-open):not([data-open]) {
+    display: none;
+  }
+
+  .tei-table-add > .tei-button {
+    flex: 1;
+    inline-size: auto;
+    block-size: auto;
+    min-inline-size: 0;
+    min-block-size: 0;
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-bg-subtle);
+    color: var(--tei-fg-subtle);
+    opacity: 0.7;
+    transition:
+      opacity var(--tei-duration) var(--tei-ease),
+      background var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-table-add > .tei-button:hover,
+  .tei-table-add > .tei-button:focus-visible {
+    background: var(--tei-accent-subtle);
+    color: var(--tei-accent);
+    opacity: 1;
+  }
+
+  .tei-table-resizer {
+    position: fixed;
+    inset: 0 auto auto 0;
+    inline-size: 6px;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    cursor: col-resize;
+    touch-action: none;
+  }
+
+  .tei-table-resizer::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 2px;
+    inline-size: 2px;
+    border-radius: 1px;
+    background: var(--tei-accent);
+    opacity: 0.6;
+  }
+
+  .tei-table-resizer[data-active]::after {
+    opacity: 1;
+  }
+
   /* Link popover: the link under the caret, and the form that edits it. */
   .tei-link-url {
     max-inline-size: 16rem;

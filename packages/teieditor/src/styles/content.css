@@ -603,7 +603,38 @@
     scrollbar-width: thin;
   }
 
-  .tei-table {
+  /* More table past an edge: that edge fades out. The Table extension sets
+   * the attribute as the table scrolls and resizes. */
+  .tei-table-scroll[data-tei-overflow] {
+    --tei-fade: 1.5rem;
+    mask-image: linear-gradient(
+      to right,
+      var(--tei-fade-start, #000),
+      #000 var(--tei-fade),
+      #000 calc(100% - var(--tei-fade)),
+      var(--tei-fade-end, #000)
+    );
+  }
+
+  .tei-table-scroll[data-tei-overflow~="left"] {
+    --tei-fade-start: transparent;
+  }
+
+  .tei-table-scroll[data-tei-overflow~="right"] {
+    --tei-fade-end: transparent;
+  }
+
+  /* A frozen first column stays put at the start edge: nothing to fade there. */
+  .tei-table-scroll:has(> .tei-table-frozen-column):dir(ltr) {
+    --tei-fade-start: #000;
+  }
+
+  .tei-table-scroll:has(> .tei-table-frozen-column):dir(rtl) {
+    --tei-fade-end: #000;
+  }
+
+  .tei-table,
+  :where(.tei-prose) table {
     inline-size: max-content;
     max-inline-size: 100%;
     margin: 0 0 0.75em;
@@ -626,8 +657,15 @@
     margin-inline-start: auto;
   }
 
+  /* Saved HTML has no scroll box: the table scrolls itself. */
+  :where(.tei-prose) table {
+    display: block;
+    overflow-x: auto;
+  }
+
   .tei-td,
-  .tei-th {
+  .tei-th,
+  :where(.tei-prose) :is(td, th) {
     position: relative;
     min-inline-size: 4.5rem;
     padding: 0.4em 0.65em;
@@ -637,13 +675,15 @@
     outline: none;
   }
 
-  .tei-th {
+  .tei-th,
+  :where(.tei-prose) th {
     background: var(--tei-table-header-bg);
     font-weight: 600;
   }
 
   .tei-td > :last-child,
-  .tei-th > :last-child {
+  .tei-th > :last-child,
+  .tei-prose :is(td, th) > :last-child {
     margin-block-end: 0;
   }
 

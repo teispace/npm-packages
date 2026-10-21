@@ -27,6 +27,8 @@ export interface FloatingOptions {
   padding?: number;
   /** Make the floating element at least as wide as the anchor. */
   matchWidth?: boolean;
+  /** Make the floating element at least as tall as the anchor. */
+  matchHeight?: boolean;
   /** Stay on the given side instead of flipping when there is no room. */
   noFlip?: boolean;
   /**
@@ -58,6 +60,7 @@ export function positionFloating(
     placement = 'bottom-start',
     padding = 8,
     matchWidth,
+    matchHeight,
     noFlip,
     flipBoundary,
     inside,
@@ -88,6 +91,7 @@ export function positionFloating(
         );
         style.setProperty('--tei-available-width', `${Math.max(96, Math.floor(availableWidth))}px`);
         if (matchWidth) style.minWidth = `${Math.round(rects.reference.width)}px`;
+        if (matchHeight) style.minHeight = `${Math.round(rects.reference.height)}px`;
       },
     }),
     hide({ padding }),
@@ -135,7 +139,16 @@ export function useFloating(
   active: boolean,
   options: FloatingOptions = {},
 ): void {
-  const { placement, offset: gap, padding, matchWidth, noFlip, flipBoundary, inside } = options;
+  const {
+    placement,
+    offset: gap,
+    padding,
+    matchWidth,
+    matchHeight,
+    noFlip,
+    flipBoundary,
+    inside,
+  } = options;
   useLayoutEffect(() => {
     const el = floating.current;
     if (!active || !anchor || !el) return;
@@ -144,9 +157,22 @@ export function useFloating(
       offset: gap,
       padding,
       matchWidth,
+      matchHeight,
       noFlip,
       flipBoundary,
       inside,
     });
-  }, [anchor, floating, active, placement, gap, padding, matchWidth, noFlip, flipBoundary, inside]);
+  }, [
+    anchor,
+    floating,
+    active,
+    placement,
+    gap,
+    padding,
+    matchWidth,
+    matchHeight,
+    noFlip,
+    flipBoundary,
+    inside,
+  ]);
 }

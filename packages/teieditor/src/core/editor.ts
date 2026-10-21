@@ -98,6 +98,11 @@ export const ITEM_GROUPS: readonly string[] = [
   'media',
   'align',
   'advanced',
+  // The table menu's sections.
+  'row',
+  'column',
+  'cell',
+  'table',
 ];
 
 function groupRank(group: string | undefined): number {

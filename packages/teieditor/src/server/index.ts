@@ -26,6 +26,31 @@ export interface ConvertOptions
 }
 
 /**
+ * happy-dom (what `@lexical/headless` installs) removes a node replaced
+ * with itself, where the DOM standard leaves it be; Lexical's HTML export
+ * does just that for each table, so without this every table would vanish
+ * from server HTML. Fixed only where it is broken, and only for the call.
+ * Returns the undo.
+ */
+function fixSelfReplace(window: { Element?: typeof Element; document: Document }): () => void {
+  const proto = window.Element?.prototype;
+  if (!proto) return () => {};
+  const parent = window.document.createElement('div');
+  const child = window.document.createElement('span');
+  parent.append(child);
+  child.replaceWith(child);
+  if (child.parentNode === parent) return () => {};
+  const original = proto.replaceWith;
+  proto.replaceWith = function (this: Element, ...nodes: Array<Node | string>) {
+    if (nodes.length === 1 && nodes[0] === this) return;
+    original.apply(this, nodes);
+  };
+  return () => {
+    proto.replaceWith = original;
+  };
+}
+
+/**
  * Read `content` as `options.from` and write it as `to`. Content that does
  * not parse throws, as `setContent` does; nothing is half-converted.
  *
@@ -34,21 +59,24 @@ export interface ConvertOptions
  */
 export function convert(content: unknown, to: ContentFormat, options: ConvertOptions): unknown {
   const { from, extensions, ...rest } = options;
-  return withDOM(() => {
-    const editor = createTeiEditor({
-      ...rest,
-      extensions: [HeadlessExtension, ...extensions],
-      content,
-      contentFormat: from,
-      editable: false,
-      onError: (error) => {
-        throw error;
-      },
-    });
+  return withDOM((window) => {
+    const unfix = fixSelfReplace(window as unknown as Parameters<typeof fixSelfReplace>[0]);
+    let editor: ReturnType<typeof createTeiEditor> | undefined;
     try {
+      editor = createTeiEditor({
+        ...rest,
+        extensions: [HeadlessExtension, ...extensions],
+        content,
+        contentFormat: from,
+        editable: false,
+        onError: (error) => {
+          throw error;
+        },
+      });
       return editor.getContent(to);
     } finally {
-      editor.destroy();
+      editor?.destroy();
+      unfix();
     }
   });
 }

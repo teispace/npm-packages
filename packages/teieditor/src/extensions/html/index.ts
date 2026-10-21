@@ -94,6 +94,27 @@ function needsPreWrap(el: HTMLElement): boolean {
   return (/^\s/.test(text) && !el.previousSibling) || (/\s$/.test(text) && !el.nextSibling);
 }
 
+/**
+ * What Lexical writes on every table cell for pages without a stylesheet;
+ * the document's own choices (a colour, a vertical alignment) are anything
+ * else. A page styles tables itself (`.tei-prose` does).
+ */
+const CELL_DEFAULTS: Readonly<Record<string, (value: string, cell: Element) => boolean>> = {
+  border: (value) => value === '1px solid black',
+  width: (value) => value === '75px',
+  'vertical-align': (value) => value === 'top',
+  'text-align': (value) => value === 'start',
+  'background-color': (value, cell) =>
+    cell.tagName === 'TH' && (value === 'rgb(242, 243, 245)' || value === '#f2f3f5'),
+};
+
+function withoutCellDefaults(el: Element, style: Record<string, string>): Record<string, string> {
+  if (el.tagName !== 'TD' && el.tagName !== 'TH') return style;
+  return Object.fromEntries(
+    Object.entries(style).filter(([name, value]) => !CELL_DEFAULTS[name]?.(value, el)),
+  );
+}
+
 /** Strip what only the editor needs from exported HTML. */
 export function cleanExportedHTML(container: ParentNode): void {
   for (const el of Array.from(container.querySelectorAll<HTMLElement>('*'))) {
@@ -107,7 +128,10 @@ export function cleanExportedHTML(container: ParentNode): void {
     // `el.style` reads empty and would lose every style.
     const css = el.getAttribute('style');
     if (css !== null) {
-      const { 'white-space': whiteSpace, ...rest } = getStyleObjectFromCSS(css);
+      const { 'white-space': whiteSpace, ...rest } = withoutCellDefaults(
+        el,
+        getStyleObjectFromCSS(css),
+      );
       const keep =
         whiteSpace === undefined ||
         (whiteSpace === 'pre-wrap' && (el.closest('pre') !== null || !needsPreWrap(el)))
