@@ -21,9 +21,9 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, grepInvert: /@mobile/ },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] }, grepInvert: /@mobile/ },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] }, grepInvert: /@mobile/ },
     { name: 'mobile-chrome', use: { ...devices['Pixel 7'] }, grep: /@mobile/ },
     { name: 'mobile-safari', use: { ...devices['iPhone 15'] }, grep: /@mobile/ },
   ],

@@ -427,3 +427,19 @@ describe('placeholder', () => {
     expect(heading?.hasAttribute('data-tei-placeholder')).toBe(false);
   });
 });
+
+describe('UI contributions', () => {
+  it('every item has an icon the editor can draw and a translated label', () => {
+    const editor = make();
+    const items = (['toolbar', 'bubble', 'slash', 'blockType'] as const).flatMap((p) =>
+      editor.items(p as never),
+    );
+    expect(items.length).toBeGreaterThan(10);
+    const missing = items.filter((item) => item.icon && !editor.icon(item.icon)).map((i) => i.id);
+    expect(missing).toEqual([]);
+    const untranslated = items.filter(
+      (item) => editor.t(item.label) === item.label && item.label.includes('.'),
+    );
+    expect(untranslated.map((i) => i.id)).toEqual([]);
+  });
+});

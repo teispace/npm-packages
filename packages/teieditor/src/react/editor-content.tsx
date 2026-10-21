@@ -61,6 +61,10 @@ export const ContentEditable = forwardRef<
       aria-multiline={role === 'textbox' ? true : undefined}
       aria-readonly={editable ? undefined : true}
       aria-placeholder={placeholder}
+      // A textbox needs a name; the app's label wins, else a translatable default.
+      aria-label={
+        rest['aria-label'] ?? (rest['aria-labelledby'] ? undefined : editor.t('editor.label'))
+      }
       contentEditable={editable}
       suppressContentEditableWarning
       spellCheck={rest.spellCheck ?? true}

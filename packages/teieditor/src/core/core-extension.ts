@@ -98,7 +98,7 @@ export const TeiCoreExtension = defineExtension({
     commands: {},
     active: {},
     items: {},
-    messages: {},
+    messages: { 'editor.label': 'Rich text editor' },
     icons: {},
     markdown: {},
     formats: { json: jsonFormat, text: textFormat },

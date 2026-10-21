@@ -42,6 +42,21 @@ export function renderIconNode(
   );
 }
 
+const warned = new Set<string>();
+
+/** Say once per name that an icon did not resolve, instead of drawing nothing in silence. */
+function warnMissing(name: string, hasEditor: boolean) {
+  if (warned.has(name)) return;
+  warned.add(name);
+  console.warn(
+    `teieditor: no icon named "${name}".${
+      hasEditor
+        ? ' Register it through the icons option or <TeiUIContext icons>.'
+        : ' This UI is outside the editor: wrap it in <EditorProvider editor={editor}>, or pass icons through <TeiUIContext>.'
+    }`,
+  );
+}
+
 /**
  * An icon. A name resolves through `<TeiUIProvider icons>` first, then the
  * editor's icon registry, so either can replace any built-in icon.
@@ -52,7 +67,11 @@ export const Icon = memo(function Icon({ icon, className, flipRtl }: IconProps) 
   const cls = usePartClass('icon', 'tei-icon', className);
   const resolved: TeiIconLike | undefined =
     typeof icon === 'string' ? (icons?.[icon] ?? editor?.icon(icon)) : icon;
-  if (resolved == null || resolved === false) return null;
+  if (resolved === false) return null;
+  if (resolved == null) {
+    if (typeof icon === 'string') warnMissing(icon, editor != null);
+    return null;
+  }
   if (isIconNode(resolved)) return renderIconNode(resolved, cls, flipRtl);
   if (isValidElement(resolved)) return resolved;
   if (typeof resolved === 'function' || (typeof resolved === 'object' && '$$typeof' in resolved)) {

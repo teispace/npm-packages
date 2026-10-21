@@ -6,14 +6,19 @@ import {
 import type { Transformer } from '@lexical/markdown';
 import {
   $addUpdateTag,
+  $createRangeSelection,
   $getRoot,
   $getSelection,
+  $isElementNode,
   $isRangeSelection,
+  $isTextNode,
+  $setSelection,
   type AnyLexicalExtension,
   type EditorState,
   type LexicalEditor,
   type LexicalExtensionConfig,
   type LexicalExtensionOutput,
+  type RangeSelection,
   type SerializedEditorState,
 } from 'lexical';
 import type { TeiCoreConfig } from './core-extension.js';
@@ -205,7 +210,7 @@ export class TeiEditor {
               get: (__, step: string | symbol) => {
                 if (isProbe(step)) return undefined;
                 if (step === 'run')
-                  return () => this.read(() => steps.every(([n, a]) => this.#check(n, a)));
+                  return () => this.#readAsUI(() => steps.every(([n, a]) => this.#check(n, a)));
                 return (...args: unknown[]) => {
                   if (step === 'command') {
                     const [named, ...rest] = args as [string, ...unknown[]];
@@ -219,9 +224,10 @@ export class TeiEditor {
           };
         }
         if (name === 'command') {
-          return (named: string, ...args: unknown[]) => this.read(() => this.#check(named, args));
+          return (named: string, ...args: unknown[]) =>
+            this.#readAsUI(() => this.#check(named, args));
         }
-        return (...args: unknown[]) => this.read(() => this.#check(name, args));
+        return (...args: unknown[]) => this.#readAsUI(() => this.#check(name, args));
       },
     });
     return this.#can;
@@ -257,6 +263,21 @@ export class TeiEditor {
       (a) => invoke(spec, a),
     );
     return chainOf(args);
+  }
+
+  /**
+   * Read as a command run from the UI would see the document. With no
+   * selection, that is a caret at the end: where `chain().focus()` puts it
+   * before the command runs. So a fresh editor's toolbar is not all
+   * disabled before the first click.
+   */
+  #readAsUI<T>(fn: () => T): T {
+    return this.read(() => {
+      if ($getSelection() !== null) return fn();
+      const caret = $endCaret();
+      if (!caret) return fn();
+      return this.lexical.getEditorState().clone(caret).read(fn, { editor: this.lexical });
+    });
   }
 
   #check(name: string, args: unknown[]): boolean {
@@ -336,7 +357,13 @@ export class TeiEditor {
   /** Replace the document. Strings default to HTML, objects to JSON. */
   setContent(value: unknown, format?: ContentFormat, options?: { tag?: string | string[] }): void {
     const codec = this.#format(format ?? (typeof value === 'string' ? 'html' : 'json'));
-    this.update(() => codec.parse(this.#ctx(), value), options);
+    this.update(() => {
+      codec.parse(this.#ctx(), value);
+      // Replacing content from code must not take focus: a selection left
+      // behind would be put into the page, focusing the editor (on page
+      // load, too, for initial content). Keep one only while focused.
+      if (!this.isFocused) $setSelection(null);
+    }, options);
   }
 
   /** The document as Lexical JSON, including writes made earlier in this update. */
@@ -526,6 +553,26 @@ export class TeiEditor {
     disposable.dispose?.();
     this.#listeners.clear();
   }
+}
+
+/** A collapsed selection at the end of the document, as `root.selectEnd()` would make. */
+function $endCaret(): RangeSelection | null {
+  const last = $getRoot().getLastDescendant();
+  if (!last) return null;
+  const selection = $createRangeSelection();
+  if ($isTextNode(last)) {
+    const offset = last.getTextContentSize();
+    selection.anchor.set(last.getKey(), offset, 'text');
+    selection.focus.set(last.getKey(), offset, 'text');
+    selection.format = last.getFormat();
+    selection.style = last.getStyle();
+  } else {
+    const element = $isElementNode(last) ? last : last.getParentOrThrow();
+    const offset = $isElementNode(last) ? last.getChildrenSize() : last.getIndexWithinParent() + 1;
+    selection.anchor.set(element.getKey(), offset, 'element');
+    selection.focus.set(element.getKey(), offset, 'element');
+  }
+  return selection;
 }
 
 function $placeSelection(position: FocusPosition): void {

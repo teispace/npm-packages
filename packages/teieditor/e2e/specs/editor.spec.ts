@@ -35,6 +35,32 @@ test.describe('typing', () => {
   });
 });
 
+test.describe('focus', () => {
+  test('the editor does not take focus on page load', async ({ tei }) => {
+    await tei.open({ content: '<p>Loaded</p>' });
+    await tei.page.waitForTimeout(100);
+    expect(await tei.page.evaluate(() => document.activeElement === document.body)).toBe(true);
+  });
+
+  test('setContent from code leaves focus where it is', async ({ tei }) => {
+    await tei.open();
+    const trigger = tei.page.getByTestId('dialog-trigger');
+    await trigger.focus();
+    await tei.page.evaluate(() => window.__tei.editor.setContent('<p>Replaced</p>'));
+    await expect(trigger).toBeFocused();
+    expect(await tei.text()).toBe('Replaced');
+  });
+
+  test('the toolbar works before the first click into the document', async ({ tei }) => {
+    await tei.open({ content: '<p>word</p>' });
+    const bold = tei.page.locator('[data-item="bold"]');
+    await expect(bold).toBeEnabled();
+    await bold.click();
+    await tei.page.keyboard.type('X');
+    expect(await tei.html()).toBe('<p>word<strong>X</strong></p>');
+  });
+});
+
 test.describe('marks from the keyboard', () => {
   for (const [key, tag] of [
     ['b', 'strong'],

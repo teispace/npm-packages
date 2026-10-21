@@ -25,12 +25,18 @@ main {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  background: transparent;
 }
 .corner {
   position: fixed;
   inset-block-end: 8px;
   inset-inline-end: 8px;
+  background: transparent;
 }
 .tall {
   block-size: 1200px;
+}
+#clip-source {
+  position: fixed;
+  inset-block-start: -9999px;
 }

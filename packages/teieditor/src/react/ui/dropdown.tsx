@@ -67,11 +67,8 @@ export function DropdownMenu({
         anchor={anchor}
         placement={placement}
         initialFocus={content ? 'first' : 'none'}
-        restoreFocus={false}
-        onDismiss={(reason) => {
-          setOpen(false);
-          if (reason === 'escape') anchor?.focus({ preventScroll: true });
-        }}
+        restoreFocus
+        onDismiss={() => setOpen(false)}
       >
         {content ? (
           content(() => setOpen(false))
@@ -80,10 +77,7 @@ export function DropdownMenu({
             items={items}
             groups={groups}
             label={menuLabel ?? button.label}
-            onClose={(reason) => {
-              setOpen(false);
-              if (reason === 'escape') anchor?.focus({ preventScroll: true });
-            }}
+            onClose={() => setOpen(false)}
           />
         )}
       </Popover>

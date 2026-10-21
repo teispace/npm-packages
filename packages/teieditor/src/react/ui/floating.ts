@@ -68,7 +68,30 @@ export function positionFloating(
     computePosition(anchor, floating, { strategy: 'fixed', placement, middleware }).then(
       ({ x, y, placement: side, middlewareData }) => {
         floating.style.translate = `${Math.round(x)}px ${Math.round(y)}px`;
-        floating.dataset.side = side.split('-')[0];
+        const edge = side.split('-')[0] as 'top' | 'bottom' | 'left' | 'right';
+        floating.dataset.side = edge;
+        // Grow out of the anchor, not the middle: the enter animation's
+        // scale then leaves the edge next to the anchor where it is.
+        const reference = anchor.getBoundingClientRect();
+        const width = floating.offsetWidth;
+        const height = floating.offsetHeight;
+        const clamp = (v: number, max: number) => Math.min(Math.max(v, 0), max);
+        const ox =
+          edge === 'left'
+            ? width
+            : edge === 'right'
+              ? 0
+              : clamp(reference.left + reference.width / 2 - x, width);
+        const oy =
+          edge === 'top'
+            ? height
+            : edge === 'bottom'
+              ? 0
+              : clamp(reference.top + reference.height / 2 - y, height);
+        floating.style.setProperty(
+          '--tei-transform-origin',
+          `${Math.round(ox)}px ${Math.round(oy)}px`,
+        );
         floating.style.visibility = middlewareData.hide?.referenceHidden ? 'hidden' : '';
       },
     );

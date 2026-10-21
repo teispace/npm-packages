@@ -125,7 +125,10 @@ export const Popover = forwardRef<HTMLDivElement, PopoverProps>(function Popover
     const restore = restoreFocus ?? initialFocus !== 'none';
     return () => {
       layers.splice(layers.indexOf(node), 1);
-      const hadFocus = node.contains(doc.activeElement);
+      // Focus inside, or dropped to <body> with this popover's DOM: give it back.
+      // Focus an action moved elsewhere on purpose (into the editor) stays there.
+      const active = doc.activeElement;
+      const hadFocus = node.contains(active) || active === doc.body || active === null;
       if (typeof node.hidePopover === 'function' && isShown(node)) node.hidePopover();
       if (restore && hadFocus) {
         const target = anchor instanceof HTMLElement ? anchor : previous;

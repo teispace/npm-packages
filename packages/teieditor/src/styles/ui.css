@@ -200,6 +200,7 @@
     overscroll-behavior: contain;
     opacity: 1;
     transform: none;
+    transform-origin: var(--tei-transform-origin, top left);
     transition:
       opacity var(--tei-duration) var(--tei-ease),
       transform var(--tei-duration) var(--tei-ease),
@@ -352,7 +353,8 @@
     flex: none;
     margin-inline-start: auto;
     padding-inline-start: var(--tei-space-4);
-    color: var(--tei-fg-subtle);
+    /* Small text on a highlighted row: muted, not subtle, keeps 4.5:1. */
+    color: var(--tei-fg-muted);
     font-family: var(--tei-font);
     font-size: 0.75rem;
     letter-spacing: 0.04em;

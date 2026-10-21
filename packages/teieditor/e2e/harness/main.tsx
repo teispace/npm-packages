@@ -9,6 +9,7 @@ import {
   Dialog,
   DropdownMenu,
   EditorContent,
+  EditorProvider,
   Field,
   GridPicker,
   Input,
@@ -150,12 +151,16 @@ function App() {
   const [color, setColor] = useState<string | null>(null);
   window.__tei = { editor, violations, log, setClipSource, trust };
   return (
-    <main className="tei" data-testid="root">
-      <section data-testid="editor">
-        <EditorToolbar editor={editor} />
+    <main data-testid="root">
+      {/* The editor root, as <Editor> renders it: tokens, container queries, containment. */}
+      <section className="tei" data-tei-bordered="" data-testid="editor">
+        <EditorProvider editor={editor}>
+          <EditorToolbar editor={editor} />
+        </EditorProvider>
         <EditorContent editor={editor} placeholder="Write something…" data-testid="content" />
       </section>
-      <section className="gallery" data-testid="gallery">
+      {/* UI outside an editor takes the tokens from .tei-portal. */}
+      <section className="tei-portal gallery" data-testid="gallery">
         <DropdownMenu label="Menu" groups={GROUPS} data-testid="menu-trigger">
           Menu
         </DropdownMenu>
@@ -212,7 +217,7 @@ function App() {
           </Field>
         </Dialog>
       </section>
-      <div className="corner">
+      <div className="tei-portal corner">
         <DropdownMenu label="Corner" groups={GROUPS} data-testid="corner-trigger">
           Corner
         </DropdownMenu>
