@@ -89,6 +89,12 @@ export interface EditorProps extends Partial<Omit<TeiEditorOptions, 'editable'>>
   format?: ContentFormat;
   /** Shown while the document is empty. */
   placeholder?: string;
+  /**
+   * The document as HTML from `renderToHTML`, shown by server rendering
+   * until the editor mounts: no blank editor, no layout shift. See
+   * `ContentEditableProps.initialHTML`.
+   */
+  initialHTML?: string;
   /** Props for the editable document itself (`aria-label`, `className`, …). */
   contentProps?: Omit<ContentEditableProps, 'placeholder'> & DataAttributes;
   /** Props for the outer frame (`id`, `style`, `data-*`, …). */
@@ -131,6 +137,7 @@ function OwnEditor(props: EditorProps) {
     onChange,
     format,
     placeholder,
+    initialHTML,
     contentProps,
     frameProps,
     bordered,
@@ -155,6 +162,7 @@ function EditorFrame({
   onChange,
   format = 'json',
   placeholder,
+  initialHTML,
   contentProps,
   frameProps,
   bordered = true,
@@ -200,7 +208,12 @@ function EditorFrame({
             overflow={toolbarOverflow}
           />,
         )}
-        <EditorContent editor={editor} placeholder={placeholder} {...contentProps}>
+        <EditorContent
+          editor={editor}
+          placeholder={placeholder}
+          initialHTML={initialHTML}
+          {...contentProps}
+        >
           {slot(parts.linkPopover, <LinkPopover />)}
           {slot(parts.bubbleMenu, <BubbleMenu />)}
           {slot(parts.slashMenu, <SlashMenu />)}

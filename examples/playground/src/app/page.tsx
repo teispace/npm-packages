@@ -1,3 +1,6 @@
+import { renderToHTML } from '@teispace/teieditor/server';
+import { DEMO } from '@/content';
+import { EXTENSIONS } from '@/extensions';
 import { Showcase } from './showcase';
 
 export default function Page() {
@@ -8,7 +11,8 @@ export default function Page() {
         One element: <code>&lt;Editor /&gt;</code> with StarterKit. Change the preset and the
         rest live; the document stays, because the editor comes from <code>useTeiEditor</code>.
       </p>
-      <Showcase />
+      {/* The document is in the page's HTML: no blank editor while scripts load. */}
+      <Showcase initialHTML={renderToHTML(DEMO, { extensions: EXTENSIONS, from: 'html' })} />
     </>
   );
 }

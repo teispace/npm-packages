@@ -10,15 +10,41 @@ import {
   useContext,
   useLayoutEffect,
   useState,
+  useSyncExternalStore,
 } from 'react';
 import type { TeiEditor } from '../core/editor.js';
+import { neutralizeAttributes } from '../utils/html-attributes.js';
 import { TeiEditorContext } from './context.js';
+import { cx } from './ui/context.js';
 
 export interface ContentEditableProps
   extends Omit<ComponentPropsWithoutRef<'div'>, 'contentEditable' | 'placeholder' | 'children'> {
   /** Shown while the document is empty. */
   placeholder?: string;
+  /**
+   * The document as HTML, for the server to render until the editor
+   * mounts: the page shows the content at once, with no blank editor and
+   * no layout shift. Pass what `renderToHTML` from
+   * `@teispace/teieditor/server` gives for the same content and
+   * extensions. It is written into the page, so it must be that output
+   * (or as trusted), never raw user input. Its `style` attributes are
+   * held back (a strict CSP would report them) and `on*` attributes
+   * dropped; the editor puts the styles on as it mounts. Only server
+   * markup uses it: a page rendered in the browser starts the editor
+   * straight away.
+   */
+  initialHTML?: string;
 }
+
+const noSubscribe = () => () => {};
+
+/** True on the server and while hydrating its markup; false after, and in a client render. */
+const useServerMarkup = () =>
+  useSyncExternalStore(
+    noSubscribe,
+    () => false,
+    () => true,
+  );
 
 /**
  * The editable document. Stable hooks for styling: `data-tei-content` always,
@@ -28,7 +54,10 @@ export interface ContentEditableProps
 export const ContentEditable = forwardRef<
   HTMLDivElement,
   ContentEditableProps & { editor: TeiEditor }
->(function ContentEditable({ editor, placeholder, className, role = 'textbox', ...rest }, ref) {
+>(function ContentEditable(
+  { editor, placeholder, initialHTML, className, role = 'textbox', ...rest },
+  ref,
+) {
   const [editable, setEditable] = useState(() => editor.isEditable);
   // Unknown until mounted: server markup never shows the placeholder over
   // content that is about to arrive. The layout effect sets it before paint.
@@ -45,8 +74,11 @@ export const ContentEditable = forwardRef<
     };
   }, [editor]);
 
+  const serverMarkup = useServerMarkup() && Boolean(initialHTML);
+
   const setRoot = useCallback(
     (element: HTMLDivElement | null) => {
+      // Lexical empties the root as it takes it: the server's HTML, if any, goes here.
       editor.lexical.setRootElement(element?.ownerDocument?.defaultView ? element : null);
       if (typeof ref === 'function') ref(element);
       else if (ref) ref.current = element;
@@ -58,7 +90,12 @@ export const ContentEditable = forwardRef<
     <div
       {...rest}
       ref={setRoot}
-      className={className}
+      className={serverMarkup ? cx(className, 'tei-prose') : className}
+      // React hydrates this as it is and never writes it again; the editor takes over on mount.
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: server markup only, from renderToHTML, with styles and handlers taken out
+      dangerouslySetInnerHTML={
+        serverMarkup ? { __html: neutralizeAttributes(initialHTML as string) } : undefined
+      }
       role={role}
       aria-multiline={role === 'textbox' ? true : undefined}
       aria-readonly={editable ? undefined : true}

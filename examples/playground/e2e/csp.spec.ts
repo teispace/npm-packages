@@ -172,6 +172,42 @@ test('server-rendered content: styled, static, and nothing reported', async ({ p
   await expectNoViolations(page);
 });
 
+test('the editor is in the server HTML, and stays put as it mounts', async ({ browser, page }) => {
+  /** Each block's height, and whether the server held back a font size in it. */
+  const layout = (content: Locator) =>
+    content.evaluate((el) =>
+      [...el.children].map((child) => ({
+        height: Math.round(child.getBoundingClientRect().height),
+        sized: child.querySelector('[data-tei-style*="font-size"]') !== null,
+      })),
+    );
+
+  // Without scripts: what a reader sees before the editor loads.
+  const still = await browser.newContext({ javaScriptEnabled: false });
+  const before = await still.newPage();
+  await before.goto(`/?run=${runId()}`);
+  const server = before.locator('[data-tei-content]');
+  await expect(server.getByRole('heading', { level: 1 })).toHaveText('Welcome to teieditor');
+  await expect(server).toHaveClass(/tei-prose/);
+  const served = await layout(server);
+  await still.close();
+
+  const editor = await open(page, '/');
+  // The editor's own DOM now, with the text styles the server held back.
+  await expect(editor.locator('.tei-h1')).toHaveText('Welcome to teieditor');
+  await expect(editor).not.toHaveClass(/tei-prose/);
+  await expect(editor.getByText('colour', { exact: true })).toHaveCSS('color', 'rgb(220, 38, 38)');
+  const mounted = await layout(editor);
+  expect(mounted).toHaveLength(served.length);
+  // Every block is as tall as the server drew it, but one whose font size
+  // waited for the editor (a strict CSP blocks style attributes).
+  expect(served.filter((block) => block.sized)).toHaveLength(1);
+  for (const [i, block] of served.entries()) {
+    if (!block.sized) expect(Math.abs((mounted[i]?.height ?? 0) - block.height)).toBeLessThanOrEqual(1);
+  }
+  await expectNoViolations(page);
+});
+
 /** WCAG contrast ratio between two `rgb()`/`rgba()` colours, alpha composited over the second. */
 function contrast(fg: string, bg: string): number {
   const parse = (c: string) => (c.match(/[\d.]+/g) ?? []).map(Number);

@@ -1,16 +1,17 @@
 'use client';
 
-import { StarterKit } from '@teispace/teieditor/extensions/starter-kit';
 import { Editor, type EditorPreset, useEditorState, useTeiEditor } from '@teispace/teieditor/react';
 import { useState } from 'react';
 import { Choice } from '@/components/choice';
 import { DEMO } from '@/content';
+import { EXTENSIONS } from '@/extensions';
 
 const PRESETS = ['full', 'notion', 'minimal'] as const satisfies readonly EditorPreset[];
 const FORMATS = ['html', 'markdown', 'json', 'text'] as const;
 
-export function Showcase() {
-  const editor = useTeiEditor({ extensions: [StarterKit], content: DEMO });
+/** `initialHTML`: the document as the server rendered it, shown until the editor mounts. */
+export function Showcase({ initialHTML }: { initialHTML?: string }) {
+  const editor = useTeiEditor({ extensions: EXTENSIONS, content: DEMO });
   const [preset, setPreset] = useState<EditorPreset>('full');
   const [editable, setEditable] = useState(true);
   const [sticky, setSticky] = useState(true);
@@ -26,6 +27,7 @@ export function Showcase() {
         editable={editable}
         stickyToolbar={sticky}
         placeholder="Write something…"
+        initialHTML={initialHTML}
       />
       <aside className="panel" aria-label="Settings">
         <h2>Settings</h2>
