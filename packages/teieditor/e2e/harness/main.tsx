@@ -1,0 +1,230 @@
+import { StrictMode, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import type { TeiEditor } from '../../src/core/editor';
+import { Html } from '../../src/extensions/html/index';
+import { StarterKit } from '../../src/extensions/starter-kit/index';
+import {
+  Button,
+  ColorPicker,
+  Dialog,
+  DropdownMenu,
+  EditorContent,
+  Field,
+  GridPicker,
+  Input,
+  type MenuGroupData,
+  Separator,
+  Toolbar,
+  useEditorState,
+  useTeiEditor,
+} from '../../src/react/index';
+import { neutralizeAttributes, restoreStyles } from '../../src/utils/html-attributes';
+
+declare global {
+  interface Window {
+    __tei: {
+      editor: TeiEditor;
+      violations: string[];
+      log: string[];
+      setClipSource: (html: string, raw?: boolean) => void;
+      trust: (html: string) => string;
+    };
+  }
+}
+
+const violations: string[] = [];
+document.addEventListener('securitypolicyviolation', (event) => {
+  violations.push(
+    `${event.violatedDirective} ${event.blockedURI} ${event.sample} at ${event.sourceFile}:${event.lineNumber}`,
+  );
+});
+const log: string[] = [];
+
+// Tests copy from here and paste into the editor: a real clipboard round trip.
+const e2ePolicy = (
+  window as {
+    trustedTypes?: {
+      createPolicy(
+        name: string,
+        rules: { createHTML(s: string): string },
+      ): {
+        createHTML(s: string): unknown;
+      };
+    };
+  }
+).trustedTypes?.createPolicy('e2e', { createHTML: (html) => html });
+const trust = (html: string) => (e2ePolicy ? e2ePolicy.createHTML(html) : html) as string;
+/** `raw` keeps handlers in the source, for tests of hostile clipboards. */
+function setClipSource(html: string, raw = false) {
+  const source = document.getElementById('clip-source') as HTMLElement;
+  // A strict style-src blocks the markup's styles (Firefox drops their text
+  // too); apply them through the CSSOM, as the editor's own import does.
+  source.innerHTML = trust(raw ? html : neutralizeAttributes(html));
+  restoreStyles(source);
+  const selection = getSelection();
+  selection?.selectAllChildren(source);
+}
+
+const params = new URLSearchParams(location.search);
+
+const GROUPS: MenuGroupData[] = [
+  {
+    id: 'basic',
+    label: 'Basic',
+    items: [
+      { id: 'one', label: 'One', icon: 'bold', shortcut: '⌘B', onSelect: () => log.push('one') },
+      {
+        id: 'two',
+        label: 'Two',
+        description: 'With a description',
+        onSelect: () => log.push('two'),
+      },
+      { id: 'off', label: 'Disabled', disabled: true },
+      {
+        id: 'more',
+        label: 'More',
+        items: [
+          { id: 'sub-a', label: 'Sub A', onSelect: () => log.push('sub-a') },
+          { id: 'sub-b', label: 'Sub B', onSelect: () => log.push('sub-b') },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'danger',
+    items: [
+      { id: 'delete', label: 'Delete', variant: 'danger', onSelect: () => log.push('delete') },
+    ],
+  },
+];
+
+const SWATCHES = [
+  { value: '#e03131', label: 'Red' },
+  { value: '#2f9e44', label: 'Green' },
+  { value: '#1971c2', label: 'Blue' },
+  { value: '#f08c00', label: 'Orange' },
+];
+
+function EditorToolbar({ editor }: { editor: TeiEditor }) {
+  const items = editor.items('toolbar');
+  const state = useEditorState(
+    (e) =>
+      items.map((item) => ({
+        active: item.active
+          ? (e.isActive as (name: string, ...args: unknown[]) => boolean)(
+              item.active,
+              ...(item.activeArgs ?? []),
+            )
+          : false,
+        enabled: item.command
+          ? e.can().command(item.command, ...((item.args ?? []) as unknown[]))
+          : true,
+      })),
+    { editor, equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) },
+  );
+  return (
+    <Toolbar aria-label="Formatting">
+      {items.map((item, i) => [
+        i > 0 && items[i - 1]?.group !== item.group ? <Separator key={`sep-${item.id}`} /> : null,
+        <Button
+          key={item.id}
+          data-item={item.id}
+          icon={item.icon}
+          label={editor.t(item.label)}
+          shortcut={item.shortcut ? editor.shortcut(item.shortcut) : undefined}
+          pressed={item.active ? state[i]?.active : undefined}
+          disabled={!state[i]?.enabled}
+          onClick={() => editor.runItem(item)}
+        />,
+      ])}
+    </Toolbar>
+  );
+}
+
+function App() {
+  const editor = useTeiEditor({
+    extensions: [StarterKit, ...(params.has('raw') ? [Html.configure({ clean: false })] : [])],
+    content: params.get('content') ?? '<p>Hello world</p>',
+  });
+  const [dialog, setDialog] = useState(false);
+  const [color, setColor] = useState<string | null>(null);
+  window.__tei = { editor, violations, log, setClipSource, trust };
+  return (
+    <main className="tei" data-testid="root">
+      <section data-testid="editor">
+        <EditorToolbar editor={editor} />
+        <EditorContent editor={editor} placeholder="Write something…" data-testid="content" />
+      </section>
+      <section className="gallery" data-testid="gallery">
+        <DropdownMenu label="Menu" groups={GROUPS} data-testid="menu-trigger">
+          Menu
+        </DropdownMenu>
+        <DropdownMenu
+          label="Colour"
+          data-testid="color-trigger"
+          content={(close) => (
+            <ColorPicker
+              value={color}
+              swatches={SWATCHES}
+              onChange={(value) => {
+                setColor(value);
+                close();
+              }}
+            />
+          )}
+        >
+          Colour {color ?? 'none'}
+        </DropdownMenu>
+        <DropdownMenu
+          label="Table"
+          data-testid="grid-trigger"
+          content={(close) => (
+            <GridPicker
+              onPick={(rows, columns) => {
+                log.push(`grid ${rows}x${columns}`);
+                close();
+              }}
+            />
+          )}
+        >
+          Table
+        </DropdownMenu>
+        <Button variant="outline" data-testid="dialog-trigger" onClick={() => setDialog(true)}>
+          Open dialog
+        </Button>
+        <Dialog
+          open={dialog}
+          onOpenChange={setDialog}
+          title="Insert link"
+          description="Paste or type a URL."
+          onSubmit={() => {
+            log.push('dialog submit');
+            setDialog(false);
+          }}
+          footer={
+            <Button variant="solid" type="submit" data-testid="dialog-submit">
+              Insert
+            </Button>
+          }
+        >
+          <Field label="URL">
+            {(field) => <Input {...field} data-testid="dialog-input" placeholder="https://" />}
+          </Field>
+        </Dialog>
+      </section>
+      <div className="corner">
+        <DropdownMenu label="Corner" groups={GROUPS} data-testid="corner-trigger">
+          Corner
+        </DropdownMenu>
+      </div>
+      <div id="clip-source" data-testid="clip-source" />
+      {params.has('tall') ? <div className="tall" /> : null}
+    </main>
+  );
+}
+
+createRoot(document.getElementById('app') as HTMLElement).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

@@ -72,9 +72,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit && tsc -p e2e",
     "clean": "rm -rf dist",
-    "prepublishOnly": "yarn clean && yarn build"
+    "prepublishOnly": "yarn clean && yarn build",
+    "test:e2e": "playwright test -c e2e/playwright.config.ts",
+    "test:types": "tsc -p type-tests/kit && tsc -p type-tests/single"
   },
   "engines": {
     "node": ">=20.9.0"
@@ -135,6 +137,7 @@
     "@floating-ui/dom": "^1.8.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@lexical/a11y": "^0.52.0",
     "@lexical/clipboard": "^0.52.0",
     "@lexical/code-core": "^0.52.0",
@@ -162,6 +165,7 @@
     "@lexical/text": "^0.52.0",
     "@lexical/utils": "^0.52.0",
     "@lexical/yjs": "^0.52.0",
+    "@playwright/test": "^1.64.1",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",

@@ -1,0 +1,36 @@
+/* Page chrome only: the editor's look comes from styles.css alone. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  color-scheme: light dark;
+}
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: Canvas;
+  color: CanvasText;
+}
+main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 16px 120px;
+  display: grid;
+  gap: 24px;
+}
+.gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.corner {
+  position: fixed;
+  inset-block-end: 8px;
+  inset-inline-end: 8px;
+}
+.tall {
+  block-size: 1200px;
+}

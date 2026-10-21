@@ -1,0 +1,73 @@
+import { test as base, expect, type Locator, type Page } from '@playwright/test';
+
+export interface Harness {
+  page: Page;
+  content: Locator;
+  /** Open the harness, optionally with initial HTML and flags (`raw`, `tall`). */
+  open(options?: { content?: string; flags?: string[] }): Promise<void>;
+  html(): Promise<string>;
+  text(): Promise<string>;
+  /** Put the caret at the end of the document. */
+  caretAtEnd(): Promise<void>;
+  /** Select the document's text, as a user would with ⌘A. */
+  selectAll(): Promise<void>;
+  log(): Promise<string[]>;
+  /** Forget console errors and CSP reports so far (ones the test caused on purpose). */
+  forgetProblems(): Promise<void>;
+}
+
+/**
+ * Every test fails on a page error, a console error or a CSP violation:
+ * the editor must work under the strict policy with nothing logged.
+ */
+export const test = base.extend<{ tei: Harness }>({
+  tei: async ({ page }, use) => {
+    const problems: string[] = [];
+    page.on('pageerror', (error) => problems.push(`pageerror: ${error.message}`));
+    page.on('console', (message) => {
+      if (message.type() === 'error') problems.push(`console: ${message.text()}`);
+    });
+    const content = page.getByTestId('content');
+    const harness: Harness = {
+      page,
+      content,
+      async open({ content: html, flags = [] } = {}) {
+        const params = new URLSearchParams(flags.map((flag) => [flag, '']));
+        if (html !== undefined) params.set('content', html);
+        await page.goto(`/?${params}`);
+        await expect(content).toBeVisible();
+      },
+      html: () => page.evaluate(() => window.__tei.editor.getHTML()),
+      text: () => page.evaluate(() => window.__tei.editor.getText()),
+      async caretAtEnd() {
+        await content.click();
+        await page.keyboard.press('ControlOrMeta+End');
+        // WebKit on macOS has no ⌘End; move by document instead.
+        await page.evaluate(() => {
+          const root = document.querySelector('[data-tei-content]');
+          const selection = getSelection();
+          if (root && selection) selection.selectAllChildren(root);
+          selection?.collapseToEnd();
+        });
+      },
+      async selectAll() {
+        await content.click();
+        await page.keyboard.press('ControlOrMeta+a');
+      },
+      log: () => page.evaluate(() => [...window.__tei.log]),
+      async forgetProblems() {
+        problems.length = 0;
+        await page.evaluate(() => {
+          window.__tei.violations.length = 0;
+        });
+      },
+    };
+    await use(harness);
+    const violations = await page
+      .evaluate(() => window.__tei?.violations ?? [])
+      .catch(() => [] as string[]);
+    expect([...problems, ...violations.map((v) => `csp: ${v}`)]).toEqual([]);
+  },
+});
+
+export { expect };

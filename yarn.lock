@@ -37,6 +37,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@axe-core/playwright@npm:^4.14.0":
+  version: 4.14.0
+  resolution: "@axe-core/playwright@npm:4.14.0"
+  dependencies:
+    axe-core: "npm:~4.14.0"
+  peerDependencies:
+    playwright-core: ">= 1.0.0"
+  checksum: 10c0/a42bca2305bbb80a374be9ff6642cac7b45f5f0aef1be9170ae42617c3423501ab1a33c8581641a71554a0c6a69f6ca512a5cc6e320ed197339a9ac4edfa713c
+  languageName: node
+  linkType: hard
+
 "@babel/code-frame@npm:^7.0.0, @babel/code-frame@npm:^7.10.4, @babel/code-frame@npm:^7.28.6, @babel/code-frame@npm:^7.29.0":
   version: 7.29.0
   resolution: "@babel/code-frame@npm:7.29.0"
@@ -3159,6 +3170,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@teispace/teieditor@workspace:packages/teieditor"
   dependencies:
+    "@axe-core/playwright": "npm:^4.14.0"
     "@floating-ui/dom": "npm:^1.8.0"
     "@lexical/a11y": "npm:^0.52.0"
     "@lexical/clipboard": "npm:^0.52.0"
@@ -3187,6 +3199,7 @@ __metadata:
     "@lexical/text": "npm:^0.52.0"
     "@lexical/utils": "npm:^0.52.0"
     "@lexical/yjs": "npm:^0.52.0"
+    "@playwright/test": "npm:^1.64.1"
     "@testing-library/react": "npm:^16.3.3"
     "@types/node": "npm:^26.6.5"
     "@types/react": "npm:^19.3.0"
@@ -3664,6 +3677,13 @@ __metadata:
   version: 1.0.0
   resolution: "at-least-node@npm:1.0.0"
   checksum: 10c0/4c058baf6df1bc5a1697cf182e2029c58cd99975288a13f9e70068ef5d6f4e1f1fd7c4d2c3c4912eae44797d1725be9700995736deca441b39f3e66d8dee97ef
+  languageName: node
+  linkType: hard
+
+"axe-core@npm:~4.14.0":
+  version: 4.14.0
+  resolution: "axe-core@npm:4.14.0"
+  checksum: 10c0/8aaa0bf748e0dcf202e8f837951a37b28b4b62d639bed58c07a6890bf035ed6a11ede9f4006db9ca8041db821dc80476c27cff08fd70afa9195ee58fb995a958
   languageName: node
   linkType: hard
 
