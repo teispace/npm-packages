@@ -130,7 +130,7 @@ function entries(): Record<string, string> {
       }
     }
   }
-  for (const single of ['react', 'server', 'cli']) {
+  for (const single of ['react', 'icons', 'server', 'cli']) {
     for (const file of ['index.ts', 'index.tsx']) {
       const source = path.join('src', single, file);
       if (existsSync(source)) found[`${single}/index`] = source;

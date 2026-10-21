@@ -1,4 +1,8 @@
-import { getExtensionDependencyFromEditor } from '@lexical/extension';
+import {
+  formatKeyboardShortcut,
+  getExtensionDependencyFromEditor,
+  KeyboardShortcutsExtension,
+} from '@lexical/extension';
 import {
   $getRoot,
   $getSelection,
@@ -20,6 +24,7 @@ import type {
   TeiContext,
   TeiEventName,
   TeiEvents,
+  TeiIconNode,
   TeiItem,
   TeiPlacement,
 } from './types.js';
@@ -355,6 +360,24 @@ export class TeiEditor {
     return values
       ? message.replace(/\{(\w+)\}/g, (m, k: string) => String(values[k] ?? m))
       : message;
+  }
+
+  /** An icon by name, as registered by extensions or replaced by the app. */
+  icon(name: string): TeiIconNode | undefined {
+    return this.#config.icons[name];
+  }
+
+  /**
+   * A shortcut's keys for display, by keymap entry name: `['⌘', 'B']` on
+   * Apple platforms, `['Ctrl', 'B']` elsewhere. `undefined` when the entry
+   * does not exist or was disabled.
+   */
+  shortcut(name: string): string[] | undefined {
+    const table = this.extension(KeyboardShortcutsExtension)?.config.shortcuts[name];
+    const first = Array.isArray(table) ? table[0] : table;
+    return first
+      ? formatKeyboardShortcut(first as Parameters<typeof formatKeyboardShortcut>[0])
+      : undefined;
   }
 
   /** Run an item: its function, or its named command with arguments. */

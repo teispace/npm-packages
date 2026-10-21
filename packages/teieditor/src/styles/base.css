@@ -1,0 +1,120 @@
+/*
+ * The editor frame and the editable root. Part hooks are stable attributes
+ * (`data-tei-*`), so app CSS can target them without depending on classes.
+ */
+@layer teieditor {
+  .tei {
+    container: tei / inline-size;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    background: var(--tei-bg);
+    color: var(--tei-fg);
+    font-family: var(--tei-font);
+    font-size: var(--tei-font-size);
+    line-height: var(--tei-line-height);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  .tei[data-tei-bordered] {
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius-lg);
+  }
+
+  .tei[data-tei-bordered]:focus-within {
+    border-color: var(--tei-border-strong);
+  }
+
+  .tei *,
+  .tei *::before,
+  .tei *::after,
+  .tei-portal *,
+  .tei-portal *::before,
+  .tei-portal *::after {
+    box-sizing: border-box;
+  }
+
+  [data-tei-content] {
+    position: relative;
+    flex: 1 1 auto;
+    min-block-size: var(--tei-content-min-height, 8rem);
+    max-inline-size: var(--tei-content-max-width);
+    inline-size: 100%;
+    margin-inline: auto;
+    padding: var(--tei-content-padding);
+    outline: none;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    word-break: break-word;
+    caret-color: var(--tei-fg);
+    tab-size: 4;
+  }
+
+  [data-tei-content]::selection,
+  [data-tei-content] *::selection {
+    background: var(--tei-selection);
+  }
+
+  [data-tei-content][data-tei-readonly] {
+    caret-color: transparent;
+    cursor: default;
+  }
+
+  /* The placeholder: drawn from an attribute, so a strict `style-src` needs
+   * nothing for it, and positioned over the first block so it lines up with
+   * the caret whatever that block's margin. */
+  [data-tei-content][data-tei-empty][data-placeholder]::before {
+    content: attr(data-placeholder);
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    padding: var(--tei-content-padding);
+    color: var(--tei-fg-placeholder);
+    pointer-events: none;
+    user-select: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Per-block placeholders ("Heading 1", "Type / for commands"), set by the
+   * placeholder extension on the empty block under the caret. */
+  [data-tei-content] [data-tei-placeholder]:empty::before,
+  [data-tei-content] [data-tei-placeholder]:has(> br:only-child)::before {
+    content: attr(data-tei-placeholder);
+    position: absolute;
+    color: var(--tei-fg-placeholder);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  [data-tei-content]:not(:focus) [data-tei-placeholder][data-tei-placeholder-focus]::before {
+    content: none;
+  }
+
+  .tei :focus-visible,
+  .tei-portal :focus-visible {
+    outline: 2px solid var(--tei-ring);
+    outline-offset: 1px;
+  }
+
+  [data-tei-content]:focus-visible {
+    outline: none;
+  }
+
+  /* Visually hidden, still announced. */
+  .tei-sr-only {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}

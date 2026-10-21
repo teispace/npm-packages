@@ -1,0 +1,92 @@
+'use client';
+
+import {
+  autoUpdate,
+  computePosition,
+  flip,
+  hide,
+  type Middleware,
+  offset,
+  type Placement,
+  shift,
+  size,
+  type VirtualElement,
+} from '@floating-ui/dom';
+import { type RefObject, useLayoutEffect } from 'react';
+
+export type { Placement, VirtualElement };
+
+/** What a floating element is placed against: an element, or a rectangle (a text selection). */
+export type FloatingAnchor = Element | VirtualElement;
+
+export interface FloatingOptions {
+  placement?: Placement;
+  /** Gap between anchor and floating element, in px. Default 6. */
+  offset?: number;
+  /** Keep at least this far from the viewport edges, in px. Default 8. */
+  padding?: number;
+  /** Make the floating element at least as wide as the anchor. */
+  matchWidth?: boolean;
+  /** Stay on the given side instead of flipping when there is no room. */
+  noFlip?: boolean;
+}
+
+/**
+ * Place `floating` next to `anchor` and keep it there through scrolling,
+ * resizing and layout shifts, until `active` turns false.
+ *
+ * It writes `translate` and two custom properties through the CSSOM, which
+ * a strict `style-src` allows, and `data-side` for side-aware styling.
+ * `translate` leaves `transform` free for enter animations.
+ */
+export function positionFloating(
+  anchor: FloatingAnchor,
+  floating: HTMLElement,
+  options: FloatingOptions = {},
+): () => void {
+  const { placement = 'bottom-start', padding = 8, matchWidth, noFlip } = options;
+  const middleware: Middleware[] = [
+    offset(options.offset ?? 6),
+    noFlip ? false : flip({ padding }),
+    shift({ padding }),
+    size({
+      padding,
+      apply({ availableHeight, availableWidth, rects, elements }) {
+        const style = elements.floating.style;
+        style.setProperty(
+          '--tei-available-height',
+          `${Math.max(96, Math.floor(availableHeight))}px`,
+        );
+        style.setProperty('--tei-available-width', `${Math.max(96, Math.floor(availableWidth))}px`);
+        if (matchWidth) style.minWidth = `${Math.round(rects.reference.width)}px`;
+      },
+    }),
+    hide({ padding }),
+  ].filter(Boolean) as Middleware[];
+
+  const update = () => {
+    computePosition(anchor, floating, { strategy: 'fixed', placement, middleware }).then(
+      ({ x, y, placement: side, middlewareData }) => {
+        floating.style.translate = `${Math.round(x)}px ${Math.round(y)}px`;
+        floating.dataset.side = side.split('-')[0];
+        floating.style.visibility = middlewareData.hide?.referenceHidden ? 'hidden' : '';
+      },
+    );
+  };
+  return autoUpdate(anchor, floating, update, { animationFrame: !(anchor instanceof Element) });
+}
+
+/** {@link positionFloating} as a hook. */
+export function useFloating(
+  anchor: FloatingAnchor | null | undefined,
+  floating: RefObject<HTMLElement | null>,
+  active: boolean,
+  options: FloatingOptions = {},
+): void {
+  const { placement, offset: gap, padding, matchWidth, noFlip } = options;
+  useLayoutEffect(() => {
+    const el = floating.current;
+    if (!active || !anchor || !el) return;
+    return positionFloating(anchor, el, { placement, offset: gap, padding, matchWidth, noFlip });
+  }, [anchor, floating, active, placement, gap, padding, matchWidth, noFlip]);
+}

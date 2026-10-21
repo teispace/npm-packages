@@ -26,6 +26,7 @@ import type {
   TeiCommandMiddleware,
   TeiContext,
   TeiEvents,
+  TeiIconNode,
   TeiItem,
   TeiKeyBinding,
 } from './types.js';
@@ -88,6 +89,8 @@ export interface TeiExtensionSpec<Name extends string, Config extends AnyConfig,
   items?: readonly TeiItem[];
   /** Default English strings for this extension's UI, by id. */
   messages?: Record<string, string>;
+  /** Icons this extension's items use, by name. Apps replace them by the same name. */
+  icons?: Record<string, TeiIconNode>;
   /** Content formats this extension can read and write. */
   formats?: Record<string, TeiFormat>;
   /** Wrap every command run. */
@@ -225,6 +228,7 @@ export function defineTeiExtension<
   }
   if (spec.items) core.items = Object.fromEntries(spec.items.map((item) => [item.id, item]));
   if (spec.messages) core.messages = spec.messages;
+  if (spec.icons) core.icons = spec.icons;
   if (spec.formats) core.formats = spec.formats;
   if (spec.middleware) core.middleware = spec.middleware;
   const events: Record<string, unknown[]> = {};

@@ -11,6 +11,7 @@ import {
 import { TeiEditor } from './editor.js';
 import { jsonFormat, textFormat } from './formats.js';
 import { PARENT, type WithParent } from './internal.js';
+import { teiTheme } from './theme.js';
 import type {
   TeiActiveCheck,
   TeiCommandMiddleware,
@@ -18,6 +19,7 @@ import type {
   TeiContext,
   TeiEventName,
   TeiEvents,
+  TeiIconNode,
   TeiItem,
 } from './types.js';
 
@@ -43,6 +45,7 @@ export interface TeiCoreConfig {
   active: Readonly<Record<string, TeiActiveCheck | null>>;
   items: Readonly<Record<string, TeiItem | null>>;
   messages: Readonly<Record<string, string>>;
+  icons: Readonly<Record<string, TeiIconNode>>;
   formats: Readonly<Record<string, TeiFormat | null>>;
   middleware: readonly TeiCommandMiddleware[];
   events: Partial<EventLists>;
@@ -72,11 +75,14 @@ function mergeEvents(base: Partial<EventLists>, overrides: Partial<EventLists> |
 
 export const TeiCoreExtension = defineExtension({
   name: '@teispace/teieditor/core',
+  // The default classes; the app's `theme` option is deep-merged over them.
+  theme: teiTheme,
   config: safeCast<TeiCoreConfig>({
     commands: {},
     active: {},
     items: {},
     messages: {},
+    icons: {},
     formats: { json: jsonFormat, text: textFormat },
     middleware: [],
     events: {},
@@ -87,6 +93,7 @@ export const TeiCoreExtension = defineExtension({
     merged.active = { ...config.active, ...overrides.active };
     merged.items = { ...config.items, ...overrides.items };
     merged.messages = { ...config.messages, ...overrides.messages };
+    merged.icons = { ...config.icons, ...overrides.icons };
     merged.formats = { ...config.formats, ...overrides.formats };
     merged.middleware = [...config.middleware, ...(overrides.middleware ?? [])];
     merged.events = mergeEvents(config.events, overrides.events);

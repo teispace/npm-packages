@@ -1,0 +1,646 @@
+/*
+ * Document styles: one rule set per class in `teiTheme`. Spacing is in `em`
+ * so a different `--tei-font-size` scales the whole document; physical
+ * directions are logical, so RTL documents need nothing extra.
+ */
+@layer teieditor {
+  /* Blocks */
+  .tei-p {
+    margin: 0 0 0.75em;
+  }
+
+  .tei-h1,
+  .tei-h2,
+  .tei-h3,
+  .tei-h4,
+  .tei-h5,
+  .tei-h6 {
+    margin: 1.4em 0 0.5em;
+    color: var(--tei-fg);
+    font-weight: 650;
+    letter-spacing: -0.012em;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+
+  .tei-h1 {
+    font-size: 2.125em;
+    letter-spacing: -0.022em;
+  }
+
+  .tei-h2 {
+    font-size: 1.625em;
+    letter-spacing: -0.018em;
+  }
+
+  .tei-h3 {
+    font-size: 1.3125em;
+  }
+
+  .tei-h4 {
+    font-size: 1.125em;
+  }
+
+  .tei-h5 {
+    font-size: 1em;
+  }
+
+  .tei-h6 {
+    font-size: 0.875em;
+    color: var(--tei-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  [data-tei-content] > :first-child {
+    margin-block-start: 0;
+  }
+
+  [data-tei-content] > :last-child {
+    margin-block-end: 0;
+  }
+
+  .tei-quote {
+    margin: 0 0 0.75em;
+    padding-inline-start: 1em;
+    border-inline-start: 3px solid var(--tei-quote-border);
+    color: var(--tei-fg-muted);
+  }
+
+  .tei-hr {
+    position: relative;
+    block-size: 1.5em;
+    margin: 0.5em 0;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .tei-hr::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 50%;
+    border-block-start: 1px solid var(--tei-border-strong);
+  }
+
+  .tei-hr-selected {
+    outline: 2px solid var(--tei-ring);
+    border-radius: var(--tei-radius-sm);
+  }
+
+  .tei-indent {
+    --tei-indent: 1.75em;
+  }
+
+  /* Inline code and the code block */
+  .tei-code {
+    padding: 0.125em 0.3em;
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-code-bg);
+    color: var(--tei-code-fg);
+    font-family: var(--tei-font-mono);
+    font-size: 0.875em;
+  }
+
+  .tei-code-block {
+    position: relative;
+    display: block;
+    margin: 0 0 0.75em;
+    padding: 2.25em 1em 1em 3.75em;
+    overflow-x: auto;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius);
+    background: var(--tei-code-block-bg);
+    color: var(--tei-code-fg);
+    font-family: var(--tei-font-mono);
+    font-size: 0.875em;
+    line-height: 1.6;
+    tab-size: 2;
+    white-space: pre;
+    counter-reset: tei-line;
+  }
+
+  /* Line numbers come from Lexical's `data-gutter` ("1\n2\n3"). */
+  .tei-code-block::before {
+    content: attr(data-gutter);
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    min-inline-size: 2.75em;
+    padding: 2.25em 0.5em 1em;
+    border-inline-end: 1px solid var(--tei-border);
+    background: var(--tei-bg-subtle);
+    color: var(--tei-fg-subtle);
+    text-align: end;
+    white-space: pre-wrap;
+    user-select: none;
+  }
+
+  .tei-code-block[data-tei-no-gutter] {
+    padding-inline-start: 1em;
+  }
+
+  .tei-code-block[data-tei-no-gutter]::before {
+    content: none;
+  }
+
+  .tei-token-comment {
+    color: var(--tei-token-comment);
+    font-style: italic;
+  }
+
+  .tei-token-punctuation {
+    color: var(--tei-token-punctuation);
+  }
+
+  .tei-token-keyword {
+    color: var(--tei-token-keyword);
+  }
+
+  .tei-token-string,
+  .tei-token-inserted {
+    color: var(--tei-token-string);
+  }
+
+  .tei-token-function,
+  .tei-token-builtin {
+    color: var(--tei-token-function);
+  }
+
+  .tei-token-constant {
+    color: var(--tei-token-constant);
+  }
+
+  .tei-token-property,
+  .tei-token-attr {
+    color: var(--tei-token-property);
+  }
+
+  .tei-token-tag,
+  .tei-token-deleted {
+    color: var(--tei-token-tag);
+  }
+
+  .tei-token-variable {
+    color: var(--tei-token-variable);
+  }
+
+  .tei-token-operator {
+    color: var(--tei-token-operator);
+  }
+
+  /* Lists */
+  .tei-ul,
+  .tei-ol,
+  .tei-checklist {
+    margin: 0 0 0.75em;
+    padding: 0;
+    padding-inline-start: 1.625em;
+  }
+
+  .tei-ul-2 {
+    list-style-type: circle;
+  }
+
+  .tei-ul-3 {
+    list-style-type: square;
+  }
+
+  .tei-ol-2 {
+    list-style-type: lower-alpha;
+  }
+
+  .tei-ol-3 {
+    list-style-type: lower-roman;
+  }
+
+  .tei-ol-4 {
+    list-style-type: upper-alpha;
+  }
+
+  .tei-ol-5 {
+    list-style-type: upper-roman;
+  }
+
+  .tei-li {
+    margin: 0.2em 0;
+    padding-inline-start: 0.25em;
+  }
+
+  .tei-li::marker {
+    color: var(--tei-fg-muted);
+  }
+
+  .tei-li-nested {
+    list-style-type: none;
+  }
+
+  .tei-li-nested::before,
+  .tei-li-nested::marker {
+    content: none;
+    display: none;
+  }
+
+  .tei-li > :where(.tei-ul, .tei-ol, .tei-checklist) {
+    margin-block-end: 0;
+  }
+
+  /* Check list: the box is drawn on the item and toggled by a click in the
+   * gutter (Lexical's CheckListExtension handles the hit test). */
+  .tei-checklist {
+    padding-inline-start: 0;
+    list-style: none;
+  }
+
+  .tei-li-checked,
+  .tei-li-unchecked {
+    position: relative;
+    padding-inline-start: 1.75em;
+    list-style: none;
+    outline: none;
+  }
+
+  .tei-li-checked::before,
+  .tei-li-unchecked::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0.125em;
+    inset-block-start: calc((1lh - 1.05em) / 2);
+    inline-size: 1.05em;
+    block-size: 1.05em;
+    border: 1.5px solid var(--tei-border-strong);
+    border-radius: 0.3em;
+    background: var(--tei-bg);
+    cursor: pointer;
+    transition:
+      background-color var(--tei-duration) var(--tei-ease),
+      border-color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-li-unchecked:hover::before {
+    border-color: var(--tei-accent);
+  }
+
+  .tei-li-checked::before {
+    border-color: var(--tei-accent);
+    background: var(--tei-accent);
+  }
+
+  .tei-li-checked::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: calc(0.125em + 0.36em);
+    inset-block-start: calc((1lh - 1.05em) / 2 + 0.18em);
+    inline-size: 0.32em;
+    block-size: 0.58em;
+    border: solid var(--tei-accent-fg);
+    border-width: 0 0.13em 0.13em 0;
+    transform: rotate(45deg);
+    pointer-events: none;
+  }
+
+  .tei-li-checked {
+    color: var(--tei-fg-muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--tei-fg-subtle);
+  }
+
+  .tei-li-checked:focus-visible::before,
+  .tei-li-unchecked:focus-visible::before {
+    outline: 2px solid var(--tei-ring);
+    outline-offset: 1px;
+  }
+
+  /* Text formats. Combined decorations share one rule so they never fight. */
+  .tei-bold {
+    font-weight: 650;
+  }
+
+  .tei-italic {
+    font-style: italic;
+  }
+
+  .tei-underline {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .tei-strike {
+    text-decoration: line-through;
+  }
+
+  .tei-underline-strike {
+    text-decoration: underline line-through;
+    text-underline-offset: 0.15em;
+  }
+
+  .tei-sub {
+    font-size: 0.75em;
+    vertical-align: sub;
+  }
+
+  .tei-sup {
+    font-size: 0.75em;
+    vertical-align: super;
+  }
+
+  .tei-highlight {
+    padding: 0.05em 0;
+    border-radius: 0.15em;
+    background: var(--tei-highlight-bg);
+    color: inherit;
+  }
+
+  .tei-uppercase {
+    text-transform: uppercase;
+  }
+
+  .tei-lowercase {
+    text-transform: lowercase;
+  }
+
+  .tei-capitalize {
+    text-transform: capitalize;
+  }
+
+  .tei-link {
+    color: var(--tei-link);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklch, var(--tei-link) 40%, transparent);
+    text-underline-offset: 0.18em;
+    cursor: pointer;
+    transition: text-decoration-color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-link:hover {
+    text-decoration-color: currentColor;
+  }
+
+  .tei-mark {
+    border-block-end: 2px solid color-mix(in oklch, var(--tei-warning) 70%, transparent);
+    background: var(--tei-mark-bg);
+  }
+
+  .tei-mark-overlap {
+    background: color-mix(in oklch, var(--tei-mark-bg) 100%, var(--tei-warning) 25%);
+  }
+
+  .tei-hashtag {
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-accent-subtle);
+    color: var(--tei-accent);
+  }
+
+  .tei-tab {
+    display: inline-block;
+  }
+
+  .tei-special-text {
+    color: var(--tei-accent);
+    font-weight: 600;
+  }
+
+  .tei-autocomplete {
+    color: var(--tei-fg-subtle);
+  }
+
+  .tei-ruby rt {
+    color: var(--tei-fg-muted);
+    font-size: 0.55em;
+  }
+
+  .tei-character-limit {
+    background: var(--tei-danger-subtle);
+    text-decoration: underline wavy var(--tei-danger);
+  }
+
+  .tei-block-cursor {
+    display: block;
+    position: absolute;
+    pointer-events: none;
+  }
+
+  .tei-block-cursor::after {
+    content: "";
+    position: absolute;
+    display: block;
+    inset-block-start: -2px;
+    inline-size: 1.25em;
+    border-block-start: 1px solid var(--tei-fg);
+    animation: tei-caret-blink 1.1s steps(2, start) infinite;
+  }
+
+  @keyframes tei-caret-blink {
+    to {
+      visibility: hidden;
+    }
+  }
+
+  /* Decorator blocks (images, embeds, …) */
+  .tei-embed {
+    position: relative;
+    margin: 0 0 0.75em;
+    user-select: none;
+  }
+
+  .tei-embed-focus,
+  [data-tei-content] [data-tei-selected] {
+    outline: 2px solid var(--tei-accent);
+    outline-offset: 2px;
+    border-radius: var(--tei-radius-sm);
+  }
+
+  .tei-image {
+    display: inline-block;
+    position: relative;
+    max-inline-size: 100%;
+    vertical-align: bottom;
+  }
+
+  .tei-image img {
+    display: block;
+    max-inline-size: 100%;
+    block-size: auto;
+    border-radius: var(--tei-radius-sm);
+  }
+
+  /* Columns */
+  .tei-columns {
+    display: grid;
+    grid-template-columns: var(--tei-columns, 1fr 1fr);
+    gap: var(--tei-space-4);
+    margin: 0 0 0.75em;
+  }
+
+  .tei-column {
+    min-inline-size: 0;
+    padding: var(--tei-space-2) var(--tei-space-3);
+    border: 1px dashed transparent;
+    border-radius: var(--tei-radius-sm);
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-column {
+    border-color: var(--tei-border);
+  }
+
+  .tei-column > :last-child {
+    margin-block-end: 0;
+  }
+
+  @container tei (max-width: 40rem) {
+    .tei-columns {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Tables */
+  .tei-table-scroll {
+    position: relative;
+    margin: 0 0 0.75em;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .tei-table {
+    inline-size: max-content;
+    max-inline-size: 100%;
+    margin: 0 0 0.75em;
+    border-collapse: collapse;
+    border-spacing: 0;
+    table-layout: fixed;
+    overflow-y: hidden;
+  }
+
+  .tei-table-scroll > .tei-table {
+    max-inline-size: none;
+    margin: 0;
+  }
+
+  .tei-table-center {
+    margin-inline: auto;
+  }
+
+  .tei-table-right {
+    margin-inline-start: auto;
+  }
+
+  .tei-td,
+  .tei-th {
+    position: relative;
+    min-inline-size: 4.5rem;
+    padding: 0.4em 0.65em;
+    border: 1px solid var(--tei-border-strong);
+    vertical-align: top;
+    text-align: start;
+    outline: none;
+  }
+
+  .tei-th {
+    background: var(--tei-table-header-bg);
+    font-weight: 600;
+  }
+
+  .tei-td > :last-child,
+  .tei-th > :last-child {
+    margin-block-end: 0;
+  }
+
+  .tei-table-striped tr:nth-child(even) > .tei-td {
+    background: var(--tei-bg-subtle);
+  }
+
+  /* An overlay rather than a background: a cell's own colour is an inline
+   * style, which only !important could beat. */
+  .tei-td-selected {
+    box-shadow: inset 0 0 0 100vmax var(--tei-table-selected-bg);
+    caret-color: transparent;
+  }
+
+  .tei-table-selection *::selection {
+    background: transparent;
+  }
+
+  .tei-table-selected {
+    outline: 2px solid var(--tei-accent);
+  }
+
+  .tei-table-frozen-row tr:first-child > :is(.tei-td, .tei-th) {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+  }
+
+  .tei-table-frozen-column tr > :is(.tei-td, .tei-th):first-child {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 2;
+    background: var(--tei-table-header-bg);
+  }
+
+  .tei-td-resizer {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: -3px;
+    inline-size: 6px;
+    z-index: 3;
+    cursor: col-resize;
+  }
+
+  .tei-td-resizer:hover,
+  .tei-td-resizer[data-tei-active] {
+    background: var(--tei-accent);
+  }
+
+  .tei-td-actions {
+    position: absolute;
+    inset-block-start: 0.3em;
+    inset-inline-end: 0.3em;
+  }
+
+  .tei-td-action {
+    display: grid;
+    place-items: center;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    padding: 0;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-bg-overlay);
+    color: var(--tei-fg-muted);
+    cursor: pointer;
+  }
+
+  .tei-table-add-columns,
+  .tei-table-add-rows {
+    position: absolute;
+    border: 0;
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-bg-muted);
+    color: var(--tei-fg-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-table-add-columns:hover,
+  .tei-table-add-rows:hover {
+    background: var(--tei-bg-active);
+    opacity: 1;
+  }
+
+  /* Print: the document only, in black on white. */
+  @media print {
+    .tei {
+      color-scheme: light;
+    }
+
+    [data-tei-content] {
+      padding: 0;
+    }
+
+    .tei [data-tei-ui],
+    [data-tei-content]::before {
+      display: none;
+    }
+  }
+}

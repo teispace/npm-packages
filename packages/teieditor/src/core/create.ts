@@ -13,6 +13,7 @@ import type {
   TeiCommandMiddleware,
   TeiCommandSpec,
   TeiEvents,
+  TeiIconNode,
   TeiItem,
   TeiKeyBinding,
 } from './types.js';
@@ -53,6 +54,8 @@ export interface TeiEditorOptions extends TeiEvents {
   items?: Record<string, TeiItem | null>;
   /** Replace any UI string by id: translations, wording. */
   messages?: Record<string, string>;
+  /** Replace any icon by name. */
+  icons?: Record<string, TeiIconNode>;
   /** Wrap every command run. */
   middleware?: readonly TeiCommandMiddleware[];
 }
@@ -116,10 +119,11 @@ export function createTeiEditor(options: TeiEditorOptions): TeiEditor {
     keymap,
     items,
     messages,
+    icons,
     middleware,
   } = options;
 
-  const app: Partial<TeiCoreConfig> = { commands, items, messages, middleware };
+  const app: Partial<TeiCoreConfig> = { commands, items, messages, icons, middleware };
   const events: Record<string, unknown[]> = {};
   for (const name of [
     'onCreate',

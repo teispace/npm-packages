@@ -27,4 +27,5 @@ export type {
 export { TeiEditor } from './core/editor.js';
 export { jsonFormat, textFormat } from './core/formats.js';
 export { parseKey } from './core/keymap.js';
+export { teiTheme } from './core/theme.js';
 export type * from './core/types.js';

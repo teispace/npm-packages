@@ -1,0 +1,8 @@
+/*
+ * @teispace/teieditor/styles.css. Plain CSS in `@layer teieditor`: no
+ * Tailwind, no preprocessor, and any unlayered app rule wins over it.
+ */
+@import "./tokens.css";
+@import "./base.css";
+@import "./content.css";
+@import "./ui.css";

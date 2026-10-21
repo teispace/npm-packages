@@ -80,6 +80,16 @@ export type TeiCommandMiddleware = (
   next: (args?: unknown[]) => boolean,
 ) => boolean;
 
+/**
+ * An icon as plain data: SVG child elements on a 24×24 stroked canvas,
+ * `[['path', { d: 'M4 12h16' }], ['circle', { cx: '12', cy: '12', r: '3' }]]`.
+ * No framework in it, so extensions and the server can carry icons and any
+ * UI layer can draw them.
+ */
+export type TeiIconNode = ReadonlyArray<
+  readonly [tag: string, attrs: Readonly<Record<string, string>>]
+>;
+
 /** Where an {@link TeiItem} shows up in the UI. */
 export type TeiPlacement =
   | 'toolbar'
