@@ -22,11 +22,14 @@ import { Columns } from '../../extensions/columns/index.js';
 import { DateTime, type DateTimeStorage } from '../../extensions/date-time/index.js';
 import { DocumentActions } from '../../extensions/document-actions/index.js';
 import { Embed, type EmbedStorage } from '../../extensions/embed/index.js';
+import { Emoji, type EmojiStorage } from '../../extensions/emoji/index.js';
 import { FileAttachment } from '../../extensions/file/index.js';
 import { FindReplace, type FindReplaceStorage } from '../../extensions/find-replace/index.js';
+import { Hashtag } from '../../extensions/hashtag/index.js';
 import { Image, type ImageStorage } from '../../extensions/image/index.js';
 import { Link, type LinkStorage } from '../../extensions/link/index.js';
 import { MarkdownSource } from '../../extensions/markdown-source/index.js';
+import { Mention } from '../../extensions/mention/index.js';
 import { PageBreak } from '../../extensions/page-break/index.js';
 import { Pages } from '../../extensions/pages/index.js';
 import { Poll } from '../../extensions/poll/index.js';
@@ -39,6 +42,7 @@ import { TabFocus } from '../../extensions/tab-focus/index.js';
 import { Table } from '../../extensions/table/index.js';
 import { TableOfContents } from '../../extensions/table-of-contents/index.js';
 import { TextStyle } from '../../extensions/text-style/index.js';
+import { Typeahead } from '../../extensions/typeahead/index.js';
 import { type ContentEditableProps, EditorContent, EditorProvider } from '../editor-content.js';
 import { cx } from '../ui/context.js';
 import { useTeiEditor } from '../use-tei-editor.js';
@@ -97,6 +101,12 @@ const FindReplaceBar = lazy(() =>
 const RubyPopover = lazy(() =>
   import('./ruby-popover.js').then((module) => ({ default: module.RubyPopover })),
 );
+const TypeaheadMenu = lazy(() =>
+  import('./typeahead-menu.js').then((module) => ({ default: module.TypeaheadMenu })),
+);
+const EmojiPicker = lazy(() =>
+  import('./emoji-picker.js').then((module) => ({ default: module.EmojiPicker })),
+);
 const StickyMenu = lazy(() =>
   import('./sticky-menu.js').then((module) => ({ default: module.StickyMenu })),
 );
@@ -148,6 +158,10 @@ export interface EditorSlots {
   wordCount?: EditorSlot;
   /** The form for a ruby annotation's reading. */
   rubyPopover?: EditorSlot;
+  /** The list for `@` mentions and `:` emoji as you type them. */
+  typeaheadMenu?: EditorSlot;
+  /** The emoji picker, from the toolbar or ⌘⌥E. */
+  emojiPicker?: EditorSlot;
   /** Below the document, inside the frame: a word count, a status line. */
   footer?: ReactNode;
 }
@@ -172,6 +186,8 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     findReplace: true,
     wordCount: true,
     rubyPopover: true,
+    typeaheadMenu: true,
+    emojiPicker: true,
   },
   notion: {
     toolbar: false,
@@ -192,6 +208,8 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     findReplace: true,
     wordCount: false,
     rubyPopover: true,
+    typeaheadMenu: true,
+    emojiPicker: true,
   },
   minimal: {
     toolbar: true,
@@ -212,6 +230,8 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     findReplace: false,
     wordCount: false,
     rubyPopover: false,
+    typeaheadMenu: false,
+    emojiPicker: false,
   },
 };
 
@@ -233,6 +253,9 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     TableOfContents,
     CharacterCount,
     Ruby,
+    Emoji,
+    Mention,
+    Hashtag,
     DocumentActions,
     MarkdownSource,
     ShowInvisibles,
@@ -260,6 +283,9 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     TableOfContents,
     CharacterCount,
     Ruby,
+    Emoji,
+    Mention,
+    Hashtag,
     PageBreak,
     Table,
     Image,
@@ -416,15 +442,19 @@ function EditorFrame({
     parts.findReplace === true
       ? (editor.extension(FindReplace)?.output.storage as FindReplaceStorage | undefined)?.ui
       : undefined;
+  const emojiPick =
+    parts.emojiPicker === true
+      ? (editor.extension(Emoji)?.output.storage as EmojiStorage | undefined)?.picker
+      : undefined;
   useEffect(() => {
     if (ready) return;
-    const releases = [linkEdit, imageInsert, embedInsert, datePick, findBar].flatMap((request) =>
-      request ? [holdUi(request)] : [],
+    const releases = [linkEdit, imageInsert, embedInsert, datePick, findBar, emojiPick].flatMap(
+      (request) => (request ? [holdUi(request)] : []),
     );
     return () => {
       for (const release of releases) release();
     };
-  }, [ready, linkEdit, imageInsert, embedInsert, datePick, findBar]);
+  }, [ready, linkEdit, imageInsert, embedInsert, datePick, findBar, emojiPick]);
   // The gutter the handles sit in, from the first render (the server's too).
   const handles = editor.extension(Blocks) !== undefined && slot(parts.blockHandle, true) !== null;
   const change = useRef({ onChange, format });
@@ -487,6 +517,8 @@ function EditorFrame({
               {editor.extension(DateTime) && slot(parts.dateTimePicker, <DateTimePicker />)}
               {editor.extension(FindReplace) && slot(parts.findReplace, <FindReplaceBar />)}
               {editor.extension(Ruby) && slot(parts.rubyPopover, <RubyPopover />)}
+              {editor.extension(Typeahead) && slot(parts.typeaheadMenu, <TypeaheadMenu />)}
+              {editor.extension(Emoji) && slot(parts.emojiPicker, <EmojiPicker />)}
               <Ready onReady={setReady} />
             </Suspense>
           )}

@@ -13,7 +13,6 @@ import { isSafeImageSrc } from '../../utils/url.js';
 import { useOptionalEditor } from '../context.js';
 import { rangeAnchor } from '../selection-anchor.js';
 import { Icon } from '../ui/icon.js';
-import { keepFocus } from '../ui/pointer.js';
 import { Popover } from '../ui/popover.js';
 import { useEditorFocus } from '../use-editor-focus.js';
 import { useSignal } from '../use-signal.js';
@@ -70,6 +69,9 @@ export function TypeaheadMenu({ editor: editorProp, renderOption }: TypeaheadMen
   }, [editor, open, listId, highlighted, count]);
 
   const rows = useRef<Array<HTMLElement | null>>([]);
+  // Where a pointer went down on an option, to tell a tap from a scroll.
+  const tap = useRef<{ x: number; y: number } | null>(null);
+  const choose = (index: number) => editor.chain().focus().chooseTypeahead(index).run();
   useEffect(() => {
     rows.current[highlighted]?.scrollIntoView?.({ block: 'nearest' });
   }, [highlighted]);
@@ -120,11 +122,29 @@ export function TypeaheadMenu({ editor: editorProp, renderOption }: TypeaheadMen
               className="tei-menu-item tei-typeahead-option"
               data-highlighted={lit ? '' : undefined}
               data-id={option.id}
-              onPointerDown={keepFocus}
+              // Touch too: a tap that took focus from the text would close the list first.
+              onPointerDown={(event) => {
+                event.preventDefault();
+                tap.current = { x: event.clientX, y: event.clientY };
+              }}
               onPointerMove={(event) => {
                 if (event.pointerType !== 'touch') setTypeaheadHighlight(storage, index);
               }}
-              onClick={() => editor.chain().focus().chooseTypeahead(index).run()}
+              // A tap picks on lifting (iOS sends no click once its pointerdown is
+              // prevented); a finger that moved was scrolling the list.
+              onPointerUp={(event) => {
+                const from = tap.current;
+                tap.current = null;
+                if (event.pointerType !== 'touch' || !from) return;
+                if (Math.hypot(event.clientX - from.x, event.clientY - from.y) > 10) return;
+                event.preventDefault();
+                choose(index);
+              }}
+              onClick={(event) => {
+                // Touch picked on pointerup already.
+                if ((event.nativeEvent as PointerEvent).pointerType === 'touch') return;
+                choose(index);
+              }}
             >
               {renderOption ? (
                 renderOption(option, { highlighted: lit })
@@ -170,9 +190,12 @@ function OptionBody({ option }: { option: TypeaheadOption }) {
       ) : option.icon ? (
         <Icon icon={option.icon} />
       ) : (
-        <span className="tei-typeahead-avatar" aria-hidden="true">
-          {option.label.trim().charAt(0).toUpperCase()}
-        </span>
+        // The initial drawn by CSS: it isn't part of the option's text.
+        <span
+          className="tei-typeahead-avatar"
+          aria-hidden="true"
+          data-initial={option.label.trim().charAt(0).toUpperCase()}
+        />
       )}
       <span className="tei-menu-item-text">
         <span className="tei-menu-item-label">{option.label}</span>

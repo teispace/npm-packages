@@ -45,6 +45,10 @@
     object-fit: cover;
   }
 
+  .tei-typeahead-avatar[data-initial]::before {
+    content: attr(data-initial);
+  }
+
   .tei-typeahead .tei-menu-empty {
     display: flex;
     align-items: center;

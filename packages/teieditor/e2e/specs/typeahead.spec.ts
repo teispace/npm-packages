@@ -134,7 +134,7 @@ test.describe('mentions', () => {
   test('a stale search is dropped; only the last query is asked', async ({ tei }) => {
     await open(tei);
     await tei.page.keyboard.type(' @al');
-    await expect(list(tei).getByRole('option')).toHaveText(['Ada Lovelace', 'Alan Turing']);
+    await expect(list(tei).getByRole('option')).toHaveText(['Alan Turing', 'Linus Torvalds']);
     const log = await tei.log();
     expect(log.filter((line) => line.startsWith('search'))).toEqual(['search @al']);
     await tei.page.keyboard.type('an');
@@ -152,6 +152,7 @@ test.describe('mentions', () => {
     await expect(tei.content).toBeFocused();
     await tei.page.keyboard.type('+gen');
     await expect(list(tei)).toHaveAttribute('data-source', 'mention:+');
+    await expect(list(tei).getByRole('option')).toHaveText(['general']);
     await tei.page.keyboard.press('Tab');
     await expect(mention(tei)).toHaveText(['@Linus Torvalds', '+general']);
     // A click on a mention reaches the app.
