@@ -19,6 +19,7 @@ import type { TeiIconLike } from '../ui/context.js';
 import { DropdownMenu } from '../ui/dropdown.js';
 import type { MenuGroupData, MenuItemData } from '../ui/menu.js';
 import { Separator, Toolbar, type ToolbarProps } from '../ui/toolbar.js';
+import { DocumentMenu } from './document-menu.js';
 import { InsertImageMenu } from './image-insert.js';
 import { InsertTableMenu } from './table-controls.js';
 import {
@@ -360,6 +361,7 @@ const MORE = [
 
 /** Defaults for {@link TeiItem.priority}, by id; anything else goes by its group. */
 const DEFAULT_PRIORITY: Readonly<Record<string, number>> = {
+  document: 90,
   undo: 100,
   redo: 100,
   blockType: 90,
@@ -489,6 +491,8 @@ function defaultLayout(editor: TeiEditor, items: readonly TeiItem[]): ToolbarLay
     const after = items[0]?.group === 'history' ? 1 : 0;
     groups.splice(after, 0, ['blockType']);
   }
+  // The document's own menu (views, import and export) last, when anything fills it.
+  if (editor.items('document').length > 0) groups.push(['document']);
   return groups;
 }
 
@@ -591,4 +595,5 @@ const BUILT_IN_CONTROLS: Record<string, ToolbarControl> = {
   fontSize: FontSizeStepper,
   color: TextColorMenu,
   backgroundColor: BackgroundColorMenu,
+  document: DocumentMenu,
 };

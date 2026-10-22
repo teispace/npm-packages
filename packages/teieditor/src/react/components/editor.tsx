@@ -20,17 +20,22 @@ import { CodeBlock } from '../../extensions/code-block/index.js';
 import { Collapsible } from '../../extensions/collapsible/index.js';
 import { Columns } from '../../extensions/columns/index.js';
 import { DateTime, type DateTimeStorage } from '../../extensions/date-time/index.js';
+import { DocumentActions } from '../../extensions/document-actions/index.js';
 import { Embed, type EmbedStorage } from '../../extensions/embed/index.js';
 import { FileAttachment } from '../../extensions/file/index.js';
 import { FindReplace, type FindReplaceStorage } from '../../extensions/find-replace/index.js';
 import { Image, type ImageStorage } from '../../extensions/image/index.js';
 import { Link, type LinkStorage } from '../../extensions/link/index.js';
+import { MarkdownSource } from '../../extensions/markdown-source/index.js';
 import { PageBreak } from '../../extensions/page-break/index.js';
+import { Pages } from '../../extensions/pages/index.js';
 import { Poll } from '../../extensions/poll/index.js';
 import { PullQuote } from '../../extensions/pull-quote/index.js';
 import { Ruby } from '../../extensions/ruby/index.js';
+import { ShowInvisibles } from '../../extensions/show-invisibles/index.js';
 import { StarterKit } from '../../extensions/starter-kit/index.js';
 import { StickyNote } from '../../extensions/sticky-note/index.js';
+import { TabFocus } from '../../extensions/tab-focus/index.js';
 import { Table } from '../../extensions/table/index.js';
 import { TableOfContents } from '../../extensions/table-of-contents/index.js';
 import { TextStyle } from '../../extensions/text-style/index.js';
@@ -228,6 +233,11 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     TableOfContents,
     CharacterCount,
     Ruby,
+    DocumentActions,
+    MarkdownSource,
+    ShowInvisibles,
+    Pages,
+    TabFocus,
     PageBreak,
     Table,
     Image,
