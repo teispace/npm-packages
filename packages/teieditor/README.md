@@ -12,6 +12,11 @@ import '@teispace/teieditor/styles.css';
 <Editor preset={full} content={saved} onChange={save} placeholder="Write something…" />;
 ```
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/teispace/npm-packages/main/packages/teieditor/docs/screenshots/editor-dark.png" />
+  <img alt="The full preset: toolbar, headings, a table of contents and text styles" src="https://raw.githubusercontent.com/teispace/npm-packages/main/packages/teieditor/docs/screenshots/editor-light.png" width="780" />
+</picture>
+
 - **Complete out of the box.** Toolbar, bubble menu, slash menu, block handles
   with drag and drop, context menu, tables with merged cells, images with
   captions, embeds, callouts, columns, find and replace, mentions, emoji,
@@ -19,7 +24,7 @@ import '@teispace/teieditor/styles.css';
   with versions, and an AI menu for your own model. Everything the Lexical
   playground does, and then some, all free.
 - **Light where it counts.** Presets, extensions and stylesheets are separate
-  entries. `<Editor>` on its own is about 47 KB gzipped; each feature costs
+  entries. `<Editor>` on its own is about 48 KB gzipped; each feature costs
   only what it adds, and the UI for a feature loads after the editor shows,
   only when that feature is installed.
 - **Plain CSS.** One stylesheet in `@layer teieditor`, built on CSS
@@ -33,8 +38,21 @@ import '@teispace/teieditor/styles.css';
   `isActive`), selectors for React, and server-side conversion between JSON,
   HTML, Markdown and text.
 
+## A look around
+
+| | |
+|---|---|
+| <img alt="The slash menu, grouped, with shortcuts" src="https://raw.githubusercontent.com/teispace/npm-packages/main/packages/teieditor/docs/screenshots/slash-menu.png" width="380" /> | <img alt="The bubble menu over selected text" src="https://raw.githubusercontent.com/teispace/npm-packages/main/packages/teieditor/docs/screenshots/bubble-menu.png" width="380" /> |
+| **Slash menu.** Type `/` on an empty line for any block. | **Bubble menu.** Select text to format it, link it, comment or ask AI. |
+| <img alt="A table with a cell selected and the add-row and add-column bars" src="https://raw.githubusercontent.com/teispace/npm-packages/main/packages/teieditor/docs/screenshots/table.png" width="380" /> | <img alt="The editor on a phone" src="https://raw.githubusercontent.com/teispace/npm-packages/main/packages/teieditor/docs/screenshots/phone.png" width="200" /> |
+| **Tables.** Merge cells, resize columns, add rows from the edge. | **Phones.** Menus fit the screen; taps work like clicks. |
+
+Try it all in the playground: run `yarn workspace teieditor-playground dev`
+from the repository root.
+
 ## Contents
 
+- [A look around](#a-look-around)
 - [Install](#install)
 - [Presets](#presets)
 - [Styles](#styles)
@@ -117,7 +135,7 @@ collaboration, AI) are in no preset: add them to one, as above.
 ## Styles
 
 ```ts
-import '@teispace/teieditor/styles.css'; // everything, ~14 KB gzipped
+import '@teispace/teieditor/styles.css'; // everything, ~18 KB gzipped
 ```
 
 Or only what you use:
@@ -132,7 +150,10 @@ The feature files are `blocks` (pull quotes, callouts, collapsibles, page
 breaks), `cards` (cards, sticky notes), `columns`, `widgets` (polls, dates),
 `media`, `tables`, `document-tools` (table of contents, word count),
 `inline-extras` (keywords, autocomplete, special text, ruby), `find`, `views`
-and `typeahead` (mentions, hashtags, emoji). Each needs `core.css` first.
+and `typeahead` (mentions, hashtags, emoji). The optional features have one
+each: `ai`, `collab` (cursors and versions), `comments` (comments and
+suggested changes), `equation`, `excalidraw`, `code-shiki`, `speech-to-text`
+and `tree-view`. Each needs `core.css` first.
 
 **Theme.** Every colour, radius, font and spacing is a `--tei-*` variable.
 In a shadcn/ui app (Tailwind v4 theme variables), `data-tei-theme="shadcn"`
@@ -376,6 +397,8 @@ Table, { maxRows: 10 })`, and every UI built on them follows.
 
 These load their code, and their package, only when used.
 
+<img alt="A comment thread in the side panel, beside suggested changes in the text" src="https://raw.githubusercontent.com/teispace/npm-packages/main/packages/teieditor/docs/screenshots/comments.png" width="780" />
+
 **AI.** Bring your own model: one function gets the request (the action, the
 selection, the text around it) and returns text or a stream. The editor
 makes no requests of its own.
@@ -597,8 +620,16 @@ Markdown shortcuts work as you type: `#` for headings, `-` or `1.` for lists,
   and mention lists keep focus in the text and announce the highlighted row
   through `aria-activedescendant`.
 - Every part is reachable by keyboard, and the e2e suite runs axe over the
-  editor with its menus, popovers and dialogs open.
-- Layout uses logical properties, so right-to-left documents need nothing.
+  editor with its menus, popovers and dialogs open, including the AI menu,
+  the equation editor, the drawing dialog, comments, suggestions, versions
+  and the node tree.
+- Input methods (Japanese, Chinese, Korean…) are safe everywhere: the Enter
+  that picks a word and the Escape that cancels one never submit a form or
+  close a popover, in Safari too.
+- To-do lists are announced as a group of checkboxes, each with its state.
+- Layout uses logical properties, so right-to-left documents need nothing;
+  floating parts stay on screen, the comments panel opens from the left, and
+  dictation's live preview runs the way the line does.
 - On touch screens the targets are larger, the block handle follows the
   caret, and menus fit a 375px phone.
 - `prefers-reduced-motion` turns animations off.
