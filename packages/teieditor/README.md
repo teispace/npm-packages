@@ -14,10 +14,12 @@ import '@teispace/teieditor/styles.css';
 
 - **Complete out of the box.** Toolbar, bubble menu, slash menu, block handles
   with drag and drop, context menu, tables with merged cells, images with
-  captions, embeds, callouts, columns, find and replace, mentions, emoji and
-  more. Everything the Lexical playground does, and then some.
+  captions, embeds, callouts, columns, find and replace, mentions, emoji,
+  comments, suggested changes, equations, drawings, real-time collaboration
+  with versions, and an AI menu for your own model. Everything the Lexical
+  playground does, and then some, all free.
 - **Light where it counts.** Presets, extensions and stylesheets are separate
-  entries. `<Editor>` on its own is about 46 KB gzipped; each feature costs
+  entries. `<Editor>` on its own is about 47 KB gzipped; each feature costs
   only what it adds, and the UI for a feature loads after the editor shows,
   only when that feature is installed.
 - **Plain CSS.** One stylesheet in `@layer teieditor`, built on CSS
@@ -40,6 +42,7 @@ import '@teispace/teieditor/styles.css';
 - [Customizing the UI](#customizing-the-ui)
 - [Commands and state](#commands-and-state)
 - [Extensions](#extensions)
+- [Collaboration, comments, AI and more](#collaboration-comments-ai-and-more)
 - [Writing an extension](#writing-an-extension)
 - [Server rendering](#server-rendering)
 - [Own the source: CLI and shadcn registry](#own-the-source-cli-and-shadcn-registry)
@@ -68,7 +71,7 @@ npm install @teispace/teieditor lexical @lexical/clipboard @lexical/code-core \
 Lexical's packages are peer dependencies, so your app has one copy of each.
 Some features need one more; the extensions table says which. The `full` and
 `notion` presets also need `@lexical/table`, `@lexical/overflow` and
-`@lexical/hashtag`.
+`@lexical/hashtag`; `full` needs `@lexical/mark` for comments too.
 
 React 18.3 or 19. The editor's own runtime dependency is `@floating-ui/dom`.
 
@@ -79,7 +82,7 @@ Each one is its own entry, so you only ship the one you import.
 
 | Preset | What you get |
 | --- | --- |
-| `full` | Every feature, a toolbar, a word count, and the document tools (import and export, Markdown source, pages, visible whitespace). |
+| `full` | Every feature, a toolbar, a word count, comments, dictation, and the document tools (import and export, Markdown source, pages, visible whitespace). |
 | `notion` | Every block and inline feature with no toolbar: select text for the bubble menu, type `/` or press + for blocks, drag blocks by their handle, `@` for people, `:` for emoji. |
 | `minimal` | Writing basics with a toolbar and links, nothing floating. For comment boxes and forms. |
 
@@ -107,6 +110,9 @@ const extensions = notion.extensions.map((ext) =>
 ```
 
 Presets work without React too: `createTeiEditor({ extensions: full.extensions })`.
+
+Features that need a package of their own (equations, drawings, Shiki,
+collaboration, AI) are in no preset: add them to one, as above.
 
 ## Styles
 
@@ -352,9 +358,91 @@ useTeiEditor({ extensions: [StarterKit, Table.configure({ maxRows: 50 })] });
 | `markdown-source` | Edit the document as Markdown | |
 | `pages`, `show-invisibles`, `tab-focus` | Paginated view, visible whitespace, Tab to leave the editor | |
 | `code-highlight` | Prism highlighting (in StarterKit) | |
+| `code-shiki` | Shiki highlighting instead of Prism: light and dark themes at once, grammars loaded as needed | `shiki`, `@lexical/code-shiki` |
+| `equation` | TeX equations, inline and block, drawn as MathML (no KaTeX CSS or fonts), `$…$` and `$$…$$` in Markdown | `katex` |
+| `excalidraw` | Drawings in Excalidraw, saved with their picture | `@excalidraw/excalidraw` |
+| `comments` | Comment threads on text: reply, resolve, delete, a panel beside the document, your own store | `@lexical/mark` |
+| `review` | Suggested changes: type in suggest mode, then accept or reject each or all | |
+| `collaboration` | Real-time editing over Yjs, with cursors, presence and per-user undo | `yjs`, `@lexical/yjs`, `y-protocols` |
+| `versions` | Named versions: save, compare, restore; Yjs snapshots when collaborating | |
+| `ai` | An AI menu (⌘J, `/ai`, the bubble menu) for your own model, streamed into the document | |
+| `speech-to-text` | Dictation with the browser's speech recognition, with voice commands | |
+| `tree-view` | A developer panel: the node tree, JSON and HTML, and time travel | `@lexical/devtools-core` |
 
 Options can change after the editor is made: `setExtensionOptions(editor,
 Table, { maxRows: 10 })`, and every UI built on them follows.
+
+## Collaboration, comments, AI and more
+
+These load their code, and their package, only when used.
+
+**AI.** Bring your own model: one function gets the request (the action, the
+selection, the text around it) and returns text or a stream. The editor
+makes no requests of its own.
+
+```ts
+import { Ai } from '@teispace/teieditor/extensions/ai';
+
+Ai.configure({
+  handler: async (request, { signal }) => {
+    const response = await fetch('/api/ai', {
+      method: 'POST',
+      body: JSON.stringify(request),
+      signal,
+    });
+    return response.body!; // a stream of text, written in as it arrives
+  },
+});
+```
+
+**Collaboration and versions.** Any Yjs provider: y-websocket, Hocuspocus,
+or `createBroadcastProvider` for tabs of one browser. Keep the document with
+`gc: false` and versions are Yjs snapshots that everyone shares.
+
+```ts
+import { Collaboration } from '@teispace/teieditor/extensions/collaboration';
+import { Versions } from '@teispace/teieditor/extensions/versions';
+import { WebsocketProvider } from 'y-websocket';
+import { Doc } from 'yjs';
+
+const doc = new Doc({ gc: false });
+const extensions = [
+  ...notion.extensions,
+  Collaboration.configure({
+    doc,
+    provider: new WebsocketProvider('wss://your.server', 'doc-42', doc, { connect: false }),
+    user: { name: 'Ada', color: '#2563eb' },
+  }),
+  Versions,
+];
+```
+
+Content comes from the shared document; an empty one is seeded from
+`initialContent` (or the editor's `content`). `<Editor>` shows who is here
+and the versions panel (`editor.commands.toggleVersions()`).
+
+**Comments and suggested changes.** Threads are kept by a `CommentStore` (in
+memory by default); give it your backend's to save them.
+
+```ts
+import { Comments } from '@teispace/teieditor/extensions/comments';
+import { Review } from '@teispace/teieditor/extensions/review';
+
+const me = { id: 'u1', name: 'Ada Lovelace', color: '#2563eb' };
+[Comments.configure({ user: me, store: myStore }), Review.configure({ user: me })];
+```
+
+Select text and press ⌘⌥M to comment. In suggest mode (⌘⌥⇧X), typing and
+deleting become suggestions to accept or reject. Suggest mode tracks text,
+not formatting or block structure.
+
+**Equations.** KaTeX loads with the first equation on the page. To render
+equations on the server, give it KaTeX: `Equation.configure({ katex })`.
+
+**Drawings.** Import Excalidraw's stylesheet in your app,
+`import '@excalidraw/excalidraw/index.css'`. Excalidraw loads its fonts
+from `esm.sh` after any copy you host (`window.EXCALIDRAW_ASSET_PATH`), and
+browsers fetch that too: under a CSP, add `font-src https://esm.sh`.
 
 ## Writing an extension
 
@@ -458,8 +546,9 @@ from your docs site, as the playground does at `/r/<item>.json`.
   frame-src https://www.youtube-nocookie.com https://player.vimeo.com …
   ```
 
-  Add `frame-src` for the embed providers you enable. The e2e suite runs
-  every feature under such a policy and fails on any violation.
+  Add `frame-src` for the embed providers you enable, and `font-src
+  https://esm.sh` for Excalidraw's fonts. The e2e suite runs every feature
+  under such a policy and fails on any violation.
 
 ## Keyboard shortcuts
 
@@ -490,6 +579,10 @@ the `keymap` option.
 | Mod-F / Mod-Alt-F | Find, replace |
 | Mod-G or F3 | Next match |
 | Mod-Alt-E | Emoji picker |
+| Mod-J | Ask AI |
+| Mod-Shift-M | Inline equation |
+| Mod-Alt-M | Comment |
+| Mod-Alt-Shift-X | Suggest mode |
 | Mod-Z / Mod-Shift-Z | Undo, redo |
 | `/` | Slash menu |
 

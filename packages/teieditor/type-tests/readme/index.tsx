@@ -1,9 +1,18 @@
 // The README's examples, against the built package: if the API they show
 // changes, this stops compiling.
 import { defineTeiExtension, getExtensionOptions, setExtensionOptions } from '@teispace/teieditor';
+import { Ai } from '@teispace/teieditor/extensions/ai';
+import {
+  Collaboration,
+  createBroadcastProvider,
+} from '@teispace/teieditor/extensions/collaboration';
+import { type CommentStore, Comments } from '@teispace/teieditor/extensions/comments';
+import { Equation } from '@teispace/teieditor/extensions/equation';
 import { Mention } from '@teispace/teieditor/extensions/mention';
+import { Review } from '@teispace/teieditor/extensions/review';
 import { StarterKit } from '@teispace/teieditor/extensions/starter-kit';
 import { Table } from '@teispace/teieditor/extensions/table';
+import { Versions } from '@teispace/teieditor/extensions/versions';
 import { full } from '@teispace/teieditor/presets/full';
 import { notion } from '@teispace/teieditor/presets/notion';
 import {
@@ -18,7 +27,9 @@ import {
   useTeiEditor,
 } from '@teispace/teieditor/react';
 import { renderToHTML, toMarkdown } from '@teispace/teieditor/server';
+import katex from 'katex';
 import { $getSelection, $isRangeSelection } from 'lexical';
+import { Doc } from 'yjs';
 
 declare const saved: unknown;
 declare function save(value: unknown): void;
@@ -26,6 +37,7 @@ declare function findPeople(query: string): Promise<{ id: string; label: string 
 declare function track(name: string): void;
 declare function audit(name: string, next: () => boolean): boolean;
 declare function showStats(): void;
+declare const myStore: CommentStore;
 
 declare module '@teispace/teieditor' {
   interface TeiCommands {
@@ -117,3 +129,31 @@ export function Examples() {
     </>
   );
 }
+
+// Collaboration, comments, AI and more.
+export const ai = Ai.configure({
+  handler: async (request, { signal }) => {
+    const response = await fetch('/api/ai', {
+      method: 'POST',
+      body: JSON.stringify(request),
+      signal,
+    });
+    return response.body!;
+  },
+});
+const doc = new Doc({ gc: false });
+export const collaborative = [
+  ...notion.extensions,
+  Collaboration.configure({
+    doc,
+    provider: createBroadcastProvider('doc-42', doc),
+    user: { name: 'Ada', color: '#2563eb' },
+  }),
+  Versions,
+];
+const me = { id: 'u1', name: 'Ada Lovelace', color: '#2563eb' };
+export const review = [
+  Comments.configure({ user: me, store: myStore }),
+  Review.configure({ user: me }),
+];
+export const serverEquations = Equation.configure({ katex });
