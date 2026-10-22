@@ -1,0 +1,63 @@
+/*
+ * Inline extras: keyword highlights, the autocomplete ghost, special text
+ * and ruby annotations. Saved HTML under `.tei-prose` draws the same boxes
+ * as the editor.
+ */
+@layer teieditor {
+  /* Keywords are CSS highlights over the text, not elements: only colours apply. */
+  :is(.tei, .tei-prose) ::highlight(tei-keyword) {
+    background-color: var(--tei-keyword-bg, var(--tei-accent-subtle));
+    color: var(--tei-keyword-fg, var(--tei-accent));
+  }
+
+  /* `[bracketed]` text, its brackets dropped. */
+  .tei-special-text,
+  :where(.tei-prose) [data-tei-special-text] {
+    color: var(--tei-accent);
+    font-weight: 600;
+  }
+
+  /* The rest of a word, after the caret: over the page, one line, never in the document. */
+  .tei-autocomplete {
+    position: absolute;
+    z-index: 1;
+    overflow: hidden;
+    color: var(--tei-fg-subtle);
+    white-space: pre;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Ruby: the reading small above its base text. */
+  .tei-ruby,
+  :where(.tei-prose) ruby {
+    ruby-position: over;
+  }
+
+  :is(.tei-ruby, :where(.tei-prose) ruby) > rt {
+    color: var(--tei-fg-muted);
+    font-size: 0.55em;
+    font-weight: 400;
+    font-style: normal;
+    letter-spacing: 0;
+    line-height: 1;
+    text-decoration: none;
+  }
+
+  /* In the editor the reading is chrome: a click edits it. */
+  [data-tei-content]:not(.tei-prose) .tei-ruby > rt {
+    border-radius: var(--tei-radius-sm);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  [data-tei-content]:not(.tei-prose):not([data-tei-readonly]) .tei-ruby > rt {
+    cursor: pointer;
+    transition: background-color var(--tei-duration) var(--tei-ease);
+  }
+
+  [data-tei-content]:not(.tei-prose):not([data-tei-readonly]) .tei-ruby > rt:hover {
+    background: var(--tei-bg-hover);
+  }
+}

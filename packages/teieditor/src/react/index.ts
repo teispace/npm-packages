@@ -50,6 +50,8 @@ export { ImageInsertPopover, InsertImageForm, InsertImageMenu } from './componen
 export type { LinkPopoverProps } from './components/link-popover.js';
 export { LinkPopover } from './components/link-popover.js';
 export { NodeToolbar, PlacementItems } from './components/node-toolbar.js';
+export type { RubyPopoverProps } from './components/ruby-popover.js';
+export { RubyPopover } from './components/ruby-popover.js';
 export type { SlashMenuProps } from './components/slash-menu.js';
 export { rankSlashItem, SlashMenu } from './components/slash-menu.js';
 export type { StickyMenuProps } from './components/sticky-menu.js';

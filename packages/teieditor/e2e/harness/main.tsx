@@ -2,6 +2,7 @@ import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { setExtensionOptions } from '../../src/core/define';
 import type { TeiEditor } from '../../src/core/editor';
+import { Autocomplete } from '../../src/extensions/autocomplete/index';
 import { Blocks } from '../../src/extensions/blocks/index';
 import { Callout } from '../../src/extensions/callout/index';
 import { Card } from '../../src/extensions/card/index';
@@ -14,9 +15,12 @@ import { FileAttachment, type FileOptions } from '../../src/extensions/file/inde
 import { FindReplace } from '../../src/extensions/find-replace/index';
 import { Html } from '../../src/extensions/html/index';
 import { Image, type ImageOptions } from '../../src/extensions/image/index';
+import { Keywords } from '../../src/extensions/keywords/index';
 import { PageBreak } from '../../src/extensions/page-break/index';
 import { Poll } from '../../src/extensions/poll/index';
 import { PullQuote } from '../../src/extensions/pull-quote/index';
+import { Ruby } from '../../src/extensions/ruby/index';
+import { SpecialText } from '../../src/extensions/special-text/index';
 import { StarterKit } from '../../src/extensions/starter-kit/index';
 import { StickyNote } from '../../src/extensions/sticky-note/index';
 import { Table } from '../../src/extensions/table/index';
@@ -148,6 +152,15 @@ function App() {
       ...(params.has('widgets') ? [Poll, DateTime.configure({ locale: 'en-US' })] : []),
       ...(params.has('find') ? [FindReplace] : []),
       ...documentTools(params),
+      // Keywords, autocomplete, typography and ruby.
+      ...(params.has('inline-extras')
+        ? [
+            Keywords.configure({ keywords: ['teieditor'] }),
+            Autocomplete.configure({ debounce: 0 }),
+            SpecialText.configure({ brackets: true }),
+            Ruby,
+          ]
+        : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
