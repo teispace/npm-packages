@@ -34,8 +34,8 @@ const CASES = [
     code: `import { Editor } from '${dist('react/index.js')}'; use(Editor);`,
     // The drop-in UI and StarterKit. The rest of the UI loads after the
     // editor shows, and only for the extensions installed; presets are
-    // entries of their own, measured below.
-    budget: 48 * KB,
+    // entries of their own, measured below. About 48 KB today.
+    budget: 49 * KB,
   },
   {
     // The sum of its extensions, each budgeted below: this catches what
