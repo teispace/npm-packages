@@ -12,12 +12,15 @@ import { Columns } from '../../src/extensions/columns/index';
 import { DateTime } from '../../src/extensions/date-time/index';
 import { DocumentActions } from '../../src/extensions/document-actions/index';
 import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
+import { Emoji } from '../../src/extensions/emoji/index';
 import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
 import { FindReplace } from '../../src/extensions/find-replace/index';
+import { Hashtag } from '../../src/extensions/hashtag/index';
 import { Html } from '../../src/extensions/html/index';
 import { Image, type ImageOptions } from '../../src/extensions/image/index';
 import { Keywords } from '../../src/extensions/keywords/index';
 import { MarkdownSource } from '../../src/extensions/markdown-source/index';
+import { Mention } from '../../src/extensions/mention/index';
 import { PageBreak } from '../../src/extensions/page-break/index';
 import { Pages } from '../../src/extensions/pages/index';
 import { Poll } from '../../src/extensions/poll/index';
@@ -132,6 +135,35 @@ const GROUPS: MenuGroupData[] = [
   },
 ];
 
+/** People and channels, found after a delay as a server would. */
+const PEOPLE = ['Ada Lovelace', 'Alan Turing', 'Grace Hopper', 'Linus Torvalds'];
+const fakeSearch =
+  (names: string[], prefix: string) =>
+  (query: string, { signal }: { signal: AbortSignal }) =>
+    new Promise<{ id: string; label: string; description?: string }[]>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        log.push(`search ${prefix}${query}`);
+        resolve(
+          names
+            .filter((name) => name.toLowerCase().includes(query.toLowerCase()))
+            .map((name) => ({ id: name.toLowerCase().replace(/\s+/g, '-'), label: name })),
+        );
+      }, 60);
+      signal.addEventListener('abort', () => {
+        clearTimeout(timer);
+        reject(signal.reason);
+      });
+    });
+const TYPEAHEAD = [
+  Emoji,
+  Hashtag.configure({ onClick: (tag) => log.push(`hashtag ${tag}`) }),
+  Mention.configure({
+    search: fakeSearch(PEOPLE, '@'),
+    triggers: [{ trigger: '+', search: fakeSearch(['general', 'random'], '+') }],
+    onClick: (mention) => log.push(`mention ${mention.id}`),
+  }),
+];
+
 const SWATCHES = [
   { value: '#e03131', label: 'Red' },
   { value: '#2f9e44', label: 'Green' },
@@ -171,6 +203,7 @@ function App() {
       ...(params.has('views')
         ? [MarkdownSource, ShowInvisibles, Pages, TabFocus, DocumentActions, PageBreak]
         : []),
+      ...(params.has('typeahead') ? TYPEAHEAD : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });

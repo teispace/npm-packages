@@ -1,17 +1,16 @@
 'use client';
 
-import {
-  $getNodeByKey,
-  $getSelection,
-  $isRangeSelection,
-  $isTextNode,
-  COMMAND_PRIORITY_HIGH,
-  KEY_DOWN_COMMAND,
-} from 'lexical';
+import { COMMAND_PRIORITY_HIGH, KEY_DOWN_COMMAND } from 'lexical';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { TeiEditor } from '../../core/editor.js';
+import {
+  $matchTypeahead,
+  $replaceTypeahead,
+  sameTypeahead,
+  type TypeaheadPattern,
+  typeaheadRange,
+} from '../../core/typeahead.js';
 import type { TeiItem } from '../../core/types.js';
-import { $blockOf } from '../../utils/selection.js';
 import { useOptionalEditor } from '../context.js';
 import { itemText } from '../items.js';
 import { rangeAnchor } from '../selection-anchor.js';
@@ -33,37 +32,8 @@ export interface SlashMenuProps {
   match?: (item: TeiItem, query: string, label: string) => number | null;
 }
 
-interface Query {
-  /** The text node the trigger is in, and the trigger's offset. */
-  key: string;
-  offset: number;
-  /** What follows the trigger, up to the caret. */
-  query: string;
-}
-
-const sameQuery = (a: Query | null, b: Query | null) =>
-  a === b ||
-  (a !== null && b !== null && a.key === b.key && a.offset === b.offset && a.query === b.query);
-
-const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-/** The trigger before the caret, at the start of the text or after a space. */
-function $query(trigger: string): Query | null {
-  const selection = $getSelection();
-  if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null;
-  const node = selection.anchor.getNode();
-  if (!$isTextNode(node) || $blockOf(node)?.getType() === 'code') return null;
-  const before = node.getTextContent().slice(0, selection.anchor.offset);
-  const found = new RegExp(
-    `(^|\\s)${escape(trigger)}([^\\s${escape(trigger)}][^${escape(trigger)}\\n]*)?$`,
-    'u',
-  ).exec(before);
-  if (!found) return null;
-  const query = found[2] ?? '';
-  // Two spaces in a row end it: that is prose, not a search.
-  if (/\s\s/.test(query) || query.length > 40) return null;
-  return { key: node.getKey(), offset: found.index + (found[1]?.length ?? 0), query };
-}
+/** The query may have single spaces in it ("heading 2"); two in a row is prose. */
+const slashPattern = (trigger: string): TypeaheadPattern => ({ trigger, spaces: true });
 
 /** Default ranking: label prefix, word prefix, keyword prefix, anywhere. */
 export function rankSlashItem(item: TeiItem, query: string, label: string): number | null {
@@ -97,10 +67,10 @@ export function SlashMenu({
   if (!editor) throw new Error('teieditor: <SlashMenu> needs an `editor` prop or a provider');
 
   const all = useMemo(() => editor.items('slash'), [editor]);
-  const current = useEditorState((e) => (e.isEditable ? e.read(() => $query(trigger)) : null), {
-    editor,
-    equal: sameQuery,
-  });
+  const current = useEditorState(
+    (e) => (e.isEditable ? e.read(() => $matchTypeahead(slashPattern(trigger))) : null),
+    { editor, equal: sameTypeahead },
+  );
   const focused = useEditorFocus(editor);
   const [dismissed, setDismissed] = useState<string | null>(null);
   const at = current ? `${current.key}:${current.offset}` : null;
@@ -123,22 +93,10 @@ export function SlashMenu({
     // From a key, this update is queued behind the key's own: the item runs
     // once it is in, or an item that inserts a block would move the caret
     // first and leave the query behind.
-    editor.lexical.update(
-      () => {
-        const node = $getNodeByKey(current.key);
-        const selection = $getSelection();
-        if (!$isTextNode(node) || !$isRangeSelection(selection)) return;
-        const typed = current.offset + trigger.length + current.query.length;
-        const end = selection.anchor.key === current.key ? selection.anchor.offset : typed;
-        node.spliceText(
-          current.offset,
-          Math.min(end, node.getTextContentSize()) - current.offset,
-          '',
-          true,
-        );
-      },
-      { discrete: true, onUpdate: () => editor.runItem(item) },
-    );
+    editor.lexical.update(() => $replaceTypeahead(current, ''), {
+      discrete: true,
+      onUpdate: () => editor.runItem(item),
+    });
   };
 
   const nav = useMenuNavigation({
@@ -203,14 +161,9 @@ export function SlashMenu({
   // biome-ignore lint/correctness/useExhaustiveDependencies: one place per trigger
   const anchor = useMemo(() => {
     if (!open || !current) return null;
+    const range = typeaheadRange(editor.lexical, current);
     const element = editor.lexical.getElementByKey(current.key);
-    const text = element && firstText(element);
-    if (!element || !text) return null;
-    const range = element.ownerDocument.createRange();
-    const offset = Math.min(current.offset, text.length);
-    range.setStart(text, offset);
-    range.setEnd(text, Math.min(offset + trigger.length, text.length));
-    return rangeAnchor(range, element);
+    return range && element ? rangeAnchor(range, element) : null;
   }, [editor, open, at]);
 
   if (!open || !anchor) return null;
@@ -265,13 +218,4 @@ function groupBy<T extends { item: TeiItem }>(list: readonly T[]): [string, T[]]
     groups.set(group, [...(groups.get(group) ?? []), entry]);
   }
   return [...groups];
-}
-
-function firstText(element: Node): Text | null {
-  if (element.nodeType === 3) return element as Text;
-  for (const child of Array.from(element.childNodes)) {
-    const text = firstText(child);
-    if (text) return text;
-  }
-  return null;
 }

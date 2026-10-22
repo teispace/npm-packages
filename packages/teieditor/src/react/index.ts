@@ -42,6 +42,8 @@ export {
   EmbedSuggestionMenu,
   InsertEmbedForm,
 } from './components/embed-controls.js';
+export type { EmojiPanelProps, EmojiPickerProps } from './components/emoji-picker.js';
+export { EmojiPanel, EmojiPicker } from './components/emoji-picker.js';
 export type { FileControlsProps } from './components/file-controls.js';
 export { FileControls } from './components/file-controls.js';
 export type { FindReplaceBarProps } from './components/find-replace-bar.js';
@@ -62,6 +64,8 @@ export type { TableControlsProps } from './components/table-controls.js';
 export { InsertTableMenu, TableControls } from './components/table-controls.js';
 export type { TableOfContentsPanelProps } from './components/table-of-contents.js';
 export { TableOfContentsPanel, useOutline } from './components/table-of-contents.js';
+export type { TypeaheadMenuProps } from './components/typeahead-menu.js';
+export { TypeaheadMenu } from './components/typeahead-menu.js';
 export type { LimitState, WordCountProps, WordCountStat } from './components/word-count.js';
 export { limitState, WordCount } from './components/word-count.js';
 export { TeiEditorContext, useCurrentEditor, useOptionalEditor } from './context.js';
@@ -115,5 +119,6 @@ export { hideTooltip, showTooltip } from './ui/tooltip.js';
 export { useEditorFocus } from './use-editor-focus.js';
 export type { UseEditorStateOptions } from './use-editor-state.js';
 export { shallowEqual, useEditorState } from './use-editor-state.js';
+export { useSignal } from './use-signal.js';
 export { createReactTeiEditor, useTeiEditor } from './use-tei-editor.js';
 export { useUiRequest } from './use-ui-request.js';

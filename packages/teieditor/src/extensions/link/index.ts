@@ -107,8 +107,12 @@ export function $getLinkAtSelection(): LinkAtSelection | null {
   };
 }
 
-/** Markdown's `![alt](src)` is an image, never a link: not with `!` before the `[`. */
-const notAfterBang = (re: RegExp) => new RegExp(`(?<!!)${re.source}`, re.flags);
+/**
+ * Markdown's `![alt](src)` is an image, never a link: not with `!` before
+ * the `[`. Nor is `@[name](mention:id)`, a mention.
+ */
+const notAfterBang = (re: RegExp) =>
+  new RegExp(`(?<!!)(?!\\[(?:\\\\.|[^\\]\\\\])*\\]\\(mention:)${re.source}`, re.flags);
 export const MARKDOWN_LINK: TextMatchTransformer = {
   ...LINK,
   regExp: notAfterBang(LINK.regExp),
