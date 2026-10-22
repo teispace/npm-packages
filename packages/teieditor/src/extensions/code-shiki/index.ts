@@ -475,6 +475,8 @@ export const CodeShiki = defineTeiExtension({
       queued = true;
       queueMicrotask(() => {
         queued = false;
+        // A load that lands after the editor is gone has nothing to colour.
+        if (!editors.has(lexical)) return;
         const root = lexical.getRootElement();
         if (root) paintRoot(root, options);
         if (blocks.size === 0) return;
