@@ -72,9 +72,7 @@
     "./styles/*": "./dist/styles/*",
     "./package.json": "./package.json"
   },
-  "bin": {
-    "teieditor": "./dist/cli/index.js"
-  },
+  "bin": "./dist/cli/index.js",
   "files": [
     "dist",
     "README.md",
@@ -127,6 +125,7 @@
     "lexical": "^0.52.0",
     "react": ">=18.3.0",
     "react-dom": ">=18.3.0",
+    "shiki": ">=4.0.0",
     "y-protocols": "^1.0.6",
     "yjs": "^13.6.0"
   },
@@ -177,6 +176,9 @@
       "optional": true
     },
     "react-dom": {
+      "optional": true
+    },
+    "shiki": {
       "optional": true
     },
     "y-protocols": {
@@ -232,6 +234,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "rolldown": "^1.2.14",
+    "shiki": "^4.5.0",
     "tsup": "^9.0.0",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",

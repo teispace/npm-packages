@@ -60,7 +60,7 @@ export {
   MAX_EQUATION_LENGTH,
 } from './node.js';
 export type { KatexLike, KatexSource } from './render.js';
-export { KATEX_OPTIONS, renderMath, sanitizeMath } from './render.js';
+export { KATEX_OPTIONS, paintMath, renderMath, sanitizeMath } from './render.js';
 
 export interface EquationOptions {
   /**

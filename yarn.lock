@@ -4047,6 +4047,7 @@ __metadata:
     react: "npm:^19.3.1"
     react-dom: "npm:^19.3.1"
     rolldown: "npm:^1.2.14"
+    shiki: "npm:^4.5.0"
     tsup: "npm:^9.0.0"
     tsx: "npm:^4.23.15"
     typescript: "npm:^6.0.3"
@@ -4084,6 +4085,7 @@ __metadata:
     lexical: ^0.52.0
     react: ">=18.3.0"
     react-dom: ">=18.3.0"
+    shiki: ">=4.0.0"
     y-protocols: ^1.0.6
     yjs: ^13.6.0
   peerDependenciesMeta:
@@ -4119,10 +4121,14 @@ __metadata:
       optional: true
     react-dom:
       optional: true
+    shiki:
+      optional: true
     y-protocols:
       optional: true
     yjs:
       optional: true
+  bin:
+    teieditor: ./dist/cli/index.js
   languageName: unknown
   linkType: soft
 
@@ -9358,7 +9364,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"shiki@npm:^4.4.3":
+"shiki@npm:^4.4.3, shiki@npm:^4.5.0":
   version: 4.5.0
   resolution: "shiki@npm:4.5.0"
   dependencies:

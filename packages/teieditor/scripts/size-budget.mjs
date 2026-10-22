@@ -49,7 +49,8 @@ const CASES = [
     name: '<Editor> + presets/full',
     code: `import { Editor } from '${dist('react/index.js')}';
       import { full } from '${dist('presets/full.js')}'; use(Editor, full);`,
-    budget: 111 * KB,
+    // notion's, a toolbar, the document tools, comments and dictation.
+    budget: 118 * KB,
   },
   {
     name: 'headless React (useTeiEditor, EditorContent)',
@@ -154,6 +155,8 @@ const EXTENSION_BUDGETS = {
   embed: 8 * KB,
   // Upload, resize, captions in a nested editor.
   image: 9 * KB,
+  // Its own tokenizer over Shiki's core (Shiki itself is the app's), and the language and theme lists.
+  'code-shiki': 9 * KB,
 };
 const BASE = `import { createTeiEditor } from '${dist('index.js')}';
   import { StarterKit } from '${dist('extensions/starter-kit/index.js')}';`;
@@ -176,7 +179,7 @@ for (const name of extensions) {
 /** Stylesheets: everything in one, and core.css for an editor that imports only what it uses. */
 const STYLES = [
   // Every feature's styles, the optional ones too; core.css is the lean way in.
-  ['styles.css', 'styles.css', 17 * KB],
+  ['styles.css', 'styles.css', 19 * KB],
   ['styles/core.css', 'styles/core.css', 8 * KB],
 ];
 for (const [name, path, budget] of STYLES) {

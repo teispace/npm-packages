@@ -35,7 +35,12 @@ export interface ContextMenuProps {
 }
 
 /** The toolbars of selected nodes: their actions come too, when they apply. */
-const NODE_MENUS: readonly TeiPlacement[] = ['imageMenu', 'fileMenu', 'embedMenu'];
+const NODE_MENUS: readonly TeiPlacement[] = [
+  'imageMenu',
+  'fileMenu',
+  'embedMenu',
+  'excalidrawMenu',
+];
 
 /** Menus that come in whole, as a submenu, when they apply. */
 const SUBMENUS = [

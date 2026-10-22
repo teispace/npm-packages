@@ -20,6 +20,16 @@ export type { ColumnsMenuProps } from './components/columns-menu.js';
 export { ColumnsMenu } from './components/columns-menu.js';
 export type { CommentComposerProps } from './components/comment-composer.js';
 export { CommentComposer } from './components/comment-composer.js';
+export {
+  Avatar,
+  commentsOptions,
+  commentsStorage,
+  currentUser,
+  formatTime,
+  reviewOptions,
+  reviewStorage,
+  submitKey,
+} from './components/comment-parts.js';
 export type { CommentsPanelProps } from './components/comments-panel.js';
 export { CommentsPanel } from './components/comments-panel.js';
 export type { ContextMenuProps } from './components/context-menu.js';

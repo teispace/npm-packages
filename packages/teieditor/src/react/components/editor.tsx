@@ -17,6 +17,8 @@ import type { AiStorage } from '../../extensions/ai/index.js';
 import type { DateTimeStorage } from '../../extensions/date-time/index.js';
 import type { EmbedStorage } from '../../extensions/embed/index.js';
 import type { EmojiStorage } from '../../extensions/emoji/index.js';
+import type { EquationStorage } from '../../extensions/equation/index.js';
+import type { ExcalidrawStorage } from '../../extensions/excalidraw/index.js';
 import type { FindReplaceStorage } from '../../extensions/find-replace/index.js';
 import type { ImageStorage } from '../../extensions/image/index.js';
 import type { LinkStorage } from '../../extensions/link/index.js';
@@ -99,6 +101,24 @@ const CollaborationStatus = lazy(() =>
 const VersionsPanel = lazy(() =>
   import('./versions-panel.js').then((module) => ({ default: module.VersionsPanel })),
 );
+const EquationEditor = lazy(() =>
+  import('./equation-editor.js').then((module) => ({ default: module.EquationEditor })),
+);
+const ExcalidrawControls = lazy(() =>
+  import('./excalidraw-controls.js').then((module) => ({ default: module.ExcalidrawControls })),
+);
+const CommentComposer = lazy(() =>
+  import('./comment-composer.js').then((module) => ({ default: module.CommentComposer })),
+);
+const CommentsPanel = lazy(() =>
+  import('./comments-panel.js').then((module) => ({ default: module.CommentsPanel })),
+);
+const SuggestionPopover = lazy(() =>
+  import('./suggestion-popover.js').then((module) => ({ default: module.SuggestionPopover })),
+);
+const TreeViewPanel = lazy(() =>
+  import('./tree-view.js').then((module) => ({ default: module.TreeViewPanel })),
+);
 const WordCount = lazy(() =>
   import('./word-count.js').then((module) => ({ default: module.WordCount })),
 );
@@ -149,6 +169,18 @@ export interface EditorSlots {
   collaborationStatus?: EditorSlot;
   /** Saved versions: save, preview, compare, restore. Shown from the document menu's "Version history". */
   versionsPanel?: EditorSlot;
+  /** The editor an equation opens: its TeX, a live preview. */
+  equationEditor?: EditorSlot;
+  /** Excalidraw in a dialog, the toolbar over a selected drawing and its resize handles. */
+  excalidrawControls?: EditorSlot;
+  /** The form a new comment is written in, by the selected text. */
+  commentComposer?: EditorSlot;
+  /** The comment threads (and suggested changes, with Review): beside the document, a sheet on a phone. */
+  commentsPanel?: EditorSlot;
+  /** Accept or reject the suggested change at the caret. */
+  suggestionPopover?: EditorSlot;
+  /** The node tree, its JSON and HTML, and time travel through past states: a developer tool. */
+  treeView?: EditorSlot;
   /** Below the document, inside the frame: a word count, a status line. */
   footer?: ReactNode;
 }
@@ -309,6 +341,12 @@ function EditorFrame({
     : undefined;
   const emojiPick = builtIn(parts.emojiPicker) ? storage<EmojiStorage>('emoji')?.picker : undefined;
   const aiAsk = builtIn(parts.aiMenu) ? storage<AiStorage>('ai')?.menu : undefined;
+  const equationEdit = builtIn(parts.equationEditor)
+    ? storage<EquationStorage>('equation')?.editor
+    : undefined;
+  const drawingEdit = builtIn(parts.excalidrawControls)
+    ? storage<ExcalidrawStorage>('excalidraw')?.dialog
+    : undefined;
   const versionsOpen = useSignal(storage<VersionsStorage>('versions')?.panelOpen) ?? false;
   useEffect(() => {
     if (ready) return;
@@ -320,11 +358,24 @@ function EditorFrame({
       findBar,
       emojiPick,
       aiAsk,
+      equationEdit,
+      drawingEdit,
     ].flatMap((request) => (request ? [holdUi(request)] : []));
     return () => {
       for (const release of releases) release();
     };
-  }, [ready, linkEdit, imageInsert, embedInsert, datePick, findBar, emojiPick, aiAsk]);
+  }, [
+    ready,
+    linkEdit,
+    imageInsert,
+    embedInsert,
+    datePick,
+    findBar,
+    emojiPick,
+    aiAsk,
+    equationEdit,
+    drawingEdit,
+  ]);
   // The gutter the handles sit in, from the first render (the server's too).
   const handles = has('blocks') && slot(parts.blockHandle, true) !== null;
   const change = useRef({ onChange, format });
@@ -391,6 +442,10 @@ function EditorFrame({
               {has('typeahead') && slot(parts.typeaheadMenu, <TypeaheadMenu />)}
               {has('emoji') && slot(parts.emojiPicker, <EmojiPicker />)}
               {has('ai') && slot(parts.aiMenu, <AiMenu />)}
+              {has('equation') && slot(parts.equationEditor, <EquationEditor />)}
+              {has('excalidraw') && slot(parts.excalidrawControls, <ExcalidrawControls />)}
+              {has('comments') && slot(parts.commentComposer, <CommentComposer />)}
+              {has('review') && slot(parts.suggestionPopover, <SuggestionPopover />)}
               <Ready onReady={setReady} />
             </Suspense>
           )}
@@ -398,6 +453,14 @@ function EditorFrame({
         </EditorContent>
         {mounted && has('versions') && versionsOpen && (
           <Suspense fallback={null}>{slot(parts.versionsPanel, <VersionsPanel />)}</Suspense>
+        )}
+        {mounted && has('comments') && (
+          <Suspense fallback={null}>
+            {slot(parts.commentsPanel, <CommentsPanel placement="overlay" />)}
+          </Suspense>
+        )}
+        {mounted && has('tree-view') && (
+          <Suspense fallback={null}>{slot(parts.treeView, <TreeViewPanel />)}</Suspense>
         )}
         {mounted && has('collaboration') && (
           <Suspense fallback={null}>

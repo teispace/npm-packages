@@ -34,12 +34,17 @@ export { TeiEditor } from './core/editor.js';
 export { jsonFormat, textFormat } from './core/formats.js';
 export { parseKey } from './core/keymap.js';
 export type { TeiPreset } from './core/preset.js';
+// Building blocks for extensions and UI of your own.
+export { $caretAfter, $selectNode } from './core/slot-host.js';
 export { teiTheme } from './core/theme.js';
 export type * from './core/types.js';
 export type { UiRequest } from './core/ui-request.js';
 export { hasUi, holdUi, requestUi, takeRequests, uiRequest } from './core/ui-request.js';
-// Building blocks for extensions and UI of your own.
+export type { SavedPoint } from './utils/dom-range.js';
+export { highlightNamed, savedPointsRange } from './utils/dom-range.js';
 export { acceptsFile, chooseFiles, readAsDataURL } from './utils/files.js';
+export { editorLocale } from './utils/locale.js';
+export { frameScheduler } from './utils/overlay.js';
 export {
   $blockOf,
   $canFormat,

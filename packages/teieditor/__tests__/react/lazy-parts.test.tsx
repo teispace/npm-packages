@@ -127,3 +127,66 @@ it('the versions panel shows while it is open, from its command', async () => {
   await waitFor(() => expect(container.querySelector('.tei-versions-save')).toBeNull());
   editor.destroy();
 });
+
+it('an equation inserted before its editor has loaded opens it as it loads', async () => {
+  vi.resetModules();
+  const [{ StarterKit }, { Equation }, react] = await Promise.all([
+    import('../../src/extensions/starter-kit/index.js'),
+    import('../../src/extensions/equation/index.js'),
+    import('../../src/react/index.js'),
+  ]);
+  const editor = react.createReactTeiEditor({
+    extensions: [StarterKit, Equation.configure({ katex: null })],
+    content: '<p></p>',
+  });
+  const { container } = render(<react.Editor editor={editor} />);
+  expect(container.querySelector('[data-tei-frame]')?.hasAttribute('data-tei-ready')).toBe(false);
+  act(() => editor.update(() => $getRoot().selectEnd()));
+  act(() => {
+    editor.commands.insertEquation();
+  });
+  await waitFor(() =>
+    expect(document.querySelector('[data-tei-control="equation-editor"]')).not.toBeNull(),
+  );
+  editor.destroy();
+});
+
+it('the comment composer and panel, and the tree view, show from their commands', async () => {
+  vi.resetModules();
+  const [{ StarterKit }, { Comments }, { TreeView }, react] = await Promise.all([
+    import('../../src/extensions/starter-kit/index.js'),
+    import('../../src/extensions/comments/index.js'),
+    import('../../src/extensions/tree-view/index.js'),
+    import('../../src/react/index.js'),
+  ]);
+  const editor = react.createReactTeiEditor({
+    extensions: [StarterKit, Comments, TreeView],
+    content: '<p>Hello world</p>',
+  });
+  const { container } = render(<react.Editor editor={editor} />);
+  await waitFor(() =>
+    expect(container.querySelector('[data-tei-frame]')?.hasAttribute('data-tei-ready')).toBe(true),
+  );
+  act(() => editor.update(() => $getRoot().select(0, 1)));
+  act(() => {
+    editor.commands.addComment();
+  });
+  await waitFor(() =>
+    expect(document.querySelector('[data-tei-control="comment-composer"]')).not.toBeNull(),
+  );
+  act(() => {
+    editor.commands.toggleCommentsPanel(false);
+  });
+  const panel = () => document.querySelector('.tei-comments-panel');
+  await waitFor(() => expect(panel()?.hasAttribute('hidden')).toBe(true));
+  act(() => {
+    editor.commands.toggleCommentsPanel(true);
+  });
+  await waitFor(() => expect(panel()?.hasAttribute('data-open')).toBe(true));
+  expect(document.querySelector('.tei-tree-view')).toBeNull();
+  act(() => {
+    editor.commands.toggleTreeView();
+  });
+  await waitFor(() => expect(document.querySelector('.tei-tree-view')).not.toBeNull());
+  editor.destroy();
+});

@@ -19,5 +19,11 @@
 @import "./typeahead.css";
 @import "./ai.css";
 @import "./collab.css";
+@import "./comments.css";
+@import "./equation.css";
+@import "./excalidraw.css";
+@import "./code-shiki.css";
+@import "./tree-view.css";
+@import "./speech-to-text.css";
 @import "./media.css";
 @import "./tables.css";

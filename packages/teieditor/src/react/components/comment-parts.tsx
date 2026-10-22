@@ -21,6 +21,7 @@ export const commentsOptions = (editor: TeiEditor) =>
 export const reviewStorage = (editor: TeiEditor) =>
   (editor.extension(REVIEW)?.output as { storage?: ReviewStorage } | undefined)?.storage;
 
+/** The Review extension's options, by name. */
 export const reviewOptions = (editor: TeiEditor) =>
   getPeerOptions<ReviewOptions>(editor.lexical, REVIEW);
 
