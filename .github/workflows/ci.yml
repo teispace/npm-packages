@@ -207,6 +207,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [quality]
+    # Browsers and their system libraries come with the image: installing them
+    # with apt stalled for minutes at a time on a slow Ubuntu mirror. Keep its
+    # tag on the @playwright/test version in yarn.lock.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
+    env:
+      # Firefox refuses a home directory owned by another user.
+      HOME: /root
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
 
     steps:
       - name: Checkout code
@@ -215,18 +225,14 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'yarn'
-
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Install browsers
+      - name: Check the image matches Playwright
         working-directory: examples/next-themes
-        run: yarn playwright install --with-deps chromium firefox webkit
+        run: |
+          version=$(node -p "require('@playwright/test/package.json').version")
+          test "$version" = 1.64.1 || { echo "::error::@playwright/test is $version; update the container image tag"; exit 1; }
 
       # The Playwright web server builds the package and the example app, then
       # serves it under a nonce CSP; every test asserts zero violations.
@@ -249,6 +255,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [quality]
+    # Browsers and their system libraries come with the image: installing them
+    # with apt stalled for minutes at a time on a slow Ubuntu mirror. Keep its
+    # tag on the @playwright/test version in yarn.lock.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
+    env:
+      # Firefox refuses a home directory owned by another user.
+      HOME: /root
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
 
     steps:
       - name: Checkout code
@@ -257,18 +273,14 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'yarn'
-
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Install browsers
+      - name: Check the image matches Playwright
         working-directory: examples/playground
-        run: yarn playwright install --with-deps chromium firefox webkit
+        run: |
+          version=$(node -p "require('@playwright/test/package.json').version")
+          test "$version" = 1.64.1 || { echo "::error::@playwright/test is $version; update the container image tag"; exit 1; }
 
       # The Playwright web server builds the package and the playground, then
       # serves it under a nonce CSP; every test asserts zero violations.
