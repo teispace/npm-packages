@@ -698,20 +698,6 @@
     display: inline-block;
   }
 
-  .tei-special-text {
-    color: var(--tei-accent);
-    font-weight: 600;
-  }
-
-  .tei-autocomplete {
-    color: var(--tei-fg-subtle);
-  }
-
-  .tei-ruby rt {
-    color: var(--tei-fg-muted);
-    font-size: 0.55em;
-  }
-
   .tei-character-limit {
     background: var(--tei-danger-subtle);
     text-decoration: underline wavy var(--tei-danger);

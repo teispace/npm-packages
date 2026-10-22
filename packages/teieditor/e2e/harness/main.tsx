@@ -2,6 +2,7 @@ import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { setExtensionOptions } from '../../src/core/define';
 import type { TeiEditor } from '../../src/core/editor';
+import { Autocomplete } from '../../src/extensions/autocomplete/index';
 import { Blocks } from '../../src/extensions/blocks/index';
 import { Callout } from '../../src/extensions/callout/index';
 import { Clipboard } from '../../src/extensions/clipboard/index';
@@ -10,8 +11,11 @@ import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
 import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
 import { Html } from '../../src/extensions/html/index';
 import { Image, type ImageOptions } from '../../src/extensions/image/index';
+import { Keywords } from '../../src/extensions/keywords/index';
 import { PageBreak } from '../../src/extensions/page-break/index';
 import { PullQuote } from '../../src/extensions/pull-quote/index';
+import { Ruby } from '../../src/extensions/ruby/index';
+import { SpecialText } from '../../src/extensions/special-text/index';
 import { StarterKit } from '../../src/extensions/starter-kit/index';
 import { Table } from '../../src/extensions/table/index';
 import { TextStyle } from '../../src/extensions/text-style/index';
@@ -25,6 +29,7 @@ import {
   GridPicker,
   Input,
   type MenuGroupData,
+  RubyPopover,
   useTeiEditor,
 } from '../../src/react/index';
 import { neutralizeAttributes, restoreStyles } from '../../src/utils/html-attributes';
@@ -136,6 +141,15 @@ function App() {
       ...(params.has('blocks') ? [Blocks] : []),
       // The document's own blocks: pull quotes, callouts, sections, page breaks.
       ...(params.has('extras') ? [PullQuote, Callout, Collapsible, PageBreak] : []),
+      // Keywords, autocomplete, typography and ruby.
+      ...(params.has('inline-extras')
+        ? [
+            Keywords.configure({ keywords: ['teieditor'] }),
+            Autocomplete.configure({ debounce: 0 }),
+            SpecialText.configure({ brackets: true }),
+            Ruby,
+          ]
+        : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
@@ -170,7 +184,9 @@ function App() {
         frameProps={{ 'data-testid': 'editor', dir: params.has('rtl') ? 'rtl' : undefined }}
         slots={params.has('nocontext') ? { contextMenu: false } : undefined}
         contentProps={{ 'data-testid': 'content' }}
-      />
+      >
+        {params.has('inline-extras') ? <RubyPopover editor={editor} /> : null}
+      </Editor>
       {/* UI outside an editor takes the tokens from .tei-portal. */}
       <section className="tei-portal gallery" data-testid="gallery">
         <DropdownMenu label="Menu" groups={GROUPS} data-testid="menu-trigger">

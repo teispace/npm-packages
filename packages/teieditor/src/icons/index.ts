@@ -81,6 +81,8 @@ export const fontSize = /* @__PURE__ */ p(
   'M21 14h-5M16 16v-3.5a2.5 2.5 0 0 1 5 0V16',
   'M4.5 13h6M3 16l4.5-9 4.5 9',
 );
+/** Ruby: a small reading over a letter. */
+export const ruby = /* @__PURE__ */ p('M8 3h8', 'M4 21l8-13 8 13M7.5 16h9');
 export const link = /* @__PURE__ */ p(
   'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71',
   'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',

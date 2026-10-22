@@ -6,6 +6,8 @@ import { Collapsible } from '../../src/extensions/collapsible/index.js';
 import { Html } from '../../src/extensions/html/index.js';
 import { PageBreak } from '../../src/extensions/page-break/index.js';
 import { PullQuote } from '../../src/extensions/pull-quote/index.js';
+import { Ruby } from '../../src/extensions/ruby/index.js';
+import { SpecialText } from '../../src/extensions/special-text/index.js';
 import { StarterKit } from '../../src/extensions/starter-kit/index.js';
 import { Table } from '../../src/extensions/table/index.js';
 import { convert, renderToHTML, toJSON, toMarkdown, toText } from '../../src/server/index.js';
@@ -167,6 +169,22 @@ describe('server rendering', () => {
     expect(renderToHTML('<div data-tei-callout="tip"><p>Hi</p></div>', blocks)).toMatch(
       /^<div data-tei-callout="tip" role="note"><span data-tei-callout-icon=""><svg .*<\/svg><\/span><p>Hi<\/p><\/div>$/,
     );
+  });
+
+  it('renders ruby annotations and special text, from HTML, JSON and markdown', () => {
+    const inline = { extensions: [StarterKit, Ruby, SpecialText.configure({ brackets: true })] };
+    const html =
+      '<p>a <ruby>漢<rt>kan</rt></ruby><ruby>字<rt>ji</rt></ruby> <span data-tei-special-text="">b</span></p>';
+    expect(
+      renderToHTML(
+        '<p>a <ruby>漢<rp>(</rp><rt>kan</rt><rp>)</rp>字<rt>ji</rt></ruby> <span data-tei-special-text="">b</span></p>',
+        inline,
+      ),
+    ).toBe(html);
+    expect(renderToHTML(toJSON(html, inline), inline)).toBe(html);
+    const md = toMarkdown(html, inline);
+    expect(md).toBe('a <ruby>漢<rt>kan</rt></ruby><ruby>字<rt>ji</rt></ruby> [b]');
+    expect(renderToHTML(md, { ...inline, from: 'markdown' })).toBe(html);
   });
 
   it('fixes the DOM of a page that has its own only for the call', async () => {
