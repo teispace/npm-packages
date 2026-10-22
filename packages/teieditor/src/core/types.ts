@@ -109,6 +109,8 @@ export type TeiPlacement =
   | 'fileMenu'
   /** The toolbar over a selected embed. */
   | 'embedMenu'
+  /** The toolbar over a selected drawing. */
+  | 'excalidrawMenu'
   /** The menu from a callout's icon: its kinds, and taking it away. */
   | 'calloutMenu'
   /** A card's looks and accents, and taking it away (a submenu of the context menu). */
