@@ -8,6 +8,7 @@ import { Clipboard } from '../../src/extensions/clipboard/index';
 import { Collapsible } from '../../src/extensions/collapsible/index';
 import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
 import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
+import { FindReplace } from '../../src/extensions/find-replace/index';
 import { Html } from '../../src/extensions/html/index';
 import { Image, type ImageOptions } from '../../src/extensions/image/index';
 import { PageBreak } from '../../src/extensions/page-break/index';
@@ -22,6 +23,7 @@ import {
   DropdownMenu,
   Editor,
   Field,
+  FindReplaceBar,
   GridPicker,
   Input,
   type MenuGroupData,
@@ -136,6 +138,7 @@ function App() {
       ...(params.has('blocks') ? [Blocks] : []),
       // The document's own blocks: pull quotes, callouts, sections, page breaks.
       ...(params.has('extras') ? [PullQuote, Callout, Collapsible, PageBreak] : []),
+      ...(params.has('find') ? [FindReplace] : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
@@ -170,7 +173,9 @@ function App() {
         frameProps={{ 'data-testid': 'editor', dir: params.has('rtl') ? 'rtl' : undefined }}
         slots={params.has('nocontext') ? { contextMenu: false } : undefined}
         contentProps={{ 'data-testid': 'content' }}
-      />
+      >
+        {params.has('find') ? <FindReplaceBar /> : null}
+      </Editor>
       {/* UI outside an editor takes the tokens from .tei-portal. */}
       <section className="tei-portal gallery" data-testid="gallery">
         <DropdownMenu label="Menu" groups={GROUPS} data-testid="menu-trigger">
