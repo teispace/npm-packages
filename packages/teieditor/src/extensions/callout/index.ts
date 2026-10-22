@@ -23,7 +23,6 @@ import {
   type ElementDOMSlot,
   ElementNode,
   KEY_BACKSPACE_COMMAND,
-  KEY_ENTER_COMMAND,
   type LexicalNode,
   type LexicalUpdateJSON,
   mergeRegister,
@@ -33,7 +32,7 @@ import {
 import { defineTeiExtension, getPeerOptions } from '../../core/define.js';
 import { TeiEditor } from '../../core/editor.js';
 import { iconElement } from '../../core/icon-dom.js';
-import { $findSlotHost } from '../../core/slot-host.js';
+import { $findSlotHost, registerStepOut } from '../../core/slot-host.js';
 import { hasUi, requestUi, type UiRequest, uiRequest } from '../../core/ui-request.js';
 import {
   callout as calloutIcon,
@@ -361,27 +360,6 @@ function $backspace(event: KeyboardEvent | null): boolean {
   return true;
 }
 
-/** Enter on an empty last line steps out of the callout, as in a list. */
-function $enter(event: KeyboardEvent | null): boolean {
-  if (event?.shiftKey) return false;
-  const selection = $getSelection();
-  if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false;
-  const block = $blockOf(selection.anchor.getNode());
-  const callout = block?.getParent();
-  if (
-    !$isParagraphNode(block) ||
-    !block.isEmpty() ||
-    !$isCalloutNode(callout) ||
-    block.getNextSibling() ||
-    !block.getPreviousSibling()
-  )
-    return false;
-  event?.preventDefault();
-  callout.insertAfter(block);
-  block.select();
-  return true;
-}
-
 type Ctx = { options: CalloutOptions; storage: CalloutStorage };
 
 /**
@@ -446,7 +424,7 @@ export const Callout = defineTeiExtension({
         }
       }),
       lexical.registerCommand(KEY_BACKSPACE_COMMAND, $backspace, COMMAND_PRIORITY_LOW),
-      lexical.registerCommand(KEY_ENTER_COMMAND, $enter, COMMAND_PRIORITY_LOW),
+      registerStepOut(lexical, $isCalloutNode),
     );
   },
   commands: {

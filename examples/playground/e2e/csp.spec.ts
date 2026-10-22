@@ -466,7 +466,7 @@ test('context menu: copy and paste through it, reporting nothing', async ({
   await expectNoViolations(page);
 });
 
-test('callouts, pull quotes and page breaks: from the server, edited, reporting nothing', async ({
+test('callouts, pull quotes, page breaks and sections: from the server, edited, reporting nothing', async ({
   page,
 }) => {
   const editor = await open(page, '/');
@@ -486,5 +486,11 @@ test('callouts, pull quotes and page breaks: from the server, edited, reporting 
   await page.emulateMedia({ media: 'print' });
   await expect(editor.locator('.tei-page-break')).toHaveCSS('break-after', 'page');
   await page.emulateMedia({ media: 'screen' });
+  // A section: its chevron closes it, hidden until found.
+  const section = editor.locator('.tei-collapsible');
+  await section.locator('[data-tei-collapsible-toggle]').click();
+  await expect(section.locator('[data-tei-collapsible-content]')).toBeHidden();
+  await section.locator('[data-tei-collapsible-toggle]').click();
+  await expect(section.locator('[data-tei-collapsible-content]')).toBeVisible();
   await expectNoViolations(page);
 });

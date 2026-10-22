@@ -1,4 +1,4 @@
-import { configExtension } from '@lexical/extension';
+import { ClickAfterLastBlockExtension, configExtension } from '@lexical/extension';
 import { DOMImportExtension, defineImportRule, sel } from '@lexical/html';
 import { RichTextExtension } from '@lexical/rich-text';
 import { $setBlocksType } from '@lexical/selection';
@@ -37,6 +37,9 @@ export const RichText = defineTeiExtension({
   name: '@teispace/teieditor/rich-text',
   dependencies: [
     RichTextExtension,
+    // A click below a last block the caret can't leave (a table, an image, a
+    // section) adds a line there to type on.
+    ClickAfterLastBlockExtension,
     Html,
     configExtension(DOMImportExtension, { rules: [TEXT_BLOCKS_RULE] }),
   ],

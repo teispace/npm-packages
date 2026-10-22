@@ -1,7 +1,11 @@
 // @vitest-environment node
 import { Window } from 'happy-dom';
 import { createTeiEditor } from '../../src/core/create.js';
+import { Callout } from '../../src/extensions/callout/index.js';
+import { Collapsible } from '../../src/extensions/collapsible/index.js';
 import { Html } from '../../src/extensions/html/index.js';
+import { PageBreak } from '../../src/extensions/page-break/index.js';
+import { PullQuote } from '../../src/extensions/pull-quote/index.js';
 import { StarterKit } from '../../src/extensions/starter-kit/index.js';
 import { Table } from '../../src/extensions/table/index.js';
 import { convert, renderToHTML, toJSON, toMarkdown, toText } from '../../src/server/index.js';
@@ -152,6 +156,17 @@ describe('server rendering', () => {
         '<tr><td><p>1</p></td><td><p>2</p></td></tr></tbody></table>',
     );
     expect(toMarkdown(html, tables)).toBe('a\n\n| A | B |\n| --- | --- |\n| wide |  |\n\nb');
+  });
+
+  it('renders the document’s own blocks: callouts, pull quotes, page breaks, sections', () => {
+    const blocks = { extensions: [StarterKit, PullQuote, Callout, Collapsible, PageBreak] };
+    const html =
+      '<aside data-tei-pull-quote="">Big</aside><hr data-tei-page-break="">' +
+      '<details><summary>Title</summary><div data-tei-collapsible-content=""><p>Body</p></div></details>';
+    expect(renderToHTML(html, blocks)).toBe(html);
+    expect(renderToHTML('<div data-tei-callout="tip"><p>Hi</p></div>', blocks)).toMatch(
+      /^<div data-tei-callout="tip" role="note"><span data-tei-callout-icon=""><svg .*<\/svg><\/span><p>Hi<\/p><\/div>$/,
+    );
   });
 
   it('fixes the DOM of a page that has its own only for the call', async () => {

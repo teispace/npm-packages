@@ -15,6 +15,7 @@ import { holdUi } from '../../core/ui-request.js';
 import { Blocks } from '../../extensions/blocks/index.js';
 import { Callout } from '../../extensions/callout/index.js';
 import { CodeBlock } from '../../extensions/code-block/index.js';
+import { Collapsible } from '../../extensions/collapsible/index.js';
 import { Embed, type EmbedStorage } from '../../extensions/embed/index.js';
 import { FileAttachment } from '../../extensions/file/index.js';
 import { Image, type ImageStorage } from '../../extensions/image/index.js';
@@ -162,6 +163,7 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     Blocks,
     PullQuote,
     Callout,
+    Collapsible,
     PageBreak,
     Table,
     Image,
@@ -174,6 +176,7 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     Blocks,
     PullQuote,
     Callout,
+    Collapsible,
     PageBreak,
     Table,
     Image,

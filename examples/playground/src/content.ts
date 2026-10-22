@@ -57,6 +57,10 @@ in markdown it is a GitHub alert, <code>&gt; [!TIP]</code>.</p></div>
 <aside data-tei-pull-quote>A pull quote sets a line of your own text large, to draw the eye.</aside>
 <p>Press <code>⌘↵</code> for a page break: printed, the page ends there.</p>
 <hr data-tei-page-break>
+<details open><summary>Sections that open and close</summary>
+<p>Type <code>/toggle</code> or press <code>⌘⌥7</code> to fold lines under a title. Click the chevron, or press
+<code>⌘⌥↵</code>, to open or close it. Saved, it is <code>&lt;details&gt;</code>: it opens and closes with no script.</p>
+</details>
 <hr>
 <p>That is the whole document. Make it yours.</p>
 `;

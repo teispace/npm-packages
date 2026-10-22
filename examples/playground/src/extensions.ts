@@ -1,5 +1,6 @@
 import { Blocks } from '@teispace/teieditor/extensions/blocks';
 import { Callout } from '@teispace/teieditor/extensions/callout';
+import { Collapsible } from '@teispace/teieditor/extensions/collapsible';
 import { Embed } from '@teispace/teieditor/extensions/embed';
 import { FileAttachment } from '@teispace/teieditor/extensions/file';
 import { Image } from '@teispace/teieditor/extensions/image';
@@ -46,5 +47,6 @@ export const EXTENSIONS = [
   Blocks,
   PullQuote,
   Callout,
+  Collapsible,
   PageBreak,
 ];

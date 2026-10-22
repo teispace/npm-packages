@@ -196,3 +196,85 @@ test.describe('page break', () => {
     expect(style).toEqual({ after: 'page', visibility: 'hidden' });
   });
 });
+
+test.describe('collapsible', () => {
+  const section = (tei: Harness) => tei.content.locator('.tei-collapsible');
+  const chevron = (tei: Harness) => tei.content.locator('[data-tei-collapsible-toggle]');
+  const body = (tei: Harness) => tei.content.locator('.tei-collapsible-content');
+  const SECTION =
+    '<details open><summary>Details</summary><p>Hidden text</p></details><p>After</p>';
+
+  test('from the slash menu: the title, Enter into the body, Enter on an empty line out', async ({
+    tei,
+  }) => {
+    await open(tei, '<p>Intro</p>');
+    await caretAtEndOf(tei, 'Intro');
+    await tei.page.keyboard.press('Enter');
+    await tei.page.keyboard.type('/toggle');
+    await expect(slash(tei).getByRole('menuitem').first()).toContainText('Toggle');
+    await tei.page.keyboard.press('Enter');
+    // An empty title says what goes there.
+    const title = section(tei).locator('.tei-collapsible-title');
+    expect(await title.evaluate((el) => getComputedStyle(el, '::before').content)).toBe('"Title"');
+    await tei.page.keyboard.type('Heading');
+    await tei.page.keyboard.press('Enter');
+    await tei.page.keyboard.type('Inside');
+    await tei.page.keyboard.press('Enter');
+    await tei.page.keyboard.press('Enter');
+    await tei.page.keyboard.type('Out');
+    expect(await tei.html()).toBe(
+      '<p>Intro</p><details open=""><summary>Heading</summary><div data-tei-collapsible-content=""><p>Inside</p></div></details><p>Out</p>',
+    );
+  });
+
+  test('the chevron, on the title’s line, closes and opens it', async ({ tei }) => {
+    await open(tei, SECTION);
+    const toggle = await chevron(tei).boundingBox();
+    const line = await section(tei).locator('.tei-collapsible-title').boundingBox();
+    if (!toggle || !line) throw new Error('not rendered');
+    expect(Math.abs(toggle.y + toggle.height / 2 - (line.y + line.height / 2))).toBeLessThan(1.5);
+    expect(toggle.x + toggle.width).toBeLessThanOrEqual(line.x + 0.5);
+    await chevron(tei).click();
+    await expect(body(tei)).toBeHidden();
+    await expect(body(tei)).toHaveAttribute('hidden', 'until-found');
+    expect(await tei.html()).toMatch(/^<details><summary>Details<\/summary>/);
+    // Closed, it is the title alone: the next line sits under it.
+    const after = await tei.content.locator('p', { hasText: 'After' }).boundingBox();
+    expect((after?.y ?? 0) - (line.y + line.height)).toBeLessThan(24);
+    await chevron(tei).click();
+    await expect(body(tei)).toBeVisible();
+  });
+
+  test('⌘⌥7 makes the line a section, ⌘⌥↵ closes it, the caret going to the title', async ({
+    tei,
+  }) => {
+    await open(tei, '<p>Summary line</p><p>Below</p>');
+    await caretAtEndOf(tei, 'Summary line');
+    await tei.page.keyboard.press('ControlOrMeta+Alt+7');
+    await expect(section(tei).locator('.tei-collapsible-title')).toHaveText('Summary line');
+    await tei.page.keyboard.press('Enter');
+    await tei.page.keyboard.type('Body');
+    await tei.page.keyboard.press('ControlOrMeta+Alt+Enter');
+    await expect(body(tei)).toBeHidden();
+    await tei.page.keyboard.type('!');
+    await expect(section(tei).locator('.tei-collapsible-title')).toHaveText('Summary line!');
+  });
+
+  test('a click below a section that ends the document adds a line to type on', async ({ tei }) => {
+    await open(tei, '<details open><summary>Last</summary><p>Inside</p></details>');
+    const box = await tei.content.boundingBox();
+    const end = await section(tei).boundingBox();
+    if (!box || !end) throw new Error('not rendered');
+    const below = end.y + end.height + 8;
+    test.skip(below >= box.y + box.height, 'no room below the section');
+    await tei.page.mouse.click(box.x + box.width / 2, below);
+    await tei.page.keyboard.type('Typed');
+    expect(await tei.html()).toMatch(/<\/details><p>Typed<\/p>$/);
+  });
+
+  test('a tap on the chevron closes it @mobile', async ({ tei }) => {
+    await tei.open({ content: SECTION, flags: ['extras', 'plain'] });
+    await chevron(tei).tap();
+    await expect(body(tei)).toBeHidden();
+  });
+});

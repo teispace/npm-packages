@@ -32,6 +32,9 @@ const EXTRAS = [
       `<div data-tei-callout="${kind}"><p>A ${kind} with <strong>bold</strong> text, long enough to wrap in a narrow frame.</p></div>`,
   ),
   '<p>Before the break</p><hr data-tei-page-break><p>After the break</p>',
+  '<details open><summary>An open section, its title long enough to wrap in a narrow frame</summary><p>Its body.</p><ul><li>A list in it</li></ul></details>',
+  '<details><summary>A closed section</summary><p>Out of sight</p></details>',
+  '<p>Last line</p>',
 ].join('');
 
 /** Nothing under the pointer, nothing focused, every animation done. */

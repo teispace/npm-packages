@@ -197,6 +197,119 @@
     background: color-mix(in oklab, var(--tei-callout-fg) 14%, transparent);
   }
 
+  /* A section that opens and closes: a chevron before its title, its body
+   * under the title. The editor's and saved <details> share every box. */
+  .tei-collapsible,
+  :where(.tei-prose) details {
+    position: relative;
+    margin: 0 0 0.75em;
+    padding-inline-start: 1.75em;
+  }
+
+  .tei-collapsible-title,
+  :where(.tei-prose) summary {
+    display: block;
+    margin: 0;
+    font-weight: 600;
+    list-style: none;
+  }
+
+  :where(.tei-prose) summary {
+    cursor: pointer;
+  }
+
+  :where(.tei-prose) summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .tei-collapsible-title:has(> br:only-child)::before {
+    content: attr(data-tei-empty-label);
+    position: absolute;
+    color: var(--tei-fg-placeholder);
+    font-weight: 400;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .tei-collapsible-content,
+  :where(.tei-prose) details > [data-tei-collapsible-content] {
+    margin-block-start: 0.25em;
+  }
+
+  :is(.tei-collapsible-content, [data-tei-collapsible-content]) > :last-child {
+    margin-block-end: 0;
+  }
+
+  /* Closed: `hidden="until-found"` keeps the body for find in page. */
+  .tei-collapsible:not([data-open]) > .tei-collapsible-content {
+    margin: 0;
+  }
+
+  /* The chevron: centred on the title's line, turned down when open. */
+  .tei-collapsible-toggle {
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0;
+    display: grid;
+    place-items: center;
+    inline-size: 1.5em;
+    block-size: 1lh;
+    border-radius: var(--tei-radius-sm);
+    color: var(--tei-fg-muted);
+    cursor: pointer;
+    user-select: none;
+    transition:
+      rotate var(--tei-duration) ease,
+      background-color var(--tei-duration) ease;
+  }
+
+  .tei-collapsible-toggle:hover {
+    background: var(--tei-bg-muted);
+    color: var(--tei-fg);
+  }
+
+  .tei-collapsible-toggle svg {
+    inline-size: 1em;
+    block-size: 1em;
+  }
+
+  /* Saved, a drawn chevron in the same place (no image: strict CSPs block them). */
+  :where(.tei-prose) summary::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0.5em;
+    inset-block-start: calc(0.5lh - 0.25em);
+    inline-size: 0.5em;
+    block-size: 0.5em;
+    border-block-start: 2px solid var(--tei-fg-muted);
+    border-inline-end: 2px solid var(--tei-fg-muted);
+    rotate: 45deg;
+    translate: -0.125em 0;
+    transition: rotate var(--tei-duration) ease;
+  }
+
+  :where(.tei-prose) details:dir(rtl) > summary::before {
+    rotate: -135deg;
+    translate: 0.125em 0;
+  }
+
+  :where(.tei-prose) details[open] > summary::before {
+    rotate: 135deg;
+    translate: 0 -0.125em;
+  }
+
+  .tei-collapsible:dir(rtl) > .tei-collapsible-toggle {
+    scale: -1 1;
+  }
+
+  .tei-collapsible[data-open] > .tei-collapsible-toggle {
+    rotate: 90deg;
+  }
+
+  .tei-collapsible[data-open]:dir(rtl) > .tei-collapsible-toggle {
+    rotate: -90deg;
+  }
+
   /* A page break: a dashed rule, labelled in the editor; on paper, a new page.
    * Borders, not a gradient: a 1px gradient on a half pixel vanishes in Firefox. */
   .tei-page-break,

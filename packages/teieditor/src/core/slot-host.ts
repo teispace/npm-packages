@@ -34,6 +34,7 @@ import {
   type NodeKey,
   type TextNode,
 } from 'lexical';
+import { $blockOf } from '../utils/selection.js';
 
 /**
  * Helpers for nodes that host editable slots (an image's caption, a card's
@@ -394,6 +395,41 @@ export function $insertBlockAtSelection<T extends LexicalNode>(node: T): T {
   if (selected && !selected.isInline()) selected.insertAfter(node);
   else $insertBlock(node);
   return node.getLatest();
+}
+
+/**
+ * Enter on an empty last line of a box of blocks (a callout, a
+ * collapsible's body) takes the line out, after `$outer(box)`, as a list
+ * does. Shift-Enter, and a box's only line, stay.
+ */
+export function registerStepOut<T extends ElementNode>(
+  editor: LexicalEditor,
+  $isBox: HostTest<T>,
+  $outer: (box: T) => LexicalNode = (box) => box,
+): () => void {
+  return editor.registerCommand(
+    KEY_ENTER_COMMAND,
+    (event) => {
+      if (event?.shiftKey) return false;
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false;
+      const block = $blockOf(selection.anchor.getNode());
+      const box = block?.getParent();
+      if (
+        !$isParagraphNode(block) ||
+        !block.isEmpty() ||
+        !$isBox(box) ||
+        block.getNextSibling() ||
+        !block.getPreviousSibling()
+      )
+        return false;
+      event?.preventDefault();
+      $outer(box).insertAfter(block);
+      block.select();
+      return true;
+    },
+    COMMAND_PRIORITY_LOW,
+  );
 }
 
 /**

@@ -10,6 +10,9 @@ export const teiTheme: EditorThemeClasses = {
   blockCursor: 'tei-block-cursor',
   callout: 'tei-callout',
   characterLimit: 'tei-character-limit',
+  collapsible: 'tei-collapsible',
+  collapsibleContent: 'tei-collapsible-content',
+  collapsibleTitle: 'tei-collapsible-title',
   code: 'tei-code-block',
   codeHighlight: {
     atrule: 'tei-token-keyword',

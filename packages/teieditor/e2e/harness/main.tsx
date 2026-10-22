@@ -5,6 +5,7 @@ import type { TeiEditor } from '../../src/core/editor';
 import { Blocks } from '../../src/extensions/blocks/index';
 import { Callout } from '../../src/extensions/callout/index';
 import { Clipboard } from '../../src/extensions/clipboard/index';
+import { Collapsible } from '../../src/extensions/collapsible/index';
 import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
 import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
 import { Html } from '../../src/extensions/html/index';
@@ -133,8 +134,8 @@ function App() {
       ...(params.has('file') ? [FileAttachment] : []),
       ...(params.has('embed') ? [Embed] : []),
       ...(params.has('blocks') ? [Blocks] : []),
-      // The document's own blocks: pull quotes, callouts, page breaks.
-      ...(params.has('extras') ? [PullQuote, Callout, PageBreak] : []),
+      // The document's own blocks: pull quotes, callouts, sections, page breaks.
+      ...(params.has('extras') ? [PullQuote, Callout, Collapsible, PageBreak] : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
