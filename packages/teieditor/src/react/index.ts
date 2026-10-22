@@ -15,6 +15,8 @@ export type { ColumnsMenuProps } from './components/columns-menu.js';
 export { ColumnsMenu } from './components/columns-menu.js';
 export type { ContextMenuProps } from './components/context-menu.js';
 export { ContextMenu } from './components/context-menu.js';
+export type { DateTimePickerProps } from './components/date-time-picker.js';
+export { DateTimePicker } from './components/date-time-picker.js';
 export type { EditorPreset, EditorProps, EditorSlot, EditorSlots } from './components/editor.js';
 export { Editor } from './components/editor.js';
 export type {

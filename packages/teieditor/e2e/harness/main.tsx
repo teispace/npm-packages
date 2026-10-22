@@ -8,11 +8,13 @@ import { Card } from '../../src/extensions/card/index';
 import { Clipboard } from '../../src/extensions/clipboard/index';
 import { Collapsible } from '../../src/extensions/collapsible/index';
 import { Columns } from '../../src/extensions/columns/index';
+import { DateTime } from '../../src/extensions/date-time/index';
 import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
 import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
 import { Html } from '../../src/extensions/html/index';
 import { Image, type ImageOptions } from '../../src/extensions/image/index';
 import { PageBreak } from '../../src/extensions/page-break/index';
+import { Poll } from '../../src/extensions/poll/index';
 import { PullQuote } from '../../src/extensions/pull-quote/index';
 import { StarterKit } from '../../src/extensions/starter-kit/index';
 import { StickyNote } from '../../src/extensions/sticky-note/index';
@@ -141,6 +143,7 @@ function App() {
       ...(params.has('extras') ? [PullQuote, Callout, Collapsible, PageBreak] : []),
       ...(params.has('cards') ? [Card, StickyNote] : []),
       ...(params.has('columns') ? [Columns] : []),
+      ...(params.has('widgets') ? [Poll, DateTime.configure({ locale: 'en-US' })] : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });

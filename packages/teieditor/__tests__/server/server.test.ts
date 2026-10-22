@@ -3,8 +3,10 @@ import { Window } from 'happy-dom';
 import { createTeiEditor } from '../../src/core/create.js';
 import { Callout } from '../../src/extensions/callout/index.js';
 import { Collapsible } from '../../src/extensions/collapsible/index.js';
+import { DateTime } from '../../src/extensions/date-time/index.js';
 import { Html } from '../../src/extensions/html/index.js';
 import { PageBreak } from '../../src/extensions/page-break/index.js';
+import { Poll } from '../../src/extensions/poll/index.js';
 import { PullQuote } from '../../src/extensions/pull-quote/index.js';
 import { StarterKit } from '../../src/extensions/starter-kit/index.js';
 import { Table } from '../../src/extensions/table/index.js';
@@ -167,6 +169,24 @@ describe('server rendering', () => {
     expect(renderToHTML('<div data-tei-callout="tip"><p>Hi</p></div>', blocks)).toMatch(
       /^<div data-tei-callout="tip" role="note"><span data-tei-callout-icon=""><svg .*<\/svg><\/span><p>Hi<\/p><\/div>$/,
     );
+  });
+
+  it('renders polls and dates, from HTML, JSON and Markdown', () => {
+    const widgets = { extensions: [StarterKit, Poll, DateTime.configure({ locale: 'en-US' })] };
+    const poll =
+      '<div data-tei-poll=""><p data-tei-poll-question="">Lunch?</p><ul data-tei-poll-options="">' +
+      '<li data-tei-poll-option="" data-voters="[&quot;a&quot;]"><span data-tei-poll-mark=""></span><span data-tei-poll-label="">Pizza</span><span data-tei-poll-count="">1 · 100%</span><meter data-tei-poll-meter="" min="0" max="1" value="1">100%</meter></li>' +
+      '<li data-tei-poll-option="" data-voters="[]"><span data-tei-poll-mark=""></span><span data-tei-poll-label="">Soup</span><span data-tei-poll-count="">0 · 0%</span><meter data-tei-poll-meter="" min="0" max="1" value="0">0%</meter></li>' +
+      '</ul><p data-tei-poll-footer=""><span data-tei-poll-total="">1 vote</span></p></div>';
+    const html = `${poll}<p>On <time datetime="2026-10-22">Oct 22, 2026</time></p>`;
+    expect(renderToHTML(html, widgets)).toBe(html);
+    expect(renderToHTML(toJSON(html, widgets), widgets)).toBe(html);
+    expect(toMarkdown(html, widgets)).toBe(
+      '**Poll:** Lunch?\n\n- Pizza (1)\n- Soup (0)\n\nOn <time datetime="2026-10-22">Oct 22, 2026</time>',
+    );
+    expect(
+      renderToHTML('On <time datetime="2026-10-22">x</time>', { ...widgets, from: 'markdown' }),
+    ).toBe('<p>On <time datetime="2026-10-22">Oct 22, 2026</time></p>');
   });
 
   it('fixes the DOM of a page that has its own only for the call', async () => {
