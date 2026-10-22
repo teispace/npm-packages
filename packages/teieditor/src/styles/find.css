@@ -1,0 +1,97 @@
+/*
+ * Find and replace: the bar in the document's top inline-end corner, and
+ * the matches, painted with the CSS Custom Highlight API (`::highlight`),
+ * so the document itself never changes.
+ */
+@layer teieditor {
+  .tei,
+  .tei-prose:where(:not(.tei *)),
+  .tei-portal:where(:not(.tei *)) {
+    --tei-find-bg: light-dark(oklch(0.905 0.13 95 / 0.7), oklch(0.62 0.12 90 / 0.45));
+    --tei-find-current-bg: light-dark(oklch(0.78 0.16 62), oklch(0.75 0.16 62));
+    --tei-find-current-fg: oklch(0.21 0.006 286);
+  }
+
+  /* The highlights take colours from the text they paint, so the tokens
+   * work in light and dark; the fallbacks cover engines that resolve
+   * variables elsewhere. */
+  ::highlight(tei-find) {
+    background-color: var(--tei-find-bg, oklch(0.905 0.13 95 / 0.6));
+  }
+
+  ::highlight(tei-find-current) {
+    background-color: var(--tei-find-current-bg, oklch(0.78 0.16 62));
+    color: var(--tei-find-current-fg, oklch(0.21 0.006 286));
+  }
+
+  @media (forced-colors: active) {
+    ::highlight(tei-find) {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    ::highlight(tei-find-current) {
+      background-color: Mark;
+      color: MarkText;
+    }
+  }
+
+  .tei-popover.tei-find {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tei-space-1);
+    inline-size: min(30rem, calc(100vw - 1rem));
+    max-inline-size: calc(100vw - 1rem);
+    overflow: visible;
+  }
+
+  /* One row on a desktop; on a phone the tools wrap under the field. */
+  .tei-find-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .tei-find-row > .tei-input {
+    flex: 1 1 9rem;
+    min-inline-size: 7rem;
+    block-size: var(--tei-control-size-sm);
+  }
+
+  .tei-find-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .tei-find-status {
+    min-inline-size: 4.5rem;
+    padding-inline: var(--tei-space-1);
+    color: var(--tei-fg-muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .tei-find-status:empty {
+    display: none;
+  }
+
+  .tei-find-status[data-error] {
+    color: var(--tei-danger);
+  }
+
+  .tei-find [data-flip-rtl]:dir(rtl) > .tei-icon {
+    transform: scaleX(-1);
+  }
+
+  /* iOS zooms into a field whose text is under 16px. */
+  @media (pointer: coarse) {
+    .tei-find .tei-input {
+      font-size: max(1rem, 16px);
+    }
+  }
+}

@@ -42,6 +42,8 @@ export {
 } from './components/embed-controls.js';
 export type { FileControlsProps } from './components/file-controls.js';
 export { FileControls } from './components/file-controls.js';
+export type { FindReplaceBarProps } from './components/find-replace-bar.js';
+export { FindReplaceBar } from './components/find-replace-bar.js';
 export type { ImageControlsProps } from './components/image-controls.js';
 export { ImageControls } from './components/image-controls.js';
 export { ImageInsertPopover, InsertImageForm, InsertImageMenu } from './components/image-insert.js';

@@ -11,6 +11,7 @@ import { Columns } from '../../src/extensions/columns/index';
 import { DateTime } from '../../src/extensions/date-time/index';
 import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
 import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
+import { FindReplace } from '../../src/extensions/find-replace/index';
 import { Html } from '../../src/extensions/html/index';
 import { Image, type ImageOptions } from '../../src/extensions/image/index';
 import { PageBreak } from '../../src/extensions/page-break/index';
@@ -144,6 +145,7 @@ function App() {
       ...(params.has('cards') ? [Card, StickyNote] : []),
       ...(params.has('columns') ? [Columns] : []),
       ...(params.has('widgets') ? [Poll, DateTime.configure({ locale: 'en-US' })] : []),
+      ...(params.has('find') ? [FindReplace] : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
@@ -181,7 +183,7 @@ function App() {
           ...(params.has('nosticky') ? { stickyMenu: false } : {}),
         }}
         contentProps={{ 'data-testid': 'content' }}
-      />
+      ></Editor>
       {/* UI outside an editor takes the tokens from .tei-portal. */}
       <section className="tei-portal gallery" data-testid="gallery">
         <DropdownMenu label="Menu" groups={GROUPS} data-testid="menu-trigger">

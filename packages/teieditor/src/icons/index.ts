@@ -346,6 +346,20 @@ export const comment = /* @__PURE__ */ p(
   'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
 );
 export const search: TeiIconNode = [circle(11, 11, 8), ['path', { d: 'm21 21-4.3-4.3' }]];
+// Find options: match case, whole word, regular expression.
+export const caseSensitive = /* @__PURE__ */ p(
+  'm3 15 4-8 4 8M4 13h6',
+  'M15 12a3 3 0 1 0 6 0 3 3 0 1 0-6 0M21 9v6',
+);
+export const wholeWord = /* @__PURE__ */ p(
+  'M4 12a3 3 0 1 0 6 0 3 3 0 1 0-6 0M10 9v6',
+  'M14 12a3 3 0 1 0 6 0 3 3 0 1 0-6 0M14 7v8',
+  'M22 17v1c0 .5-.5 1-1 1H3c-.5 0-1-.5-1-1v-1',
+);
+export const regex = /* @__PURE__ */ p(
+  'M17 3v10M12.67 5.5l8.66 5M12.67 10.5l8.66-5',
+  'M9 17a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2z',
+);
 export const clock: TeiIconNode = [circle(12, 12, 10), ['path', { d: 'M12 6v6l4 2' }]];
 
 // Actions and chrome
