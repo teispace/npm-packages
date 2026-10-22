@@ -73,10 +73,12 @@ export type TeiActiveCheck<A extends unknown[] = any[]> = (ctx: TeiContext, ...a
 
 /**
  * Wraps every command run: log it, veto it (`return false` without calling
- * `next`), or change its arguments.
+ * `next`), or change its arguments. It answers `can()` too, with `check`
+ * set: there `next` asks the command instead of running it, so a veto also
+ * greys out the command's buttons. Act only when `check` is false.
  */
 export type TeiCommandMiddleware = (
-  call: { name: string; args: unknown[]; ctx: TeiContext },
+  call: { name: string; args: unknown[]; ctx: TeiContext; check: boolean },
   next: (args?: unknown[]) => boolean,
 ) => boolean;
 
@@ -108,7 +110,9 @@ export type TeiPlacement =
   /** The toolbar over a selected embed. */
   | 'embedMenu'
   /** The menu from a callout's icon: its kinds, and taking it away. */
-  | 'calloutMenu';
+  | 'calloutMenu'
+  /** The document menu: views, import and export, clearing. */
+  | 'document';
 
 /**
  * A UI entry an extension contributes — a toolbar button, a slash-menu row,
