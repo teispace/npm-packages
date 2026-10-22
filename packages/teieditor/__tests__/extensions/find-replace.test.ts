@@ -337,7 +337,9 @@ describe('FindReplace: keeping up with edits', () => {
     expect(storage.matches.value).toHaveLength(3);
   });
 
-  it('stays quick in a 10,000-paragraph document', () => {
+  // Timings are noisy on a busy machine; a retry absorbs a pause, while
+  // quadratic growth fails every attempt.
+  it('stays quick in a 10,000-paragraph document', { retry: 2, timeout: 30_000 }, () => {
     const lines = (count: number) =>
       Array.from({ length: count }, (_, i) => `<p>line ${i} with some words</p>`).join('');
     /** How long a first search takes in a document of `count` paragraphs. */
@@ -370,7 +372,7 @@ describe('FindReplace: keeping up with edits', () => {
       expect(storage.matches.value).toHaveLength(i === 1 ? 10_000 : 10_001);
     }
     expect(fastest).toBeLessThan(first);
-  }, 30_000);
+  });
 });
 
 describe('FindReplace: highlights', () => {

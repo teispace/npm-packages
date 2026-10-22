@@ -167,7 +167,11 @@ describe('TableOfContents: the outline', () => {
     expect(outline(editor)).toEqual(['3 Install #INSTALL', '3 Inside #INSIDE']);
   });
 
-  it('is cheap: 10,000 paragraphs, and typing in one does not walk them', () => {
+  // A retry absorbs a pause of a busy machine; walking every block fails each time.
+  it('is cheap: 10,000 paragraphs, and typing in one does not walk them', {
+    retry: 2,
+    timeout: 30_000,
+  }, () => {
     const editor = make('<h1>Top</h1>');
     editor.update(() => {
       const root = $getRoot();
@@ -189,7 +193,7 @@ describe('TableOfContents: the outline', () => {
     }
     expect(performance.now() - started).toBeLessThan(500);
     expect(outline(editor)).toHaveLength(11);
-  }, 30_000);
+  });
 });
 
 describe('TableOfContents: HTML, markdown and commands', () => {
