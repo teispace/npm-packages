@@ -218,6 +218,30 @@ const deleteKeyPath = (obj: Record<string, unknown>, keyPath: string): void => {
   }
 };
 
+const BIOME = '@biomejs/biome';
+
+/**
+ * Biome's configuration is written for one release, and a newer one can
+ * reject it (2.6 dropped the `useSortedClasses` key). The starter's
+ * lockfile holds Biome to that release; a package manager installing
+ * without it would take the newest the range allows. So without the
+ * lockfile, pin the release the configuration names in its `$schema`.
+ */
+const pinBiome = async (projectPath: string, pkg: { devDependencies?: Record<string, string> }) => {
+  if (!pkg.devDependencies?.[BIOME]) return;
+  for (const name of ['biome.json', 'biome.jsonc']) {
+    let config: string;
+    try {
+      config = await readFile(path.join(projectPath, name), 'utf-8');
+    } catch {
+      continue;
+    }
+    const version = /biomejs\.dev\/schemas\/(\d+\.\d+\.\d+[\w.-]*)\/schema\.json/.exec(config)?.[1];
+    if (version) pkg.devDependencies[BIOME] = version;
+    return;
+  }
+};
+
 const editPackageJson = async (
   projectPath: string,
   plan: CompositionPlan,
@@ -252,6 +276,8 @@ const editPackageJson = async (
     for (const pm of Object.keys(manifest.packageManagers)) delete pkg.engines[pm];
     Object.assign(pkg.engines, plan.pmSpec.engines ?? {});
   }
+  if (!(await exists(path.join(projectPath, plan.pmSpec.lockfile))))
+    await pinBiome(projectPath, pkg);
 
   await writeFile(file, `${JSON.stringify(pkg, null, 2)}\n`, 'utf-8');
 };
