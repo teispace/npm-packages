@@ -26,6 +26,7 @@ import {
   unfoldLines,
 } from './escape.js';
 import { getPayloadType } from './index.js';
+import { normalizeOtpSecret, OTPAUTH_DEFAULTS } from './security.js';
 import { profileUrlPattern, SOCIAL_NETWORKS } from './social.js';
 import type { PayloadValues } from './types.js';
 
@@ -45,6 +46,12 @@ export interface ParsedPayload {
    * inferred from a URL's shape, which can be wrong for lookalike links.
    */
   readonly confidence: 'exact' | 'heuristic';
+  /**
+   * Set when the payload is a format teiqr recognises but cannot decompose —
+   * Google Authenticator's `otpauth-migration://` export, for one. The payload
+   * comes back as `type: 'text'`, and this says why.
+   */
+  readonly unsupported?: string;
 }
 
 /**
@@ -161,6 +168,63 @@ const wifiParser: PayloadParser = {
     return compact(values);
   },
 };
+
+/** Labels longer than this are refused rather than decoded. */
+const MAX_OTP_LABEL = 256;
+
+/**
+ * Authenticator Key URIs: `otpauth://totp/Issuer:account?secret=…`.
+ *
+ * Defaults are written into the values, so a form shows what the app will
+ * use; the serialiser drops them again, which keeps the round trip exact.
+ */
+const otpauthParser: PayloadParser = {
+  type: 'otpauth',
+  parse(text) {
+    const match = /^otpauth:\/\/([a-z]+)\/([^?]*)/i.exec(text.trim());
+    if (!match) return null;
+    const kind = match[1].toLowerCase();
+    if ((kind !== 'totp' && kind !== 'hotp') || match[2].length > MAX_OTP_LABEL) return null;
+
+    let label: string;
+    try {
+      label = decodeURIComponent(match[2]);
+    } catch {
+      return null;
+    }
+    // The issuer prefix ends at the first colon; the account may be preceded
+    // by spaces, which the format allows.
+    const colon = label.indexOf(':');
+    const prefix = colon === -1 ? '' : label.slice(0, colon).trim();
+    const account = (colon === -1 ? label : label.slice(colon + 1)).trim();
+
+    const params = queryParams(text.trim());
+    return compact({
+      kind,
+      // The parameter wins: the label prefix is optional and display-only.
+      issuer: params.issuer?.trim() || prefix,
+      account,
+      secret: params.secret === undefined ? undefined : normalizeOtpSecret(params.secret),
+      algorithm: (params.algorithm ?? OTPAUTH_DEFAULTS.algorithm).toUpperCase(),
+      digits: params.digits ?? OTPAUTH_DEFAULTS.digits,
+      ...(kind === 'totp'
+        ? { period: params.period ?? OTPAUTH_DEFAULTS.period }
+        : { counter: params.counter }),
+    });
+  },
+};
+
+/**
+ * Formats recognised only to say they cannot be decomposed. Checked after the
+ * parsers and before the URL fallback, which would otherwise claim them.
+ */
+const UNSUPPORTED: readonly { test: RegExp; reason: string }[] = [
+  {
+    test: /^otpauth-migration:\/\//i,
+    reason:
+      'Google Authenticator export (otpauth-migration://). It packs several accounts into a protobuf; import it in an authenticator app instead.',
+  },
+];
 
 /** vCard 3.0 and 4.0 share a body; only the VERSION line and TEL scheme differ. */
 const vcardParser = (type: 'vcard' | 'vcard4', version: string): PayloadParser => ({
@@ -516,6 +580,7 @@ const urlParser: PayloadParser = {
  */
 const BUILTIN: PayloadParser[] = [
   wifiParser,
+  otpauthParser,
   vcardParser('vcard4', '4.0'),
   vcardParser('vcard', '3.0'),
   mecardParser,
@@ -561,17 +626,23 @@ export const parsePayload = (text: string): ParsedPayload => {
     type: string,
     values: PayloadValues,
     confidence: 'exact' | 'heuristic',
+    unsupported?: string,
   ): ParsedPayload => ({
     type,
     label: getPayloadType(type)?.label ?? type,
     values,
     raw: text,
     confidence,
+    ...(unsupported ? { unsupported } : {}),
   });
 
   for (const parser of [...custom, ...BUILTIN]) {
     const values = parser.parse(text);
     if (values) return describe(parser.type, values, parser.confidence ?? 'exact');
+  }
+
+  for (const format of UNSUPPORTED) {
+    if (format.test.test(text.trim())) return describe('text', { text }, 'exact', format.reason);
   }
 
   // URLs last: several specific types are URLs, and matching them first would

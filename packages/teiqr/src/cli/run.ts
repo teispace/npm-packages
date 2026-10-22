@@ -29,8 +29,16 @@ import { encodeStructured } from '../core/structured.js';
 import type { EccLevel } from '../core/types.js';
 import { type ExportFormat, exportQr } from '../export/index.js';
 import { createZip } from '../export/zip.js';
-import { getPayloadType, PAYLOAD_TYPES, serializePayload } from '../payload/index.js';
+import {
+  getPayloadType,
+  PAYLOAD_TYPES,
+  redactPayloadValues,
+  SECRET_MASK,
+  sensitiveFieldsIn,
+  serializePayload,
+} from '../payload/index.js';
 import { parsePayload } from '../payload/parse.js';
+import type { PayloadType } from '../payload/types.js';
 import type { EyeBallShape, EyeFrameShape, ModuleShape, QrStyle } from '../render/types.js';
 import { toTerminal } from '../terminal.js';
 import { validate } from '../validate/index.js';
@@ -108,6 +116,10 @@ const SCAN_FLAGS: Record<string, FlagSpec> = {
     describe: 'Report every code in the image, not just the first',
   },
   parse: { kind: 'boolean', short: 'p', describe: 'Decompose the payload into fields' },
+  reveal: {
+    kind: 'boolean',
+    describe: 'Print passwords and authenticator secrets instead of masking them',
+  },
   help: { kind: 'boolean', short: 'h', describe: 'Show this help' },
 };
 
@@ -159,6 +171,26 @@ const asEcc = (value: unknown): EccLevel | undefined => {
     throw new ArgError(`--ecc must be one of L, M, Q, H (got ${JSON.stringify(value)})`);
   }
   return upper as EccLevel;
+};
+
+const ECC_ORDER: readonly EccLevel[] = ['L', 'M', 'Q', 'H'];
+
+/**
+ * The level to encode a payload type at: the one asked for, or the default M,
+ * raised to the type's `minEcc`. Asking for less than the minimum is refused —
+ * a WiFi or payment code is scanned once, often from print, and a misread is
+ * expensive.
+ */
+const eccFor = (requested: EccLevel | undefined, type: PayloadType): EccLevel | undefined => {
+  const minimum = type.minEcc;
+  if (!minimum) return requested;
+  if (requested === undefined) {
+    return ECC_ORDER.indexOf(minimum) > ECC_ORDER.indexOf('M') ? minimum : undefined;
+  }
+  if (ECC_ORDER.indexOf(requested) < ECC_ORDER.indexOf(minimum)) {
+    throw new ArgError(`--ecc ${requested} is below the minimum ${minimum} for ${type.id} codes`);
+  }
+  return requested;
 };
 
 /** Work out the format from an explicit flag, then the output extension, then the default. */
@@ -217,6 +249,7 @@ const generate = async (argv: readonly string[], io: CliIo): Promise<number> => 
   }
 
   let text: string;
+  let ecc = asEcc(flags.ecc);
   if (flags.type) {
     const typeId = String(flags.type);
     const type = getPayloadType(typeId);
@@ -227,11 +260,11 @@ const generate = async (argv: readonly string[], io: CliIo): Promise<number> => 
     }
     text = serializePayload(typeId, fieldsFrom(positional));
     if (!text) throw new ArgError(`No fields given for payload type ${typeId}`);
+    ecc = eccFor(ecc, type);
   } else {
     text = positional.join(' ');
   }
 
-  const ecc = asEcc(flags.ecc);
   const style = styleFrom(flags);
   const output = flags.output === undefined ? undefined : String(flags.output);
 
@@ -303,16 +336,38 @@ const scanCommand = async (argv: readonly string[], io: CliIo): Promise<number> 
 
   const chosen = flags.all ? results : results.slice(0, 1);
 
+  // A WiFi password or an authenticator secret is masked unless asked for:
+  // terminal output ends up in scrollback, shell logs and screen shares. The
+  // raw text carries the credential too, so it is withheld along with it.
+  const reveal = Boolean(flags.reveal);
+  const read = chosen.map((result) => {
+    const parsed = parsePayload(result.text);
+    const hidden = reveal ? [] : sensitiveFieldsIn(parsed.type, parsed.values);
+    return { result, parsed, hidden };
+  });
+
   if (flags.json) {
     io.stdout(
       `${JSON.stringify(
-        chosen.map((r) => ({
-          text: r.text,
+        read.map(({ result: r, parsed, hidden }) => ({
+          text: hidden.length > 0 ? null : r.text,
+          ...(hidden.length > 0 ? { redacted: hidden } : {}),
           version: r.version,
           ecc: r.ecc,
           mask: r.mask,
           corrected: r.corrected,
-          ...(flags.parse ? { payload: parsePayload(r.text) } : {}),
+          ...(flags.parse
+            ? {
+                payload:
+                  hidden.length > 0
+                    ? {
+                        ...parsed,
+                        raw: null,
+                        values: redactPayloadValues(parsed.type, parsed.values),
+                      }
+                    : parsed,
+              }
+            : {}),
         })),
         null,
         2,
@@ -321,14 +376,18 @@ const scanCommand = async (argv: readonly string[], io: CliIo): Promise<number> 
     return 0;
   }
 
-  for (const result of chosen) {
-    io.stdout(`${result.text}\n`);
+  for (const { result, parsed, hidden } of read) {
+    io.stdout(
+      hidden.length > 0
+        ? `[${parsed.label}: ${hidden.join(', ')} masked as ${SECRET_MASK}; pass --reveal to print it]\n`
+        : `${result.text}\n`,
+    );
     if (flags.parse) {
-      const parsed = parsePayload(result.text);
       io.stdout(`  type: ${parsed.type} (${parsed.confidence})\n`);
-      for (const [key, value] of Object.entries(parsed.values)) {
-        io.stdout(`  ${key}: ${value}\n`);
-      }
+      if (parsed.unsupported) io.stdout(`  unsupported: ${parsed.unsupported}\n`);
+      const values =
+        hidden.length > 0 ? redactPayloadValues(parsed.type, parsed.values) : parsed.values;
+      for (const [key, value] of Object.entries(values)) io.stdout(`  ${key}: ${value}\n`);
     }
   }
   return 0;
@@ -347,7 +406,8 @@ const batchCommand = async (argv: readonly string[], io: CliIo): Promise<number>
   if (!flags.output) throw new ArgError('batch needs --output, a directory or a .zip file');
 
   const typeId = String(flags.type);
-  if (!getPayloadType(typeId)) {
+  const type = getPayloadType(typeId);
+  if (!type) {
     throw new ArgError(`Unknown payload type ${JSON.stringify(typeId)}. Run \`teiqr types\`.`);
   }
 
@@ -369,7 +429,7 @@ const batchCommand = async (argv: readonly string[], io: CliIo): Promise<number>
   }
 
   const format = resolveFormat(flags.format, undefined, 'png');
-  const ecc = asEcc(flags.ecc);
+  const ecc = eccFor(asEcc(flags.ecc), type);
   const scale = typeof flags.scale === 'number' ? flags.scale : 10;
   const output = String(flags.output);
   const toZip = output.toLowerCase().endsWith('.zip');
