@@ -282,7 +282,7 @@ describe('the inline script', () => {
     expect(styles[0]?.nonce).toBe('n0nce');
   });
 
-  it('prefers a constructable sheet when the engine has one', () => {
+  it('prefers a constructable sheet when the engine has one, and removes it', async () => {
     const uninstall = installAdoptedStyleSheets();
     try {
       document.cookie = 'theme=dark; Path=/';
@@ -294,6 +294,9 @@ describe('the inline script', () => {
       );
       expect(styles).toHaveLength(0);
       expect((document as SheetDoc).adoptedStyleSheets).toHaveLength(1);
+      // And it lets go of the sheet. Wait for that before taking the API away,
+      // or the script's later removal runs against a document without it.
+      await vi.waitFor(() => expect((document as SheetDoc).adoptedStyleSheets).toHaveLength(0));
     } finally {
       uninstall();
     }
