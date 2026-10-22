@@ -367,6 +367,36 @@ export const microphone: TeiIconNode = [
 export const sparkles = /* @__PURE__ */ p(
   'M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0l1.58 6.14a2 2 0 0 0 1.44 1.44l6.14 1.58a.5.5 0 0 1 0 .96l-6.14 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z',
 );
+// Writing assistant: its actions, and stopping or retrying an answer.
+export const wand = /* @__PURE__ */ p(
+  'M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8 19 13M15 9h.01M17.8 6.2 19 5m-16 16 9-9M12.2 6.2 11 5',
+);
+export const penLine = /* @__PURE__ */ p(
+  'M12 20h9',
+  'M16.38 3.62a1 1 0 0 1 3 3L7.37 18.64a2 2 0 0 1-.86.5l-2.87.84a.5.5 0 0 1-.62-.62l.84-2.87a2 2 0 0 1 .5-.86z',
+);
+export const spellCheck = /* @__PURE__ */ p('m6 16 6-12 6 12M8 12h8m0 8 2 2 4-4');
+export const shrink = /* @__PURE__ */ p(
+  'm15 15 6 6m-6-6v4.8m0-4.8h4.8M9 19.8V15m0 0H4.2M9 15l-6 6',
+  'M15 4.2V9m0 0h4.8M15 9l6-6M9 4.2V9m0 0H4.2M9 9 3 3',
+);
+export const expand = /* @__PURE__ */ p(
+  'm15 15 6 6m-6-12 6-6M21 16v5h-5M21 8V3h-5',
+  'M3 16v5h5m-5 0 6-6M3 8V3h5M9 9 3 3',
+);
+export const languages = /* @__PURE__ */ p(
+  'm5 8 6 6m-7 0 6-6 2-3M2 5h12M7 2h1',
+  'm22 22-5-10-5 10m2-4h6',
+);
+export const megaphone = /* @__PURE__ */ p(
+  'm3 11 18-5v12L3 14v-3z',
+  'M11.6 16.8a3 3 0 1 1-5.8-1.6',
+);
+export const stop: TeiIconNode = [rect(6, 6, 12, 12, 1)];
+export const retry = /* @__PURE__ */ p(
+  'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8',
+  'M3 3v5h5',
+);
 export const comment = /* @__PURE__ */ p(
   'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
 );
