@@ -1,7 +1,11 @@
 import { $isLinkNode } from '@lexical/link';
 import {
+  $createNodeSelection,
   $createTextNode,
   $getRoot,
+  $getSelection,
+  $isRangeSelection,
+  $setSelection,
   type ElementNode,
   KEY_DOWN_COMMAND,
   type LexicalNode,
@@ -214,6 +218,33 @@ describe('blocks', () => {
     expect(editor.can().outdent()).toBe(false);
     editor.commands.indent();
     expect(editor.can().outdent()).toBe(true);
+  });
+});
+
+describe('selection', () => {
+  it('puts the caret where a click lands in text while a node is selected', () => {
+    const editor = make('<p>Hello</p><hr><p>World</p>');
+    const root = editor.lexical.getRootElement() as HTMLElement;
+    root.setAttribute('contenteditable', 'true');
+    editor.update(
+      () => {
+        const selection = $createNodeSelection();
+        selection.add(($getRoot().getChildAtIndex(1) as LexicalNode).getKey());
+        $setSelection(selection);
+      },
+      { discrete: true },
+    );
+    // The mousedown has placed the browser's caret; its selectionchange has not come yet.
+    const span = root.querySelectorAll('p')[1]?.querySelector('span') as HTMLElement;
+    getSelection()?.collapse(span.firstChild as Text, 3);
+    span.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+    const caret = editor.read(() => {
+      const selection = $getSelection();
+      return $isRangeSelection(selection)
+        ? `${selection.anchor.getNode().getTextContent()}@${selection.anchor.offset}`
+        : String(selection);
+    });
+    expect(caret).toBe('World@3');
   });
 });
 

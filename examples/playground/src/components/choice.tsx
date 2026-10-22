@@ -1,5 +1,7 @@
 'use client';
 
+import { useId } from 'react';
+
 /**
  * A row of buttons for one of a few values. (A native <select> would do,
  * but Safari reports CSP violations for its own styles under this policy.)
@@ -15,10 +17,11 @@ export function Choice<T extends string>({
   options: readonly T[];
   onChange: (value: T) => void;
 }) {
+  const id = useId();
   return (
     <div className="choice">
-      <span id={`choice-${label}`}>{label}</span>
-      <div className="segmented" role="group" aria-labelledby={`choice-${label}`}>
+      <span id={id}>{label}</span>
+      <div className="segmented" role="group" aria-labelledby={id}>
         {options.map((option) => (
           <button
             key={option}

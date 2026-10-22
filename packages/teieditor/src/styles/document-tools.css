@@ -46,6 +46,12 @@
     padding-inline-start: 0;
   }
 
+  /* Not the document's list items: saved HTML in .tei-prose would space them out. */
+  [data-tei-toc] li {
+    margin: 0;
+    padding: 0;
+  }
+
   [data-tei-toc] a {
     color: var(--tei-fg-muted);
     text-decoration: none;

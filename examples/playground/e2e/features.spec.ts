@@ -100,3 +100,60 @@ test('two editors, and another tab, edit one document', async ({ page, context }
   await expect(page.locator('.tei-versions-save').first()).toBeVisible();
   await expectNoViolations(page);
 });
+
+test('the widgets and inline extras read in, and the contents list the headings', async ({
+  page,
+}) => {
+  const editor = await open(page, '/');
+  await expect(editor.locator('.tei-columns > [data-tei-column]')).toHaveCount(2);
+  await expect(editor.locator('.tei-card')).toBeVisible();
+  await expect(editor.locator('.tei-sticky')).toBeVisible();
+  const poll = editor.locator('[data-tei-poll]');
+  await expect(poll.getByRole('textbox', { name: 'Ask a question' })).toHaveValue('Which feature next?');
+  await expect(poll.getByRole('meter', { name: 'Footnotes: 2 votes' })).toBeVisible();
+  await expect(editor.locator('time')).toContainText('2026');
+  await expect(editor.locator('[data-tei-mention]')).toContainText('Grace Hopper');
+  await expect(editor.locator('[data-tei-hashtag]')).toHaveText('#launch');
+  await expect(editor.locator('ruby rt')).toHaveText('かんじ');
+  await expect(editor.locator('.tei-special-text')).toContainText('bracketed');
+  const contents = editor.locator('[data-tei-toc] a');
+  await expect(contents.filter({ hasText: 'In a line of text' })).toHaveCount(1);
+  expect(await contents.count()).toBeGreaterThanOrEqual(10);
+  await expectNoViolations(page);
+});
+
+test('Shiki colours code in place of Prism, and the document carries over', async ({ page }) => {
+  const editor = await open(page, '/');
+  await editor.locator('h1').click();
+  await page.keyboard.type(' today');
+  await page.getByRole('group', { name: 'Code colours' }).getByRole('button', { name: 'shiki' }).click();
+  const fresh = page.locator('[contenteditable="true"]').first();
+  await expect(fresh).toHaveAttribute('data-tei-shiki', '', { timeout: 15_000 });
+  await expect(fresh.locator('h1')).toContainText('today');
+  // A token coloured by the theme, through a custom property.
+  await expect
+    .poll(() =>
+      fresh
+        .locator('code span')
+        .evaluateAll((spans) =>
+          spans.some((span) => (span as HTMLElement).style.cssText.includes('--tei-shiki-')),
+        ),
+    )
+    .toBe(true);
+  await expectNoViolations(page);
+});
+
+test('autocomplete suggests the rest of a word, and Tab takes it', async ({ page }) => {
+  const editor = await open(page, '/');
+  await page.getByRole('checkbox', { name: 'Autocomplete' }).check();
+  const fresh = page.locator('[contenteditable="true"]').first();
+  await fresh.locator('blockquote').click();
+  // To the end of the line (End on a Mac scrolls the page instead).
+  await page.keyboard.press(MOD === 'Meta' ? 'Meta+ArrowRight' : 'End');
+  await page.keyboard.type(' becau');
+  await expect(page.locator('[data-tei-autocomplete]')).toContainText('se');
+  await page.keyboard.press('Tab');
+  await expect(fresh.locator('blockquote')).toContainText('because');
+  await expect(editor).toBeVisible();
+  await expectNoViolations(page);
+});

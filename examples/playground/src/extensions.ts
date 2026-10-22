@@ -1,12 +1,16 @@
 import type { TeiExtensionInput } from '@teispace/teieditor';
 import { Ai, type AiHandler } from '@teispace/teieditor/extensions/ai';
+import { Autocomplete } from '@teispace/teieditor/extensions/autocomplete';
+import { CodeShiki } from '@teispace/teieditor/extensions/code-shiki';
 import { Comments } from '@teispace/teieditor/extensions/comments';
 import { Equation } from '@teispace/teieditor/extensions/equation';
 import { Excalidraw } from '@teispace/teieditor/extensions/excalidraw';
 import { FileAttachment } from '@teispace/teieditor/extensions/file';
 import { Image } from '@teispace/teieditor/extensions/image';
+import { Keywords } from '@teispace/teieditor/extensions/keywords';
 import { Mention, type MentionSearch } from '@teispace/teieditor/extensions/mention';
 import { Review } from '@teispace/teieditor/extensions/review';
+import { SpecialText } from '@teispace/teieditor/extensions/special-text';
 import { TreeView } from '@teispace/teieditor/extensions/tree-view';
 import { full } from '@teispace/teieditor/presets/full';
 
@@ -95,7 +99,8 @@ const CONFIGURED = new Map<TeiExtensionInput, TeiExtensionInput>([
 /**
  * What the showcase installs, on the server (for its first HTML) and in the
  * browser alike: the full preset, with uploads, people to mention and a demo AI,
- * plus equations, drawings, suggested changes and the tree view.
+ * plus equations, drawings, suggested changes, marked keywords, `[special]`
+ * text and the tree view.
  */
 export const EXTENSIONS: TeiExtensionInput[] = [
   ...full.extensions.map((extension) => CONFIGURED.get(extension) ?? extension),
@@ -104,6 +109,25 @@ export const EXTENSIONS: TeiExtensionInput[] = [
   Equation,
   Excalidraw,
   Review.configure({ user: ME }),
+  // Marked where they appear, never saved: CSS highlights over the text.
+  Keywords.configure({ keywords: ['teieditor', 'Lexical', /\bTODO\b/] }),
+  SpecialText,
   // A developer tool: the node tree, from the document menu.
   TreeView,
+];
+
+/** The settings that change which extensions are installed. */
+export interface ExtensionSettings {
+  /** Colour code with Shiki (VS Code's grammars) in place of Prism. */
+  shiki: boolean;
+  /** Suggest the rest of a word as you type; Tab takes it. */
+  autocomplete: boolean;
+}
+
+/** {@link EXTENSIONS}, with the settings' extras. */
+export const extensionsFor = ({ shiki, autocomplete }: ExtensionSettings): TeiExtensionInput[] => [
+  ...EXTENSIONS,
+  // Installed alongside Prism, it switches Prism off.
+  ...(shiki ? [CodeShiki] : []),
+  ...(autocomplete ? [Autocomplete] : []),
 ];

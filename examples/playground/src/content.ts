@@ -10,6 +10,7 @@ export const DEMO = `
 <span style="background-color: rgb(234 179 8 / 0.35);">highlight</span>,
 <span style="font-size: 20px;">size</span> and
 <span style="font-family: Georgia, serif;">font</span>, from the toolbar or the bubble menu.</p>
+<nav data-tei-toc></nav>
 <h2>Markdown as you type</h2>
 <ul>
   <li><code>#</code> to <code>######</code> and a space make headings, <code>&gt;</code> a quote</li>
@@ -73,6 +74,23 @@ in markdown it is a GitHub alert, <code>&gt; [!TIP]</code>.</p></div>
 <p>Type <code>/toggle</code> or press <code>⌘⌥7</code> to fold lines under a title. Click the chevron, or press
 <code>⌘⌥↵</code>, to open or close it. Saved, it is <code>&lt;details&gt;</code>: it opens and closes with no script.</p>
 </details>
+<h2>Layout and widgets</h2>
+<p>Lay blocks side by side with <code>/columns</code>, and drag the gap between two columns to resize them.</p>
+<div data-tei-columns="1fr 1fr"><div data-tei-column="1"><p><strong>Left.</strong> Each column holds any blocks:
+lists, images, tables.</p></div><div data-tei-column="1"><p><strong>Right.</strong> On a phone, columns stack.</p></div></div>
+<div data-tei-card="default"><p>A card frames a few blocks: <code>/card</code>.</p></div>
+<aside data-tei-sticky="yellow"><p>A sticky note, from <code>/sticky</code>.</p></aside>
+<p>The text wraps round a sticky note, as it would round a note on a page. A poll keeps its votes in the
+document, from <code>/poll</code>, and a date is a chip that opens a calendar: the launch is
+<time datetime="2026-11-02">Nov 2, 2026</time>. Type <code>/date</code> for one.</p>
+<div data-tei-poll><p data-tei-poll-question>Which feature next?</p><ul><li data-tei-poll-option data-voters="[&quot;ada&quot;,&quot;grace&quot;]"><span data-tei-poll-label>Footnotes</span></li><li data-tei-poll-option data-voters="[&quot;alan&quot;]"><span data-tei-poll-label>Charts</span></li></ul></div>
+<h2>In a line of text</h2>
+<p>Mention someone with <code>@</code>, like <span data-tei-mention="grace-hopper" data-label="Grace Hopper">@Grace Hopper</span>;
+tag with <code>#</code>, like <span data-tei-hashtag="">#launch</span>; and find emoji with <code>:</code>, as in
+<code>:tada:</code>. A reading goes over its text with <code>/ruby</code>: <ruby>漢字<rt>かんじ</rt></ruby>.
+Keywords such as TODO are marked wherever they appear, and <span data-tei-special-text>bracketed</span>
+text is set apart. Type <code>--</code> for a dash and <code>1/2</code> for ½.</p>
 <hr>
-<p>That is the whole document. Make it yours.</p>
+<p>That is the whole document. Press <code>⌘F</code> to find and replace in it, and open the document menu to see
+its markdown source, show what does not print, or lay it out in pages. Make it yours.</p>
 `;
