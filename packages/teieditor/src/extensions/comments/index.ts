@@ -517,7 +517,7 @@ export const Comments = defineTeiExtension({
     'comments.detached': 'The text was deleted',
     'comments.replies': '{count} replies',
     'comments.tooLong': 'Comments are limited to {max} characters.',
-    'comments.shortcutHint': '⌘↵ to post',
+    'comments.shortcutHint': '{key} to post',
   },
   items: [
     {
