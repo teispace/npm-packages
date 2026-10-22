@@ -105,6 +105,11 @@ jobs:
       - name: teieditor size budget
         run: yarn workspace @teispace/teieditor size
 
+      # The built package as an app sees it, and every component `npx
+      # @teispace/teieditor add` copies, compiled as an app's own code.
+      - name: teieditor type tests
+        run: yarn workspace @teispace/teieditor test:types
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:

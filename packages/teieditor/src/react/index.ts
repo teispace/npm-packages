@@ -4,6 +4,7 @@
 
 export type { BlockHandleProps } from './components/block-handle.js';
 export { BlockHandle } from './components/block-handle.js';
+export { useBlockMenu } from './components/block-menu.js';
 export type { BubbleMenuProps } from './components/bubble-menu.js';
 export { BubbleMenu } from './components/bubble-menu.js';
 export type { CalloutMenuProps } from './components/callout-menu.js';
@@ -34,6 +35,7 @@ export {
   EditorToolbar,
   ItemButton,
   ItemMenu,
+  itemControl,
 } from './components/editor-toolbar.js';
 export type { EmbedControlsProps } from './components/embed-controls.js';
 export {
@@ -50,9 +52,15 @@ export type { FindReplaceBarProps } from './components/find-replace-bar.js';
 export { FindReplaceBar } from './components/find-replace-bar.js';
 export type { ImageControlsProps } from './components/image-controls.js';
 export { ImageControls } from './components/image-controls.js';
-export { ImageInsertPopover, InsertImageForm, InsertImageMenu } from './components/image-insert.js';
+export {
+  ImageInsertPopover,
+  InsertImageForm,
+  InsertImageMenu,
+  pickImages,
+} from './components/image-insert.js';
 export type { LinkPopoverProps } from './components/link-popover.js';
 export { LinkPopover } from './components/link-popover.js';
+export { useMenuEntries } from './components/menu-entries.js';
 export { NodeToolbar, PlacementItems } from './components/node-toolbar.js';
 export type { RubyPopoverProps } from './components/ruby-popover.js';
 export { RubyPopover } from './components/ruby-popover.js';
@@ -63,17 +71,28 @@ export { StickyMenu } from './components/sticky-menu.js';
 export type { TableControlsProps } from './components/table-controls.js';
 export { TableControls } from './components/table-controls.js';
 export { InsertTableMenu } from './components/table-insert.js';
+export { useTableMenu } from './components/table-menu.js';
 export type { TableOfContentsPanelProps } from './components/table-of-contents.js';
 export { TableOfContentsPanel, useOutline } from './components/table-of-contents.js';
+export {
+  BackgroundColorMenu,
+  FontFamilyMenu,
+  FontSizeStepper,
+  TextColorMenu,
+} from './components/text-style-controls.js';
+export type { ToolbarSlot } from './components/toolbar-fit.js';
+export { fitToolbar, visibleSlots } from './components/toolbar-fit.js';
 export type { TypeaheadMenuProps } from './components/typeahead-menu.js';
 export { TypeaheadMenu } from './components/typeahead-menu.js';
 export type { LimitState, WordCountProps, WordCountStat } from './components/word-count.js';
 export { limitState, WordCount } from './components/word-count.js';
 export { TeiEditorContext, useCurrentEditor, useOptionalEditor } from './context.js';
+export { contextMenuOwners } from './context-menu-owner.js';
 export type { ContentEditableProps, EditorContentProps } from './editor-content.js';
 export { ContentEditable, EditorContent, EditorProvider } from './editor-content.js';
+export { hoverNow } from './hover-now.js';
 export type { ItemState } from './items.js';
-export { itemText, readItemState, useItemStates } from './items.js';
+export { groupItems, itemText, readItemState, useItemStates } from './items.js';
 export { rangeAnchor, selectionAnchor } from './selection-anchor.js';
 // UI primitives: what the built-in UI is made of, exported for custom UI.
 export type { ButtonProps } from './ui/button.js';
@@ -120,6 +139,7 @@ export { hideTooltip, showTooltip } from './ui/tooltip.js';
 export { useEditorFocus } from './use-editor-focus.js';
 export type { UseEditorStateOptions } from './use-editor-state.js';
 export { shallowEqual, useEditorState } from './use-editor-state.js';
+export { useHover, useRootListener } from './use-hover.js';
 export { useSignal } from './use-signal.js';
 export { createReactTeiEditor, useTeiEditor } from './use-tei-editor.js';
 export { useUiRequest } from './use-ui-request.js';

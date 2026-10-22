@@ -38,3 +38,24 @@ export { teiTheme } from './core/theme.js';
 export type * from './core/types.js';
 export type { UiRequest } from './core/ui-request.js';
 export { hasUi, holdUi, requestUi, takeRequests, uiRequest } from './core/ui-request.js';
+// Building blocks for extensions and UI of your own.
+export { acceptsFile, chooseFiles, readAsDataURL } from './utils/files.js';
+export {
+  $blockOf,
+  $canFormat,
+  $canStyleText,
+  $everyBlock,
+  $hasFormat,
+  $selectedBlocks,
+} from './utils/selection.js';
+export type { SafeUrlOptions } from './utils/url.js';
+export {
+  FILE_PROTOCOLS,
+  IMAGE_PROTOCOLS,
+  isSafeFileUrl,
+  isSafeImageSrc,
+  isSafeUrl,
+  LINK_PROTOCOLS,
+  safeUrl,
+  withDefaultScheme,
+} from './utils/url.js';

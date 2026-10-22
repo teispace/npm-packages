@@ -53,6 +53,11 @@
       "import": "./dist/react/index.js",
       "default": "./dist/react/index.js"
     },
+    "./react/components/*": {
+      "types": "./dist/react/components/*.d.ts",
+      "import": "./dist/react/components/*.js",
+      "default": "./dist/react/components/*.js"
+    },
     "./icons": {
       "types": "./dist/icons/index.d.ts",
       "import": "./dist/icons/index.js",
@@ -67,13 +72,16 @@
     "./styles/*": "./dist/styles/*",
     "./package.json": "./package.json"
   },
+  "bin": {
+    "teieditor": "./dist/cli/index.js"
+  },
   "files": [
     "dist",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup && tsc -p tsconfig.build.json && node scripts/build-css.mjs",
+    "build": "tsup && tsc -p tsconfig.build.json && node scripts/build-css.mjs && node scripts/build-templates.mjs",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -83,7 +91,7 @@
     "prepublishOnly": "yarn clean && yarn build",
     "test:e2e": "playwright test -c e2e/playwright.config.ts",
     "test:visual": "node e2e/visual.mjs",
-    "test:types": "tsc -p type-tests/kit && tsc -p type-tests/single",
+    "test:types": "tsc -p type-tests/kit && tsc -p type-tests/single && tsc -p type-tests/templates",
     "size": "node scripts/size-budget.mjs"
   },
   "engines": {
