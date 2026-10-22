@@ -17,6 +17,7 @@ import { Callout } from '../../extensions/callout/index.js';
 import { Card } from '../../extensions/card/index.js';
 import { CodeBlock } from '../../extensions/code-block/index.js';
 import { Collapsible } from '../../extensions/collapsible/index.js';
+import { Columns } from '../../extensions/columns/index.js';
 import { Embed, type EmbedStorage } from '../../extensions/embed/index.js';
 import { FileAttachment } from '../../extensions/file/index.js';
 import { Image, type ImageStorage } from '../../extensions/image/index.js';
@@ -72,6 +73,9 @@ const ContextMenu = lazy(() =>
 const CalloutMenu = lazy(() =>
   import('./callout-menu.js').then((module) => ({ default: module.CalloutMenu })),
 );
+const ColumnsMenu = lazy(() =>
+  import('./columns-menu.js').then((module) => ({ default: module.ColumnsMenu })),
+);
 const StickyMenu = lazy(() =>
   import('./sticky-menu.js').then((module) => ({ default: module.StickyMenu })),
 );
@@ -81,7 +85,7 @@ const EmbedControls = lazy(() =>
 
 /**
  * Which UI comes with it.
- * - `full`: toolbar, bubble menu, slash menu, link popover, block handles, context menu, code block bar, table, image, file and embed controls, the callout and sticky note menus.
+ * - `full`: toolbar, bubble menu, slash menu, link popover, block handles, context menu, code block bar, table, image, file and embed controls, the callout, sticky note and columns menus.
  * - `notion`: no toolbar; select text for the bubble menu, type `/` or press + for blocks, drag a block by its handle.
  * - `minimal`: a toolbar and links, nothing floating: comment boxes, forms.
  */
@@ -113,6 +117,8 @@ export interface EditorSlots {
   calloutMenu?: EditorSlot;
   /** The menu a sticky note's swatch opens: its colours, and taking it away. */
   stickyMenu?: EditorSlot;
+  /** The menu a columns block's control opens: its layouts, adding and removing columns. */
+  columnsMenu?: EditorSlot;
   /** Below the document, inside the frame: a word count, a status line. */
   footer?: ReactNode;
 }
@@ -132,6 +138,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     embedControls: true,
     calloutMenu: true,
     stickyMenu: true,
+    columnsMenu: true,
   },
   notion: {
     toolbar: false,
@@ -147,6 +154,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     embedControls: true,
     calloutMenu: true,
     stickyMenu: true,
+    columnsMenu: true,
   },
   minimal: {
     toolbar: true,
@@ -162,6 +170,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     embedControls: false,
     calloutMenu: false,
     stickyMenu: false,
+    columnsMenu: false,
   },
 };
 
@@ -174,6 +183,7 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     PullQuote,
     Callout,
     Collapsible,
+    Columns,
     Card,
     StickyNote,
     PageBreak,
@@ -189,6 +199,7 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     PullQuote,
     Callout,
     Collapsible,
+    Columns,
     Card,
     StickyNote,
     PageBreak,
@@ -406,6 +417,7 @@ function EditorFrame({
               {editor.extension(Embed) && slot(parts.embedControls, <EmbedControls />)}
               {editor.extension(Callout) && slot(parts.calloutMenu, <CalloutMenu />)}
               {editor.extension(StickyNote) && slot(parts.stickyMenu, <StickyMenu />)}
+              {editor.extension(Columns) && slot(parts.columnsMenu, <ColumnsMenu />)}
               <Ready onReady={setReady} />
             </Suspense>
           )}
