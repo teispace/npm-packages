@@ -275,6 +275,21 @@ describe('Versions with collaboration', () => {
     expect(a.storage.versions.peek()).toEqual([]);
   });
 
+  it('finds collaboration when listed before it', async () => {
+    const doc = new Y.Doc({ gc: false });
+    const provider = new MemoryProvider(doc, new MemoryNetwork());
+    providers.push(provider);
+    const editor = createTeiEditor({
+      extensions: [Versions, StarterKit, Collaboration.configure({ doc, provider })],
+      content: '<p>One</p>',
+    });
+    editors.push(editor);
+    await settle();
+    const v = storageOf(editor).save();
+    expect(v.kind).toBe('yjs');
+    expect(doc.getArray('teieditor-versions').length).toBe(1);
+  });
+
   it('falls back to JSON on a document that collects garbage', async () => {
     const network = new MemoryNetwork();
     const a = client(network, new Y.Doc(), '<p>One</p>');
