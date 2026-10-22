@@ -18,11 +18,13 @@ import { Card } from '../../extensions/card/index.js';
 import { CodeBlock } from '../../extensions/code-block/index.js';
 import { Collapsible } from '../../extensions/collapsible/index.js';
 import { Columns } from '../../extensions/columns/index.js';
+import { DateTime, type DateTimeStorage } from '../../extensions/date-time/index.js';
 import { Embed, type EmbedStorage } from '../../extensions/embed/index.js';
 import { FileAttachment } from '../../extensions/file/index.js';
 import { Image, type ImageStorage } from '../../extensions/image/index.js';
 import { Link, type LinkStorage } from '../../extensions/link/index.js';
 import { PageBreak } from '../../extensions/page-break/index.js';
+import { Poll } from '../../extensions/poll/index.js';
 import { PullQuote } from '../../extensions/pull-quote/index.js';
 import { StarterKit } from '../../extensions/starter-kit/index.js';
 import { StickyNote } from '../../extensions/sticky-note/index.js';
@@ -76,6 +78,9 @@ const CalloutMenu = lazy(() =>
 const ColumnsMenu = lazy(() =>
   import('./columns-menu.js').then((module) => ({ default: module.ColumnsMenu })),
 );
+const DateTimePicker = lazy(() =>
+  import('./date-time-picker.js').then((module) => ({ default: module.DateTimePicker })),
+);
 const StickyMenu = lazy(() =>
   import('./sticky-menu.js').then((module) => ({ default: module.StickyMenu })),
 );
@@ -85,7 +90,7 @@ const EmbedControls = lazy(() =>
 
 /**
  * Which UI comes with it.
- * - `full`: toolbar, bubble menu, slash menu, link popover, block handles, context menu, code block bar, table, image, file and embed controls, the callout, sticky note and columns menus.
+ * - `full`: toolbar, bubble menu, slash menu, link popover, block handles, context menu, code block bar, table, image, file and embed controls, the callout, sticky note and columns menus, the date picker.
  * - `notion`: no toolbar; select text for the bubble menu, type `/` or press + for blocks, drag a block by its handle.
  * - `minimal`: a toolbar and links, nothing floating: comment boxes, forms.
  */
@@ -119,6 +124,8 @@ export interface EditorSlots {
   stickyMenu?: EditorSlot;
   /** The menu a columns block's control opens: its layouts, adding and removing columns. */
   columnsMenu?: EditorSlot;
+  /** The picker a date opens: its day, and its time. */
+  dateTimePicker?: EditorSlot;
   /** Below the document, inside the frame: a word count, a status line. */
   footer?: ReactNode;
 }
@@ -139,6 +146,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     calloutMenu: true,
     stickyMenu: true,
     columnsMenu: true,
+    dateTimePicker: true,
   },
   notion: {
     toolbar: false,
@@ -155,6 +163,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     calloutMenu: true,
     stickyMenu: true,
     columnsMenu: true,
+    dateTimePicker: true,
   },
   minimal: {
     toolbar: true,
@@ -171,6 +180,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     calloutMenu: false,
     stickyMenu: false,
     columnsMenu: false,
+    dateTimePicker: false,
   },
 };
 
@@ -186,6 +196,8 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     Columns,
     Card,
     StickyNote,
+    Poll,
+    DateTime,
     PageBreak,
     Table,
     Image,
@@ -202,6 +214,8 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     Columns,
     Card,
     StickyNote,
+    Poll,
+    DateTime,
     PageBreak,
     Table,
     Image,
@@ -350,15 +364,19 @@ function EditorFrame({
     parts.embedControls === true
       ? (editor.extension(Embed)?.output.storage as EmbedStorage | undefined)?.insert
       : undefined;
+  const datePick =
+    parts.dateTimePicker === true
+      ? (editor.extension(DateTime)?.output.storage as DateTimeStorage | undefined)?.picker
+      : undefined;
   useEffect(() => {
     if (ready) return;
-    const releases = [linkEdit, imageInsert, embedInsert].flatMap((request) =>
+    const releases = [linkEdit, imageInsert, embedInsert, datePick].flatMap((request) =>
       request ? [holdUi(request)] : [],
     );
     return () => {
       for (const release of releases) release();
     };
-  }, [ready, linkEdit, imageInsert, embedInsert]);
+  }, [ready, linkEdit, imageInsert, embedInsert, datePick]);
   // The gutter the handles sit in, from the first render (the server's too).
   const handles = editor.extension(Blocks) !== undefined && slot(parts.blockHandle, true) !== null;
   const change = useRef({ onChange, format });
@@ -418,6 +436,7 @@ function EditorFrame({
               {editor.extension(Callout) && slot(parts.calloutMenu, <CalloutMenu />)}
               {editor.extension(StickyNote) && slot(parts.stickyMenu, <StickyMenu />)}
               {editor.extension(Columns) && slot(parts.columnsMenu, <ColumnsMenu />)}
+              {editor.extension(DateTime) && slot(parts.dateTimePicker, <DateTimePicker />)}
               <Ready onReady={setReady} />
             </Suspense>
           )}

@@ -104,8 +104,13 @@ test.describe('poll', () => {
     await tei.page.keyboard.type('Salad');
     await poll(tei).getByRole('button', { name: 'Remove Pizza' }).click();
     expect(await values(tei)).toEqual(['Lunch?', 'Soup', 'Salad']);
-    // Two left: neither can go.
-    await expect(poll(tei).getByRole('button', { name: 'Remove Soup' })).toBeDisabled();
+    // Two left: neither can go, and their buttons are out of the way.
+    const removes = poll(tei).locator('[data-tei-poll-remove]');
+    await expect(removes).toHaveCount(2);
+    for (const remove of await removes.all()) {
+      await expect(remove).toBeDisabled();
+      await expect(remove).toBeHidden();
+    }
     await fields(tei).nth(0).fill('Dinner?');
     await fields(tei).nth(0).press('Tab');
     const html = await tei.html();
