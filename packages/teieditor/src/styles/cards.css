@@ -26,7 +26,9 @@
     --tei-sticky-tilt: 0.75deg;
   }
 
-  /* Saved HTML on its own answers the editor's width queries the same way. */
+  /* Saved HTML on its own answers the editor's width queries the same way.
+   * A size container takes its width from its parent, so `.tei-prose`
+   * needs one: a block, or a flex or grid item that stretches. */
   .tei-prose:where(:not(.tei *)) {
     container: tei / inline-size;
   }

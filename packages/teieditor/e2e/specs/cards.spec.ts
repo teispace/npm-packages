@@ -206,7 +206,7 @@ test.describe('sticky note', () => {
   test('with no colour menu mounted, its swatch steps to the next colour; the text keeps the caret', async ({
     tei,
   }) => {
-    await open(tei, NOTE);
+    await open(tei, NOTE, { flags: ['nosticky'] });
     await caretAtEndOf(tei, 'Remember');
     await expect(swatch(tei)).toHaveAttribute('role', 'button');
     await swatch(tei).click();
@@ -231,7 +231,7 @@ test.describe('sticky note', () => {
   });
 
   // Needs <Editor> to render <StickyMenu> (the `stickyMenu` slot the lead wires).
-  test.fixme('its swatch opens the colour menu; picking one changes it', async ({ tei }) => {
+  test('its swatch opens the colour menu; picking one changes it', async ({ tei }) => {
     await open(tei, NOTE);
     await swatch(tei).click();
     const menu = tei.page.locator('[data-tei-control="sticky-menu"]');
@@ -241,9 +241,12 @@ test.describe('sticky note', () => {
     await expect(sticky(tei)).toHaveAttribute('data-color', 'blue');
   });
 
-  test('a tap on the swatch changes the colour @mobile', async ({ tei }) => {
+  test('a tap on the swatch opens the colours @mobile', async ({ tei }) => {
     await tei.open({ content: NOTE, flags: ['cards', 'plain'] });
     await swatch(tei).tap();
+    const menu = tei.page.locator('[data-tei-control="sticky-menu"]');
+    await expect(menu).toBeVisible();
+    await menu.getByRole('menuitemradio', { name: 'Pink' }).tap();
     await expect(sticky(tei)).toHaveAttribute('data-color', 'pink');
   });
 });

@@ -171,7 +171,10 @@ function App() {
         placeholder="Write something…"
         toolbarOverflow={params.has('scroll') ? 'scroll' : params.has('wrap') ? 'wrap' : undefined}
         frameProps={{ 'data-testid': 'editor', dir: params.has('rtl') ? 'rtl' : undefined }}
-        slots={params.has('nocontext') ? { contextMenu: false } : undefined}
+        slots={{
+          ...(params.has('nocontext') ? { contextMenu: false } : {}),
+          ...(params.has('nosticky') ? { stickyMenu: false } : {}),
+        }}
         contentProps={{ 'data-testid': 'content' }}
       />
       {/* UI outside an editor takes the tokens from .tei-portal. */}

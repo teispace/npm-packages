@@ -14,6 +14,7 @@ import type { ContentFormat, TeiEditor } from '../../core/editor.js';
 import { holdUi } from '../../core/ui-request.js';
 import { Blocks } from '../../extensions/blocks/index.js';
 import { Callout } from '../../extensions/callout/index.js';
+import { Card } from '../../extensions/card/index.js';
 import { CodeBlock } from '../../extensions/code-block/index.js';
 import { Collapsible } from '../../extensions/collapsible/index.js';
 import { Embed, type EmbedStorage } from '../../extensions/embed/index.js';
@@ -23,6 +24,7 @@ import { Link, type LinkStorage } from '../../extensions/link/index.js';
 import { PageBreak } from '../../extensions/page-break/index.js';
 import { PullQuote } from '../../extensions/pull-quote/index.js';
 import { StarterKit } from '../../extensions/starter-kit/index.js';
+import { StickyNote } from '../../extensions/sticky-note/index.js';
 import { Table } from '../../extensions/table/index.js';
 import { TextStyle } from '../../extensions/text-style/index.js';
 import { type ContentEditableProps, EditorContent, EditorProvider } from '../editor-content.js';
@@ -70,13 +72,16 @@ const ContextMenu = lazy(() =>
 const CalloutMenu = lazy(() =>
   import('./callout-menu.js').then((module) => ({ default: module.CalloutMenu })),
 );
+const StickyMenu = lazy(() =>
+  import('./sticky-menu.js').then((module) => ({ default: module.StickyMenu })),
+);
 const EmbedControls = lazy(() =>
   import('./embed-controls.js').then((module) => ({ default: module.EmbedControls })),
 );
 
 /**
  * Which UI comes with it.
- * - `full`: toolbar, bubble menu, slash menu, link popover, block handles, context menu, code block bar, table, image, file and embed controls, the callout menu.
+ * - `full`: toolbar, bubble menu, slash menu, link popover, block handles, context menu, code block bar, table, image, file and embed controls, the callout and sticky note menus.
  * - `notion`: no toolbar; select text for the bubble menu, type `/` or press + for blocks, drag a block by its handle.
  * - `minimal`: a toolbar and links, nothing floating: comment boxes, forms.
  */
@@ -106,6 +111,8 @@ export interface EditorSlots {
   embedControls?: EditorSlot;
   /** The menu a callout's icon opens: its kinds, and taking it away. */
   calloutMenu?: EditorSlot;
+  /** The menu a sticky note's swatch opens: its colours, and taking it away. */
+  stickyMenu?: EditorSlot;
   /** Below the document, inside the frame: a word count, a status line. */
   footer?: ReactNode;
 }
@@ -124,6 +131,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     fileControls: true,
     embedControls: true,
     calloutMenu: true,
+    stickyMenu: true,
   },
   notion: {
     toolbar: false,
@@ -138,6 +146,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     fileControls: true,
     embedControls: true,
     calloutMenu: true,
+    stickyMenu: true,
   },
   minimal: {
     toolbar: true,
@@ -152,6 +161,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     fileControls: false,
     embedControls: false,
     calloutMenu: false,
+    stickyMenu: false,
   },
 };
 
@@ -164,6 +174,8 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     PullQuote,
     Callout,
     Collapsible,
+    Card,
+    StickyNote,
     PageBreak,
     Table,
     Image,
@@ -177,6 +189,8 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     PullQuote,
     Callout,
     Collapsible,
+    Card,
+    StickyNote,
     PageBreak,
     Table,
     Image,
@@ -391,6 +405,7 @@ function EditorFrame({
               {editor.extension(FileAttachment) && slot(parts.fileControls, <FileControls />)}
               {editor.extension(Embed) && slot(parts.embedControls, <EmbedControls />)}
               {editor.extension(Callout) && slot(parts.calloutMenu, <CalloutMenu />)}
+              {editor.extension(StickyNote) && slot(parts.stickyMenu, <StickyMenu />)}
               <Ready onReady={setReady} />
             </Suspense>
           )}
