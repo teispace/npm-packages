@@ -28,6 +28,7 @@ import {
   useTeiEditor,
 } from '../../src/react/index';
 import { neutralizeAttributes, restoreStyles } from '../../src/utils/html-attributes';
+import { DocumentTools, documentTools } from './document-tools';
 
 declare global {
   interface Window {
@@ -136,6 +137,7 @@ function App() {
       ...(params.has('blocks') ? [Blocks] : []),
       // The document's own blocks: pull quotes, callouts, sections, page breaks.
       ...(params.has('extras') ? [PullQuote, Callout, Collapsible, PageBreak] : []),
+      ...documentTools(params),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
@@ -171,6 +173,7 @@ function App() {
         slots={params.has('nocontext') ? { contextMenu: false } : undefined}
         contentProps={{ 'data-testid': 'content' }}
       />
+      {params.has('doctools') && <DocumentTools editor={editor} />}
       {/* UI outside an editor takes the tokens from .tei-portal. */}
       <section className="tei-portal gallery" data-testid="gallery">
         <DropdownMenu label="Menu" groups={GROUPS} data-testid="menu-trigger">
