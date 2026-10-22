@@ -30,6 +30,10 @@ import { defineTeiExtension, getPeerOptions } from '../../core/define.js';
 import type { TeiEditor } from '../../core/editor.js';
 import { hasUi, requestUi, type UiRequest, uiRequest } from '../../core/ui-request.js';
 import {
+  check,
+  chevronLeft,
+  chevronRight,
+  close,
   expand,
   fileText,
   languages,
@@ -816,6 +820,10 @@ export const Ai = defineTeiExtension({
     languages,
     stop,
     retry,
+    check,
+    close,
+    chevronLeft,
+    chevronRight,
   },
   messages: {
     'ai.label': 'AI',
