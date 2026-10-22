@@ -35,8 +35,10 @@ const CASES = [
     // The drop-in: every extension the full preset installs, each with a
     // budget of its own below, plus the UI that loads up front. It grows
     // only as the preset does; a lighter editor uses `EditorContent` and
-    // the extensions it wants.
-    budget: 96 * KB,
+    // the extensions it wants. Temporarily raised while M4 lands; presets
+    // become entries of their own next, and this case measures <Editor>
+    // without them.
+    budget: 100 * KB,
   },
   {
     name: 'headless React (useTeiEditor, EditorContent)',
@@ -147,7 +149,8 @@ for (const name of extensions) {
 
 const css = readFileSync(dist('styles.css'));
 const cssGzip = gzipSync(css, { level: 9 }).length;
-const cssBudget = 12 * KB;
+// Temporarily raised while M4 lands; per-feature stylesheets follow.
+const cssBudget = 13 * KB;
 over ||= cssGzip > cssBudget;
 rows.push(['styles.css', fmt(css.length), fmt(cssGzip), '', fmt(cssBudget), cssGzip > cssBudget ? 'OVER' : 'ok']);
 

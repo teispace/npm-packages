@@ -15,6 +15,7 @@ import { holdUi } from '../../core/ui-request.js';
 import { Blocks } from '../../extensions/blocks/index.js';
 import { Callout } from '../../extensions/callout/index.js';
 import { Card } from '../../extensions/card/index.js';
+import { CharacterCount } from '../../extensions/character-count/index.js';
 import { CodeBlock } from '../../extensions/code-block/index.js';
 import { Collapsible } from '../../extensions/collapsible/index.js';
 import { Columns } from '../../extensions/columns/index.js';
@@ -30,11 +31,13 @@ import { PullQuote } from '../../extensions/pull-quote/index.js';
 import { StarterKit } from '../../extensions/starter-kit/index.js';
 import { StickyNote } from '../../extensions/sticky-note/index.js';
 import { Table } from '../../extensions/table/index.js';
+import { TableOfContents } from '../../extensions/table-of-contents/index.js';
 import { TextStyle } from '../../extensions/text-style/index.js';
 import { type ContentEditableProps, EditorContent, EditorProvider } from '../editor-content.js';
 import { cx } from '../ui/context.js';
 import { useTeiEditor } from '../use-tei-editor.js';
 import { EditorToolbar, type EditorToolbarProps, type ToolbarLayout } from './editor-toolbar.js';
+import { WordCount } from './word-count.js';
 
 /**
  * The parts that show only once there is something to act on (a selection,
@@ -132,6 +135,8 @@ export interface EditorSlots {
   dateTimePicker?: EditorSlot;
   /** The find and replace bar, from ⌘F. */
   findReplace?: EditorSlot;
+  /** Words and characters under the document, and the limit when one is set. */
+  wordCount?: EditorSlot;
   /** Below the document, inside the frame: a word count, a status line. */
   footer?: ReactNode;
 }
@@ -154,6 +159,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     columnsMenu: true,
     dateTimePicker: true,
     findReplace: true,
+    wordCount: true,
   },
   notion: {
     toolbar: false,
@@ -172,6 +178,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     columnsMenu: true,
     dateTimePicker: true,
     findReplace: true,
+    wordCount: false,
   },
   minimal: {
     toolbar: true,
@@ -190,6 +197,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     columnsMenu: false,
     dateTimePicker: false,
     findReplace: false,
+    wordCount: false,
   },
 };
 
@@ -208,6 +216,8 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     Poll,
     DateTime,
     FindReplace,
+    TableOfContents,
+    CharacterCount,
     PageBreak,
     Table,
     Image,
@@ -227,6 +237,8 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     Poll,
     DateTime,
     FindReplace,
+    TableOfContents,
+    CharacterCount,
     PageBreak,
     Table,
     Image,
@@ -458,6 +470,7 @@ function EditorFrame({
           )}
           {children}
         </EditorContent>
+        {editor.extension(CharacterCount) && slot(parts.wordCount, <WordCount />)}
         {parts.footer}
       </div>
     </EditorProvider>
