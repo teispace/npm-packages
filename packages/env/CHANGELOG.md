@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.2](https://github.com/teispace/npm-packages/compare/env-v1.0.1...env-v1.0.2) (2026-10-22)
+
+
+### Bug Fixes
+
+* **env:** redact connection strings and more secret-shaped names ([#187](https://github.com/teispace/npm-packages/issues/187)) ([d519763](https://github.com/teispace/npm-packages/commit/d519763c1928f4ab6a159f5066255214d6f7f371))
+
+
+### Miscellaneous Chores
+
+* update workspace dependencies to latest ([#185](https://github.com/teispace/npm-packages/issues/185)) ([ab5d963](https://github.com/teispace/npm-packages/commit/ab5d9638568cc28ee0f48a3fc528aeb647ff0eab))
+
 ## [1.0.1](https://github.com/teispace/npm-packages/compare/env-v1.0.0...env-v1.0.1) (2026-09-06)
 
 

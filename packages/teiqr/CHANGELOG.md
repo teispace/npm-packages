@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.7...teiqr-v0.4.0) (2026-10-22)
+
+
+### Features
+
+* **teiqr:** authenticator (otpauth) payloads and sensitive-field handling ([#189](https://github.com/teispace/npm-packages/issues/189)) ([0e6126b](https://github.com/teispace/npm-packages/commit/0e6126b14e9c259f861b356a46aa6a7d5a20a74a))
+
+
+### Miscellaneous Chores
+
+* update workspace dependencies to latest ([#185](https://github.com/teispace/npm-packages/issues/185)) ([ab5d963](https://github.com/teispace/npm-packages/commit/ab5d9638568cc28ee0f48a3fc528aeb647ff0eab))
+
 ## [0.3.7](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.6...teiqr-v0.3.7) (2026-09-06)
 
 

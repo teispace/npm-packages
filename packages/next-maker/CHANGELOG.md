@@ -1,5 +1,17 @@
 # Changelog
 
+## [5.2.1](https://github.com/teispace/npm-packages/compare/next-maker-v5.2.0...next-maker-v5.2.1) (2026-10-22)
+
+
+### Bug Fixes
+
+* **next-maker:** run package managers and Biome on Windows, and hold Biome to its config's release ([#190](https://github.com/teispace/npm-packages/issues/190)) ([a5c2652](https://github.com/teispace/npm-packages/commit/a5c2652ec941d093d89a7b520a6b4ef8582012b3))
+
+
+### Miscellaneous Chores
+
+* update workspace dependencies to latest ([#185](https://github.com/teispace/npm-packages/issues/185)) ([ab5d963](https://github.com/teispace/npm-packages/commit/ab5d9638568cc28ee0f48a3fc528aeb647ff0eab))
+
 ## [5.2.0](https://github.com/teispace/npm-packages/compare/next-maker-v5.1.2...next-maker-v5.2.0) (2026-09-06)
 
 
