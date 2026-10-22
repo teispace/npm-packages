@@ -159,6 +159,25 @@ describe('Popover', () => {
     anchor.remove();
   });
 
+  it('stays open on an Escape that cancels an input method’s word', () => {
+    const onDismiss = vi.fn();
+    const anchor = document.createElement('button');
+    document.body.append(anchor);
+    render(
+      <Popover open anchor={anchor} onDismiss={onDismiss}>
+        <input aria-label="field" />
+      </Popover>,
+    );
+    const field = screen.getByLabelText('field');
+    fireEvent.keyDown(field, { key: 'Escape', isComposing: true });
+    // Safari marks it only by its key code.
+    fireEvent.keyDown(field, { key: 'Escape', keyCode: 229 });
+    expect(onDismiss).not.toHaveBeenCalled();
+    key(field, 'Escape');
+    expect(onDismiss).toHaveBeenCalledWith('escape');
+    anchor.remove();
+  });
+
   it('dismisses on a press outside, but not on its anchor or inside', () => {
     const onDismiss = vi.fn();
     const anchor = document.createElement('button');

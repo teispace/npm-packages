@@ -32,7 +32,7 @@ export type {
 } from './core/editor.js';
 export { TeiEditor } from './core/editor.js';
 export { jsonFormat, textFormat } from './core/formats.js';
-export { parseKey } from './core/keymap.js';
+export { isComposingKey, parseKey } from './core/keymap.js';
 export type { TeiPreset } from './core/preset.js';
 // Building blocks for extensions and UI of your own.
 export { $caretAfter, $selectNode } from './core/slot-host.js';

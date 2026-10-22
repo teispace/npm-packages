@@ -516,6 +516,7 @@ function preview(lexical: LexicalEditor, storage: SpeechToTextStorage): () => vo
       layer = createOverlay(root, 'tei-dictation');
       bubble = root.ownerDocument.createElement('span');
       bubble.className = 'tei-dictation-interim';
+      bubble.dir = 'auto';
       layer.append(bubble);
     }
     if (!bubble) return;
@@ -532,7 +533,12 @@ function preview(lexical: LexicalEditor, storage: SpeechToTextStorage): () => vo
         : null;
     const at = caret && (caret.width || caret.height) ? caret : root.getBoundingClientRect();
     const origin = layer.getBoundingClientRect();
-    place(bubble, at.left - origin.left, at.bottom - origin.top + 4);
+    // From the caret toward the line's end: leftward in right-to-left text.
+    const node = range?.startContainer;
+    const block = node instanceof Element ? node : (node?.parentElement ?? root);
+    const rtl = getComputedStyle(block).direction === 'rtl';
+    const x = rtl ? at.right - bubble.offsetWidth : at.left;
+    place(bubble, x - origin.left, at.bottom - origin.top + 4);
   });
   return mergeRegister(
     effect(() => {

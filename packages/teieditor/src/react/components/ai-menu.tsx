@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { getPeerOptions } from '../../core/define.js';
 import type { TeiEditor } from '../../core/editor.js';
+import { isComposingKey } from '../../core/keymap.js';
 import type { AiAction, AiOptions, AiStorage } from '../../extensions/ai/index.js';
 import { useOptionalEditor } from '../context.js';
 import { selectionAnchor } from '../selection-anchor.js';
@@ -274,7 +275,7 @@ function AiPanel({
   const current = Math.min(highlighted, rows.length - 1);
 
   const onInputKey = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.nativeEvent.isComposing) return;
+    if (isComposingKey(event.nativeEvent)) return;
     const move = (to: number) => {
       event.preventDefault();
       if (rows.length) setHighlighted((to + rows.length) % rows.length);

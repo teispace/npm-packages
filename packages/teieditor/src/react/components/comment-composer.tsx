@@ -2,6 +2,7 @@
 
 import { type FormEvent, type KeyboardEvent, useId, useMemo, useState } from 'react';
 import type { TeiEditor } from '../../core/editor.js';
+import { isComposingKey } from '../../core/keymap.js';
 import type { CommentComposerState } from '../../extensions/comments/index.js';
 import { savedPointsRange } from '../../utils/dom-range.js';
 import { useOptionalEditor } from '../context.js';
@@ -79,7 +80,8 @@ function ComposerForm({ editor, composer }: { editor: TeiEditor; composer: Comme
     if (editor.chain().focus().submitComment(text).run()) editor.commands.toggleCommentsPanel(true);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) submit();
+    if (event.key !== 'Enter' || isComposingKey(event.nativeEvent)) return;
+    if (event.metaKey || event.ctrlKey) submit();
   };
 
   return (

@@ -5,11 +5,13 @@ import {
   $removeList,
   CheckListExtension,
   ListExtension,
+  ListNode,
   type ListType,
 } from '@lexical/list';
 import { CHECK_LIST, ORDERED_LIST, UNORDERED_LIST } from '@lexical/markdown';
 import { $findMatchingParent } from '@lexical/utils';
 import {
+  $getNodeByKey,
   $getSelection,
   $isRangeSelection,
   configExtension,
@@ -188,6 +190,20 @@ export const CheckList = defineTeiExtension({
     },
   },
   active: { checkList: () => $listTypeAtSelection() === 'check' },
+  // Lexical makes each to-do item a checkbox, so a to-do list is a group of
+  // checkboxes: as a list, its items would not be list items.
+  register: ({ lexical }) =>
+    lexical.registerMutationListener(ListNode, (mutations) => {
+      lexical.getEditorState().read(() => {
+        for (const [key, kind] of mutations) {
+          const node = kind === 'destroyed' ? null : $getNodeByKey(key);
+          const dom = lexical.getElementByKey(key);
+          if (!$isListNode(node) || !dom) continue;
+          if (node.getListType() === 'check') dom.setAttribute('role', 'group');
+          else if (dom.getAttribute('role') === 'group') dom.removeAttribute('role');
+        }
+      });
+    }),
   keymap: {
     checkList: { key: 'Mod-Shift-9', command: 'toggleCheckList', description: 'To-do list' },
   },

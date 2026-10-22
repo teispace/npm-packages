@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 import type { TeiEditor } from '../../core/editor.js';
+import { isComposingKey } from '../../core/keymap.js';
 import {
   Emoji,
   type EmojiEntry,
@@ -205,7 +206,7 @@ export function EmojiPanel({ editor, onPick, columns = 8 }: EmojiPanelProps) {
           if (event.key === 'ArrowDown') {
             event.preventDefault();
             focusCell(0);
-          } else if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+          } else if (event.key === 'Enter' && !isComposingKey(event.nativeEvent)) {
             event.preventDefault();
             const first = list[0];
             if (first) onPick(first.emoji);

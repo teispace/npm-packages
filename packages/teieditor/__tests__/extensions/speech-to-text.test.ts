@@ -139,6 +139,31 @@ describe('SpeechToText', () => {
     await vi.waitFor(() => expect(document.querySelector('.tei-dictation-interim')).toBeNull());
   });
 
+  it('shows what is being heard from the caret toward the end of the line, either way', async () => {
+    const { editor, root } = make();
+    // jsdom has no layout: the caret falls back to the root, 100px to 300px.
+    root.getBoundingClientRect = () => new DOMRect(100, 0, 200, 20);
+    const width = vi
+      .spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('tei-dictation-interim') ? 50 : 0;
+      });
+    try {
+      editor.commands.startDictation();
+      const rec = FakeRecognition.last;
+      getSelection()?.removeAllRanges();
+      rec.hear('hello', false);
+      const bubble = () => document.querySelector<HTMLElement>('.tei-dictation-interim');
+      await vi.waitFor(() => expect(bubble()?.style.transform).toBe('translate(100px, 24px)'));
+      expect(bubble()?.dir).toBe('auto');
+      root.style.direction = 'rtl';
+      rec.hear('שלום', false);
+      await vi.waitFor(() => expect(bubble()?.style.transform).toBe('translate(250px, 24px)'));
+    } finally {
+      width.mockRestore();
+    }
+  });
+
   it('writes each final phrase as one undo step, spaced and capitalized', () => {
     const { editor } = make();
     editor.commands.startDictation();

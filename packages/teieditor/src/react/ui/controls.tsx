@@ -8,6 +8,7 @@ import {
   useId,
   useState,
 } from 'react';
+import { isComposingKey } from '../../core/keymap.js';
 import { Button } from './button.js';
 import { usePartClass } from './context.js';
 import { keepFocus } from './pointer.js';
@@ -161,6 +162,7 @@ export function NumberStepper({
         onChange={(event) => setDraft(event.currentTarget.value)}
         onBlur={() => draft !== null && commit(Number(draft))}
         onKeyDown={(event) => {
+          if (isComposingKey(event.nativeEvent)) return;
           if (event.key === 'Enter') {
             event.preventDefault();
             commit(Number(draft ?? value));

@@ -103,3 +103,13 @@ export function parseKey(binding: string): KeyboardShortcutMatch[] {
       ]
     : [match];
 }
+
+/**
+ * Whether a key belongs to an input method mid-word (Japanese, Chinese,
+ * Korean…): its Enter picks a candidate and its Escape cancels one, so
+ * neither should submit or close anything. Safari sends the Enter that
+ * commits a word after composition ends, marked only by key code 229.
+ */
+export function isComposingKey(event: KeyboardEvent): boolean {
+  return event.isComposing || event.keyCode === 229;
+}

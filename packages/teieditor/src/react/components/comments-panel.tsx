@@ -14,6 +14,7 @@ import {
   useState,
 } from 'react';
 import type { TeiEditor } from '../../core/editor.js';
+import { isComposingKey } from '../../core/keymap.js';
 import type { CommentThread, TeiComment } from '../../extensions/comments/index.js';
 import type { Suggestion } from '../../extensions/review/index.js';
 import { TeiEditorContext, useOptionalEditor } from '../context.js';
@@ -140,7 +141,8 @@ export function CommentsPanel({
     editor.focus();
   };
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key !== 'Escape' || !overlay || event.defaultPrevented) return;
+    if (event.key !== 'Escape' || isComposingKey(event.nativeEvent)) return;
+    if (!overlay || event.defaultPrevented) return;
     event.preventDefault();
     close();
   };
@@ -410,7 +412,8 @@ function ReplyForm({ editor, threadId }: { editor: TeiEditor; threadId: string }
         title={editor.t('comments.shortcutHint', { key: submitKey(editor) })}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) submit();
+          if (event.key !== 'Enter' || isComposingKey(event.nativeEvent)) return;
+          if (event.metaKey || event.ctrlKey) submit();
         }}
       />
       {text && (

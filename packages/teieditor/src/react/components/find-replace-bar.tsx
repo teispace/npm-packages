@@ -2,6 +2,7 @@
 
 import { type KeyboardEvent, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { TeiEditor } from '../../core/editor.js';
+import { isComposingKey } from '../../core/keymap.js';
 import { FindReplace, type FindReplaceStorage } from '../../extensions/find-replace/index.js';
 import { useOptionalEditor } from '../context.js';
 import { Button } from '../ui/button.js';
@@ -126,7 +127,7 @@ function OpenBar({
       toggle(
         event.code === 'KeyC' ? 'caseSensitive' : event.code === 'KeyW' ? 'wholeWord' : 'regex',
       );
-    } else if (event.key === 'Enter' && inField && !event.nativeEvent.isComposing) {
+    } else if (event.key === 'Enter' && inField && !isComposingKey(event.nativeEvent)) {
       event.preventDefault();
       if (event.target === replaceRef.current) {
         if (isMod(event)) editor.commands.replaceAll();

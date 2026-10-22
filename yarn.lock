@@ -9647,6 +9647,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "teieditor-playground@workspace:examples/playground"
   dependencies:
+    "@axe-core/playwright": "npm:^4.14.0"
     "@excalidraw/excalidraw": "npm:^0.18.1"
     "@lexical/clipboard": "npm:^0.52.0"
     "@lexical/code-core": "npm:^0.52.0"

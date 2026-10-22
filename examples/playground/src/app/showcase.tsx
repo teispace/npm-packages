@@ -48,7 +48,8 @@ export function Showcase({ initialHTML }: { initialHTML?: string }) {
         </label>
         <h2>Output</h2>
         <Choice label="Format" value={format} options={FORMATS} onChange={setFormat} />
-        <pre className="output" data-testid="output">
+        {/* biome-ignore lint/a11y/noNoninteractiveTabindex: it scrolls, and a keyboard scrolls what has focus */}
+        <pre className="output" data-testid="output" tabIndex={0} aria-label="Output">
           {typeof output === 'string' ? output : JSON.stringify(output, null, 2)}
         </pre>
       </aside>

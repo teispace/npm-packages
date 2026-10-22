@@ -158,6 +158,17 @@ describe('blocks', () => {
     expect(editor.isActive('list')).toBe(false);
   });
 
+  it('makes a to-do list a group of checkboxes, and a list again when it changes kind', () => {
+    const editor = make('<p>One</p>');
+    const root = editor.lexical.getRootElement();
+    selectBlock(editor, 0);
+    editor.commands.toggleCheckList();
+    expect(root?.querySelector('ul')?.getAttribute('role')).toBe('group');
+    expect(root?.querySelector('li')?.getAttribute('role')).toBe('checkbox');
+    editor.commands.toggleBulletList();
+    expect(root?.querySelector('ul')?.hasAttribute('role')).toBe(false);
+  });
+
   it('nests a list item with Tab and lifts it with Shift-Tab', () => {
     const editor = make('<ul><li>One</li><li>Two</li></ul>');
     editor.update(() => {

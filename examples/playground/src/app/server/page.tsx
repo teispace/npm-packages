@@ -27,7 +27,10 @@ export default function Page() {
         />
         <aside className="panel">
           <h2>Markdown</h2>
-          <pre className="output">{markdown}</pre>
+          {/* biome-ignore lint/a11y/noNoninteractiveTabindex: it scrolls, and a keyboard scrolls what has focus */}
+          <pre className="output" tabIndex={0} aria-label="Markdown">
+            {markdown}
+          </pre>
         </aside>
       </div>
     </>

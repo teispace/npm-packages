@@ -10,6 +10,7 @@ import {
   useLayoutEffect,
   useRef,
 } from 'react';
+import { isComposingKey } from '../../core/keymap.js';
 import { usePartClass } from './context.js';
 import { type FloatingAnchor, type FloatingOptions, useFloating } from './floating.js';
 
@@ -158,7 +159,8 @@ export const Popover = forwardRef<HTMLDivElement, PopoverProps>(function Popover
     if (!open || !node) return;
     const doc = node.ownerDocument;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented || innermost() !== node) return;
+      if (event.key !== 'Escape' || isComposingKey(event)) return;
+      if (event.defaultPrevented || innermost() !== node) return;
       event.preventDefault();
       event.stopPropagation();
       dismiss.current?.('escape');

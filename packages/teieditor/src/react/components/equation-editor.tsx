@@ -3,6 +3,7 @@
 import { $getNodeByKey, type NodeKey } from 'lexical';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { TeiEditor } from '../../core/editor.js';
+import { isComposingKey } from '../../core/keymap.js';
 import { $caretAfter, $selectNode } from '../../core/slot-host.js';
 import type { EquationStorage } from '../../extensions/equation/index.js';
 import { $isEquationNode } from '../../extensions/equation/node.js';
@@ -242,7 +243,7 @@ function EquationField({
         aria-invalid={error !== null ? true : undefined}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
+          if (event.key !== 'Enter' || event.shiftKey || isComposingKey(event.nativeEvent)) return;
           event.preventDefault();
           onSubmit();
         }}
