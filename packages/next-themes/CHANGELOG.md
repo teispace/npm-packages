@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.1.0](https://github.com/teispace/npm-packages/compare/next-themes-v3.0.2...next-themes-v3.1.0) (2026-10-22)
+
+
+### Features
+
+* **next-themes:** strict-CSP support, hash-allowable script and hydration fixes ([#188](https://github.com/teispace/npm-packages/issues/188)) ([40eec94](https://github.com/teispace/npm-packages/commit/40eec94836f8f6c7b855343aea25ac43583a9ddf))
+
+
+### Miscellaneous Chores
+
+* update workspace dependencies to latest ([#185](https://github.com/teispace/npm-packages/issues/185)) ([ab5d963](https://github.com/teispace/npm-packages/commit/ab5d9638568cc28ee0f48a3fc528aeb647ff0eab))
+
 ## [3.0.2](https://github.com/teispace/npm-packages/compare/next-themes-v3.0.1...next-themes-v3.0.2) (2026-09-06)
 
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## [5.0.0](https://github.com/teispace/npm-packages/compare/teieditor-v4.0.1...teieditor-v5.0.0) (2026-10-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* **teieditor:** teieditor 5.0 replaces the 4.x API entirely. There is no compatibility layer and no 4.x JSON support.
+
+### Features
+
+* **teieditor:** teieditor 5.0, rebuilt on Lexical 0.52 ([#191](https://github.com/teispace/npm-packages/issues/191)) ([aea3c2d](https://github.com/teispace/npm-packages/commit/aea3c2d3a755d4f1845a10c77ca5701e1b359057))
+
+
+### Miscellaneous Chores
+
+* update workspace dependencies to latest ([#185](https://github.com/teispace/npm-packages/issues/185)) ([ab5d963](https://github.com/teispace/npm-packages/commit/ab5d9638568cc28ee0f48a3fc528aeb647ff0eab))
+
 ## [4.0.1](https://github.com/teispace/npm-packages/compare/teieditor-v4.0.0...teieditor-v4.0.1) (2026-09-06)
 
 

@@ -1,6 +1,6 @@
 {
   "name": "@teispace/teieditor",
-  "version": "4.0.1",
+  "version": "5.0.0",
   "description": "A powerful, fully customizable rich-text editor on Lexical: a one-line drop-in, or headless with every part replaceable.",
   "type": "module",
   "license": "MIT",
