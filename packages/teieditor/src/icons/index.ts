@@ -370,6 +370,11 @@ export const sparkles = /* @__PURE__ */ p(
 export const comment = /* @__PURE__ */ p(
   'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
 );
+/** Suggest changes: a pen over a line. */
+export const suggest = /* @__PURE__ */ p(
+  'M12 20h9',
+  'M16.38 3.62a1 1 0 0 1 3 3L7.37 18.64a2 2 0 0 1-.86.5l-2.87.84a.5.5 0 0 1-.62-.62l.84-2.87a2 2 0 0 1 .5-.85z',
+);
 export const search: TeiIconNode = [circle(11, 11, 8), ['path', { d: 'm21 21-4.3-4.3' }]];
 // Find options: match case, whole word, regular expression.
 export const caseSensitive = /* @__PURE__ */ p(
