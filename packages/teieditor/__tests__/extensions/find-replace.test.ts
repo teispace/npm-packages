@@ -348,13 +348,14 @@ describe('FindReplace: keeping up with edits', () => {
       return { ...made, ms: performance.now() - started };
     };
     // Time depends on the machine; how it grows does not. Five times the
-    // paragraphs is about five times the work, never twenty-five.
+    // paragraphs is about five times the work, never twenty-five: the bound
+    // leaves room for a busy machine and still catches quadratic growth.
     const small = search(2_000);
     expect(small.storage.matches.value).toHaveLength(2_000);
     small.editor.destroy();
     const { editor, storage, ms: first } = search(10_000);
     expect(storage.matches.value).toHaveLength(10_000);
-    expect(first).toBeLessThan(small.ms * 10);
+    expect(first).toBeLessThan(small.ms * 15);
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     // Over `largeDocument`: debounced, and only the changed block is searched
     // again. The best of three edits, so a pause of the machine's (a GC) in

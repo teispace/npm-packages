@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { $getRoot } from 'lexical';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { $selectNode } from '../../src/core/slot-host.js';
 import {
@@ -29,6 +29,9 @@ function fakeExcalidraw() {
     Excalidraw: function Fake(p: Record<string, unknown>) {
       props.last = p;
       const initial = p.initialData as { elements: unknown[]; files: Record<string, unknown> };
+      // The canvas shows once mounted, so a test that waits for it never
+      // races the scene below.
+      const [mounted, setMounted] = useState(false);
       // Like Excalidraw: the initial data and the API callback are read once, on mount.
       // biome-ignore lint/correctness/useExhaustiveDependencies: mount only
       useEffect(() => {
@@ -43,8 +46,9 @@ function fakeExcalidraw() {
           getFiles: () => scene.files,
         });
         (p.onChange as ((elements: unknown[]) => void) | undefined)?.(scene.elements);
+        setMounted(true);
       }, []);
-      return <div data-testid="canvas" />;
+      return mounted ? <div data-testid="canvas" /> : null;
     } as ExcalidrawModule['Excalidraw'],
     // What Excalidraw exports, and what the dialog must clean: a link, a script.
     exportToSvg: vi.fn(async ({ elements }) => {
