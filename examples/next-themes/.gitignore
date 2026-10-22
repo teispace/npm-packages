@@ -3,3 +3,5 @@ node_modules/
 *.log
 coverage/
 next-env.d.ts
+test-results/
+playwright-report/

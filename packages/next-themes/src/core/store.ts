@@ -38,6 +38,11 @@ export interface StoreOptions {
   storage: StorageAdapter;
   transition?: TransitionConfig;
   onChange?: (theme: string, resolvedTheme: string) => void;
+  /**
+   * CSP nonce stamped on any `<style>` the store has to fall back to when the
+   * engine lacks constructable stylesheets.
+   */
+  nonce?: string;
 }
 
 /**
@@ -78,9 +83,6 @@ export interface ThemeStore {
   update: (opts: UpdatableStoreOptions) => void;
 }
 
-const DISABLE_CSS =
-  '*,*::before,*::after{-webkit-transition:none!important;transition:none!important;-moz-transition:none!important;-o-transition:none!important;}';
-
 /** Shallow value-equality for `Record<string,string> | null` maps. */
 function recordEqual(a: Record<string, string> | null, b: Record<string, string> | null): boolean {
   if (a === b) return true;
@@ -103,6 +105,22 @@ function themeColorEqual(
   return recordEqual(a, b);
 }
 
+/**
+ * Which store last wrote its theme to each element. Several providers can
+ * target the same element (nested providers, a page-level `forcedTheme`
+ * provider inside the root one), and each guards it against drift. Only the
+ * last writer restores the theme, so two guards never fight over the element.
+ */
+const owners = new WeakMap<Element, object>();
+
+/**
+ * How many restorations a guard may make inside {@link GUARD_WINDOW_MS}
+ * before it gives up. Something rewriting the element in a loop would
+ * otherwise keep the guard — and the page — busy forever.
+ */
+const GUARD_BUDGET = 20;
+const GUARD_WINDOW_MS = 1000;
+
 export function createStore(opts: StoreOptions): ThemeStore {
   // Frozen-at-construction options. Changing any of these would require
   // rebuilding the inline anti-FOUC script (which is already serialized into
@@ -116,6 +134,7 @@ export function createStore(opts: StoreOptions): ThemeStore {
     enableColorScheme,
     target,
     storage,
+    nonce,
   } = opts;
 
   // Mutable through `update()`. Using `let` so `setTheme`, `apply`, and the
@@ -139,44 +158,59 @@ export function createStore(opts: StoreOptions): ThemeStore {
     return themes.includes(v) ? v : null;
   }
 
-  function initial(): ThemeState {
-    const systemTheme = getSystemTheme();
+  // The OS preference. Kept current by the media-query listener once mounted,
+  // so a theme switch never has to re-evaluate `matchMedia`.
+  let systemTheme: 'light' | 'dark' = 'light';
+  let systemSubscribed = false;
+  function currentSystemTheme(): 'light' | 'dark' {
+    if (!systemSubscribed) systemTheme = getSystemTheme();
+    return systemTheme;
+  }
+
+  function compute(stored: string | null, system: 'light' | 'dark'): ThemeState {
     let rawTheme: string;
     if (forcedTheme) {
       rawTheme = forcedTheme;
     } else if (followSystem && enableSystem) {
       rawTheme = 'system';
     } else {
-      rawTheme = readStored() ?? initialTheme ?? defaultTheme;
+      rawTheme = stored ?? initialTheme ?? defaultTheme;
     }
     const theme = normalizeSelection(rawTheme, themes, defaultTheme, enableSystem);
-    const resolved = theme === 'system' ? systemTheme : theme;
+    const resolved = theme === 'system' ? system : theme;
     return {
       theme,
       resolvedTheme: resolved,
-      systemTheme: enableSystem ? systemTheme : null,
+      systemTheme: enableSystem ? system : null,
       forcedTheme: forcedTheme ?? null,
       themes: allThemes,
     };
   }
 
+  function initial(): ThemeState {
+    return compute(readStored(), currentSystemTheme());
+  }
+
+  // The state the server rendered, for `useSyncExternalStore`'s server-snapshot
+  // slot. It must be computed the way the server computes it — from props
+  // alone, with no storage and the server's `'light'` system fallback — and
+  // NOT from this browser's storage: React hydrates against this value, so a
+  // client-side read here (say a localStorage `dark` the server never saw)
+  // made the hydration render disagree with the server HTML. React then
+  // re-renders with the live snapshot after hydration, which is the correct,
+  // warning-free way to reveal a client-only value. Seeding the provider with
+  // `initialTheme` from the server cookie makes the two agree from the start.
+  // Computed once: React requires a referentially stable snapshot.
+  const serverState: ThemeState = compute(null, 'light');
   let state: ThemeState = initial();
-  // Frozen snapshot of the seeded state for `useSyncExternalStore`'s
-  // server-snapshot slot. Must be referentially stable across calls (React
-  // calls it repeatedly during render), so it is computed once here. On the
-  // server `setState` never runs, so this equals the live state; on the client
-  // it is only ever read during the hydration render. When the provider is
-  // seeded (initialTheme / forcedTheme from the server cookie) this lets SSR
-  // render the correct resolved theme instead of an empty placeholder, so
-  // theme-dependent components (ThemedImage/ThemedIcon) avoid a post-hydration
-  // swap.
-  const serverState: ThemeState = state;
   let previousApplied: string | null = null;
   const listeners = new Set<Listener>();
   let mounted = false;
   let unsubSystem: (() => void) | null = null;
   let unsubStorage: (() => void) | null = null;
   let unsubPageShow: (() => void) | null = null;
+  let observer: MutationObserver | null = null;
+  const ownerToken = {};
 
   function emit(): void {
     for (const l of listeners) l(state);
@@ -197,10 +231,7 @@ export function createStore(opts: StoreOptions): ThemeStore {
 
     let restore: (() => void) | null = null;
     if (!skipTransitionDisable && disableTransitionOnChange && !domUnchanged) {
-      restore = disableTransition(
-        typeof disableTransitionOnChange === 'string' ? disableTransitionOnChange : DISABLE_CSS,
-        respectReducedMotion,
-      );
+      restore = disableTransition(disableTransitionOnChange, respectReducedMotion, nonce);
     }
 
     if (!domUnchanged) {
@@ -217,6 +248,7 @@ export function createStore(opts: StoreOptions): ThemeStore {
     applyThemeColor(next.theme, next.resolvedTheme, themeColor ?? undefined);
 
     previousApplied = applied;
+    owners.set(el, ownerToken);
     restore?.();
   }
 
@@ -247,7 +279,7 @@ export function createStore(opts: StoreOptions): ThemeStore {
 
     const doApply = (insideViewTransition: boolean): void => {
       storage.set(theme);
-      const systemTheme = getSystemTheme();
+      const systemTheme = currentSystemTheme();
       const resolved = theme === 'system' ? systemTheme : theme;
       // When a View Transition is animating this change, suppress the
       // `disableTransitionOnChange` <style>: that style sets
@@ -268,31 +300,32 @@ export function createStore(opts: StoreOptions): ThemeStore {
     // Resolve the concrete target theme up front so it can be stamped as a
     // view-transition type (`types: ['theme', 'dark']`), letting consumers write
     // direction-aware CSS without reading any DOM attribute.
-    const targetResolved = theme === 'system' ? getSystemTheme() : theme;
+    const targetResolved = theme === 'system' ? currentSystemTheme() : theme;
     const resolvedVt = resolveTransition(effective, respectReducedMotion, targetResolved);
     if (resolvedVt) {
-      startViewTransition(() => doApply(true), resolvedVt);
+      startViewTransition(() => doApply(true), resolvedVt, nonce);
     } else {
       doApply(false);
     }
   }
 
-  function onSystemChange(systemTheme: 'light' | 'dark'): void {
+  function onSystemChange(next: 'light' | 'dark'): void {
+    systemTheme = next;
     // An OS light/dark flip only repaints when the *selected* theme is
     // `system`. setState() applies to the DOM only when resolvedTheme
     // changes, so for a concrete 'light'/'dark' selection this updates the
     // user-visible systemTheme (one emit) without rewriting the DOM.
     setState({
       ...state,
-      systemTheme,
-      resolvedTheme: state.theme === 'system' ? systemTheme : state.resolvedTheme,
+      systemTheme: next,
+      resolvedTheme: state.theme === 'system' ? next : state.resolvedTheme,
     });
   }
 
   function onStorageChange(raw: string | null): void {
     if (forcedTheme) return;
     const nextTheme = normalizeSelection(raw, themes, defaultTheme, enableSystem);
-    const systemTheme = getSystemTheme();
+    const systemTheme = currentSystemTheme();
     const resolved = nextTheme === 'system' ? systemTheme : nextTheme;
     setState({
       ...state,
@@ -319,7 +352,12 @@ export function createStore(opts: StoreOptions): ThemeStore {
     }
     if (enableSystem) {
       unsubSystem = subscribeSystem(onSystemChange);
+      // The listener only reports changes, so take a fresh reading now; from
+      // here on the cached value is authoritative.
+      systemTheme = getSystemTheme();
+      systemSubscribed = true;
     }
+    observer = guardDom();
     if (storage.subscribe) {
       unsubStorage = storage.subscribe(onStorageChange);
     }
@@ -328,6 +366,8 @@ export function createStore(opts: StoreOptions): ThemeStore {
     if (hasWindowEvents()) {
       const onPageShow = (e: PageTransitionEvent): void => {
         if (!e.persisted) return;
+        // A frozen page can miss the media-query change event entirely.
+        if (systemSubscribed) systemTheme = getSystemTheme();
         const next = initial();
         if (next.theme !== state.theme || next.resolvedTheme !== state.resolvedTheme) {
           setState(next, true);
@@ -342,8 +382,53 @@ export function createStore(opts: StoreOptions): ThemeStore {
     }
   }
 
+  /**
+   * Re-apply the theme when something else strips it from the target. The
+   * classic case is React re-rendering `<html className={…}>` on a client
+   * navigation: it rewrites the whole `class` attribute and silently drops the
+   * theme class (upstream next-themes #351, #242). Only the attributes the
+   * theme owns are observed, and the callback is a no-op unless the DOM has
+   * actually drifted, so our own writes never loop.
+   */
+  function guardDom(): MutationObserver | null {
+    if (!isDom() || typeof MutationObserver !== 'function') return null;
+    const el = resolveTarget(target);
+    const attributeFilter: string[] = Array.isArray(attribute) ? [...attribute] : [attribute];
+    if (enableColorScheme) attributeFilter.push('style');
+    let windowStart = 0;
+    let restorations = 0;
+    try {
+      const mo = new MutationObserver(() => {
+        if (owners.get(el) !== ownerToken) return;
+        const applied = value?.[state.resolvedTheme] ?? state.resolvedTheme;
+        const schemeDrift =
+          enableColorScheme &&
+          (state.resolvedTheme === 'light' || state.resolvedTheme === 'dark') &&
+          el.style.colorScheme !== state.resolvedTheme;
+        if (!schemeDrift && isAttributeAlreadyApplied(el, attribute, applied)) return;
+        const now = Date.now();
+        if (now - windowStart > GUARD_WINDOW_MS) {
+          windowStart = now;
+          restorations = 0;
+        }
+        if (++restorations > GUARD_BUDGET) {
+          mo.disconnect();
+          return;
+        }
+        apply(state, true);
+      });
+      mo.observe(el, { attributes: true, attributeFilter });
+      return mo;
+    } catch (_e) {
+      return null;
+    }
+  }
+
   function unmount(): void {
     mounted = false;
+    systemSubscribed = false;
+    observer?.disconnect();
+    observer = null;
     unsubSystem?.();
     unsubStorage?.();
     unsubPageShow?.();

@@ -39,4 +39,4 @@ export function makeThemedIcon(useThemeHook: UseThemeHook) {
   };
 }
 
-export const ThemedIcon = makeThemedIcon(useTheme);
+export const ThemedIcon = /*#__PURE__*/ makeThemedIcon(useTheme);

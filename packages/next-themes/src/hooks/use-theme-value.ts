@@ -38,4 +38,4 @@ export function makeUseThemeValue(useThemeHook: UseThemeHook): UseThemeValueHook
  * @example
  *   const color = useThemeValue({ light: '#fff', dark: '#000', default: '#fff' });
  */
-export const useThemeValue: UseThemeValueHook = makeUseThemeValue(useTheme);
+export const useThemeValue: UseThemeValueHook = /*#__PURE__*/ makeUseThemeValue(useTheme);

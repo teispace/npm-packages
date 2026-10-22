@@ -1,161 +1,27 @@
 'use client';
 
 import { useServerInsertedHTML } from 'next/navigation';
-import { useEffect, useRef } from 'react';
-import { resolveAdapter } from '../adapters/index';
-import { DefaultThemeContext } from '../core/context';
-import { ensureCursorTracker } from '../core/cursor-tracker';
-import { buildScript } from '../core/script';
-import { createStore, type ThemeStore } from '../core/store';
-import { resolveStorageConfig, type ThemeProviderProps } from './props';
-
-const DISABLE_CSS =
-  '*,*::before,*::after{-webkit-transition:none!important;transition:none!important;-moz-transition:none!important;-o-transition:none!important;}';
+import { useRef } from 'react';
+import type { ThemeProviderProps } from './props';
+import { useThemeProvider } from './shared';
 
 /**
  * Next.js App Router ThemeProvider. The inline anti-FOUC script is injected
  * via `useServerInsertedHTML`, placing it in the server-rendered HTML head —
  * it blocks before hydration, and React 19 does not emit a client-script
- * warning since the script is not part of the React tree.
+ * warning since the script is not part of the React tree. A remount on the
+ * client (say a root `[lang]` segment changing) renders no script at all,
+ * which is what keeps upstream next-themes #397 away.
  */
 export function ThemeProvider(props: ThemeProviderProps): React.JSX.Element {
-  const {
-    children,
-    themes = ['light', 'dark'],
-    defaultTheme = 'system',
-    forcedTheme,
-    enableSystem = true,
-    followSystem = false,
-    attribute = 'data-theme',
-    value,
-    target = 'html',
-    storage,
-    storageKey,
-    cookieOptions,
-    disableTransitionOnChange = false,
-    respectReducedMotion = true,
-    enableColorScheme = true,
-    themeColor,
-    initialTheme,
-    nonce,
-    noScript = false,
-    scriptProps,
-    transition,
-    onChange,
-    onStorageError,
-    themeContext,
-  } = props;
-
-  const {
-    mode: storageMode,
-    key: resolvedStorageKey,
-    cookieOptions: resolvedCookieOptions,
-  } = resolveStorageConfig(storage, storageKey, cookieOptions);
-
-  const Context = themeContext ?? DefaultThemeContext;
-
-  const storeRef = useRef<ThemeStore | null>(null);
-  // NOTE: `storeRef.current === null` — NOT `!storeRef.current`.
-  // React Compiler's ValidateNoRefAccessInRender treats a `!ref.current` unary
-  // read during render as an error ("Cannot access refs during render") and
-  // bails on the whole component, but explicitly allows the lazy-init guard
-  // written as a comparison against null. Same behaviour, compiler-clean.
-  if (storeRef.current === null) {
-    storeRef.current = createStore({
-      themes,
-      defaultTheme,
-      enableSystem,
-      forcedTheme: forcedTheme ?? null,
-      initialTheme: initialTheme ?? null,
-      followSystem,
-      attribute,
-      value: value ?? null,
-      enableColorScheme,
-      themeColor: themeColor ?? null,
-      disableTransitionOnChange,
-      respectReducedMotion,
-      target,
-      storage: resolveAdapter({
-        mode: storageMode,
-        key: resolvedStorageKey,
-        cookieOptions: resolvedCookieOptions,
-        onStorageError,
-      }),
-      transition,
-      onChange,
-    });
-  }
-
-  useEffect(() => {
-    const s = storeRef.current;
-    s?.mount();
-    ensureCursorTracker();
-    return () => {
-      s?.unmount();
-    };
-  }, []);
-
-  // Sync runtime-mutable props into the store. The store is built once
-  // (storeRef) so without this, changes to forcedTheme/value/themeColor/etc.
-  // never propagate. Limited to props that don't invalidate the inline script.
-  useEffect(() => {
-    storeRef.current?.update({
-      forcedTheme: forcedTheme ?? null,
-      followSystem,
-      value: value ?? null,
-      themeColor: themeColor ?? null,
-      disableTransitionOnChange,
-      respectReducedMotion,
-      transition,
-      onChange,
-    });
-  }, [
-    forcedTheme,
-    followSystem,
-    value,
-    themeColor,
-    disableTransitionOnChange,
-    respectReducedMotion,
-    transition,
-    onChange,
-  ]);
+  const { Context, store, renderScript } = useThemeProvider(props);
 
   const insertedRef = useRef(false);
   useServerInsertedHTML(() => {
-    if (insertedRef.current || noScript) return null;
+    if (insertedRef.current) return null;
     insertedRef.current = true;
-    const script = buildScript({
-      storageMode,
-      storageKey: resolvedStorageKey,
-      cookieName: resolvedCookieOptions?.name ?? resolvedStorageKey,
-      attribute,
-      themes,
-      defaultTheme,
-      enableSystem,
-      followSystem,
-      forcedTheme: forcedTheme ?? null,
-      initialTheme: initialTheme ?? null,
-      value: value ?? null,
-      enableColorScheme,
-      themeColor: themeColor ?? null,
-      disableTransitionOnChange:
-        disableTransitionOnChange === true
-          ? DISABLE_CSS
-          : typeof disableTransitionOnChange === 'string'
-            ? disableTransitionOnChange
-            : null,
-      respectReducedMotion,
-      target,
-    });
-    return (
-      <script
-        {...scriptProps}
-        nonce={nonce}
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: anti-FOUC inline script
-        dangerouslySetInnerHTML={{ __html: script }}
-      />
-    );
+    return renderScript();
   });
 
-  return <Context.Provider value={storeRef.current}>{children}</Context.Provider>;
+  return <Context.Provider value={store}>{props.children}</Context.Provider>;
 }

@@ -1,5 +1,12 @@
 import { readCookieFromString, serializeCookie } from '../adapters/cookie';
-import { type BuildScriptOptions, buildScript } from '../core/script';
+import {
+  type BuildScriptOptions,
+  buildScript,
+  getScriptConfig,
+  THEME_SCRIPT,
+  THEME_SCRIPT_ATTRIBUTE,
+  THEME_SCRIPT_HASH,
+} from '../core/script';
 import type { CookieOptions } from '../core/types';
 import { readColorSchemeHint } from './client-hint';
 
@@ -226,39 +233,81 @@ export async function writeThemeCookie(
 }
 
 /**
- * Build the inline anti-FOUC script as an HTML-safe string. Place this
- * inside the `<head>` of your root layout — that is where it can run
- * synchronously before the browser paints any body pixels, eliminating
- * the dark → light → dark flicker that `useServerInsertedHTML` placement
- * inside `<body>` allows.
+ * Build the inline anti-FOUC script as an HTML-safe string, with the
+ * configuration baked into the text.
  *
- * Recommended usage in Next.js App Router:
+ * Because the text depends on the configuration, a hash-based CSP needs a
+ * hash per configuration. Prefer {@link getThemeScriptProps}, whose script
+ * text never changes and is covered by the single {@link getThemeScriptHash}.
+ *
+ * If you render the script yourself, pass `noScript` to the `ThemeProvider`
+ * so it does not inject a second copy, and pass the same configuration to both
+ * call sites (or use `createThemes()` so it lives in one place).
+ */
+export function getThemeScript(options: BuildScriptOptions = {}): string {
+  return buildScript(options);
+}
+
+export interface ThemeScriptProps {
+  [THEME_SCRIPT_ATTRIBUTE]: string;
+  'data-cfasync': 'false';
+  nonce?: string;
+  suppressHydrationWarning: true;
+  dangerouslySetInnerHTML: { __html: string };
+}
+
+/**
+ * Props for a `<script>` element that runs the anti-FOUC script. Spread them
+ * onto a `<script>` in the `<head>` of your root layout — that placement runs
+ * before the browser paints any body pixels — and pass `noScript` to the
+ * provider so it does not inject a second copy:
  *
  * ```tsx
  * // app/layout.tsx
- * import { getTheme, getThemeScript } from '@teispace/next-themes/server';
+ * import { getTheme, getThemeScriptProps } from '@teispace/next-themes/server';
  *
  * export default async function RootLayout({ children }) {
  *   const initialTheme = await getTheme();
- *   const script = getThemeScript({ attribute: 'class', initialTheme });
  *   return (
  *     <html lang="en" suppressHydrationWarning>
  *       <head>
- *         <script dangerouslySetInnerHTML={{ __html: script }} />
+ *         <script {...getThemeScriptProps({ attribute: 'class', initialTheme })} />
  *       </head>
  *       <body>
- *         <Providers initialTheme={initialTheme}>{children}</Providers>
+ *         <Providers initialTheme={initialTheme} noScript>{children}</Providers>
  *       </body>
  *     </html>
  *   );
  * }
  * ```
  *
- * When this helper is used, the `ThemeProvider` skips its own script
- * injection (passing `nonce` is enough — see the `noScript` provider
- * prop). Pass the same configuration object to both call sites to keep
- * them in sync, or use `createThemes()` so the config lives in one place.
+ * The script text is the same for every configuration (the configuration
+ * travels in a `data-` attribute), so under a hash-based CSP a single
+ * `script-src` entry — {@link getThemeScriptHash} — allows it everywhere.
+ * Under a nonce-based CSP pass `nonce` instead.
  */
-export function getThemeScript(options: BuildScriptOptions = {}): string {
-  return buildScript(options);
+export function getThemeScriptProps(
+  options: BuildScriptOptions & { nonce?: string } = {},
+): ThemeScriptProps {
+  const { nonce, ...config } = options;
+  return {
+    [THEME_SCRIPT_ATTRIBUTE]: getScriptConfig(config),
+    'data-cfasync': 'false',
+    ...(nonce ? { nonce } : {}),
+    suppressHydrationWarning: true,
+    dangerouslySetInnerHTML: { __html: THEME_SCRIPT },
+  };
+}
+
+/**
+ * The CSP source expression (`'sha256-…'`) that allows the anti-FOUC script
+ * the providers and {@link getThemeScriptProps} render. Add it to `script-src`
+ * and the script runs under a hash-based policy with no nonce — which also
+ * means pages can stay statically rendered.
+ *
+ * It does not cover {@link getThemeScript}, whose text varies with the
+ * configuration.
+ */
+export function getThemeScriptHash(): string {
+  return THEME_SCRIPT_HASH;
 }

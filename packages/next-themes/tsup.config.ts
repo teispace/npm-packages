@@ -26,8 +26,10 @@ export default defineConfig({
   dts: true,
   clean: true,
   splitting: true,
-  treeshake: true,
-  minify: true,
+  treeshake: false,
+  // Ship readable ESM: the app's bundler minifies, and esbuild's minifier
+  // strips the `/*#__PURE__*/` annotations that let it drop unused exports.
+  minify: false,
   sourcemap: false,
   external: ['react', 'react-dom', 'next', 'next/navigation', 'next/headers'],
   target: 'es2020',

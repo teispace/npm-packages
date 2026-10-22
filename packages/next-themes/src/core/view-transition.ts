@@ -1,9 +1,9 @@
 import { getLastPointerPosition } from './cursor-tracker';
+import { injectStyle } from './dom';
 import { hasMatchMedia, isDom } from './env';
 import type { TransitionConfig, TransitionOptions, TransitionOrigin } from './types';
 
 const MEDIA_REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
-const STYLE_MARKER = 'data-teispace-vt';
 
 export interface ResolvedTransition {
   css: string;
@@ -127,16 +127,24 @@ const VT_TYPE = 'theme';
  *
  * Cross-browser as of 2026 (Chrome/Edge 125, Safari 18.2, Firefox 147).
  */
+let typesSupported: boolean | undefined;
 function supportsTransitionTypes(): boolean {
+  // Engine capability never changes within a page, so probe once.
+  if (typesSupported !== undefined) return typesSupported;
   try {
-    return (
+    typesSupported =
       typeof CSS !== 'undefined' &&
       typeof CSS.supports === 'function' &&
-      CSS.supports('selector(:active-view-transition-type(theme))')
-    );
+      CSS.supports('selector(:active-view-transition-type(theme))');
   } catch {
-    return false;
+    typesSupported = false;
   }
+  return typesSupported;
+}
+
+/** Test-only: forget the cached capability probe. */
+export function resetTransitionSupportCache(): void {
+  typesSupported = undefined;
 }
 
 /**
@@ -144,26 +152,27 @@ function supportsTransitionTypes(): boolean {
  * synchronously. The transition CSS is injected into `<head>` for the
  * duration of the animation and torn down afterwards.
  */
-export function startViewTransition(apply: () => void, transition: ResolvedTransition): void {
+export function startViewTransition(
+  apply: () => void,
+  transition: ResolvedTransition,
+  nonce?: string,
+): void {
   const d = document as unknown as { startViewTransition?: StartViewTransitionFn };
   if (typeof d.startViewTransition !== 'function') {
     apply();
     return;
   }
 
-  // Each call owns its own <style> element. Marker attribute (not `id`) so
-  // rapid successive switches or nested providers don't collide. The marker
-  // also lets external test harnesses or debug overlays find these tags.
-  const style = document.createElement('style');
-  style.setAttribute(STYLE_MARKER, '');
-  style.appendChild(document.createTextNode(transition.css));
-  document.head.appendChild(style);
+  // Each call owns its own stylesheet, so rapid successive switches or nested
+  // providers don't collide. `injectStyle` keeps this working under a strict
+  // `style-src` CSP.
+  const removeStyle = injectStyle(transition.css, nonce);
 
   let cleaned = false;
   const cleanup = (): void => {
     if (cleaned) return;
     cleaned = true;
-    if (style.parentNode) style.parentNode.removeChild(style);
+    removeStyle();
   };
 
   // Stamp the transition with a type when the engine supports it, so consumers

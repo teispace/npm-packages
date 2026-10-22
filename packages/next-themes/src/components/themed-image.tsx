@@ -46,4 +46,4 @@ export function makeThemedImage(useThemeHook: UseThemeHook) {
   };
 }
 
-export const ThemedImage = makeThemedImage(useTheme);
+export const ThemedImage = /*#__PURE__*/ makeThemedImage(useTheme);

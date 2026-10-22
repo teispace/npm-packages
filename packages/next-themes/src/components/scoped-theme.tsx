@@ -17,6 +17,11 @@ export interface ScopedThemeProps<T extends string = string> {
   value?: Record<string, string>;
   className?: string;
   style?: React.CSSProperties;
+  /**
+   * Set `color-scheme` on the wrapper when the scoped theme is `light` or
+   * `dark`, so native controls and scrollbars inside match it. Default: `true`.
+   */
+  enableColorScheme?: boolean;
 }
 
 /**
@@ -37,6 +42,7 @@ export function makeScopedTheme(Context: ThemeContext) {
     value,
     className,
     style,
+    enableColorScheme = true,
     ...rest
   }: ScopedThemeProps<T> & Record<string, unknown>): React.JSX.Element {
     const store = useMemo<ThemeStore>(() => makeScopedStore(theme), [theme]);
@@ -44,6 +50,17 @@ export function makeScopedTheme(Context: ThemeContext) {
     const attrs = Array.isArray(attribute) ? attribute : [attribute];
 
     const scopedProps: Record<string, unknown> = { style, ...rest };
+    // Set `color-scheme` through the CSSOM at commit time rather than the
+    // `style` prop: server rendering would turn the prop into a `style="…"`
+    // attribute, which a strict `style-src-attr` CSP blocks. Only intrinsic
+    // elements are guaranteed to accept a ref, and a caller-supplied
+    // `colorScheme` style wins.
+    const scheme = enableColorScheme && (theme === 'light' || theme === 'dark') ? theme : null;
+    if (scheme && typeof Component === 'string' && !style?.colorScheme) {
+      scopedProps.ref = (el: HTMLElement | null) => {
+        if (el && el.style.colorScheme !== scheme) el.style.colorScheme = scheme;
+      };
+    }
     let classNames = className;
     for (const attr of attrs) {
       if (attr === 'class') {
@@ -62,7 +79,7 @@ export function makeScopedTheme(Context: ThemeContext) {
   };
 }
 
-export const ScopedTheme = makeScopedTheme(DefaultThemeContext);
+export const ScopedTheme = /*#__PURE__*/ makeScopedTheme(DefaultThemeContext);
 
 function makeScopedStore(theme: string): ThemeStore {
   const state: ThemeState = {

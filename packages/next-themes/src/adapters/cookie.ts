@@ -4,11 +4,13 @@ import type { AdapterFactory, StorageAdapter } from './types';
 
 export function readCookieFromString(cookie: string, name: string): string | null {
   if (!cookie) return null;
-  const parts = cookie.split('; ');
+  // Browsers join with '; ', but a hand-built or proxied Cookie header may use
+  // ';' alone or extra spaces.
+  const parts = cookie.split(/;\s*/);
   for (const part of parts) {
     const eq = part.indexOf('=');
     if (eq < 0) continue;
-    if (part.substring(0, eq) === name) {
+    if (part.substring(0, eq).trim() === name) {
       const raw = part.substring(eq + 1);
       if (!raw) return null;
       try {

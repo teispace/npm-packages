@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { getTheme } from '@teispace/next-themes/server';
+import { headers } from 'next/headers';
 import { Nav } from '@/components/nav';
 import { Providers } from './providers';
 import './globals.css';
@@ -17,6 +18,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Zero-flash SSR: read the theme cookie (or Sec-CH-Prefers-Color-Scheme hint)
   // so `initialTheme` is seeded before hydration.
   const initialTheme = await getTheme();
+  // The per-request CSP nonce minted in src/proxy.ts. The provider stamps it on
+  // its inline script and on any <style> it has to fall back to.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
 
   return (
     <html
@@ -25,7 +29,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <body>
-        <Providers initialTheme={initialTheme}>
+        <Providers initialTheme={initialTheme} nonce={nonce}>
           <Nav />
           <main className="mx-auto w-full max-w-5xl px-4 py-8">{children}</main>
         </Providers>
