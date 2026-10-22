@@ -1,0 +1,75 @@
+/*
+ * Dictation (the SpeechToText extension): what is still being heard, shown
+ * just under the caret in a layer beside the document, never in it; and
+ * the toolbar's microphone while it listens.
+ */
+@layer teieditor {
+  .tei-dictation {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    inline-size: 0;
+    block-size: 0;
+    overflow: visible;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .tei-dictation-interim {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    max-inline-size: min(28rem, 80vw);
+    padding: 2px var(--tei-space-2);
+    overflow: hidden;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-bg-overlay);
+    box-shadow: var(--tei-shadow);
+    color: var(--tei-fg-muted);
+    font-family: var(--tei-font);
+    font-size: var(--tei-ui-font-size-sm);
+    font-style: italic;
+    line-height: var(--tei-ui-line-height);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Listening: the microphone in the danger colour, breathing. */
+  .tei [data-item="dictation"][aria-pressed="true"] {
+    color: var(--tei-danger);
+  }
+
+  .tei [data-item="dictation"][aria-pressed="true"] svg {
+    animation: tei-dictation-pulse 1.4s var(--tei-ease) infinite;
+  }
+
+  @keyframes tei-dictation-pulse {
+    50% {
+      opacity: 0.45;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tei [data-item="dictation"][aria-pressed="true"] svg {
+      animation: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .tei-dictation-interim {
+      border-color: CanvasText;
+      background: Canvas;
+      color: CanvasText;
+    }
+  }
+
+  @media print {
+    .tei-dictation {
+      display: none;
+    }
+  }
+}
