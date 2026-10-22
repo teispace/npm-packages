@@ -13,6 +13,7 @@ export type UseThemeEffectHook = <T extends string = string>(
  * Build a `useThemeEffect` bound to a specific `useTheme`. See `makeUseTheme`.
  */
 export function makeUseThemeEffect(useThemeHook: UseThemeHook): UseThemeEffectHook {
+  // biome-ignore lint/correctness/noComponentHookFactories: built once per createThemes() call, at module level
   return function useThemeEffect<T extends string = string>(
     effect: (theme: T | 'system', resolvedTheme: T) => void | (() => void),
     deps: DependencyList = [],

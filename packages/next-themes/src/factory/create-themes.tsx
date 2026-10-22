@@ -69,6 +69,7 @@ export function makeCreateThemes(
       themeContext: ThemeCtx,
     };
 
+    // biome-ignore lint/correctness/noComponentHookFactories: built once per createThemes() call, at module level
     const TypedProvider: ComponentType<
       Partial<Omit<ThemeProviderProps, 'themes'>> & { children?: ReactNode }
     > = (props) => {

@@ -146,7 +146,9 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 11
+          # The starter's own `packageManager` pin: pnpm refuses to run under
+          # Corepack at any other version, so "the newest 11" broke installs.
+          package_json_file: .starter/package.json
 
       - name: Install dependencies
         run: yarn install --immutable
