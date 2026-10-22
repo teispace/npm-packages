@@ -168,7 +168,11 @@ export interface TeiItem {
    * longest; subscript goes early).
    */
   priority?: number;
-  /** Whether to offer it at all, given the editor's current options. Default: always. */
+  /**
+   * Whether to offer it at all, given the editor's current options. Default:
+   * always. Never ask the browser here: a server render must list the same
+   * items; disable through the command's `can()` instead.
+   */
   visible?: (editor: TeiEditor) => boolean;
 }
 

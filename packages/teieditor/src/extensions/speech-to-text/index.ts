@@ -14,7 +14,7 @@ import {
   SKIP_DOM_SELECTION_TAG,
   SKIP_SCROLL_INTO_VIEW_TAG,
 } from 'lexical';
-import { defineTeiExtension, getPeerOptions } from '../../core/define.js';
+import { defineTeiExtension } from '../../core/define.js';
 import type { TeiEditor } from '../../core/editor.js';
 import type { CommandName } from '../../core/types.js';
 import { microphone } from '../../icons/index.js';
@@ -650,9 +650,8 @@ export const SpeechToText = defineTeiExtension({
       order: 95,
       command: 'toggleDictation',
       active: 'dictation',
-      visible: (editor) =>
-        (getPeerOptions<SpeechToTextOptions>(editor.lexical, NAME)?.recognition ??
-          browserSpeechRecognition()) !== null,
+      // Always offered, so the server's toolbar and the browser's agree;
+      // disabled (`can()`) where the browser cannot listen.
     },
   ],
 });

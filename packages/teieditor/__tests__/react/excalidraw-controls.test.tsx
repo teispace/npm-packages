@@ -32,12 +32,17 @@ function fakeExcalidraw() {
       // Like Excalidraw: the initial data and the API callback are read once, on mount.
       // biome-ignore lint/correctness/useExhaustiveDependencies: mount only
       useEffect(() => {
-        scene.elements = [...initial.elements];
+        // Restoring a scene bumps its elements' versions, and reports it.
+        scene.elements = initial.elements.map((el) => ({
+          ...(el as object),
+          version: ((el as { version?: number }).version ?? 0) + 1,
+        }));
         scene.files = { ...initial.files };
         (p.excalidrawAPI as (api: unknown) => void)({
           getSceneElements: () => scene.elements,
           getFiles: () => scene.files,
         });
+        (p.onChange as ((elements: unknown[]) => void) | undefined)?.(scene.elements);
       }, []);
       return <div data-testid="canvas" />;
     } as ExcalidrawModule['Excalidraw'],
@@ -170,6 +175,29 @@ describe('ExcalidrawControls', () => {
     });
     expect(dialog()).toBeNull();
     expect(drawing(editor)?.scene.elements.map((el) => el.id)).toEqual(['r1']);
+  });
+
+  it('closes untouched without asking, though Excalidraw restored the scene', async () => {
+    const preview = svgDataURL('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>');
+    const { editor } = open({
+      root: {
+        type: 'root',
+        version: 1,
+        format: '',
+        indent: 0,
+        direction: null,
+        children: [{ type: 'excalidraw', version: 1, elements: [RECT], files: {}, preview }],
+      },
+    });
+    act(() => {
+      editor.commands.openExcalidraw(drawing(editor)?.key);
+    });
+    await screen.findByTestId('canvas');
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(dialog()).toBeNull();
   });
 
   it('says so when Excalidraw cannot load', async () => {

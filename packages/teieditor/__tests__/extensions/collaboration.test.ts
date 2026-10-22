@@ -7,7 +7,7 @@ import {
   $isRangeSelection,
   type LexicalEditor,
 } from 'lexical';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 import {
   Collaboration,
@@ -467,6 +467,21 @@ describe('Collaboration: presence', () => {
 });
 
 describe('Collaboration: connection', () => {
+  it('neither seeds nor connects where there is no document (a server render)', async () => {
+    const network = new MemoryNetwork();
+    vi.stubGlobal('document', undefined);
+    let a: ReturnType<typeof client>;
+    try {
+      a = client(network, { initialContent: '<p>Seed</p>' });
+      await settle();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(a.storage.status.peek()).toBe('disconnected');
+    // Nothing written to the shared document.
+    expect(Y.encodeStateVector(a.doc)).toEqual(new Uint8Array([0]));
+  });
+
   it('reports connecting, connected and synced, and offline after disconnect', async () => {
     const network = new MemoryNetwork();
     const seen: string[] = [];

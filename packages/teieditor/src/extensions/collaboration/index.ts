@@ -616,8 +616,10 @@ export const Collaboration = defineTeiExtension({
       readPeers();
     };
     // After the editor's starting content is in (Lexical applies it after
-    // every extension has registered).
-    queueMicrotask(start);
+    // every extension has registered). Not where there is no document: an
+    // editor built for a server render neither seeds nor connects (a server
+    // that collaborates runs it inside @lexical/headless's `withDOM`).
+    if (typeof document !== 'undefined') queueMicrotask(start);
 
     // A new name or colour, live.
     const offUser = effect(() => {

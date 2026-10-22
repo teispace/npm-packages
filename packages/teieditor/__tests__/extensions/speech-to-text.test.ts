@@ -297,16 +297,17 @@ describe('SpeechToText', () => {
     expect(storage.listening.value).toBe(false);
   });
 
-  it('is unavailable where the browser cannot listen: no button, no command', () => {
+  it('is unavailable where the browser cannot listen: a disabled button, no command', () => {
     const { editor, storage } = make({ recognition: null });
-    expect(editor.items('toolbar').some((item) => item.id === 'dictation')).toBe(false);
+    // The same toolbar a server renders: only `can()` knows the browser.
+    expect(editor.items('toolbar').some((item) => item.id === 'dictation')).toBe(true);
     expect(editor.can().startDictation()).toBe(false);
     expect(editor.can().toggleDictation()).toBe(false);
     expect(editor.commands.startDictation()).toBe(false);
     expect(storage.error.value?.code).toBe('unsupported');
     // The browser's own, when it has one.
     vi.stubGlobal('webkitSpeechRecognition', FakeRecognition);
-    expect(editor.items('toolbar').some((item) => item.id === 'dictation')).toBe(true);
+    expect(editor.can().toggleDictation()).toBe(true);
     expect(editor.commands.startDictation()).toBe(true);
   });
 

@@ -376,7 +376,10 @@ function DrawingDialog({
     [editor, nodeKey],
   );
   const dark = useMemo(() => isDark(editor.lexical.getRootElement()), [editor]);
-  const opened = useMemo(() => signature(initial?.scene.elements ?? []), [initial]);
+  // The scene as Excalidraw first shows it: restoring it bumps versions, so
+  // the saved one would never match. The saved one until Excalidraw reports.
+  const saved = useMemo(() => signature(initial?.scene.elements ?? []), [initial]);
+  const opened = useRef<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -396,7 +399,7 @@ function DrawingDialog({
   };
   const changed = () => {
     const scene = current();
-    return scene !== null && signature(scene.elements) !== opened;
+    return scene !== null && signature(scene.elements) !== (opened.current ?? saved);
   };
 
   /** Close; a drawing still empty (new, never saved) goes. */
@@ -508,6 +511,12 @@ function DrawingDialog({
             }}
             excalidrawAPI={(value: ExcalidrawApi) => {
               api.current = value;
+            }}
+            onChange={(elements: readonly unknown[]) => {
+              // Deleted elements included, as the saved scene never has them.
+              opened.current ??= signature(
+                elements.filter((el) => !(el as { isDeleted?: boolean }).isDeleted),
+              );
             }}
             theme={dark ? 'dark' : 'light'}
             UIOptions={{ canvasActions: { loadScene: false, saveToActiveFile: false } }}
