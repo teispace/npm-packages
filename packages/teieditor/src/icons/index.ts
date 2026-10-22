@@ -141,6 +141,18 @@ export const pageBreak = /* @__PURE__ */ p(
   'M3 12h2M9 12h2M13 12h2M19 12h2',
 );
 export const columns: TeiIconNode = [rect(3, 3, 18, 18), ['path', { d: 'M12 3v18' }]];
+export const columns3: TeiIconNode = [rect(3, 3, 18, 18), ['path', { d: 'M9 3v18M15 3v18' }]];
+export const columns4: TeiIconNode = [
+  rect(3, 3, 18, 18),
+  ['path', { d: 'M7.5 3v18M12 3v18M16.5 3v18' }],
+];
+export const columnsNarrowWide: TeiIconNode = [rect(3, 3, 18, 18), ['path', { d: 'M9 3v18' }]];
+export const columnsWideNarrow: TeiIconNode = [rect(3, 3, 18, 18), ['path', { d: 'M15 3v18' }]];
+export const columnsWideMiddle: TeiIconNode = [
+  rect(3, 3, 18, 18),
+  ['path', { d: 'M7 3v18M17 3v18' }],
+];
+export const rows3: TeiIconNode = [rect(3, 3, 18, 18), ['path', { d: 'M3 9h18M3 15h18' }]];
 export const collapsible = /* @__PURE__ */ p(
   'm3 10 2.5-2.5L3 5M3 19l2.5-2.5L3 14',
   'M10 6h11M10 12h11M10 18h11',

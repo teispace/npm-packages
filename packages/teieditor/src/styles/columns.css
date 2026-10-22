@@ -1,0 +1,131 @@
+/*
+ * Columns: blocks side by side. Each column's share of the row is its
+ * `data-tei-column` attribute (1 to 6), in the editor and in saved HTML
+ * alike, so a strict `style-src` needs nothing and both lay out the same
+ * boxes. A flex row whose items start from nothing and grow by their share
+ * is what `grid-template-columns: 1fr 2fr` draws. Narrow, they stack.
+ */
+@layer teieditor {
+  .tei-columns,
+  :where(.tei-prose) [data-tei-columns] {
+    position: relative;
+    display: flex;
+    gap: var(--tei-columns-gap, 1em);
+    margin: 0 0 0.75em;
+  }
+
+  .tei-column,
+  :where(.tei-prose) [data-tei-columns] > [data-tei-column] {
+    flex: 1 1 0;
+    min-inline-size: 0;
+    padding: 0.25em 0.5em;
+    border: 1px dashed transparent;
+    border-radius: var(--tei-radius-sm);
+  }
+
+  :is(.tei-column, :where(.tei-prose) [data-tei-column])[data-tei-column="2"] {
+    flex-grow: 2;
+  }
+
+  :is(.tei-column, :where(.tei-prose) [data-tei-column])[data-tei-column="3"] {
+    flex-grow: 3;
+  }
+
+  :is(.tei-column, :where(.tei-prose) [data-tei-column])[data-tei-column="4"] {
+    flex-grow: 4;
+  }
+
+  :is(.tei-column, :where(.tei-prose) [data-tei-column])[data-tei-column="5"] {
+    flex-grow: 5;
+  }
+
+  :is(.tei-column, :where(.tei-prose) [data-tei-column])[data-tei-column="6"] {
+    flex-grow: 6;
+  }
+
+  :is(.tei-column, :where(.tei-prose) [data-tei-column]) > :first-child {
+    margin-block-start: 0;
+  }
+
+  :is(.tei-column, :where(.tei-prose) [data-tei-column]) > :last-child {
+    margin-block-end: 0;
+  }
+
+  /* Editing: the columns' edges show on hover and while the caret is in them. */
+  [data-tei-content]:not([data-tei-readonly])
+    .tei-columns:is(:hover, [data-tei-caret])
+    > .tei-column {
+    border-color: var(--tei-border);
+  }
+
+  /* The control for the block's menu, astride its top edge at the end. */
+  .tei-columns-control {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0.5em;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    translate: 0 -50%;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-bg);
+    box-shadow: var(--tei-shadow-sm);
+    color: var(--tei-fg-muted);
+    cursor: pointer;
+    user-select: none;
+    visibility: hidden;
+    opacity: 0;
+    transition:
+      opacity var(--tei-duration) ease,
+      visibility var(--tei-duration),
+      background-color var(--tei-duration) ease;
+  }
+
+  .tei-columns-control svg {
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+
+  [data-tei-content]:not([data-tei-readonly])
+    .tei-columns:is(:hover, [data-tei-caret])
+    > .tei-columns-control {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .tei-columns-control:hover {
+    background: var(--tei-bg-muted);
+    color: var(--tei-fg);
+  }
+
+  /* Narrow: one column under another; three or four stack sooner. Grid,
+   * not flex, so each column's share no longer applies. */
+  @container tei (max-width: 30rem) {
+    .tei-columns,
+    :where(.tei-prose) [data-tei-columns] {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.5em;
+    }
+  }
+
+  @container tei (max-width: 40rem) {
+    :is(.tei-columns, :where(.tei-prose) [data-tei-columns]):has(> div:nth-of-type(3)) {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.5em;
+    }
+  }
+
+  /* Saved HTML outside an editor frame has no `tei` container: the screen decides. */
+  @media (max-width: 30rem) {
+    :where(.tei-prose) [data-tei-columns] {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.5em;
+    }
+  }
+}

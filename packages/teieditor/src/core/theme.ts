@@ -13,6 +13,8 @@ export const teiTheme: EditorThemeClasses = {
   collapsible: 'tei-collapsible',
   collapsibleContent: 'tei-collapsible-content',
   collapsibleTitle: 'tei-collapsible-title',
+  column: 'tei-column',
+  columns: 'tei-columns',
   code: 'tei-code-block',
   codeHighlight: {
     atrule: 'tei-token-keyword',
@@ -61,8 +63,6 @@ export const teiTheme: EditorThemeClasses = {
   hrSelected: 'tei-hr-selected',
   image: 'tei-image',
   indent: 'tei-indent',
-  layoutContainer: 'tei-columns',
-  layoutItem: 'tei-column',
   link: 'tei-link',
   list: {
     checklist: 'tei-checklist',

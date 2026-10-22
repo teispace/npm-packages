@@ -112,7 +112,9 @@ export type TeiPlacement =
   /** A card's looks and accents, and taking it away (a submenu of the context menu). */
   | 'cardMenu'
   /** The menu from a sticky note's swatch: its colours, and taking it away. */
-  | 'stickyMenu';
+  | 'stickyMenu'
+  /** The menu from a columns block's control: its layouts, adding and removing columns. */
+  | 'columnsMenu';
 
 /**
  * A UI entry an extension contributes — a toolbar button, a slash-menu row,

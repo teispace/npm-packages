@@ -1256,35 +1256,6 @@
     pointer-events: none;
   }
 
-  /* Columns */
-  .tei-columns {
-    display: grid;
-    grid-template-columns: var(--tei-columns, 1fr 1fr);
-    gap: var(--tei-space-4);
-    margin: 0 0 0.75em;
-  }
-
-  .tei-column {
-    min-inline-size: 0;
-    padding: var(--tei-space-2) var(--tei-space-3);
-    border: 1px dashed transparent;
-    border-radius: var(--tei-radius-sm);
-  }
-
-  [data-tei-content]:not([data-tei-readonly]) .tei-column {
-    border-color: var(--tei-border);
-  }
-
-  .tei-column > :last-child {
-    margin-block-end: 0;
-  }
-
-  @container tei (max-width: 40rem) {
-    .tei-columns {
-      grid-template-columns: 1fr;
-    }
-  }
-
   /* Tables */
   .tei-table-scroll {
     position: relative;
