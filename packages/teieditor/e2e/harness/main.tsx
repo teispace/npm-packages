@@ -34,6 +34,7 @@ import {
   useTeiEditor,
 } from '../../src/react/index';
 import { neutralizeAttributes, restoreStyles } from '../../src/utils/html-attributes';
+import { DocumentTools, documentTools } from './document-tools';
 
 declare global {
   interface Window {
@@ -146,6 +147,7 @@ function App() {
       ...(params.has('columns') ? [Columns] : []),
       ...(params.has('widgets') ? [Poll, DateTime.configure({ locale: 'en-US' })] : []),
       ...(params.has('find') ? [FindReplace] : []),
+      ...documentTools(params),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
@@ -183,7 +185,8 @@ function App() {
           ...(params.has('nosticky') ? { stickyMenu: false } : {}),
         }}
         contentProps={{ 'data-testid': 'content' }}
-      ></Editor>
+      />
+      {params.has('doctools') && <DocumentTools editor={editor} />}
       {/* UI outside an editor takes the tokens from .tei-portal. */}
       <section className="tei-portal gallery" data-testid="gallery">
         <DropdownMenu label="Menu" groups={GROUPS} data-testid="menu-trigger">
