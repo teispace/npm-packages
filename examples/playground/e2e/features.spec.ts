@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { expectNoViolations, MOD, open, recordViolations } from './strict';
+import { expectNoViolations, MOD, open, recordViolations, selectAWord } from './strict';
 
 /**
  * The heavier features, each used as a person would, in the showcase and
@@ -67,7 +67,7 @@ test('a suggested change is accepted from its popover', async ({ page }) => {
 
 test('a comment on selected text shows in the panel', async ({ page }) => {
   const editor = await open(page, '/');
-  await editor.locator('blockquote').dblclick();
+  await selectAWord(editor);
   await page.keyboard.press(`${MOD}+Alt+m`);
   const box = page.getByPlaceholder('Add a comment…');
   await expect(box).toBeVisible();

@@ -238,6 +238,9 @@ for (const theme of ['light', 'dark'] as const) {
 test('images: a dropped file uploads, resizes and aligns, reporting nothing', async ({ page }) => {
   const editor = await open(page, '/');
   const figures = editor.locator('[data-tei-image]');
+  // Count once the document's own images are in, or the drop is miscounted.
+  await page.locator('[data-tei-ready]').waitFor();
+  await expect(editor.locator('figure img[src="/hills.svg"]')).toBeVisible();
   const before = await figures.count();
   // A dropped picture: the upload preview is a blob: URL, which img-src allows.
   await editor.locator('p').first().evaluate((el) => {
@@ -407,7 +410,8 @@ test('context menu: copy and paste through it, reporting nothing', async ({
   await menu.locator('[data-id="copy"]').click();
   await expect(menu).toHaveCount(0);
   // Paste it at the start of the next block, through the menu where the browser allows it.
-  const next = editor.locator(':scope > p').first();
+  // By position, not tag: a pasted heading's HTML (Firefox on Linux) makes the block a heading.
+  const next = editor.locator(':scope > *').nth(1);
   await next.click();
   await page.keyboard.press('Home');
   if (browserName === 'chromium') {

@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { MOD, open, recordViolations } from './strict';
+import { MOD, open, recordViolations, selectAWord } from './strict';
 
 /**
  * No serious accessibility issues with each floating part open: the AI menu,
@@ -11,6 +11,23 @@ import { MOD, open, recordViolations } from './strict';
 recordViolations();
 
 async function serious(page: Page): Promise<string[]> {
+  // A part still fading in has a lower contrast than it will have: let the
+  // running, finite animations (not a spinner's) settle first, briefly.
+  await page.evaluate(() =>
+    Promise.race([
+      Promise.all(
+        document
+          .getAnimations()
+          .filter(
+            (a) =>
+              a.playState === 'running' &&
+              a.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY,
+          )
+          .map((a) => a.finished.catch(() => undefined)),
+      ),
+      new Promise((done) => setTimeout(done, 2_000)),
+    ]),
+  );
   const results = await new AxeBuilder({ page }).analyze();
   return results.violations
     .filter((v) => v.impact === 'serious' || v.impact === 'critical')
@@ -60,7 +77,7 @@ test('the drawing dialog', async ({ page }) => {
 
 test('the comment composer, then the panel', async ({ page }) => {
   const editor = await open(page, '/');
-  await editor.locator('blockquote').dblclick();
+  await selectAWord(editor);
   await page.keyboard.press(`${MOD}+Alt+m`);
   const box = page.getByPlaceholder('Add a comment…');
   await expect(box).toBeVisible();
@@ -121,7 +138,7 @@ test.describe('keyboard', () => {
 
   test('Escape closes the comment composer', async ({ page }) => {
     const editor = await open(page, '/');
-    await editor.locator('blockquote').dblclick();
+    await selectAWord(editor);
     await page.keyboard.press(`${MOD}+Alt+m`);
     const box = page.getByPlaceholder('Add a comment…');
     await expect(box).toBeFocused();
@@ -173,7 +190,7 @@ test.describe('right to left', () => {
     await onScreen(page, menu);
     await page.keyboard.press('Escape');
 
-    await editor.locator('blockquote').dblclick();
+    await selectAWord(editor);
     await page.keyboard.press(`${MOD}+Alt+m`);
     const box = page.getByPlaceholder('Add a comment…');
     await expect(box).toBeVisible();

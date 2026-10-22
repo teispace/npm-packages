@@ -31,6 +31,15 @@ export async function open(page: Page, path: string): Promise<Locator> {
   return editor;
 }
 
+/**
+ * Select a word of the quote. A double-click on the text itself: past the end
+ * of a line, macOS selects the nearest word but Linux and Windows select
+ * nothing.
+ */
+export async function selectAWord(editor: Locator): Promise<void> {
+  await editor.locator('blockquote [data-lexical-text]').first().dblclick();
+}
+
 export async function expectNoViolations(page: Page): Promise<void> {
   // report-uri delivery is asynchronous; give it a moment to land.
   await page.waitForTimeout(400);
