@@ -6,11 +6,13 @@ import { Blocks } from '../../src/extensions/blocks/index';
 import { Callout } from '../../src/extensions/callout/index';
 import { Clipboard } from '../../src/extensions/clipboard/index';
 import { Collapsible } from '../../src/extensions/collapsible/index';
+import { DateTime } from '../../src/extensions/date-time/index';
 import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
 import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
 import { Html } from '../../src/extensions/html/index';
 import { Image, type ImageOptions } from '../../src/extensions/image/index';
 import { PageBreak } from '../../src/extensions/page-break/index';
+import { Poll } from '../../src/extensions/poll/index';
 import { PullQuote } from '../../src/extensions/pull-quote/index';
 import { StarterKit } from '../../src/extensions/starter-kit/index';
 import { Table } from '../../src/extensions/table/index';
@@ -136,6 +138,7 @@ function App() {
       ...(params.has('blocks') ? [Blocks] : []),
       // The document's own blocks: pull quotes, callouts, sections, page breaks.
       ...(params.has('extras') ? [PullQuote, Callout, Collapsible, PageBreak] : []),
+      ...(params.has('widgets') ? [Poll, DateTime.configure({ locale: 'en-US' })] : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
