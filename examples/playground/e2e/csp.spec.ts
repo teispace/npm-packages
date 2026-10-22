@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expectNoViolations, MOD, open, recordViolations, runId } from './strict';
 
 /**
  * The playground serves every page under a strict nonce CSP (src/proxy.ts):
@@ -9,55 +10,7 @@ import { expect, type Locator, type Page, test } from '@playwright/test';
  * there are none while the editor demonstrably did its job.
  */
 
-declare global {
-  interface Window {
-    __violations: string[];
-  }
-}
-
-const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
-
-/**
- * A per-test marker in the page URL. The report endpoint is shared by tests
- * running in parallel across three browsers, so each test only counts the
- * reports whose document-uri carries its own marker.
- */
-function runId(): string {
-  const info = test.info();
-  return `${info.project.name}-${info.testId}`;
-}
-
-async function open(page: Page, path: string): Promise<Locator> {
-  await page.goto(`${path}?run=${runId()}`);
-  const editor = page.locator('[contenteditable="true"]').first();
-  await expect(editor).toBeVisible();
-  return editor;
-}
-
-async function expectNoViolations(page: Page): Promise<void> {
-  // report-uri delivery is asynchronous; give it a moment to land.
-  await page.waitForTimeout(400);
-  expect(await page.evaluate(() => window.__violations)).toEqual([]);
-  const reports = (await (await page.request.get('/api/csp-report')).json()) as Array<{
-    'csp-report'?: { 'document-uri'?: string };
-  }>;
-  expect(reports.filter((r) => r['csp-report']?.['document-uri']?.includes(runId()))).toEqual([]);
-}
-
-test.beforeEach(async ({ page }) => {
-  // The embed providers' frames, stood in for: tests stay off the network.
-  await page.context().route(
-    /^https:\/\/(www\.youtube-nocookie\.com|player\.vimeo\.com|platform\.twitter\.com|www\.figma\.com|www\.loom\.com)\//,
-    (route) => route.fulfill({ contentType: 'text/html', body: '<!doctype html><p>Embedded</p>' }),
-  );
-  // Init scripts are injected by the browser driver, outside the page's CSP.
-  await page.addInitScript(() => {
-    window.__violations = [];
-    document.addEventListener('securitypolicyviolation', (e) => {
-      window.__violations.push(`${e.violatedDirective} ${e.blockedURI} ${e.sample}`);
-    });
-  });
-});
+recordViolations();
 
 test('the page really is under the strict policy', async ({ page }) => {
   const response = await page.goto(`/?run=${runId()}`);
@@ -207,6 +160,8 @@ test('the editor is in the server HTML, and stays put as it mounts', async ({ br
   await expect(editor.locator('.tei-h1')).toHaveText('Welcome to teieditor');
   await expect(editor).not.toHaveClass(/tei-prose/);
   await expect(editor.getByText('colour', { exact: true })).toHaveCSS('color', 'rgb(220, 38, 38)');
+  // Equations as the server drew them, once KaTeX (loaded lazily) is in.
+  await expect(editor.locator('[data-tei-equation] math')).toHaveCount(2);
   const mounted = await layout(editor);
   // Inline code in the editor's monospace before it mounts too.
   expect(servedCode).toBe(await font(editor.locator('.tei-code').first()));

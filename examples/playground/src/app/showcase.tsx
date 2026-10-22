@@ -1,5 +1,6 @@
 'use client';
 
+import '@excalidraw/excalidraw/index.css';
 import { full } from '@teispace/teieditor/presets/full';
 import { minimal } from '@teispace/teieditor/presets/minimal';
 import { notion } from '@teispace/teieditor/presets/notion';

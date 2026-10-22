@@ -10,6 +10,7 @@ const LINKS = [
   { href: '/comments', label: 'Comment box' },
   { href: '/customize', label: 'Customize' },
   { href: '/headless', label: 'Headless' },
+  { href: '/collaboration', label: 'Collaboration' },
   { href: '/server', label: 'Server render' },
 ];
 

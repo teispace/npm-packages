@@ -1,3 +1,5 @@
+import { DRAWING_PREVIEW, DRAWING_SCENE } from './demo-drawing';
+
 /** The document most pages start from: a bit of everything the showcase installs. */
 export const DEMO = `
 <h1>Welcome to teieditor</h1>
@@ -51,6 +53,16 @@ rename or replace it; in a read-only document, the card is a download link.</p>
 or insert one from the toolbar or <code>/embed</code>. Click an embed to align it, open its page or copy its link;
 once selected, it plays.</p>
 <div data-tei-embed="youtube" data-id="aqz-KE-bpKQ"></div>
+<h2>Equations and drawings</h2>
+<p>Type <code>$e^{i\\pi} + 1 = 0$</code> for an equation in a line: <span data-tei-equation="inline" data-tex="e^{i\\pi} + 1 = 0"></span>.
+Click one to edit its TeX with a live preview. <code>$$</code> and a space starts one of its own:</p>
+<div data-tei-equation="block" data-tex="\\int_0^1 x^2\\,dx = \\tfrac{1}{3}"></div>
+<p>A drawing, from <code>/drawing</code>: double-click it to open Excalidraw.</p>
+<div data-tei-excalidraw data-scene="${DRAWING_SCENE}"><img src="${DRAWING_PREVIEW}" alt="A box, an arrow and a circle"></div>
+<h2>Comments and suggestions</h2>
+<p>Select text and press <code>⌘⌥M</code> to comment. Turn on suggesting from the toolbar, and what you type
+<ins data-tei-suggestion="demo-1" data-author="grace" data-author-name="Grace Hopper" datetime="2026-10-01T09:00:00.000Z">is proposed</ins><del data-tei-suggestion="demo-2" data-author="grace" data-author-name="Grace Hopper" datetime="2026-10-01T09:00:00.000Z">goes straight in</del>
+for someone to accept or reject.</p>
 <h2>Callouts, pull quotes and page breaks</h2>
 <div data-tei-callout="tip"><p>Type <code>/callout</code> to set lines apart. Click the icon to change its kind;
 in markdown it is a GitHub alert, <code>&gt; [!TIP]</code>.</p></div>

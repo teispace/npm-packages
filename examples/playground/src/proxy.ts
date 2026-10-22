@@ -23,7 +23,9 @@ export function proxy(request: NextRequest) {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ''}`,
     dev ? "style-src 'self' 'unsafe-inline'" : `style-src 'self' 'nonce-${nonce}'`,
     "img-src 'self' data: blob: https:",
-    "font-src 'self'",
+    // Excalidraw's drawing fonts: it lists its CDN after any self-hosted
+    // copy, and browsers fetch that too, so it is allowed here.
+    "font-src 'self' https://esm.sh",
     // The embed providers' frames (Embed's defaults), and nothing else.
     'frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://platform.twitter.com https://www.figma.com https://www.loom.com',
     `connect-src 'self'${dev ? ' ws:' : ''}`,
