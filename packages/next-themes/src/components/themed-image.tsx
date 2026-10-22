@@ -31,6 +31,7 @@ export interface ThemedImageProps<T extends string = string>
  * (`html[data-theme]`-scoped `background-image`) over a JS `src` swap.
  */
 export function makeThemedImage(useThemeHook: UseThemeHook) {
+  // biome-ignore lint/correctness/noComponentHookFactories: built once per createThemes() call, at module level
   return function ThemedImage<T extends string = string>({
     sources,
     fallbackSrc,

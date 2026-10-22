@@ -46,7 +46,7 @@
     "test:workspaces": "yarn workspaces foreach -Apt --no-private run test"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.15",
+    "@biomejs/biome": "^2.6.2",
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
     "@vitest/coverage-v8": "^5.0.5",
@@ -57,7 +57,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "typescript": "^6.0.3",
-    "vite": "^8.3.4",
+    "vite": "^8.3.5",
     "vitest": "^5.0.5"
   },
   "resolutions": {

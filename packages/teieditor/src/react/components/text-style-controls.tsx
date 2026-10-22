@@ -58,7 +58,7 @@ export function FontFamilyMenu({ editor }: { editor: TeiEditor }) {
   if (!options) return null;
   const current = states.findIndex((state) => state.active);
   const enabled = states.some((state) => state.enabled);
-  const shown = editor.t(items[current >= 0 ? current : 0]?.label ?? '');
+  const shown = editor.t(items[Math.max(current, 0)]?.label ?? '');
   const label = editor.t('style.fontFamily');
   const menu: MenuItemData[] = items.map((item, i) => {
     const text = editor.t(item.label);
@@ -151,6 +151,7 @@ function colorControl(kind: 'color' | 'backgroundColor') {
   const labelId = kind === 'color' ? 'style.color' : 'style.backgroundColor';
 
   /** The selection's colour on the trigger, and the swatches in a popover. */
+  // biome-ignore lint/correctness/noComponentHookFactories: built twice, at module level, below
   function ColorMenu({ editor }: { editor: TeiEditor }) {
     const options = useOptions(editor);
     const { value, enabled } = useEditorState(

@@ -16,6 +16,7 @@ export type UseThemeValueHook = <V, T extends string = string>(
  * API reads from its own context. See `makeUseTheme` for the why.
  */
 export function makeUseThemeValue(useThemeHook: UseThemeHook): UseThemeValueHook {
+  // biome-ignore lint/correctness/noComponentHookFactories: built once per createThemes() call, at module level
   return function useThemeValue<V, T extends string = string>(
     map: ThemeValueMap<T, V>,
   ): V | undefined {

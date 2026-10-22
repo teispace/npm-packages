@@ -48,7 +48,7 @@
   },
   "dependencies": {
     "commander": "^15.0.0",
-    "degit": "^3.10.0",
+    "degit": "^3.10.1",
     "enquirer": "^2.4.1",
     "ora": "^9.4.1",
     "picocolors": "^1.1.1",
@@ -61,7 +61,7 @@
     "esbuild": "^0.28.2",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
-    "vite": "^8.3.4",
+    "vite": "^8.3.5",
     "vitest": "^5.0.5"
   },
   "engines": {

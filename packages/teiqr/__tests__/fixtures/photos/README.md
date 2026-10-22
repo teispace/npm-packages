@@ -22,7 +22,11 @@ the directory is empty, so nothing breaks for a contributor who has none.
 
 ```json
 [
-  { "file": "printed-flat.png", "text": "https://example.com", "note": "laser-printed A4, desk lamp" },
+  {
+    "file": "printed-flat.png",
+    "text": "https://example.com",
+    "note": "laser-printed A4, desk lamp"
+  },
   { "file": "screen-angle.png", "text": "https://example.com", "note": "phone screen, ~30 degrees" }
 ]
 ```
@@ -33,9 +37,8 @@ on the machines that matter. Convert before committing.
 
 ## What is worth photographing
 
-Aim for the cases the simulation cannot reach, and for ones expected to *fail* —
+Aim for the cases the simulation cannot reach, and for ones expected to _fail_ —
 a scanner that never says no is not a scanner.
-
 - Printed on paper, flat, good light. The baseline; if this fails nothing else matters.
 - The same code at 20, 40 and 60 degrees off-axis.
 - On a phone or monitor screen, which brings moiré and backlight.
