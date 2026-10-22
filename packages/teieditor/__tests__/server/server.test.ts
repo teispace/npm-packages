@@ -3,7 +3,10 @@ import { Window } from 'happy-dom';
 import { createTeiEditor } from '../../src/core/create.js';
 import { Callout } from '../../src/extensions/callout/index.js';
 import { Collapsible } from '../../src/extensions/collapsible/index.js';
+import { Emoji } from '../../src/extensions/emoji/index.js';
+import { Hashtag } from '../../src/extensions/hashtag/index.js';
 import { Html } from '../../src/extensions/html/index.js';
+import { Mention } from '../../src/extensions/mention/index.js';
 import { PageBreak } from '../../src/extensions/page-break/index.js';
 import { PullQuote } from '../../src/extensions/pull-quote/index.js';
 import { StarterKit } from '../../src/extensions/starter-kit/index.js';
@@ -167,6 +170,22 @@ describe('server rendering', () => {
     expect(renderToHTML('<div data-tei-callout="tip"><p>Hi</p></div>', blocks)).toMatch(
       /^<div data-tei-callout="tip" role="note"><span data-tei-callout-icon=""><svg .*<\/svg><\/span><p>Hi<\/p><\/div>$/,
     );
+  });
+
+  it('renders mentions, hashtags and emoji', () => {
+    const chips = { extensions: [StarterKit, Mention, Hashtag, Emoji] };
+    const html =
+      '<p>Hi <span data-tei-mention="u1" data-label="Ada">@Ada</span>, ' +
+      '<a href="https://example.com/alan" data-tei-mention="u2" data-label="Alan">@Alan</a> ' +
+      '<span data-tei-hashtag="">#launch</span> 🎉</p>';
+    expect(renderToHTML(html, chips)).toBe(html);
+    expect(toMarkdown(html, chips)).toBe('Hi @[Ada](mention:u1), @[Alan](mention:u2) #launch 🎉');
+    expect(renderToHTML('Hi @[Ada](mention:u1) #launch', { ...chips, from: 'markdown' })).toBe(
+      '<p>Hi <span data-tei-mention="u1" data-label="Ada">@Ada</span> <span data-tei-hashtag="">#launch</span></p>',
+    );
+    expect(
+      renderToHTML('<p><a href="javascript:alert(1)" data-tei-mention="x">@X</a></p>', chips),
+    ).toBe('<p><span data-tei-mention="x" data-label="X">@X</span></p>');
   });
 
   it('fixes the DOM of a page that has its own only for the call', async () => {

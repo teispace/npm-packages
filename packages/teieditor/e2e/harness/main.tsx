@@ -7,9 +7,12 @@ import { Callout } from '../../src/extensions/callout/index';
 import { Clipboard } from '../../src/extensions/clipboard/index';
 import { Collapsible } from '../../src/extensions/collapsible/index';
 import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
+import { Emoji } from '../../src/extensions/emoji/index';
 import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
+import { Hashtag } from '../../src/extensions/hashtag/index';
 import { Html } from '../../src/extensions/html/index';
 import { Image, type ImageOptions } from '../../src/extensions/image/index';
+import { Mention } from '../../src/extensions/mention/index';
 import { PageBreak } from '../../src/extensions/page-break/index';
 import { PullQuote } from '../../src/extensions/pull-quote/index';
 import { StarterKit } from '../../src/extensions/starter-kit/index';
@@ -21,10 +24,12 @@ import {
   Dialog,
   DropdownMenu,
   Editor,
+  EmojiPicker,
   Field,
   GridPicker,
   Input,
   type MenuGroupData,
+  TypeaheadMenu,
   useTeiEditor,
 } from '../../src/react/index';
 import { neutralizeAttributes, restoreStyles } from '../../src/utils/html-attributes';
@@ -115,6 +120,35 @@ const GROUPS: MenuGroupData[] = [
   },
 ];
 
+/** People and channels, found after a delay as a server would. */
+const PEOPLE = ['Ada Lovelace', 'Alan Turing', 'Grace Hopper', 'Linus Torvalds'];
+const fakeSearch =
+  (names: string[], prefix: string) =>
+  (query: string, { signal }: { signal: AbortSignal }) =>
+    new Promise<{ id: string; label: string; description?: string }[]>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        log.push(`search ${prefix}${query}`);
+        resolve(
+          names
+            .filter((name) => name.toLowerCase().includes(query.toLowerCase()))
+            .map((name) => ({ id: name.toLowerCase().replace(/\s+/g, '-'), label: name })),
+        );
+      }, 60);
+      signal.addEventListener('abort', () => {
+        clearTimeout(timer);
+        reject(signal.reason);
+      });
+    });
+const TYPEAHEAD = [
+  Emoji,
+  Hashtag.configure({ onClick: (tag) => log.push(`hashtag ${tag}`) }),
+  Mention.configure({
+    search: fakeSearch(PEOPLE, '@'),
+    triggers: [{ trigger: '+', search: fakeSearch(['general', 'random'], '+') }],
+    onClick: (mention) => log.push(`mention ${mention.id}`),
+  }),
+];
+
 const SWATCHES = [
   { value: '#e03131', label: 'Red' },
   { value: '#2f9e44', label: 'Green' },
@@ -136,6 +170,7 @@ function App() {
       ...(params.has('blocks') ? [Blocks] : []),
       // The document's own blocks: pull quotes, callouts, sections, page breaks.
       ...(params.has('extras') ? [PullQuote, Callout, Collapsible, PageBreak] : []),
+      ...(params.has('typeahead') ? TYPEAHEAD : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
@@ -170,7 +205,14 @@ function App() {
         frameProps={{ 'data-testid': 'editor', dir: params.has('rtl') ? 'rtl' : undefined }}
         slots={params.has('nocontext') ? { contextMenu: false } : undefined}
         contentProps={{ 'data-testid': 'content' }}
-      />
+      >
+        {params.has('typeahead') ? (
+          <>
+            <TypeaheadMenu />
+            <EmojiPicker />
+          </>
+        ) : null}
+      </Editor>
       {/* UI outside an editor takes the tokens from .tei-portal. */}
       <section className="tei-portal gallery" data-testid="gallery">
         <DropdownMenu label="Menu" groups={GROUPS} data-testid="menu-trigger">
