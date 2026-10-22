@@ -28,6 +28,7 @@ import { Link, type LinkStorage } from '../../extensions/link/index.js';
 import { PageBreak } from '../../extensions/page-break/index.js';
 import { Poll } from '../../extensions/poll/index.js';
 import { PullQuote } from '../../extensions/pull-quote/index.js';
+import { Ruby } from '../../extensions/ruby/index.js';
 import { StarterKit } from '../../extensions/starter-kit/index.js';
 import { StickyNote } from '../../extensions/sticky-note/index.js';
 import { Table } from '../../extensions/table/index.js';
@@ -88,6 +89,9 @@ const DateTimePicker = lazy(() =>
 const FindReplaceBar = lazy(() =>
   import('./find-replace-bar.js').then((module) => ({ default: module.FindReplaceBar })),
 );
+const RubyPopover = lazy(() =>
+  import('./ruby-popover.js').then((module) => ({ default: module.RubyPopover })),
+);
 const StickyMenu = lazy(() =>
   import('./sticky-menu.js').then((module) => ({ default: module.StickyMenu })),
 );
@@ -137,6 +141,8 @@ export interface EditorSlots {
   findReplace?: EditorSlot;
   /** Words and characters under the document, and the limit when one is set. */
   wordCount?: EditorSlot;
+  /** The form for a ruby annotation's reading. */
+  rubyPopover?: EditorSlot;
   /** Below the document, inside the frame: a word count, a status line. */
   footer?: ReactNode;
 }
@@ -160,6 +166,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     dateTimePicker: true,
     findReplace: true,
     wordCount: true,
+    rubyPopover: true,
   },
   notion: {
     toolbar: false,
@@ -179,6 +186,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     dateTimePicker: true,
     findReplace: true,
     wordCount: false,
+    rubyPopover: true,
   },
   minimal: {
     toolbar: true,
@@ -198,6 +206,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     dateTimePicker: false,
     findReplace: false,
     wordCount: false,
+    rubyPopover: false,
   },
 };
 
@@ -218,6 +227,7 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     FindReplace,
     TableOfContents,
     CharacterCount,
+    Ruby,
     PageBreak,
     Table,
     Image,
@@ -239,6 +249,7 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     FindReplace,
     TableOfContents,
     CharacterCount,
+    Ruby,
     PageBreak,
     Table,
     Image,
@@ -465,6 +476,7 @@ function EditorFrame({
               {editor.extension(Columns) && slot(parts.columnsMenu, <ColumnsMenu />)}
               {editor.extension(DateTime) && slot(parts.dateTimePicker, <DateTimePicker />)}
               {editor.extension(FindReplace) && slot(parts.findReplace, <FindReplaceBar />)}
+              {editor.extension(Ruby) && slot(parts.rubyPopover, <RubyPopover />)}
               <Ready onReady={setReady} />
             </Suspense>
           )}
