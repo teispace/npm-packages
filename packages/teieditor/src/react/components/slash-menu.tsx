@@ -120,17 +120,25 @@ export function SlashMenu({
   const choose = (item: TeiItem) => {
     if (!current) return;
     // Take out the trigger and the query, then run the item where they were.
+    // From a key, this update is queued behind the key's own: the item runs
+    // once it is in, or an item that inserts a block would move the caret
+    // first and leave the query behind.
     editor.lexical.update(
       () => {
         const node = $getNodeByKey(current.key);
         const selection = $getSelection();
         if (!$isTextNode(node) || !$isRangeSelection(selection)) return;
-        const end = selection.anchor.key === current.key ? selection.anchor.offset : current.offset;
-        node.spliceText(current.offset, end - current.offset, '', true);
+        const typed = current.offset + trigger.length + current.query.length;
+        const end = selection.anchor.key === current.key ? selection.anchor.offset : typed;
+        node.spliceText(
+          current.offset,
+          Math.min(end, node.getTextContentSize()) - current.offset,
+          '',
+          true,
+        );
       },
-      { discrete: true },
+      { discrete: true, onUpdate: () => editor.runItem(item) },
     );
-    editor.runItem(item);
   };
 
   const nav = useMenuNavigation({

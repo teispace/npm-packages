@@ -186,6 +186,19 @@ test.describe('page break', () => {
     expect(await tei.html()).toBe('<p>One</p><p>XTwo</p>');
   });
 
+  test('from the slash menu: the query goes, the break takes its line', async ({ tei }) => {
+    await open(tei, '<p>One</p>');
+    await caretAtEndOf(tei, 'One');
+    await tei.page.keyboard.press('Enter');
+    await tei.page.keyboard.type('/page');
+    await expect(slash(tei).getByRole('menuitem').first()).toContainText('Page break');
+    await tei.page.keyboard.press('Enter');
+    await expect(pageBreak(tei)).toHaveCount(1);
+    await tei.page.keyboard.type('Two');
+    expect(await tei.html()).not.toContain('/page');
+    await expect(tei.content.locator('p').last()).toHaveText('Two');
+  });
+
   test('on paper: a new page and no rule', async ({ tei }) => {
     await open(tei, '<p>One</p><hr data-tei-page-break><p>Two</p>');
     await tei.page.emulateMedia({ media: 'print' });
