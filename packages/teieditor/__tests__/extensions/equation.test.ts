@@ -272,6 +272,26 @@ describe('Equation: KaTeX', () => {
     expect(box.textContent).toBe('abalert(1)c');
   });
 
+  it('asks KaTeX for MathML only, untrusted, bounded, throwing on mistakes', () => {
+    const seen: Record<string, unknown>[] = [];
+    const spy: KatexLike = {
+      render: (tex, el, options) => {
+        seen.push(options ?? {});
+        katex.render(tex, el, options);
+      },
+    };
+    make(INLINE_JSON('x'), { options: { katex: spy } });
+    expect(seen[0]).toMatchObject({
+      output: 'mathml',
+      trust: false,
+      throwOnError: true,
+      displayMode: false,
+      globalGroup: false,
+    });
+    expect(seen[0]?.maxExpand).toBeLessThanOrEqual(1000);
+    expect(seen[0]?.maxSize).toBeLessThanOrEqual(20);
+  });
+
   it('a hostile renderer cannot put script in the page', () => {
     const evil: KatexLike = {
       render: (_tex, el) => {
@@ -360,9 +380,9 @@ describe('Equation: Markdown', () => {
   });
 
   it('leaves money alone', () => {
-    const editor = make('It costs $5 and $10, or $ 3 $.', { markdown: true });
+    const editor = make('It costs $5 and $10, or $ 3 $, from $10 to$20.', { markdown: true });
     expect(equations(editor)).toEqual([]);
-    expect(editor.getMarkdown()).toBe('It costs $5 and $10, or $ 3 $.');
+    expect(editor.getMarkdown()).toBe('It costs $5 and $10, or $ 3 $, from $10 to$20.');
   });
 
   it('keeps an escaped dollar in the TeX', () => {
