@@ -367,15 +367,26 @@ const tokenizer: Tokenizer = {
     if (grammar === null) return $plainifyCodeContent(text);
     const themes = ensureThemes([light, dark], state.refresh);
     if (!grammar || !themes) return $keep(code);
-    try {
-      const { tokens } = core().codeToTokens(text, {
+    const colour = () =>
+      core().codeToTokens(text, {
         lang: id,
         themes: { light: themeName(light), dark: themeName(dark) },
         defaultColor: false,
         cssVariablePrefix: PREFIX,
         includeExplanation: 'scopeName',
         tokenizeMaxLineLength: state.options.maxLineLength,
-      });
+      }).tokens;
+    try {
+      let tokens: ReturnType<typeof colour>;
+      try {
+        tokens = colour();
+      } catch {
+        // Shiki tokenizes each line twice (colours, then scopes), each under
+        // a time limit. The first run of a grammar compiles its patterns; on
+        // a slow or busy machine that run stops short and the two disagree,
+        // which throws. Compiled now, a second run agrees.
+        tokens = colour();
+      }
       return $tokensToNodes(tokens, diff !== null);
     } catch (error) {
       console.warn(`teieditor: Shiki could not colour "${id}".`, error);

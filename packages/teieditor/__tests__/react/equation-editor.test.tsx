@@ -106,7 +106,7 @@ describe('EquationEditor', () => {
     await waitFor(() => expect(screen.getByText(/KaTeX is not available/)).not.toBeNull(), {
       timeout: 5_000,
     });
-    expect(preview().textContent).toBe('x^2');
+    await waitFor(() => expect(preview().textContent).toBe('x^2'));
   });
 
   it('a new empty equation opens the editor; cancelled, it goes', async () => {

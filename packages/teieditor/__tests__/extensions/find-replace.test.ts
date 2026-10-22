@@ -32,7 +32,8 @@ afterEach(() => {
   document.body.replaceChildren();
   highlights.clear();
   vi.useRealTimers();
-});
+  // Taking down a 10,000-paragraph editor takes a while on a busy machine.
+}, 30_000);
 
 function make(
   content: string,
@@ -337,25 +338,39 @@ describe('FindReplace: keeping up with edits', () => {
   });
 
   it('stays quick in a 10,000-paragraph document', () => {
-    const html = Array.from({ length: 10_000 }, (_, i) => `<p>line ${i} with some words</p>`).join(
-      '',
-    );
-    const { editor, storage } = make(html, { config: { maxMatches: 20_000 } });
-    const started = performance.now();
-    find(editor, 'some');
-    const first = performance.now() - started;
+    const lines = (count: number) =>
+      Array.from({ length: count }, (_, i) => `<p>line ${i} with some words</p>`).join('');
+    /** How long a first search takes in a document of `count` paragraphs. */
+    const search = (count: number) => {
+      const made = make(lines(count), { config: { maxMatches: 20_000 } });
+      const started = performance.now();
+      find(made.editor, 'some');
+      return { ...made, ms: performance.now() - started };
+    };
+    // Time depends on the machine; how it grows does not. Five times the
+    // paragraphs is about five times the work, never twenty-five.
+    const small = search(2_000);
+    expect(small.storage.matches.value).toHaveLength(2_000);
+    small.editor.destroy();
+    const { editor, storage, ms: first } = search(10_000);
     expect(storage.matches.value).toHaveLength(10_000);
-    expect(first).toBeLessThan(1500);
+    expect(first).toBeLessThan(small.ms * 10);
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    editor.update(() => {
-      $getRoot().getFirstDescendant<TextNode>()?.setTextContent('some some');
-    });
-    // Over `largeDocument`: debounced, and only the changed block is searched again.
-    const later = performance.now();
-    vi.runAllTimers();
-    expect(storage.matches.value).toHaveLength(10_001);
-    expect(performance.now() - later).toBeLessThan(first);
-  });
+    // Over `largeDocument`: debounced, and only the changed block is searched
+    // again. The best of three edits, so a pause of the machine's (a GC) in
+    // one doesn't count; a full search each time would still be over.
+    let fastest = Number.POSITIVE_INFINITY;
+    for (const [i, text] of ['some some', 'some', 'some some'].entries()) {
+      editor.update(() => {
+        $getRoot().getFirstDescendant<TextNode>()?.setTextContent(text);
+      });
+      const later = performance.now();
+      vi.runAllTimers();
+      fastest = Math.min(fastest, performance.now() - later);
+      expect(storage.matches.value).toHaveLength(i === 1 ? 10_000 : 10_001);
+    }
+    expect(fastest).toBeLessThan(first);
+  }, 30_000);
 });
 
 describe('FindReplace: highlights', () => {

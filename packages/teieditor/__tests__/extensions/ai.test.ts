@@ -101,8 +101,8 @@ describe('Ai: streaming answers', () => {
     stream.push('wor');
     await tick();
     stream.push('ld');
-    await tick();
-    expect(storage.output.peek()).toBe('world');
+    // Shown a frame at a time: whenever the next frame comes.
+    await vi.waitFor(() => expect(storage.output.peek()).toBe('world'));
     expect(editor.getJSON()).toEqual(before);
     expect(editor.can().aiAccept()).toBe(false);
     stream.end();
@@ -297,8 +297,7 @@ describe('Ai: errors, stopping and discarding', () => {
     expect(second.signal?.aborted).toBe(false);
     first.push('stale');
     second.push('fresh');
-    await tick();
-    expect(storage.output.peek()).toBe('fresh');
+    await vi.waitFor(() => expect(storage.output.peek()).toBe('fresh'));
     const handled = editor.lexical.dispatchCommand(
       KEY_ESCAPE_COMMAND,
       new KeyboardEvent('keydown', { key: 'Escape' }),
