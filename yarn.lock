@@ -3860,9 +3860,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@teispace/next-maker@workspace:packages/next-maker"
   dependencies:
+    "@types/cross-spawn": "npm:^6.0.6"
     "@types/degit": "npm:^2.8.6"
     "@types/node": "npm:^26.6.5"
     commander: "npm:^15.0.0"
+    cross-spawn: "npm:^7.0.6"
     degit: "npm:^3.10.1"
     enquirer: "npm:^2.4.1"
     esbuild: "npm:^0.28.2"
@@ -4108,6 +4110,15 @@ __metadata:
     "@types/deep-eql": "npm:*"
     assertion-error: "npm:^2.0.1"
   checksum: 10c0/e0ef1de3b6f8045a5e473e867c8565788c444271409d155588504840ad1a53611011f85072188c2833941189400228c1745d78323dac13fcede9c2b28bacfb2f
+  languageName: node
+  linkType: hard
+
+"@types/cross-spawn@npm:^6.0.6":
+  version: 6.0.6
+  resolution: "@types/cross-spawn@npm:6.0.6"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/e3d476bb6b3a54a8934a97fe6ee4bd13e2e5eb29073929a4be76a52466602ffaea420b20774ffe8503f9fa24f3ae34817e95e7f625689fb0d1c10404f5b2889c
   languageName: node
   linkType: hard
 
@@ -5391,7 +5402,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cross-spawn@npm:^7.0.1":
+"cross-spawn@npm:^7.0.1, cross-spawn@npm:^7.0.6":
   version: 7.0.6
   resolution: "cross-spawn@npm:7.0.6"
   dependencies:

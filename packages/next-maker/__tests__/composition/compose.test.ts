@@ -64,8 +64,9 @@ const files: Record<string, string> = {
       'type-check': 'pnpm typegen && tsc',
     },
     dependencies: { redux: '1', 'next-intl': '1', next: '1' },
-    devDependencies: { vitest: '1' },
+    devDependencies: { vitest: '1', '@biomejs/biome': '^2.5.12' },
   }),
+  'biome.json': '{ "$schema": "https://biomejs.dev/schemas/2.5.12/schema.json" }',
   'CHANGELOG.md': '# x',
   'next-maker.json': '{}',
   'pnpm-lock.yaml': 'lock',
@@ -171,6 +172,8 @@ describe('applyComposition', () => {
     const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf-8'));
     expect(pkg.scripts.validate).toBe('pnpm lint && pnpm test && pnpm build');
     expect(pkg.packageManager).toBe('pnpm@11.0.0');
+    // The starter's lockfile holds Biome already; the range stays as the lockfile records it.
+    expect(pkg.devDependencies['@biomejs/biome']).toBe('^2.5.12');
     expect(await exists('.next-maker/overlays/no-i18n/src/app/page.tsx')).toBe(false);
   });
 
@@ -201,7 +204,8 @@ describe('applyComposition', () => {
 
     const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf-8'));
     expect(pkg.dependencies).toEqual({ next: '1' });
-    expect(pkg.devDependencies).toEqual({});
+    // No lockfile under npm: Biome is held to the release its config is for.
+    expect(pkg.devDependencies).toEqual({ '@biomejs/biome': '2.5.12' });
     expect(pkg.scripts.test).toBeUndefined();
     expect(pkg.scripts.validate).toBe('npm run lint && npm run build');
     expect(pkg.scripts['type-check']).toBe('npm run typegen && tsc');

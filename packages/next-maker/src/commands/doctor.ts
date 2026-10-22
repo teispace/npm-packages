@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { runCommand } from '../composition/package-manager';
@@ -11,6 +10,7 @@ import {
   readProjectRecord,
 } from '../composition/project';
 import { log, logError } from '../config';
+import { execSync } from '../core/exec';
 
 interface DoctorCommandOptions {
   fix?: boolean;
@@ -112,8 +112,8 @@ export const registerDoctorCommand = (program: Command) => {
         let compile: { ok: boolean; output: string } | undefined;
         if (options.compile) {
           const [cmd, ...args] = runCommand(record.packageManager, 'type-check').split(' ');
-          const run = spawnSync(cmd, args, { cwd: projectPath, encoding: 'utf-8' });
-          compile = { ok: run.status === 0, output: `${run.stdout}${run.stderr}`.trim() };
+          const run = execSync(cmd, args, { cwd: projectPath });
+          compile = { ok: run.status === 0, output: run.output };
         }
 
         const drifted = results.filter((r) => r.on && r.drift.length);
