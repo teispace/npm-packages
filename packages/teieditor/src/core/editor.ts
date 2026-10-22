@@ -274,9 +274,20 @@ export class TeiEditor {
         parent ? invoke(parent, nextArgs.length ? nextArgs : callArgs) : false;
       return current.run({ ...ctx, next }, ...callArgs) !== false;
     };
+    return this.#through(name, args, false, (a) => invoke(spec, a));
+  }
+
+  /** Pass a run, or a `can()` check, through the middleware. */
+  #through(
+    name: string,
+    args: unknown[],
+    check: boolean,
+    last: (args: unknown[]) => boolean,
+  ): boolean {
+    const ctx = this.#ctx();
     const chainOf = this.#config.middleware.reduceRight<(a: unknown[]) => boolean>(
-      (next, middleware) => (a) => middleware({ name, args: a, ctx }, (b) => next(b ?? a)),
-      (a) => invoke(spec, a),
+      (next, middleware) => (a) => middleware({ name, args: a, ctx, check }, (b) => next(b ?? a)),
+      last,
     );
     return chainOf(args);
   }
@@ -299,7 +310,8 @@ export class TeiEditor {
   #check(name: string, args: unknown[]): boolean {
     const spec = this.#config.commands[name];
     if (!spec) return false;
-    return spec.can ? spec.can(this.#ctx(), ...args) : true;
+    const can = spec.can;
+    return this.#through(name, args, true, (a) => (can ? can(this.#ctx(), ...a) : true));
   }
 
   #ctx(): TeiContext {

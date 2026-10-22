@@ -10,25 +10,31 @@ import { Clipboard } from '../../src/extensions/clipboard/index';
 import { Collapsible } from '../../src/extensions/collapsible/index';
 import { Columns } from '../../src/extensions/columns/index';
 import { DateTime } from '../../src/extensions/date-time/index';
+import { DocumentActions } from '../../src/extensions/document-actions/index';
 import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
 import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
 import { FindReplace } from '../../src/extensions/find-replace/index';
 import { Html } from '../../src/extensions/html/index';
 import { Image, type ImageOptions } from '../../src/extensions/image/index';
 import { Keywords } from '../../src/extensions/keywords/index';
+import { MarkdownSource } from '../../src/extensions/markdown-source/index';
 import { PageBreak } from '../../src/extensions/page-break/index';
+import { Pages } from '../../src/extensions/pages/index';
 import { Poll } from '../../src/extensions/poll/index';
 import { PullQuote } from '../../src/extensions/pull-quote/index';
 import { Ruby } from '../../src/extensions/ruby/index';
+import { ShowInvisibles } from '../../src/extensions/show-invisibles/index';
 import { SpecialText } from '../../src/extensions/special-text/index';
 import { StarterKit } from '../../src/extensions/starter-kit/index';
 import { StickyNote } from '../../src/extensions/sticky-note/index';
+import { TabFocus } from '../../src/extensions/tab-focus/index';
 import { Table } from '../../src/extensions/table/index';
 import { TextStyle } from '../../src/extensions/text-style/index';
 import {
   Button,
   ColorPicker,
   Dialog,
+  DocumentMenu,
   DropdownMenu,
   Editor,
   Field,
@@ -161,6 +167,10 @@ function App() {
             Ruby,
           ]
         : []),
+      // Views and document actions: source, invisibles, pages, Tab focus, import and export.
+      ...(params.has('views')
+        ? [MarkdownSource, ShowInvisibles, Pages, TabFocus, DocumentActions, PageBreak]
+        : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
@@ -202,6 +212,7 @@ function App() {
       {params.has('doctools') && <DocumentTools editor={editor} />}
       {/* UI outside an editor takes the tokens from .tei-portal. */}
       <section className="tei-portal gallery" data-testid="gallery">
+        {params.has('views') ? <DocumentMenu editor={editor} data-testid="document-menu" /> : null}
         <DropdownMenu label="Menu" groups={GROUPS} data-testid="menu-trigger">
           Menu
         </DropdownMenu>

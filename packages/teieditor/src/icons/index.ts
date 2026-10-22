@@ -414,3 +414,17 @@ export const pastePlain: TeiIconNode = [
 export const lock: TeiIconNode = [rect(3, 11, 18, 11), ['path', { d: 'M7 11V7a5 5 0 0 1 10 0v4' }]];
 export const pilcrow = paragraph;
 export const spinner = /* @__PURE__ */ p('M21 12a9 9 0 1 1-6.22-8.56');
+
+// Document
+const SHEET = 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7ZM14 2v4a2 2 0 0 0 2 2h4';
+export const fileText = /* @__PURE__ */ p(SHEET, 'M10 9H8M16 13H8M16 17H8');
+export const fileCode = /* @__PURE__ */ p(SHEET, 'M10 12.5 8 15l2 2.5M14 12.5l2 2.5-2 2.5');
+export const pages = /* @__PURE__ */ p(
+  'M20 7h-3a2 2 0 0 1-2-2V2',
+  'M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l4 4v10a2 2 0 0 1-2 2Z',
+  'M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8',
+);
+export const eraser = /* @__PURE__ */ p(
+  'm7 21-4.3-4.3a1 1 0 0 1 0-1.4l10-10a1 1 0 0 1 1.4 0l5.6 5.6a1 1 0 0 1 0 1.4L11 21',
+  'M22 21H7M5 11l9 9',
+);

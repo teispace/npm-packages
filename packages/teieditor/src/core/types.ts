@@ -73,10 +73,12 @@ export type TeiActiveCheck<A extends unknown[] = any[]> = (ctx: TeiContext, ...a
 
 /**
  * Wraps every command run: log it, veto it (`return false` without calling
- * `next`), or change its arguments.
+ * `next`), or change its arguments. It answers `can()` too, with `check`
+ * set: there `next` asks the command instead of running it, so a veto also
+ * greys out the command's buttons. Act only when `check` is false.
  */
 export type TeiCommandMiddleware = (
-  call: { name: string; args: unknown[]; ctx: TeiContext },
+  call: { name: string; args: unknown[]; ctx: TeiContext; check: boolean },
   next: (args?: unknown[]) => boolean,
 ) => boolean;
 
@@ -114,7 +116,9 @@ export type TeiPlacement =
   /** The menu from a sticky note's swatch: its colours, and taking it away. */
   | 'stickyMenu'
   /** The menu from a columns block's control: its layouts, adding and removing columns. */
-  | 'columnsMenu';
+  | 'columnsMenu'
+  /** The document menu: views, import and export, clearing. */
+  | 'document';
 
 /**
  * A UI entry an extension contributes — a toolbar button, a slash-menu row,

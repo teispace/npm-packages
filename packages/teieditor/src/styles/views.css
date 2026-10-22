@@ -1,0 +1,227 @@
+/*
+ * Ways to view the document: the markdown source, non-printing characters,
+ * pages; and the document menu's confirming step. Each draws only while its
+ * attribute is on the root, so none costs anything until switched on.
+ */
+@layer teieditor {
+  .tei,
+  .tei-portal:where(:not(.tei *)) {
+    --tei-page-bg: light-dark(oklch(1 0 0), oklch(0.235 0.006 286));
+    --tei-page-gap-bg: light-dark(oklch(0.94 0.003 286), oklch(0.16 0.004 286));
+    --tei-page-edge: light-dark(oklch(0.88 0.005 286), oklch(1 0 0 / 0.12));
+    --tei-invisible-fg: light-dark(oklch(0.7 0.06 262), oklch(0.62 0.08 260));
+  }
+
+  /* -- Markdown source --------------------------------------------------- */
+
+  .tei-markdown-source {
+    margin: 0;
+    padding: 0;
+    background: none;
+    color: var(--tei-fg);
+    font-family: var(--tei-font-mono);
+    font-size: 0.875em;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    tab-size: 4;
+  }
+
+  /* Its text is code-formatted only to keep markdown shortcuts away. */
+  .tei-markdown-source .tei-code,
+  .tei-markdown-source code {
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+  }
+
+  /* -- Non-printing characters -------------------------------------------- */
+
+  .tei-invisibles,
+  .tei-page-numbers {
+    position: absolute;
+    inset-block-start: 0;
+    left: 0;
+    inline-size: 0;
+    block-size: 0;
+    overflow: visible;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .tei-invisible {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    color: var(--tei-invisible-fg);
+    font-family: var(--tei-font);
+    font-size: 0.8em;
+    font-style: normal;
+    font-weight: 400;
+    text-align: center;
+    white-space: pre;
+  }
+
+  .tei-invisible[data-kind="space"]::before {
+    content: "·";
+  }
+
+  .tei-invisible[data-kind="tab"]::before {
+    content: "→";
+  }
+
+  .tei-invisible[data-kind="tab"][data-rtl]::before {
+    content: "←";
+  }
+
+  .tei-invisible[data-kind="break"]::before {
+    content: "↵";
+    padding-inline-start: 0.15em;
+  }
+
+  .tei-invisible[data-kind="end"]::before {
+    content: "¶";
+    padding-inline-start: 0.15em;
+  }
+
+  /* At a right-to-left line's end, the mark extends left of the point. */
+  .tei-invisible[data-rtl]:is([data-kind="break"], [data-kind="end"]) {
+    translate: -100% 0;
+  }
+
+  /* -- Pages -------------------------------------------------------------- */
+
+  /* Every sheet is the same height, so one repeating background draws them all.
+   * The attribute twice outweighs the block handles' gutter rule. */
+  [data-tei-content][data-tei-pages][data-tei-pages] {
+    --tei-page-period: calc(var(--tei-page-height) + var(--tei-page-gap));
+
+    box-sizing: border-box;
+    inline-size: min(var(--tei-page-width), 100%);
+    max-inline-size: none;
+    min-block-size: calc(var(--tei-page-count, 1) * var(--tei-page-period) - var(--tei-page-gap));
+    margin-block: var(--tei-space-4);
+    margin-inline: auto;
+    padding: var(--tei-page-margin-top) var(--tei-page-margin-right) var(--tei-page-margin-bottom)
+      var(--tei-page-margin-left);
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--tei-page-bg) 0,
+      var(--tei-page-bg) calc(var(--tei-page-height) - 1px),
+      var(--tei-page-edge) calc(var(--tei-page-height) - 1px),
+      var(--tei-page-edge) var(--tei-page-height),
+      var(--tei-page-gap-bg) var(--tei-page-height),
+      var(--tei-page-gap-bg) var(--tei-page-period)
+    );
+    box-shadow: 0 0 0 1px var(--tei-page-edge);
+  }
+
+  /* The first block on each sheet but the first, moved to its top. On
+   * screen only: printed, the browser makes the sheets. */
+  @media screen {
+    [data-tei-content][data-tei-pages] > [data-tei-page-shift] {
+      margin-block-start: var(--tei-page-shift);
+    }
+  }
+
+  /* A narrow screen keeps the sheet's height but not its side margins. */
+  @container tei (max-width: 40rem) {
+    [data-tei-content][data-tei-pages][data-tei-pages] {
+      padding-inline: var(--tei-space-4);
+    }
+  }
+
+  .tei:has([data-tei-pages]) {
+    background: var(--tei-page-gap-bg);
+  }
+
+  .tei-page-number {
+    position: absolute;
+    top: 0;
+    left: 0;
+    translate: -50% -50%;
+    color: var(--tei-fg-subtle);
+    font-size: var(--tei-ui-font-size-sm);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* -- Document menu ------------------------------------------------------ */
+
+  .tei-confirm {
+    display: grid;
+    gap: var(--tei-space-1);
+    max-inline-size: 18rem;
+    padding: var(--tei-space-3);
+    font-size: var(--tei-ui-font-size);
+    line-height: var(--tei-ui-line-height);
+  }
+
+  .tei-confirm-title {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .tei-confirm-hint {
+    margin: 0;
+    color: var(--tei-fg-muted);
+  }
+
+  .tei-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--tei-space-2);
+    margin-block-start: var(--tei-space-2);
+  }
+
+  /* -- The selection, kept while focus is elsewhere ----------------------- */
+
+  ::highlight(tei-kept-selection) {
+    background-color: var(--tei-selection);
+  }
+
+  /* -- Print -------------------------------------------------------------- */
+
+  @page tei-a4 {
+    size: A4;
+    margin: 25.4mm;
+  }
+
+  @page tei-letter {
+    size: letter;
+    margin: 1in;
+  }
+
+  @media print {
+    /* The browser makes the sheets: the view's own gaps and marks go. */
+    [data-tei-content][data-tei-pages][data-tei-pages] {
+      inline-size: auto;
+      min-block-size: 0;
+      margin: 0;
+      padding: 0;
+      background: none;
+      box-shadow: none;
+    }
+
+    [data-tei-content][data-tei-pages="a4"] {
+      page: tei-a4;
+    }
+
+    [data-tei-content][data-tei-pages="letter"] {
+      page: tei-letter;
+    }
+
+    .tei:has([data-tei-pages]) {
+      background: none;
+    }
+
+    .tei-invisibles,
+    .tei-page-numbers {
+      display: none;
+    }
+  }
+}

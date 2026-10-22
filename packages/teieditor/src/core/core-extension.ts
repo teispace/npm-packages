@@ -104,6 +104,7 @@ export const TeiCoreExtension = defineExtension({
       'toolbar.blockType': 'Block type',
       'toolbar.align': 'Align',
       'toolbar.more': 'More',
+      'document.label': 'Document',
       'bubble.label': 'Text formatting',
       'slash.label': 'Insert block',
       'contextMenu.label': 'Edit',
