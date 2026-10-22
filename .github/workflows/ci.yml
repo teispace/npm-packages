@@ -253,6 +253,11 @@ jobs:
           FONTCONFIG_FILE: ${{ github.workspace }}/packages/teieditor/e2e/fonts.conf
         run: yarn test:e2e
 
+      # Typing latency, measured with nothing else running.
+      - name: Run the performance benchmark
+        working-directory: packages/teieditor
+        run: yarn test:perf
+
       - name: Upload reports on failure
         if: failure()
         uses: actions/upload-artifact@v7

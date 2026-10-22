@@ -5,6 +5,11 @@ const PORT = 3119;
 // Pixel baselines exist for the Linux Playwright image only (`yarn test:visual`).
 const VISUAL = /@visual/;
 const visual = Boolean(process.env.TEI_VISUAL);
+// Latency benchmarks measure an idle machine: `yarn test:perf` runs them alone.
+const PERF = /@perf/;
+const perf = Boolean(process.env.TEI_PERF);
+const desktop = visual ? [/@mobile/] : [/@mobile/, VISUAL];
+const skipped = perf ? desktop : [...desktop, PERF];
 
 /**
  * The editor and its UI in real engines, under a strict CSP: what jsdom
@@ -35,24 +40,29 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      grepInvert: visual ? /@mobile/ : [/@mobile/, VISUAL],
+      grepInvert: skipped,
     },
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
-      grepInvert: visual ? /@mobile/ : [/@mobile/, VISUAL],
+      grepInvert: skipped,
     },
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
-      grepInvert: visual ? /@mobile/ : [/@mobile/, VISUAL],
+      grepInvert: skipped,
     },
-    { name: 'mobile-chrome', use: { ...devices['Pixel 7'] }, grep: /@mobile/, grepInvert: VISUAL },
+    {
+      name: 'mobile-chrome',
+      use: { ...devices['Pixel 7'] },
+      grep: /@mobile/,
+      grepInvert: [VISUAL, PERF],
+    },
     {
       name: 'mobile-safari',
       use: { ...devices['iPhone 15'] },
       grep: /@mobile/,
-      grepInvert: VISUAL,
+      grepInvert: [VISUAL, PERF],
     },
   ],
   webServer: {
