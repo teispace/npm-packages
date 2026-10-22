@@ -335,20 +335,6 @@
     padding-inline: var(--tei-space-2);
   }
 
-  /* Table: the handle on the cell with the caret, the + bars, the column resizer. */
-  .tei-popover[data-tei-control="table-cell-handle"] {
-    padding: 0;
-    border-radius: var(--tei-radius-sm);
-    box-shadow: var(--tei-shadow-sm);
-  }
-
-  .tei-button[data-tei-control="table-cell-menu"] {
-    --tei-control-size: 1.25rem;
-    inline-size: 1.25rem;
-    min-inline-size: 0;
-    padding: 0;
-  }
-
   /* Block handle: + and the grip, in the gutter level with a block's first
    * line. Quiet until hovered; the grip takes drags (touch too). */
   .tei-popover.tei-block-handle {
@@ -1065,37 +1051,6 @@
     transform: rotate(-45deg);
   }
 
-  /* Grid picker (insert table) */
-  .tei-grid-picker {
-    display: grid;
-    grid-template-columns: repeat(var(--tei-grid-columns, 10), 1.125rem);
-    gap: 3px;
-    padding: var(--tei-space-1);
-  }
-
-  .tei-grid-cell {
-    inline-size: 1.125rem;
-    block-size: 1.125rem;
-    padding: 0;
-    border: 1px solid var(--tei-border-strong);
-    border-radius: 3px;
-    background: var(--tei-bg);
-    cursor: pointer;
-  }
-
-  .tei-grid-cell[data-active] {
-    border-color: var(--tei-accent);
-    background: var(--tei-accent-subtle);
-  }
-
-  .tei-grid-caption {
-    padding: var(--tei-space-1) var(--tei-space-1) 0;
-    color: var(--tei-fg-muted);
-    font-size: 0.75rem;
-    text-align: center;
-    font-variant-numeric: tabular-nums;
-  }
-
   /* Status bar (word count, character limit) */
   .tei-statusbar {
     display: flex;
@@ -1121,109 +1076,5 @@
       --tei-control-size: 2.5rem;
       --tei-control-size-sm: 2.25rem;
     }
-  }
-
-  /* Images and files: the insert form, alt text, renaming, and the resize handles. */
-  .tei-image-insert,
-  .tei-image-alt,
-  .tei-file-rename {
-    display: flex;
-    flex-direction: column;
-    gap: var(--tei-space-2);
-    inline-size: min(21rem, calc(100vw - 2rem));
-  }
-
-  .tei-image-insert .tei-link-form,
-  .tei-image-alt .tei-link-form,
-  .tei-file-rename .tei-link-form {
-    inline-size: auto;
-  }
-
-  .tei-image-alt > .tei-hint {
-    margin: 0 var(--tei-space-1);
-  }
-
-  .tei-dropzone {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--tei-space-1);
-    padding: var(--tei-space-4) var(--tei-space-3);
-    border: 1px dashed var(--tei-border-strong);
-    border-radius: var(--tei-radius);
-    transition:
-      border-color var(--tei-duration) var(--tei-ease),
-      background-color var(--tei-duration) var(--tei-ease);
-  }
-
-  .tei-dropzone[data-over] {
-    border-color: var(--tei-accent);
-    background: var(--tei-accent-subtle);
-  }
-
-  .tei-image-resizer {
-    position: fixed;
-    inset: 0 auto auto 0;
-    margin: 0;
-    padding: 0;
-    overflow: visible;
-    border: 0;
-    background: transparent;
-    pointer-events: none;
-  }
-
-  .tei-image-handle {
-    --tei-handle: 12px;
-    position: absolute;
-    inline-size: var(--tei-handle);
-    block-size: var(--tei-handle);
-    margin: calc(var(--tei-handle) / -2);
-    padding: 0;
-    border: 2px solid var(--tei-bg);
-    border-radius: 50%;
-    background: var(--tei-accent);
-    box-shadow: var(--tei-shadow-sm);
-    pointer-events: auto;
-    touch-action: none;
-  }
-
-  @media (pointer: coarse) {
-    .tei-image-handle {
-      --tei-handle: 20px;
-    }
-  }
-
-  .tei-image-handle:focus-visible {
-    outline: 2px solid var(--tei-ring);
-    outline-offset: 2px;
-  }
-
-  /* Physical corners: the image does not mirror in right-to-left text. */
-  .tei-image-handle[data-corner="nw"] {
-    top: 0;
-    left: 0;
-    cursor: nwse-resize;
-  }
-
-  .tei-image-handle[data-corner="ne"] {
-    top: 0;
-    right: 0;
-    cursor: nesw-resize;
-  }
-
-  .tei-image-handle[data-corner="sw"] {
-    bottom: 0;
-    left: 0;
-    cursor: nesw-resize;
-  }
-
-  .tei-image-handle[data-corner="se"] {
-    right: 0;
-    bottom: 0;
-    cursor: nwse-resize;
-  }
-
-  .tei-image-resizer[data-active] .tei-image-handle {
-    transform: scale(1.15);
   }
 }

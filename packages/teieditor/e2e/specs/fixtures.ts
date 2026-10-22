@@ -87,7 +87,7 @@ export const test = base.extend<{ tei: Harness }>({
         await expect(content).toBeVisible();
         // <Editor>'s table, image and code block parts load after it shows.
         await page.waitForFunction(() => {
-          const frame = document.querySelector('[data-tei-preset]');
+          const frame = document.querySelector('[data-tei-frame]');
           return !frame || frame.hasAttribute('data-tei-ready');
         });
       },

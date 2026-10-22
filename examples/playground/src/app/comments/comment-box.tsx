@@ -1,6 +1,7 @@
 'use client';
 
 import { StarterKit } from '@teispace/teieditor/extensions/starter-kit';
+import { minimal } from '@teispace/teieditor/presets/minimal';
 import { Editor, useEditorState, useTeiEditor } from '@teispace/teieditor/react';
 import { type FormEvent, useState } from 'react';
 
@@ -37,7 +38,7 @@ export function CommentBox() {
       <form className="stack" onSubmit={post}>
         <Editor
           editor={editor}
-          preset="minimal"
+          preset={minimal}
           placeholder="Add a comment…"
           contentProps={{
             'aria-label': 'Comment',

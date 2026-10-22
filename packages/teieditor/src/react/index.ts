@@ -19,7 +19,7 @@ export type { DateTimePickerProps } from './components/date-time-picker.js';
 export { DateTimePicker } from './components/date-time-picker.js';
 export type { DocumentMenuProps } from './components/document-menu.js';
 export { DocumentMenu } from './components/document-menu.js';
-export type { EditorPreset, EditorProps, EditorSlot, EditorSlots } from './components/editor.js';
+export type { EditorProps, EditorSlot, EditorSlots } from './components/editor.js';
 export { Editor } from './components/editor.js';
 export type {
   EditorToolbarProps,
@@ -61,7 +61,8 @@ export { rankSlashItem, SlashMenu } from './components/slash-menu.js';
 export type { StickyMenuProps } from './components/sticky-menu.js';
 export { StickyMenu } from './components/sticky-menu.js';
 export type { TableControlsProps } from './components/table-controls.js';
-export { InsertTableMenu, TableControls } from './components/table-controls.js';
+export { TableControls } from './components/table-controls.js';
+export { InsertTableMenu } from './components/table-insert.js';
 export type { TableOfContentsPanelProps } from './components/table-of-contents.js';
 export { TableOfContentsPanel, useOutline } from './components/table-of-contents.js';
 export type { TypeaheadMenuProps } from './components/typeahead-menu.js';

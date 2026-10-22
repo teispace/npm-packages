@@ -11,43 +11,19 @@ import {
 } from 'react';
 import type { TeiEditorOptions } from '../../core/create.js';
 import type { ContentFormat, TeiEditor } from '../../core/editor.js';
+import type { TeiPreset } from '../../core/preset.js';
 import { holdUi } from '../../core/ui-request.js';
-import { Blocks } from '../../extensions/blocks/index.js';
-import { Callout } from '../../extensions/callout/index.js';
-import { Card } from '../../extensions/card/index.js';
-import { CharacterCount } from '../../extensions/character-count/index.js';
-import { CodeBlock } from '../../extensions/code-block/index.js';
-import { Collapsible } from '../../extensions/collapsible/index.js';
-import { Columns } from '../../extensions/columns/index.js';
-import { DateTime, type DateTimeStorage } from '../../extensions/date-time/index.js';
-import { DocumentActions } from '../../extensions/document-actions/index.js';
-import { Embed, type EmbedStorage } from '../../extensions/embed/index.js';
-import { Emoji, type EmojiStorage } from '../../extensions/emoji/index.js';
-import { FileAttachment } from '../../extensions/file/index.js';
-import { FindReplace, type FindReplaceStorage } from '../../extensions/find-replace/index.js';
-import { Hashtag } from '../../extensions/hashtag/index.js';
-import { Image, type ImageStorage } from '../../extensions/image/index.js';
-import { Link, type LinkStorage } from '../../extensions/link/index.js';
-import { MarkdownSource } from '../../extensions/markdown-source/index.js';
-import { Mention } from '../../extensions/mention/index.js';
-import { PageBreak } from '../../extensions/page-break/index.js';
-import { Pages } from '../../extensions/pages/index.js';
-import { Poll } from '../../extensions/poll/index.js';
-import { PullQuote } from '../../extensions/pull-quote/index.js';
-import { Ruby } from '../../extensions/ruby/index.js';
-import { ShowInvisibles } from '../../extensions/show-invisibles/index.js';
+import type { DateTimeStorage } from '../../extensions/date-time/index.js';
+import type { EmbedStorage } from '../../extensions/embed/index.js';
+import type { EmojiStorage } from '../../extensions/emoji/index.js';
+import type { FindReplaceStorage } from '../../extensions/find-replace/index.js';
+import type { ImageStorage } from '../../extensions/image/index.js';
+import type { LinkStorage } from '../../extensions/link/index.js';
 import { StarterKit } from '../../extensions/starter-kit/index.js';
-import { StickyNote } from '../../extensions/sticky-note/index.js';
-import { TabFocus } from '../../extensions/tab-focus/index.js';
-import { Table } from '../../extensions/table/index.js';
-import { TableOfContents } from '../../extensions/table-of-contents/index.js';
-import { TextStyle } from '../../extensions/text-style/index.js';
-import { Typeahead } from '../../extensions/typeahead/index.js';
 import { type ContentEditableProps, EditorContent, EditorProvider } from '../editor-content.js';
 import { cx } from '../ui/context.js';
 import { useTeiEditor } from '../use-tei-editor.js';
 import { EditorToolbar, type EditorToolbarProps, type ToolbarLayout } from './editor-toolbar.js';
-import { WordCount } from './word-count.js';
 
 /**
  * The parts that show only once there is something to act on (a selection,
@@ -113,14 +89,9 @@ const StickyMenu = lazy(() =>
 const EmbedControls = lazy(() =>
   import('./embed-controls.js').then((module) => ({ default: module.EmbedControls })),
 );
-
-/**
- * Which UI comes with it.
- * - `full`: toolbar, bubble menu, slash menu, link popover, block handles, context menu, code block bar, table, image, file and embed controls, the callout, sticky note and columns menus, the date picker, find and replace.
- * - `notion`: no toolbar; select text for the bubble menu, type `/` or press + for blocks, drag a block by its handle.
- * - `minimal`: a toolbar and links, nothing floating: comment boxes, forms.
- */
-export type EditorPreset = 'full' | 'notion' | 'minimal';
+const WordCount = lazy(() =>
+  import('./word-count.js').then((module) => ({ default: module.WordCount })),
+);
 
 /** A part of the UI: `false` leaves it out, a node replaces it, `true` keeps the default. */
 export type EditorSlot = boolean | ReactNode;
@@ -166,134 +137,11 @@ export interface EditorSlots {
   footer?: ReactNode;
 }
 
-const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
-  full: {
-    toolbar: true,
-    bubbleMenu: true,
-    slashMenu: true,
-    linkPopover: true,
-    blockHandle: true,
-    contextMenu: true,
-    codeBlockBar: true,
-    tableControls: true,
-    imageControls: true,
-    fileControls: true,
-    embedControls: true,
-    calloutMenu: true,
-    stickyMenu: true,
-    columnsMenu: true,
-    dateTimePicker: true,
-    findReplace: true,
-    wordCount: true,
-    rubyPopover: true,
-    typeaheadMenu: true,
-    emojiPicker: true,
-  },
-  notion: {
-    toolbar: false,
-    bubbleMenu: true,
-    slashMenu: true,
-    linkPopover: true,
-    blockHandle: true,
-    contextMenu: true,
-    codeBlockBar: true,
-    tableControls: true,
-    imageControls: true,
-    fileControls: true,
-    embedControls: true,
-    calloutMenu: true,
-    stickyMenu: true,
-    columnsMenu: true,
-    dateTimePicker: true,
-    findReplace: true,
-    wordCount: false,
-    rubyPopover: true,
-    typeaheadMenu: true,
-    emojiPicker: true,
-  },
-  minimal: {
-    toolbar: true,
-    bubbleMenu: false,
-    slashMenu: false,
-    linkPopover: true,
-    blockHandle: false,
-    contextMenu: false,
-    codeBlockBar: false,
-    tableControls: false,
-    imageControls: false,
-    fileControls: false,
-    embedControls: false,
-    calloutMenu: false,
-    stickyMenu: false,
-    columnsMenu: false,
-    dateTimePicker: false,
-    findReplace: false,
-    wordCount: false,
-    rubyPopover: false,
-    typeaheadMenu: false,
-    emojiPicker: false,
-  },
-};
+/** What `<Editor>` installs without `preset` or `extensions`. */
+const DEFAULT_EXTENSIONS = [StarterKit];
 
-/** What each preset installs when `<Editor>` makes its own editor. */
-const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = {
-  full: [
-    StarterKit,
-    TextStyle,
-    Blocks,
-    PullQuote,
-    Callout,
-    Collapsible,
-    Columns,
-    Card,
-    StickyNote,
-    Poll,
-    DateTime,
-    FindReplace,
-    TableOfContents,
-    CharacterCount,
-    Ruby,
-    Emoji,
-    Mention,
-    Hashtag,
-    DocumentActions,
-    MarkdownSource,
-    ShowInvisibles,
-    Pages,
-    TabFocus,
-    PageBreak,
-    Table,
-    Image,
-    FileAttachment,
-    Embed,
-  ],
-  notion: [
-    StarterKit,
-    TextStyle,
-    Blocks,
-    PullQuote,
-    Callout,
-    Collapsible,
-    Columns,
-    Card,
-    StickyNote,
-    Poll,
-    DateTime,
-    FindReplace,
-    TableOfContents,
-    CharacterCount,
-    Ruby,
-    Emoji,
-    Mention,
-    Hashtag,
-    PageBreak,
-    Table,
-    Image,
-    FileAttachment,
-    Embed,
-  ],
-  minimal: [StarterKit],
-};
+/** An installed extension by its directory under `extensions/`, without importing it. */
+const NAME = (feature: string) => `@teispace/teieditor/${feature}`;
 
 /** `data-*` attributes, which TypeScript only accepts in JSX otherwise. */
 type DataAttributes = { [key: `data-${string}`]: string | undefined };
@@ -305,8 +153,12 @@ export interface EditorProps extends Partial<Omit<TeiEditorOptions, 'editable'>>
    * default), once: later changes to them are ignored, except `editable`.
    */
   editor?: TeiEditor;
-  /** Default `full`. */
-  preset?: EditorPreset;
+  /**
+   * A ready set of extensions and the UI that goes with them, from its own
+   * entry: `import { full } from '@teispace/teieditor/presets/full'`. Without
+   * one, StarterKit (or your `extensions`) and every part they have UI for.
+   */
+  preset?: TeiPreset;
   /** Leave out or replace any part of the preset. */
   slots?: EditorSlots;
   /** The toolbar's layout; see `EditorToolbar`. */
@@ -382,7 +234,7 @@ function OwnEditor(props: EditorProps) {
     colorScheme,
     className,
     children,
-    extensions = PRESET_EXTENSIONS[preset ?? 'full'],
+    extensions = preset?.extensions ?? DEFAULT_EXTENSIONS,
     ...options
   } = props;
   const editor = useTeiEditor({ ...options, extensions, editable });
@@ -391,7 +243,7 @@ function OwnEditor(props: EditorProps) {
 
 function EditorFrame({
   editor,
-  preset = 'full',
+  preset,
   slots,
   toolbar,
   stickyToolbar,
@@ -408,7 +260,10 @@ function EditorFrame({
   className,
   children,
 }: EditorProps & { editor: TeiEditor }) {
-  const parts = { ...PRESETS[preset], ...slots };
+  const parts: EditorSlots = { ...preset?.ui, ...slots };
+  const has = (feature: string) => editor.extension(NAME(feature)) !== undefined;
+  const storage = <S,>(feature: string) =>
+    (editor.extension(NAME(feature))?.output as { storage?: S } | undefined)?.storage;
 
   useEffect(() => {
     if (editable !== undefined && editable !== editor.isEditable) editor.setEditable(editable);
@@ -423,29 +278,20 @@ function EditorFrame({
   const [ready, setReady] = useState(false);
   // A request before its UI has loaded (⌘K, the slash menu's Image): hold
   // the UI's place, so the request stands and the UI takes it as it loads.
-  const linkEdit = slot(parts.linkPopover, true)
-    ? (editor.extension(Link)?.output.storage as LinkStorage | undefined)?.edit
+  const linkEdit = builtIn(parts.linkPopover) ? storage<LinkStorage>('link')?.edit : undefined;
+  const imageInsert = builtIn(parts.imageControls)
+    ? storage<ImageStorage>('image')?.insert
     : undefined;
-  const imageInsert =
-    parts.imageControls === true
-      ? (editor.extension(Image)?.output.storage as ImageStorage | undefined)?.insert
-      : undefined;
-  const embedInsert =
-    parts.embedControls === true
-      ? (editor.extension(Embed)?.output.storage as EmbedStorage | undefined)?.insert
-      : undefined;
-  const datePick =
-    parts.dateTimePicker === true
-      ? (editor.extension(DateTime)?.output.storage as DateTimeStorage | undefined)?.picker
-      : undefined;
-  const findBar =
-    parts.findReplace === true
-      ? (editor.extension(FindReplace)?.output.storage as FindReplaceStorage | undefined)?.ui
-      : undefined;
-  const emojiPick =
-    parts.emojiPicker === true
-      ? (editor.extension(Emoji)?.output.storage as EmojiStorage | undefined)?.picker
-      : undefined;
+  const embedInsert = builtIn(parts.embedControls)
+    ? storage<EmbedStorage>('embed')?.insert
+    : undefined;
+  const datePick = builtIn(parts.dateTimePicker)
+    ? storage<DateTimeStorage>('date-time')?.picker
+    : undefined;
+  const findBar = builtIn(parts.findReplace)
+    ? storage<FindReplaceStorage>('find-replace')?.ui
+    : undefined;
+  const emojiPick = builtIn(parts.emojiPicker) ? storage<EmojiStorage>('emoji')?.picker : undefined;
   useEffect(() => {
     if (ready) return;
     const releases = [linkEdit, imageInsert, embedInsert, datePick, findBar, emojiPick].flatMap(
@@ -456,7 +302,7 @@ function EditorFrame({
     };
   }, [ready, linkEdit, imageInsert, embedInsert, datePick, findBar, emojiPick]);
   // The gutter the handles sit in, from the first render (the server's too).
-  const handles = editor.extension(Blocks) !== undefined && slot(parts.blockHandle, true) !== null;
+  const handles = has('blocks') && slot(parts.blockHandle, true) !== null;
   const change = useRef({ onChange, format });
   change.current = { onChange, format };
   useEffect(
@@ -477,7 +323,8 @@ function EditorFrame({
         className={cx('tei', className, frameProps?.className)}
         data-tei-bordered={bordered ? '' : undefined}
         data-theme={colorScheme}
-        data-tei-preset={preset}
+        data-tei-frame=""
+        data-tei-preset={preset?.name}
         data-tei-handles={handles ? '' : undefined}
         data-tei-ready={ready ? '' : undefined}
       >
@@ -501,33 +348,52 @@ function EditorFrame({
               {slot(parts.linkPopover, <LinkPopover />)}
               {slot(parts.bubbleMenu, <BubbleMenu />)}
               {slot(parts.slashMenu, <SlashMenu />)}
-              {editor.extension(Blocks) && slot(parts.blockHandle, <BlockHandle />)}
+              {has('blocks') && slot(parts.blockHandle, <BlockHandle />)}
               {slot(parts.contextMenu, <ContextMenu />)}
-              {editor.extension(Image) && parts.imageControls === true && (
+              {has('image') && builtIn(parts.imageControls) && (
                 <ImageInsertPopover editor={editor} />
               )}
-              {editor.extension(CodeBlock) && slot(parts.codeBlockBar, <CodeBlockBar />)}
-              {editor.extension(Table) && slot(parts.tableControls, <TableControls />)}
-              {editor.extension(Image) && slot(parts.imageControls, <LazyImageControls />)}
-              {editor.extension(FileAttachment) && slot(parts.fileControls, <FileControls />)}
-              {editor.extension(Embed) && slot(parts.embedControls, <EmbedControls />)}
-              {editor.extension(Callout) && slot(parts.calloutMenu, <CalloutMenu />)}
-              {editor.extension(StickyNote) && slot(parts.stickyMenu, <StickyMenu />)}
-              {editor.extension(Columns) && slot(parts.columnsMenu, <ColumnsMenu />)}
-              {editor.extension(DateTime) && slot(parts.dateTimePicker, <DateTimePicker />)}
-              {editor.extension(FindReplace) && slot(parts.findReplace, <FindReplaceBar />)}
-              {editor.extension(Ruby) && slot(parts.rubyPopover, <RubyPopover />)}
-              {editor.extension(Typeahead) && slot(parts.typeaheadMenu, <TypeaheadMenu />)}
-              {editor.extension(Emoji) && slot(parts.emojiPicker, <EmojiPicker />)}
+              {has('code-block') && slot(parts.codeBlockBar, <CodeBlockBar />)}
+              {has('table') && slot(parts.tableControls, <TableControls />)}
+              {has('image') && slot(parts.imageControls, <LazyImageControls />)}
+              {has('file') && slot(parts.fileControls, <FileControls />)}
+              {has('embed') && slot(parts.embedControls, <EmbedControls />)}
+              {has('callout') && slot(parts.calloutMenu, <CalloutMenu />)}
+              {has('sticky-note') && slot(parts.stickyMenu, <StickyMenu />)}
+              {has('columns') && slot(parts.columnsMenu, <ColumnsMenu />)}
+              {has('date-time') && slot(parts.dateTimePicker, <DateTimePicker />)}
+              {has('find-replace') && slot(parts.findReplace, <FindReplaceBar />)}
+              {has('ruby') && slot(parts.rubyPopover, <RubyPopover />)}
+              {has('typeahead') && slot(parts.typeaheadMenu, <TypeaheadMenu />)}
+              {has('emoji') && slot(parts.emojiPicker, <EmojiPicker />)}
               <Ready onReady={setReady} />
             </Suspense>
           )}
           {children}
         </EditorContent>
-        {editor.extension(CharacterCount) && slot(parts.wordCount, <WordCount />)}
+        {has('character-count') &&
+          slot(
+            parts.wordCount,
+            // The line holds its place while the count loads: nothing below moves.
+            mounted ? (
+              <Suspense fallback={<WordCountPlaceholder />}>
+                <WordCount />
+              </Suspense>
+            ) : (
+              <WordCountPlaceholder />
+            ),
+          )}
         {parts.footer}
       </div>
     </EditorProvider>
+  );
+}
+
+function WordCountPlaceholder() {
+  return (
+    <div className="tei-word-count" aria-hidden="true">
+      {'\u00a0'}
+    </div>
   );
 }
 
@@ -537,7 +403,10 @@ function Ready({ onReady }: { onReady: (ready: true) => void }) {
   return null;
 }
 
+/** A part left as it comes: on, and the built-in one. */
+const builtIn = (value: EditorSlot | undefined) => value === undefined || value === true;
+
 function slot(value: EditorSlot | undefined, fallback: ReactNode): ReactNode {
-  if (value === false || value === null || value === undefined) return null;
-  return value === true ? fallback : value;
+  if (value === false || value === null) return null;
+  return builtIn(value) ? fallback : value;
 }

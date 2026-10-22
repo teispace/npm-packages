@@ -1,10 +1,13 @@
 /*
- * @teispace/teieditor/styles.css. Plain CSS in `@layer teieditor`: no
- * Tailwind, no preprocessor, and any unlayered app rule wins over it.
+ * @teispace/teieditor/styles.css: everything, in one import. Plain CSS in
+ * `@layer teieditor`: no Tailwind, no preprocessor, and any unlayered app
+ * rule wins over it. For less, import `styles/core.css` and the features'
+ * own files instead (`styles/tables.css`, `styles/media.css`, …).
  */
 @import "./tokens.css";
 @import "./base.css";
 @import "./content.css";
+@import "./blocks.css";
 @import "./cards.css";
 @import "./columns.css";
 @import "./widgets.css";
@@ -14,3 +17,5 @@
 @import "./find.css";
 @import "./views.css";
 @import "./typeahead.css";
+@import "./media.css";
+@import "./tables.css";

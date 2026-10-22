@@ -18,74 +18,19 @@ import {
 } from 'react';
 import { getExtensionOptions } from '../../core/define.js';
 import type { TeiEditor } from '../../core/editor.js';
-import type { TeiItem } from '../../core/types.js';
 import { $getTableAtSelection, Table } from '../../extensions/table/index.js';
 import { TeiEditorContext, useOptionalEditor } from '../context.js';
 import { contextMenuOwners } from '../context-menu-owner.js';
 import { Button } from '../ui/button.js';
-import { GridPicker } from '../ui/controls.js';
-import { DropdownMenu } from '../ui/dropdown.js';
 import type { FloatingAnchor, VirtualElement } from '../ui/floating.js';
 import { Menu } from '../ui/menu.js';
 import { Popover } from '../ui/popover.js';
 import { useEditorFocus } from '../use-editor-focus.js';
 import { useEditorState } from '../use-editor-state.js';
 import { useHover, useRootListener } from '../use-hover.js';
-import type { ToolbarSubmenu } from './editor-toolbar.js';
 import { useTableMenu } from './table-menu.js';
 
-// -- Insert -------------------------------------------------------------------
-
-const SIZES: ReadonlyArray<readonly [number, number]> = [
-  [2, 2],
-  [3, 3],
-  [4, 4],
-  [5, 5],
-];
-
-/** A toolbar button that opens a grid: hover or arrow to a size, click or Enter to insert. */
-export function InsertTableMenu({ editor }: { editor: TeiEditor }) {
-  const enabled = useEditorState((e) => e.can().insertTable(), { editor });
-  const options = getExtensionOptions(editor, Table);
-  if (!options) return null;
-  const label = editor.t('table.insert');
-  return (
-    <DropdownMenu
-      data-item="insertTable"
-      data-tei-control="insertTable"
-      icon="table"
-      label={label}
-      aria-label={label}
-      menuLabel={label}
-      disabled={!enabled}
-      content={(close) => (
-        <GridPicker
-          rows={Math.min(8, options.maxRows)}
-          columns={Math.min(10, options.maxColumns)}
-          formatCaption={(rows, columns) => `${rows} × ${columns}`}
-          onPick={(rows, columns) => {
-            close();
-            editor.chain().focus().insertTable(rows, columns).run();
-          }}
-        />
-      )}
-    />
-  );
-}
-
-InsertTableMenu.overflowMenu = (editor: TeiEditor): ToolbarSubmenu => ({
-  label: editor.t('table.insert'),
-  icon: 'table',
-  items: SIZES.map(
-    ([rows, columns]): TeiItem => ({
-      id: `insertTable-${rows}x${columns}`,
-      label: `${rows} × ${columns}`,
-      in: [],
-      command: 'insertTable',
-      args: [rows, columns],
-    }),
-  ),
-});
+export { InsertTableMenu } from './table-insert.js';
 
 // -- Shared -------------------------------------------------------------------
 

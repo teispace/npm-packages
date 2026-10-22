@@ -1,9 +1,9 @@
 'use client';
 
 import { type DragEvent, type FormEvent, useId, useState } from 'react';
-import { getExtensionOptions } from '../../core/define.js';
+import { getPeerOptions } from '../../core/define.js';
 import type { TeiEditor } from '../../core/editor.js';
-import { Image, type ImageStorage } from '../../extensions/image/index.js';
+import type { ImageOptions, ImageStorage } from '../../extensions/image/index.js';
 import { chooseFiles } from '../../utils/files.js';
 import { selectionAnchor } from '../selection-anchor.js';
 import { Button } from '../ui/button.js';
@@ -14,9 +14,12 @@ import { Popover } from '../ui/popover.js';
 import { useEditorState } from '../use-editor-state.js';
 import { useUiRequest } from '../use-ui-request.js';
 
+/** The Image extension, by name: looked up, not imported. */
+const IMAGE = '@teispace/teieditor/image';
+
 /** Ask for files with the chooser, as the Image extension accepts them. */
 export function pickImages(editor: TeiEditor, multiple: boolean): Promise<File[]> {
-  const options = getExtensionOptions(editor, Image);
+  const options = getPeerOptions<ImageOptions>(editor.lexical, IMAGE);
   const doc = editor.lexical.getRootElement()?.ownerDocument ?? document;
   return chooseFiles(doc, { accept: options?.accept, multiple });
 }
@@ -114,7 +117,7 @@ export function InsertImageForm({ editor, onDone }: { editor: TeiEditor; onDone:
 /** The toolbar's image button: a popover to upload or link one. */
 export function InsertImageMenu({ editor }: { editor: TeiEditor }) {
   const enabled = useEditorState((e) => e.can().openImageInsert(), { editor });
-  if (!getExtensionOptions(editor, Image)) return null;
+  if (!getPeerOptions<ImageOptions>(editor.lexical, IMAGE)) return null;
   const label = editor.t('image.insert');
   return (
     <DropdownMenu
@@ -132,7 +135,8 @@ export function InsertImageMenu({ editor }: { editor: TeiEditor }) {
 
 /** The same form, opened by `openImageInsert` (the slash menu's Image) at the caret. */
 export function ImageInsertPopover({ editor }: { editor: TeiEditor }) {
-  const storage = editor.extension(Image)?.output.storage as ImageStorage | undefined;
+  const storage = (editor.extension(IMAGE)?.output as { storage?: ImageStorage } | undefined)
+    ?.storage;
   const [anchor, setAnchor] = useState<FloatingAnchor | null>(null);
 
   // Open at the caret on each request, and for one made while this loaded.

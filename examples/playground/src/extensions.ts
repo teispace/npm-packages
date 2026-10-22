@@ -1,14 +1,8 @@
-import { Blocks } from '@teispace/teieditor/extensions/blocks';
-import { Callout } from '@teispace/teieditor/extensions/callout';
-import { Collapsible } from '@teispace/teieditor/extensions/collapsible';
-import { Embed } from '@teispace/teieditor/extensions/embed';
+import type { TeiExtensionInput } from '@teispace/teieditor';
 import { FileAttachment } from '@teispace/teieditor/extensions/file';
 import { Image } from '@teispace/teieditor/extensions/image';
-import { PageBreak } from '@teispace/teieditor/extensions/page-break';
-import { PullQuote } from '@teispace/teieditor/extensions/pull-quote';
-import { StarterKit } from '@teispace/teieditor/extensions/starter-kit';
-import { Table } from '@teispace/teieditor/extensions/table';
-import { TextStyle } from '@teispace/teieditor/extensions/text-style';
+import { Mention, type MentionSearch } from '@teispace/teieditor/extensions/mention';
+import { full } from '@teispace/teieditor/presets/full';
 
 /**
  * A stand-in for a real upload, so the showcase needs no server: the file
@@ -36,17 +30,36 @@ const demoUpload = (
     });
   });
 
-/** What the showcase installs, on the server (for its first HTML) and in the browser alike. */
-export const EXTENSIONS = [
-  StarterKit,
-  TextStyle,
-  Table,
-  Image.configure({ upload: demoUpload }),
-  FileAttachment.configure({ upload: demoUpload }),
-  Embed,
-  Blocks,
-  PullQuote,
-  Callout,
-  Collapsible,
-  PageBreak,
-];
+/** People to mention, found as a server would: a moment later, by any part of the name. */
+const PEOPLE = ['Ada Lovelace', 'Alan Turing', 'Grace Hopper', 'Katherine Johnson', 'Linus Torvalds'];
+const demoSearch: MentionSearch = (query, { signal }) =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      const q = query.toLowerCase();
+      resolve(
+        PEOPLE.filter((name) => name.toLowerCase().includes(q)).map((name) => ({
+          id: name.toLowerCase().replace(/\s+/g, '-'),
+          label: name,
+        })),
+      );
+    }, 120);
+    signal.addEventListener('abort', () => {
+      clearTimeout(timer);
+      reject(signal.reason);
+    });
+  });
+
+/** The configured stand-ins for the preset's own. */
+const CONFIGURED = new Map<TeiExtensionInput, TeiExtensionInput>([
+  [Image, Image.configure({ upload: demoUpload })],
+  [FileAttachment, FileAttachment.configure({ upload: demoUpload })],
+  [Mention, Mention.configure({ search: demoSearch })],
+]);
+
+/**
+ * What the showcase installs, on the server (for its first HTML) and in the
+ * browser alike: the full preset, with uploads and people to mention.
+ */
+export const EXTENSIONS: TeiExtensionInput[] = full.extensions.map(
+  (extension) => CONFIGURED.get(extension) ?? extension,
+);

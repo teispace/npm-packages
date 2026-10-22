@@ -142,11 +142,13 @@ test.describe('find and replace', () => {
     expect(box.y).toBeLessThan(doc.y + 24);
 
     await tei.page.setViewportSize({ width: 375, height: 700 });
-    await settled(tei.page);
-    const narrow = await bar(tei).boundingBox();
-    if (!narrow) throw new Error('not rendered');
-    expect(narrow.x).toBeGreaterThanOrEqual(0);
-    expect(narrow.x + narrow.width).toBeLessThanOrEqual(375);
+    // The popover moves on the resize's next position update, not a set frame later.
+    await expect(async () => {
+      const narrow = await bar(tei).boundingBox();
+      if (!narrow) throw new Error('not rendered');
+      expect(narrow.x).toBeGreaterThanOrEqual(0);
+      expect(narrow.x + narrow.width).toBeLessThanOrEqual(375);
+    }).toPass({ timeout: 2000 });
     const overflow = await tei.page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     );

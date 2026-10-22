@@ -1,6 +1,7 @@
 import {
   formatKeyboardShortcut,
   getExtensionDependencyFromEditor,
+  getPeerDependencyFromEditor,
   KeyboardShortcutsExtension,
 } from '@lexical/extension';
 import type { Transformer } from '@lexical/markdown';
@@ -499,10 +500,25 @@ export class TeiEditor {
 
   // -- Extensions -----------------------------------------------------------
 
-  /** An installed extension's live config and output, or `undefined` if absent. */
+  /**
+   * An installed extension's live config and output, or `undefined` if
+   * absent. By name (`'@teispace/teieditor/table'`), it costs the caller no
+   * import of the extension: how UI that only shows for an installed
+   * extension stays out of a bundle without it.
+   */
   extension<E extends AnyLexicalExtension>(
     extension: E,
-  ): { config: LexicalExtensionConfig<E>; output: LexicalExtensionOutput<E> } | undefined {
+  ): { config: LexicalExtensionConfig<E>; output: LexicalExtensionOutput<E> } | undefined;
+  extension(name: string): { config: unknown; output: unknown } | undefined;
+  extension(
+    extension: AnyLexicalExtension | string,
+  ): { config: unknown; output: unknown } | undefined {
+    if (typeof extension === 'string') {
+      const dep = getPeerDependencyFromEditor(this.lexical, extension as never) as
+        | { config: unknown; output: unknown }
+        | undefined;
+      return dep ? { config: dep.config, output: dep.output } : undefined;
+    }
     try {
       const dep = getExtensionDependencyFromEditor(this.lexical, extension);
       return { config: dep.config, output: dep.output };

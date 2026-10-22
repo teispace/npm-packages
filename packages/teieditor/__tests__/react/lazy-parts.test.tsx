@@ -17,7 +17,7 @@ async function load() {
     content: '<p>Hello</p>',
   });
   const { container } = render(<react.Editor editor={editor} />);
-  const frame = container.querySelector('[data-tei-preset]');
+  const frame = container.querySelector('[data-tei-frame]');
   expect(frame?.hasAttribute('data-tei-ready')).toBe(false);
   act(() => editor.update(() => $getRoot().selectEnd()));
   return { editor, frame };

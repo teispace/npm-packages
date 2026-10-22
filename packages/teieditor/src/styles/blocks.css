@@ -1,0 +1,260 @@
+/*
+ * Blocks beyond StarterKit's: pull quotes, callouts, collapsible sections
+ * and page breaks. Each editor class and the saved HTML under `.tei-prose`
+ * share one rule, as in content.css.
+ */
+@layer teieditor {
+  /* A pull quote: a line of the text set large between two rules. */
+  .tei-pull-quote,
+  :where(.tei-prose) aside[data-tei-pull-quote] {
+    margin: 1em 0;
+    padding: 0.75em 1em;
+    border-block: 2px solid var(--tei-border-strong);
+    color: var(--tei-fg);
+    font-size: 1.375em;
+    font-style: italic;
+    font-weight: 500;
+    line-height: 1.4;
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  /* A callout: a tinted box, its kind's icon at the start of its first line. */
+  .tei-callout,
+  :where(.tei-prose) [data-tei-callout] {
+    --tei-callout-fg: var(--tei-info);
+    --tei-callout-bg: var(--tei-info-subtle);
+    position: relative;
+    margin: 0 0 0.75em;
+    padding: 0.75em 1em;
+    padding-inline-start: 2.875em;
+    border: 1px solid color-mix(in oklab, var(--tei-callout-fg) 22%, transparent);
+    border-radius: var(--tei-radius);
+    background: var(--tei-callout-bg);
+  }
+
+  :is(.tei-callout, [data-tei-callout]) > :last-child {
+    margin-block-end: 0;
+  }
+
+  :is(.tei-callout, [data-tei-callout])[data-variant="tip"],
+  :where(.tei-prose) [data-tei-callout="tip"] {
+    --tei-callout-fg: var(--tei-success);
+    --tei-callout-bg: var(--tei-success-subtle);
+  }
+
+  :is(.tei-callout, [data-tei-callout])[data-variant="important"],
+  :where(.tei-prose) [data-tei-callout="important"] {
+    --tei-callout-fg: var(
+      --tei-callout-important,
+      light-dark(oklch(0.541 0.198 293), oklch(0.702 0.16 293))
+    );
+    --tei-callout-bg: light-dark(oklch(0.969 0.016 293.8), oklch(0.29 0.06 293));
+  }
+
+  :is(.tei-callout, [data-tei-callout])[data-variant="warning"],
+  :where(.tei-prose) [data-tei-callout="warning"] {
+    --tei-callout-fg: var(--tei-warning);
+    --tei-callout-bg: var(--tei-warning-subtle);
+  }
+
+  :is(.tei-callout, [data-tei-callout])[data-variant="caution"],
+  :where(.tei-prose) [data-tei-callout="caution"] {
+    --tei-callout-fg: var(--tei-danger);
+    --tei-callout-bg: var(--tei-danger-subtle);
+  }
+
+  /* Centred on the first line: its middle is the padding plus half a line
+   * down, less half the icon (as tall as the padding). */
+  .tei-callout-icon,
+  :where(.tei-prose) [data-tei-callout-icon] {
+    position: absolute;
+    inset-inline-start: 0.75em;
+    inset-block-start: 0.5lh;
+    display: grid;
+    place-items: center;
+    inline-size: 1.5em;
+    block-size: 1.5em;
+    border-radius: var(--tei-radius-sm);
+    color: var(--tei-callout-fg);
+    user-select: none;
+  }
+
+  :is(.tei-callout-icon, [data-tei-callout-icon]) svg {
+    inline-size: 1.125em;
+    block-size: 1.125em;
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-callout-icon {
+    cursor: pointer;
+    transition: background-color var(--tei-duration) ease;
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-callout-icon:hover {
+    background: color-mix(in oklab, var(--tei-callout-fg) 14%, transparent);
+  }
+
+  /* A section that opens and closes: a chevron before its title, its body
+   * under the title. The editor's and saved <details> share every box. */
+  .tei-collapsible,
+  :where(.tei-prose) details {
+    position: relative;
+    margin: 0 0 0.75em;
+    padding-inline-start: 1.75em;
+  }
+
+  .tei-collapsible-title,
+  :where(.tei-prose) summary {
+    display: block;
+    margin: 0;
+    font-weight: 600;
+    list-style: none;
+  }
+
+  :where(.tei-prose) summary {
+    cursor: pointer;
+  }
+
+  :where(.tei-prose) summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .tei-collapsible-title:has(> br:only-child)::before {
+    content: attr(data-tei-empty-label);
+    position: absolute;
+    color: var(--tei-fg-placeholder);
+    font-weight: 400;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .tei-collapsible-content,
+  :where(.tei-prose) details > [data-tei-collapsible-content] {
+    margin-block-start: 0.25em;
+  }
+
+  :is(.tei-collapsible-content, [data-tei-collapsible-content]) > :last-child {
+    margin-block-end: 0;
+  }
+
+  /* Closed: `hidden="until-found"` keeps the body for find in page. */
+  .tei-collapsible:not([data-open]) > .tei-collapsible-content {
+    margin: 0;
+  }
+
+  /* The chevron: centred on the title's line, turned down when open. */
+  .tei-collapsible-toggle {
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0;
+    display: grid;
+    place-items: center;
+    inline-size: 1.5em;
+    block-size: 1lh;
+    border-radius: var(--tei-radius-sm);
+    color: var(--tei-fg-muted);
+    cursor: pointer;
+    user-select: none;
+    transition:
+      rotate var(--tei-duration) ease,
+      background-color var(--tei-duration) ease;
+  }
+
+  .tei-collapsible-toggle:hover {
+    background: var(--tei-bg-muted);
+    color: var(--tei-fg);
+  }
+
+  .tei-collapsible-toggle svg {
+    inline-size: 1em;
+    block-size: 1em;
+  }
+
+  /* Saved, a drawn chevron in the same place (no image: strict CSPs block them). */
+  :where(.tei-prose) summary::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0.5em;
+    inset-block-start: calc(0.5lh - 0.25em);
+    inline-size: 0.5em;
+    block-size: 0.5em;
+    border-block-start: 2px solid var(--tei-fg-muted);
+    border-inline-end: 2px solid var(--tei-fg-muted);
+    rotate: 45deg;
+    translate: -0.125em 0;
+    transition: rotate var(--tei-duration) ease;
+  }
+
+  :where(.tei-prose) details:dir(rtl) > summary::before {
+    rotate: -135deg;
+    translate: 0.125em 0;
+  }
+
+  :where(.tei-prose) details[open] > summary::before {
+    rotate: 135deg;
+    translate: 0 -0.125em;
+  }
+
+  .tei-collapsible:dir(rtl) > .tei-collapsible-toggle {
+    scale: -1 1;
+  }
+
+  .tei-collapsible[data-open] > .tei-collapsible-toggle {
+    rotate: 90deg;
+  }
+
+  .tei-collapsible[data-open]:dir(rtl) > .tei-collapsible-toggle {
+    rotate: -90deg;
+  }
+
+  /* A page break: a dashed rule, labelled in the editor; on paper, a new page.
+   * Borders, not a gradient: a 1px gradient on a half pixel vanishes in Firefox. */
+  .tei-page-break,
+  :where(.tei-prose) hr[data-tei-page-break] {
+    display: flex;
+    align-items: center;
+    gap: var(--tei-space-2);
+    block-size: 1.5em;
+    margin: 0.75em 0;
+    border: 0;
+    break-after: page;
+    user-select: none;
+  }
+
+  .tei-page-break {
+    cursor: pointer;
+  }
+
+  /* Saved HTML has no label: one rule, as tall as the editor's, so a
+   * server-rendered document does not move as the editor takes over. */
+  .tei-page-break::before,
+  .tei-page-break::after,
+  :where(.tei-prose) hr[data-tei-page-break]::after {
+    content: "";
+    flex: 1;
+    border-block-start: 1px dashed var(--tei-border-strong);
+  }
+
+  .tei-page-break-label {
+    color: var(--tei-fg-subtle);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .tei-indent {
+    --tei-indent: 1.75em;
+  }
+
+  @media print {
+    /* Only the break itself, no rule on the page. */
+    .tei-page-break,
+    :where(.tei-prose) hr[data-tei-page-break] {
+      visibility: hidden;
+      block-size: 0;
+      margin: 0;
+    }
+  }
+}

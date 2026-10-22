@@ -8,6 +8,9 @@ import { Bold } from '../../src/extensions/formatting/index.js';
 import { RichText } from '../../src/extensions/rich-text/index.js';
 import { StarterKit } from '../../src/extensions/starter-kit/index.js';
 import type { TeiEditor } from '../../src/index.js';
+import { full } from '../../src/presets/full.js';
+import { minimal } from '../../src/presets/minimal.js';
+import { notion } from '../../src/presets/notion.js';
 import {
   createReactTeiEditor,
   Editor,
@@ -40,7 +43,7 @@ describe('Editor', () => {
   });
 
   it('presets and slots choose the parts', () => {
-    const { rerender } = render(<Editor preset="notion" />);
+    const { rerender } = render(<Editor preset={notion} />);
     expect(screen.queryByRole('toolbar')).toBeNull();
     rerender(
       <Editor key="b" slots={{ toolbar: <nav>mine</nav>, footer: <footer>42 words</footer> }} />,
@@ -62,14 +65,41 @@ describe('Editor', () => {
       return box.querySelector('.tei')?.hasAttribute('data-tei-handles');
     };
     // Server HTML, before any part loads: the frame says the gutter is there.
-    expect(gutter(renderToString(<Editor preset="full" />))).toBe(true);
-    expect(gutter(renderToString(<Editor preset="notion" />))).toBe(true);
-    expect(gutter(renderToString(<Editor preset="minimal" />))).toBe(false);
+    expect(gutter(renderToString(<Editor preset={full} />))).toBe(true);
+    expect(gutter(renderToString(<Editor preset={notion} />))).toBe(true);
+    expect(gutter(renderToString(<Editor preset={minimal} />))).toBe(false);
     // No handle, no gutter: turned off, or without Blocks.
-    expect(gutter(renderToString(<Editor preset="full" slots={{ blockHandle: false }} />))).toBe(
+    expect(gutter(renderToString(<Editor preset={full} slots={{ blockHandle: false }} />))).toBe(
       false,
     );
     expect(gutter(renderToString(<Editor extensions={[StarterKit]} />))).toBe(false);
+  });
+
+  it('names its preset on the frame, and holds the word count line from the first HTML', () => {
+    const frame = (html: string) => {
+      const box = document.createElement('div');
+      box.innerHTML = html;
+      return box.querySelector('[data-tei-frame]') as HTMLElement;
+    };
+    const withFull = frame(renderToString(<Editor preset={full} />));
+    expect(withFull.dataset.teiPreset).toBe('full');
+    // The count loads after the editor; its line is there before, so nothing moves.
+    expect(withFull.querySelector('.tei-word-count')?.getAttribute('aria-hidden')).toBe('true');
+    // Notion's leaves it out; StarterKit alone has no count to show.
+    expect(
+      frame(renderToString(<Editor preset={notion} />)).querySelector('.tei-word-count'),
+    ).toBeNull();
+    const plain = frame(renderToString(<Editor />));
+    expect(plain.hasAttribute('data-tei-preset')).toBe(false);
+    expect(plain.querySelector('.tei-word-count')).toBeNull();
+  });
+
+  it('loads the word count in place of its placeholder', async () => {
+    const { container } = render(<Editor preset={full} content="<p>One two three</p>" />);
+    await waitFor(() =>
+      expect(container.querySelector('.tei-word-count')?.textContent).toContain('3 words'),
+    );
+    expect(container.querySelectorAll('.tei-word-count')).toHaveLength(1);
   });
 
   it('reports changes in the chosen format, and not selection moves', () => {
@@ -176,9 +206,7 @@ describe('hydration', () => {
     container.innerHTML = renderToString(app);
     // The parts that load later are the browser's: none in the server's markup
     // (`renderToString` cannot render a lazy part not loaded yet).
-    expect(container.querySelector('[data-tei-preset]')?.hasAttribute('data-tei-ready')).toBe(
-      false,
-    );
+    expect(container.querySelector('[data-tei-frame]')?.hasAttribute('data-tei-ready')).toBe(false);
     document.body.append(container);
     const errors: unknown[] = [];
     const root = await act(async () =>
@@ -189,7 +217,7 @@ describe('hydration', () => {
     expect(container.querySelector('output')?.textContent).toBe('2 words');
     expect(screen.getByRole('toolbar', { name: 'Formatting' })).toBeTruthy();
     await waitFor(() =>
-      expect(container.querySelector('[data-tei-preset]')?.hasAttribute('data-tei-ready')).toBe(
+      expect(container.querySelector('[data-tei-frame]')?.hasAttribute('data-tei-ready')).toBe(
         true,
       ),
     );

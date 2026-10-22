@@ -21,7 +21,7 @@ import type { MenuGroupData, MenuItemData } from '../ui/menu.js';
 import { Separator, Toolbar, type ToolbarProps } from '../ui/toolbar.js';
 import { DocumentMenu } from './document-menu.js';
 import { InsertImageMenu } from './image-insert.js';
-import { InsertTableMenu } from './table-controls.js';
+import { InsertTableMenu } from './table-insert.js';
 import {
   BackgroundColorMenu,
   FontFamilyMenu,

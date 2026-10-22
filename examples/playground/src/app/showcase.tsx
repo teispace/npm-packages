@@ -1,18 +1,23 @@
 'use client';
 
-import { Editor, type EditorPreset, useEditorState, useTeiEditor } from '@teispace/teieditor/react';
+import { full } from '@teispace/teieditor/presets/full';
+import { minimal } from '@teispace/teieditor/presets/minimal';
+import { notion } from '@teispace/teieditor/presets/notion';
+import { Editor, useEditorState, useTeiEditor } from '@teispace/teieditor/react';
 import { useState } from 'react';
 import { Choice } from '@/components/choice';
 import { DEMO } from '@/content';
 import { EXTENSIONS } from '@/extensions';
 
-const PRESETS = ['full', 'notion', 'minimal'] as const satisfies readonly EditorPreset[];
+/** The editor is the page's own; a preset here only chooses the UI. */
+const PRESETS = { full, notion, minimal };
+const PRESET_NAMES = ['full', 'notion', 'minimal'] as const;
 const FORMATS = ['html', 'markdown', 'json', 'text'] as const;
 
 /** `initialHTML`: the document as the server rendered it, shown until the editor mounts. */
 export function Showcase({ initialHTML }: { initialHTML?: string }) {
   const editor = useTeiEditor({ extensions: EXTENSIONS, content: DEMO });
-  const [preset, setPreset] = useState<EditorPreset>('full');
+  const [preset, setPreset] = useState<(typeof PRESET_NAMES)[number]>('full');
   const [editable, setEditable] = useState(true);
   const [sticky, setSticky] = useState(true);
   const [format, setFormat] = useState<(typeof FORMATS)[number]>('html');
@@ -23,7 +28,7 @@ export function Showcase({ initialHTML }: { initialHTML?: string }) {
     <div className="split">
       <Editor
         editor={editor}
-        preset={preset}
+        preset={PRESETS[preset]}
         editable={editable}
         stickyToolbar={sticky}
         placeholder="Write something…"
@@ -31,7 +36,7 @@ export function Showcase({ initialHTML }: { initialHTML?: string }) {
       />
       <aside className="panel" aria-label="Settings">
         <h2>Settings</h2>
-        <Choice label="Preset" value={preset} options={PRESETS} onChange={setPreset} />
+        <Choice label="Preset" value={preset} options={PRESET_NAMES} onChange={setPreset} />
         <label>
           Editable
           <input type="checkbox" checked={editable} onChange={(e) => setEditable(e.target.checked)} />

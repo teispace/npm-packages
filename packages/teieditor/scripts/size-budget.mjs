@@ -30,15 +30,26 @@ const CASES = [
     budget: 20 * KB,
   },
   {
-    name: '<Editor> (full preset, StarterKit)',
+    name: '<Editor> (StarterKit)',
     code: `import { Editor } from '${dist('react/index.js')}'; use(Editor);`,
-    // The drop-in: every extension the full preset installs, each with a
-    // budget of its own below, plus the UI that loads up front. It grows
-    // only as the preset does; a lighter editor uses `EditorContent` and
-    // the extensions it wants. Temporarily raised while M4 lands; presets
-    // become entries of their own next, and this case measures <Editor>
-    // without them.
-    budget: 100 * KB,
+    // The drop-in UI and StarterKit. The rest of the UI loads after the
+    // editor shows, and only for the extensions installed; presets are
+    // entries of their own, measured below.
+    budget: 48 * KB,
+  },
+  {
+    // The sum of its extensions, each budgeted below: this catches what
+    // they share growing, and anything the preset pulls in by accident.
+    name: '<Editor> + presets/notion',
+    code: `import { Editor } from '${dist('react/index.js')}';
+      import { notion } from '${dist('presets/notion.js')}'; use(Editor, notion);`,
+    budget: 104 * KB,
+  },
+  {
+    name: '<Editor> + presets/full',
+    code: `import { Editor } from '${dist('react/index.js')}';
+      import { full } from '${dist('presets/full.js')}'; use(Editor, full);`,
+    budget: 111 * KB,
   },
   {
     name: 'headless React (useTeiEditor, EditorContent)',
@@ -147,12 +158,18 @@ for (const name of extensions) {
   rows.push([`+ extensions/${name}`, '', `+${fmt(cost)}`, '', fmt(budget), fails ? 'OVER' : 'ok']);
 }
 
-const css = readFileSync(dist('styles.css'));
-const cssGzip = gzipSync(css, { level: 9 }).length;
-// Temporarily raised while M4 lands; per-feature stylesheets follow.
-const cssBudget = 13 * KB;
-over ||= cssGzip > cssBudget;
-rows.push(['styles.css', fmt(css.length), fmt(cssGzip), '', fmt(cssBudget), cssGzip > cssBudget ? 'OVER' : 'ok']);
+/** Stylesheets: everything in one, and core.css for an editor that imports only what it uses. */
+const STYLES = [
+  ['styles.css', 'styles.css', 14.5 * KB],
+  ['styles/core.css', 'styles/core.css', 8 * KB],
+];
+for (const [name, path, budget] of STYLES) {
+  const css = readFileSync(dist(path));
+  const gzip = gzipSync(css, { level: 9 }).length;
+  const fails = gzip > budget;
+  over ||= fails;
+  rows.push([name, fmt(css.length), fmt(gzip), '', fmt(budget), fails ? 'OVER' : 'ok']);
+}
 
 const head = ['case', 'min', 'min+gzip', 'lazy', 'budget', ''];
 const widths = head.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)));

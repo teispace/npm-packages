@@ -43,6 +43,11 @@
       "import": "./dist/extensions/*/index.js",
       "default": "./dist/extensions/*/index.js"
     },
+    "./presets/*": {
+      "types": "./dist/presets/*.d.ts",
+      "import": "./dist/presets/*.js",
+      "default": "./dist/presets/*.js"
+    },
     "./react": {
       "types": "./dist/react/index.d.ts",
       "import": "./dist/react/index.js",
@@ -59,6 +64,7 @@
       "default": "./dist/server/index.js"
     },
     "./styles.css": "./dist/styles.css",
+    "./styles/*": "./dist/styles/*",
     "./package.json": "./package.json"
   },
   "files": [

@@ -1,0 +1,563 @@
+/*
+ * Images, files and embeds: in the document, in saved HTML under
+ * `.tei-prose`, and the UI that edits them (the insert form, alt text,
+ * renaming, the resize handles).
+ */
+@layer teieditor {
+  /* Embeds: a frame from another site. The editor's are .tei-embed around
+   * the frame, saved HTML's the iframe alone; both are as wide as the text
+   * (or the provider's widest), at its ratio (16/9 unless it says) or a
+   * height it reports, placed by data-align. */
+  .tei-embed {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 0.75em;
+    user-select: none;
+  }
+
+  .tei-embed[data-align="start"] {
+    justify-content: flex-start;
+  }
+
+  .tei-embed[data-align="end"] {
+    justify-content: flex-end;
+  }
+
+  :where(.tei-prose) iframe[data-tei-embed],
+  .tei-embed-frame {
+    display: block;
+    position: relative;
+    inline-size: 100%;
+    max-inline-size: var(--tei-embed-max, 100%);
+    block-size: auto;
+    aspect-ratio: var(--tei-embed-ratio, 16 / 9);
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--tei-radius);
+    background: var(--tei-bg-muted);
+  }
+
+  :where(.tei-prose) iframe[data-tei-embed] {
+    margin: 0 auto 0.75em;
+  }
+
+  :where(.tei-prose) iframe[data-tei-embed][data-align="start"] {
+    margin-inline-start: 0;
+  }
+
+  :where(.tei-prose) iframe[data-tei-embed][data-align="end"] {
+    margin-inline-end: 0;
+  }
+
+  /* X posts: as tall as the post says, no wider than X draws them. */
+  :where(.tei-prose) iframe[data-tei-embed="x"],
+  [data-tei-embed="x"] .tei-embed-frame {
+    max-inline-size: 550px;
+    block-size: var(--tei-embed-height, 320px);
+    aspect-ratio: auto;
+  }
+
+  .tei-embed-frame iframe {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    border: 0;
+  }
+
+  /* While editing, a click selects the embed; once selected, it plays. */
+  [data-tei-content]:not([data-tei-readonly]) .tei-embed:not([data-tei-selected]) iframe {
+    pointer-events: none;
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-embed {
+    cursor: pointer;
+  }
+
+  /* With consent: a button in the frame's place until the reader asks. */
+  .tei-embed-load {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: var(--tei-space-1);
+    position: absolute;
+    inset: 0;
+    padding: var(--tei-space-4);
+    border: 1px dashed var(--tei-border-strong);
+    border-radius: inherit;
+    background: var(--tei-bg-subtle);
+    color: var(--tei-fg);
+    font: inherit;
+    text-align: center;
+    cursor: pointer;
+    transition:
+      background-color var(--tei-duration) var(--tei-ease),
+      border-color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-embed-load:hover {
+    border-color: var(--tei-accent);
+    background: var(--tei-bg-hover);
+  }
+
+  .tei-embed-load:focus-visible {
+    outline: 2px solid var(--tei-accent);
+    outline-offset: -2px;
+  }
+
+  .tei-embed-load-title {
+    font-weight: 500;
+  }
+
+  .tei-embed-load-host,
+  .tei-embed-missing {
+    color: var(--tei-fg-muted);
+    font-size: 0.875em;
+  }
+
+  /* With no provider for it, a short note, not a frame's worth of nothing. */
+  [data-unknown] > .tei-embed-frame {
+    aspect-ratio: auto;
+  }
+
+  .tei-embed-missing {
+    display: block;
+    padding: var(--tei-space-3) var(--tei-space-4);
+    text-align: center;
+  }
+
+  /* Images: <img>, or <figure> with a caption. A figure is a table box as
+   * wide as its image, so the caption wraps to that width; data-align places
+   * it. The editor's are .tei-image, saved HTML's plain figures. Rules are in
+   * order of specificity, saved HTML's and the editor's interleaved. */
+  :where(.tei-prose) figure,
+  .tei-image {
+    display: table;
+    position: relative;
+    margin: 0 auto 0.75em;
+  }
+
+  :where(.tei-prose) figure[data-align="start"],
+  .tei-image[data-align="start"] {
+    margin-inline-start: 0;
+  }
+
+  :where(.tei-prose) figure[data-align="end"],
+  .tei-image[data-align="end"] {
+    margin-inline-end: 0;
+  }
+
+  :where(.tei-prose) figure[data-align="full"],
+  .tei-image[data-align="full"] {
+    inline-size: 100%;
+  }
+
+  .tei-image {
+    user-select: none;
+  }
+
+  :where(.tei-prose) img {
+    display: block;
+    max-inline-size: 100%;
+    block-size: auto;
+    margin: 0 auto 0.75em;
+    border-radius: var(--tei-radius-sm);
+  }
+
+  :where(.tei-prose) figure img {
+    margin: 0;
+  }
+
+  .tei-image img,
+  .tei-inline-image img {
+    display: block;
+    max-inline-size: 100%;
+    block-size: auto;
+    border-radius: var(--tei-radius-sm);
+  }
+
+  :where(.tei-prose) figure[data-align="full"] img {
+    inline-size: 100%;
+  }
+
+  .tei-image[data-align="full"] img {
+    inline-size: 100%;
+  }
+
+  /* Uploading: the file shows dimmed, with a bar filling across its top. */
+  .tei-image[data-tei-uploading] img,
+  .tei-inline-image[data-tei-uploading] img {
+    opacity: 0.6;
+  }
+
+  .tei-image[data-tei-uploading]::after,
+  .tei-inline-image[data-tei-uploading]::after {
+    content: "";
+    position: absolute;
+    inset-block-start: var(--tei-space-2);
+    inset-inline: var(--tei-space-2);
+    block-size: 4px;
+    border-radius: 2px;
+    background:
+      linear-gradient(
+        to right,
+        var(--tei-accent) calc(var(--tei-progress, 0) * 100%),
+        transparent 0
+      ),
+      var(--tei-bg-overlay);
+    box-shadow: var(--tei-shadow-sm);
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-image img,
+  [data-tei-content]:not([data-tei-readonly]) .tei-inline-image img {
+    cursor: pointer;
+  }
+
+  /* Selected: the outline goes round the image, not its caption. */
+  [data-tei-content] .tei-image[data-tei-selected],
+  [data-tei-content] .tei-inline-image[data-tei-selected] {
+    outline: none;
+  }
+
+  [data-tei-content] .tei-image[data-tei-selected] img,
+  [data-tei-content] .tei-inline-image[data-tei-selected] img {
+    outline: 2px solid var(--tei-accent);
+    outline-offset: 2px;
+  }
+
+  /* An embed's outline goes round its frame, which may be narrower. */
+  [data-tei-content] .tei-embed[data-tei-selected] {
+    outline: none;
+  }
+
+  [data-tei-content] .tei-embed[data-tei-selected] .tei-embed-frame {
+    outline: 2px solid var(--tei-accent);
+    outline-offset: 2px;
+  }
+
+  :where(.tei-prose) figcaption {
+    display: table-caption;
+    caption-side: bottom;
+    padding-block-start: var(--tei-space-2);
+    color: var(--tei-fg-muted);
+    font-size: 0.875em;
+    text-align: center;
+  }
+
+  .tei-image figcaption {
+    display: table-caption;
+    position: relative;
+    caption-side: bottom;
+    padding-block-start: var(--tei-space-2);
+    color: var(--tei-fg-muted);
+    font-size: 0.875em;
+    text-align: center;
+    user-select: text;
+  }
+
+  :where(.tei-prose) figure[data-align="start"] figcaption {
+    text-align: start;
+  }
+
+  :where(.tei-prose) figure[data-align="end"] figcaption {
+    text-align: end;
+  }
+
+  .tei-image[data-align="start"] figcaption {
+    text-align: start;
+  }
+
+  .tei-image[data-align="end"] figcaption {
+    text-align: end;
+  }
+
+  .tei-image figcaption:empty,
+  [data-tei-readonly] .tei-image figcaption:has(p > br:only-child) {
+    display: none;
+  }
+
+  .tei-image figcaption p {
+    margin: 0;
+  }
+
+  /* An empty caption says what it is for while it can be typed in. */
+  [data-tei-content]:not([data-tei-readonly])
+    .tei-image
+    figcaption[data-placeholder]:has(p > br:only-child)::before {
+    content: attr(data-placeholder);
+    position: absolute;
+    inset-inline: 0;
+    color: var(--tei-fg-placeholder);
+    pointer-events: none;
+  }
+
+  /* Inline images: in a line of text like a character, or floated to a
+   * side with the text wrapping round. Saved HTML's are img[data-inline]. */
+  :where(.tei-prose) img[data-inline] {
+    display: inline-block;
+    margin: 0;
+  }
+
+  .tei-inline-image {
+    display: inline-block;
+    position: relative;
+    max-inline-size: 100%;
+    user-select: none;
+  }
+
+  :where(.tei-prose) img[data-float="start"],
+  .tei-inline-image[data-float="start"] {
+    float: inline-start;
+    margin-block: 0.25em 0.5em;
+    margin-inline-end: 1em;
+  }
+
+  :where(.tei-prose) img[data-float="end"],
+  .tei-inline-image[data-float="end"] {
+    float: inline-end;
+    margin-block: 0.25em 0.5em;
+    margin-inline-start: 1em;
+  }
+
+  /* Files: a card with the file's kind, name and size, which downloads it.
+   * The editor's are .tei-file; saved HTML's a[data-tei-file] draws the same
+   * card from attributes, to the pixel, so server HTML doesn't shift. */
+  :where(.tei-prose) a[data-tei-file],
+  .tei-file {
+    --tei-file-badge: 2.5rem;
+    position: relative;
+    max-inline-size: 28rem;
+    margin: 0 0 0.75em;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius);
+    background: var(--tei-bg-subtle);
+    color: var(--tei-fg);
+    line-height: 1.35;
+    text-decoration: none;
+    transition: border-color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-file {
+    display: grid;
+    grid-template-columns: var(--tei-file-badge) minmax(0, 1fr);
+    column-gap: var(--tei-space-3);
+    align-items: center;
+    padding: var(--tei-space-2) var(--tei-space-3) var(--tei-space-2) var(--tei-space-2);
+  }
+
+  :where(.tei-prose) a[data-tei-file]::before,
+  .tei-file::before {
+    content: attr(data-ext);
+    display: grid;
+    place-items: center;
+    block-size: var(--tei-file-badge);
+    overflow: hidden;
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-accent-subtle);
+    color: var(--tei-accent);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  /* Saved HTML: one line of name, cut short like the editor's, the badge
+   * and the size (from `title`) placed round it; padding centres the stack
+   * in the badge's height. */
+  :where(.tei-prose) a[data-tei-file] {
+    --tei-file-gap: calc((var(--tei-file-badge) - 1.35em) / 2);
+    display: block;
+    overflow: hidden;
+    padding-block: calc(var(--tei-space-2) + var(--tei-file-gap));
+    padding-inline: calc(var(--tei-space-2) + var(--tei-file-badge) + var(--tei-space-3))
+      var(--tei-space-3);
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :where(.tei-prose) a[data-tei-file][title] {
+    /* Name and size: 1.35em + 1.35 × 0.8125em. */
+    --tei-file-gap: calc((var(--tei-file-badge) - 2.446875em) / 2);
+    padding-block-end: calc(var(--tei-space-2) + var(--tei-file-gap) + 1.096875em);
+  }
+
+  :where(.tei-prose) a[data-tei-file]::before {
+    position: absolute;
+    inset-block-start: var(--tei-space-2);
+    inset-inline-start: var(--tei-space-2);
+    inline-size: var(--tei-file-badge);
+  }
+
+  :where(.tei-prose) a[data-tei-file][title]::after {
+    content: attr(title);
+    position: absolute;
+    inset-block-end: calc(var(--tei-space-2) + var(--tei-file-gap));
+    inset-inline-start: calc(var(--tei-space-2) + var(--tei-file-badge) + var(--tei-space-3));
+    color: var(--tei-fg-muted);
+    font-size: 0.8125em;
+    font-weight: 400;
+  }
+
+  :where(.tei-prose) a[data-tei-file]:hover,
+  .tei-file:hover {
+    border-color: var(--tei-border-strong);
+  }
+
+  .tei-file {
+    user-select: none;
+  }
+
+  .tei-file-link {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* The link covers the card; while editing, a click selects the card. */
+  .tei-file-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .tei-file-name {
+    overflow: hidden;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tei-file-meta {
+    color: var(--tei-fg-muted);
+    font-size: 0.8125em;
+  }
+
+  .tei-file-meta:empty {
+    display: none;
+  }
+
+  /* Uploading: the card fills as it goes. */
+  .tei-file[data-tei-uploading] {
+    background: linear-gradient(
+      to right,
+      var(--tei-accent-subtle) calc(var(--tei-progress, 0) * 100%),
+      var(--tei-bg-subtle) 0
+    );
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-file {
+    cursor: pointer;
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-file-link {
+    pointer-events: none;
+  }
+
+  /* Images and files: the insert form, alt text, renaming, and the resize handles. */
+  .tei-image-insert,
+  .tei-image-alt,
+  .tei-file-rename {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tei-space-2);
+    inline-size: min(21rem, calc(100vw - 2rem));
+  }
+
+  .tei-image-insert .tei-link-form,
+  .tei-image-alt .tei-link-form,
+  .tei-file-rename .tei-link-form {
+    inline-size: auto;
+  }
+
+  .tei-image-alt > .tei-hint {
+    margin: 0 var(--tei-space-1);
+  }
+
+  .tei-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tei-space-1);
+    padding: var(--tei-space-4) var(--tei-space-3);
+    border: 1px dashed var(--tei-border-strong);
+    border-radius: var(--tei-radius);
+    transition:
+      border-color var(--tei-duration) var(--tei-ease),
+      background-color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-dropzone[data-over] {
+    border-color: var(--tei-accent);
+    background: var(--tei-accent-subtle);
+  }
+
+  .tei-image-resizer {
+    position: fixed;
+    inset: 0 auto auto 0;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .tei-image-handle {
+    --tei-handle: 12px;
+    position: absolute;
+    inline-size: var(--tei-handle);
+    block-size: var(--tei-handle);
+    margin: calc(var(--tei-handle) / -2);
+    padding: 0;
+    border: 2px solid var(--tei-bg);
+    border-radius: 50%;
+    background: var(--tei-accent);
+    box-shadow: var(--tei-shadow-sm);
+    pointer-events: auto;
+    touch-action: none;
+  }
+
+  @media (pointer: coarse) {
+    .tei-image-handle {
+      --tei-handle: 20px;
+    }
+  }
+
+  .tei-image-handle:focus-visible {
+    outline: 2px solid var(--tei-ring);
+    outline-offset: 2px;
+  }
+
+  /* Physical corners: the image does not mirror in right-to-left text. */
+  .tei-image-handle[data-corner="nw"] {
+    top: 0;
+    left: 0;
+    cursor: nwse-resize;
+  }
+
+  .tei-image-handle[data-corner="ne"] {
+    top: 0;
+    right: 0;
+    cursor: nesw-resize;
+  }
+
+  .tei-image-handle[data-corner="sw"] {
+    bottom: 0;
+    left: 0;
+    cursor: nesw-resize;
+  }
+
+  .tei-image-handle[data-corner="se"] {
+    right: 0;
+    bottom: 0;
+    cursor: nwse-resize;
+  }
+
+  .tei-image-resizer[data-active] .tei-image-handle {
+    transform: scale(1.15);
+  }
+}

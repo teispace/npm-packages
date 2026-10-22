@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { getExtensionOptions } from '../../core/define.js';
+import { getPeerOptions } from '../../core/define.js';
 import type { TeiEditor } from '../../core/editor.js';
 import {
   $getFontSize,
@@ -9,9 +9,8 @@ import {
   colorItems,
   fontFamilyItems,
   fontSizeItems,
-  TextStyle,
   type TextStyleOptions,
-} from '../../extensions/text-style/index.js';
+} from '../../extensions/text-style/items.js';
 import { useItemStates } from '../items.js';
 import { ColorPicker, NumberStepper } from '../ui/controls.js';
 import { DropdownMenu } from '../ui/dropdown.js';
@@ -21,7 +20,7 @@ import { useEditorState } from '../use-editor-state.js';
 import type { ToolbarSubmenu } from './editor-toolbar.js';
 
 function useOptions(editor: TeiEditor): Readonly<TextStyleOptions> | undefined {
-  return getExtensionOptions(editor, TextStyle);
+  return getPeerOptions<TextStyleOptions>(editor.lexical, '@teispace/teieditor/text-style');
 }
 
 /** Set a preview font on a menu row through the CSSOM: a strict CSP blocks style attributes. */
@@ -91,7 +90,10 @@ export function FontFamilyMenu({ editor }: { editor: TeiEditor }) {
 }
 
 FontFamilyMenu.overflowMenu = (editor: TeiEditor): ToolbarSubmenu => {
-  const options = getExtensionOptions(editor, TextStyle);
+  const options = getPeerOptions<TextStyleOptions>(
+    editor.lexical,
+    '@teispace/teieditor/text-style',
+  );
   return {
     label: editor.t('style.fontFamily'),
     icon: 'fontFamily',
@@ -132,7 +134,10 @@ export function FontSizeStepper({ editor }: { editor: TeiEditor }) {
 }
 
 FontSizeStepper.overflowMenu = (editor: TeiEditor): ToolbarSubmenu => {
-  const options = getExtensionOptions(editor, TextStyle);
+  const options = getPeerOptions<TextStyleOptions>(
+    editor.lexical,
+    '@teispace/teieditor/text-style',
+  );
   return {
     label: editor.t('style.fontSize'),
     icon: 'fontSize',
@@ -199,7 +204,10 @@ function colorControl(kind: 'color' | 'backgroundColor') {
   }
 
   ColorMenu.overflowMenu = (editor: TeiEditor): ToolbarSubmenu => {
-    const options = getExtensionOptions(editor, TextStyle);
+    const options = getPeerOptions<TextStyleOptions>(
+      editor.lexical,
+      '@teispace/teieditor/text-style',
+    );
     const colors = kind === 'color' ? options?.colors : options?.backgroundColors;
     return {
       label: editor.t(labelId),

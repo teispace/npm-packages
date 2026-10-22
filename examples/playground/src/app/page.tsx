@@ -8,8 +8,8 @@ export default function Page() {
     <>
       <h1>The editor</h1>
       <p className="lead">
-        One element: <code>&lt;Editor /&gt;</code> with StarterKit. Change the preset and the
-        rest live; the document stays, because the editor comes from <code>useTeiEditor</code>.
+        One element: <code>{'<Editor preset={full} />'}</code>, every feature. Switch the preset and
+        the UI follows; the document stays, because the editor comes from <code>useTeiEditor</code>.
       </p>
       {/* The document is in the page's HTML: no blank editor while scripts load. */}
       <Showcase initialHTML={renderToHTML(DEMO, { extensions: EXTENSIONS, from: 'html' })} />
