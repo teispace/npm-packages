@@ -12,6 +12,21 @@ yarn workspace next-themes-examples dev
 
 Visit [http://localhost:3000](http://localhost:3000).
 
+## Browser checks
+
+```bash
+yarn workspace next-themes-examples playwright install chromium firefox webkit
+yarn workspace next-themes-examples test:e2e
+```
+
+The Playwright suite rebuilds the package, builds the app and serves it with `next start` under the strict policy in `src/proxy.ts`. The dev server needs a relaxed policy for hot reload, so only the production build is tested. In Chromium, Firefox and WebKit it checks for zero CSP violations, both from the in-page `securitypolicyviolation` event and from `report-uri` (`src/app/api/csp-report`), across:
+
+- theme switches with `disableTransitionOnChange` and with View Transitions;
+- back/forward-cache restores, which re-run the inline script;
+- each of those with constructable stylesheets and without them (the `<style nonce>` fallback).
+
+`e2e/harness.spec.ts` serves two policies the Next.js app can't isolate: a hash-only `script-src` using `getThemeScriptHash()`, with a tampered-script control, and `require-trusted-types-for 'script'` with no policy allowed.
+
 ## Routes
 
 | Route | What it shows |
@@ -25,6 +40,7 @@ Visit [http://localhost:3000](http://localhost:3000).
 | `/themed` | `<ThemedImage>` and `<ThemedIcon>` |
 | `/hooks` | `useThemeValue` (value maps) + `useThemeEffect` (change callbacks) |
 | `/storage` | Side-by-side comparison of the five storage modes |
+| `/csp` | The whole app runs under a strict nonce CSP (`src/proxy.ts`); theme switches with transitions report zero violations |
 | `/advanced` | `forcedTheme`, `disableTransitionOnChange`, array attributes, `value` map, CSP nonce, `themeColor`, `respectReducedMotion`, `onChange` |
 
 ## Implementation notes

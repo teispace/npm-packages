@@ -28,3 +28,10 @@ export const EXAMPLE_TITLE = 'Product Designer';
 export const EXAMPLE_EMAIL = 'hello@example.com';
 /** An obvious sequence, in the right shape for the locale but unallocated. */
 export const EXAMPLE_PHONE = '+9779812345678';
+/** An account at a reserved domain, for the authenticator sample. */
+export const EXAMPLE_ACCOUNT = 'you@example.com';
+/**
+ * A fictional 20-byte Base32 secret — the length RFC 4226 recommends, so the
+ * sample passes `validateOtpauth` without a warning. It protects nothing.
+ */
+export const EXAMPLE_OTP_SECRET = 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP';

@@ -2,6 +2,7 @@ export type PayloadGroup =
   | 'web'
   | 'contact'
   | 'network'
+  | 'security'
   | 'messaging'
   | 'place'
   | 'payment'
@@ -31,6 +32,12 @@ export type PayloadField = {
   help?: string;
   /** Lay two fields side by side on wide screens. */
   half?: boolean;
+  /**
+   * The value is a credential — a WiFi password, an authenticator secret. The
+   * CLI masks it, batch filenames never use it, and `payloadFieldProps` from
+   * `teiqr/react` renders it as a password input with autocomplete off.
+   */
+  sensitive?: boolean;
 };
 
 export type PayloadValues = Record<string, string | undefined>;
@@ -60,6 +67,7 @@ export const GROUP_LABEL: Record<PayloadGroup, string> = {
   web: 'Web & app',
   contact: 'Contact',
   network: 'Network',
+  security: 'Security',
   messaging: 'Messaging',
   place: 'Time & place',
   payment: 'Payments',

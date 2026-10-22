@@ -22,7 +22,7 @@ export const NETWORK_TYPES: PayloadType[] = [
           { value: 'WPA2-EAP', label: 'WPA2 Enterprise (EAP)' },
         ],
       },
-      { name: 'password', label: 'Password', type: 'text', half: true },
+      { name: 'password', label: 'Password', type: 'text', half: true, sensitive: true },
       {
         name: 'hidden',
         label: 'Hidden network',

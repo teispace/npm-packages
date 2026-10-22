@@ -36,6 +36,7 @@ yarn add @teispace/next-themes
   - [`<ThemedIcon />`](#themedicon-)
   - [`<ScopedTheme />`](#scopedtheme-)
 - [View transitions](#view-transitions)
+- [Content Security Policy](#content-security-policy)
 - [Tailwind](#tailwind)
   - [Tailwind v4](#tailwind-v4)
   - [Tailwind v3](#tailwind-v3)
@@ -146,19 +147,14 @@ That's it. The anti-FOUC script is injected server-side via `useServerInsertedHT
 ```tsx
 // app/layout.tsx — still a server component
 import { ThemeProvider } from '@teispace/next-themes';
-import { getTheme, getThemeScript } from '@teispace/next-themes/server';
+import { getTheme, getThemeScriptProps } from '@teispace/next-themes/server';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const initialTheme = await getTheme();
-  const themeScript = getThemeScript({
-    attribute: 'class',
-    initialTheme: initialTheme ?? undefined,
-  });
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: anti-FOUC */}
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script {...getThemeScriptProps({ attribute: 'class', initialTheme: initialTheme ?? undefined })} />
       </head>
       <body>
         <ThemeProvider attribute="class" initialTheme={initialTheme ?? undefined} noScript>
@@ -170,7 +166,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 }
 ```
 
-This guarantees the inline script runs **before** the browser paints any body pixels, regardless of how Next.js streams the response. Pass the same options to `getThemeScript()` and `<ThemeProvider>` so they stay in sync — or use [`createThemes()`](#typed-factory--createthemes) so the configuration lives in one place.
+This guarantees the inline script runs **before** the browser paints any body pixels, regardless of how Next.js streams the response. Pass the same options to `getThemeScriptProps()` and `<ThemeProvider>` so they stay in sync — or use [`createThemes()`](#typed-factory--createthemes) so the configuration lives in one place.
 
 ### Vite / Remix / Generic React
 
@@ -277,7 +273,7 @@ On the server, the provider emits a tiny, synchronous, blocking `<script>` insid
 
 It runs **before** React hydrates, **before** first paint, so the correct theme is visible in the first rendered frame — no flash.
 
-The script accepts a `nonce` for CSP environments and always wraps its body in a `try/catch` so it is silent on any runtime error (never blocks rendering).
+The script always wraps its body in a `try/catch`, so a runtime error is silent and never blocks rendering. Its text is constant (the configuration travels in a `data-teispace-theme` attribute), so it works under a nonce or a single published hash. See [Content Security Policy](#content-security-policy).
 
 ---
 
@@ -659,7 +655,7 @@ import { ScopedTheme } from '@teispace/next-themes';
 <ScopedTheme theme="dark" value={{ dark: 'theme-dark' }}>...</ScopedTheme>
 ```
 
-Props: `theme`, `children`, `as?` (default `'div'`), `attribute?` (default `'class'`), `value?`, plus any DOM props passed through to the wrapper element.
+Props: `theme`, `children`, `as?` (default `'div'`), `attribute?` (default `'class'`), `value?`, `enableColorScheme?` (default `true`: sets `color-scheme` on the wrapper through the CSSOM for `light`/`dark`, unless you pass `style.colorScheme` yourself), plus any DOM props passed through to the wrapper element.
 
 ---
 
@@ -726,6 +722,70 @@ setTheme(next, {
   },
 });
 ```
+
+---
+
+## Content Security Policy
+
+The package works under a strict policy with no `'unsafe-inline'` anywhere. Here is everything it puts into the page, and what each item needs from your policy:
+
+| What | When | What it needs |
+|---|---|---|
+| Inline anti-FOUC `<script>` | Server render | `script-src`: the nonce **or** the hash from `getThemeScriptHash()` |
+| Transition-freezing stylesheet | `disableTransitionOnChange`, during a switch | Nothing where constructable stylesheets exist; otherwise `style-src` with the nonce |
+| View Transition stylesheet | `transition`, during a switch | Same as above |
+| `color-scheme` on the target element | `enableColorScheme` (default) | Nothing. It is set through the CSSOM (`el.style.colorScheme`), not a `style=""` attribute |
+| `<meta name="theme-color">` | `themeColor` | Nothing |
+
+**Stylesheets.** Short-lived styles go through a constructable `CSSStyleSheet` adopted onto the document (`document.adoptedStyleSheets`). CSP does not govern constructable stylesheets, so they need no nonce. Engines without them (Safari before 16.4, for example) get a `<style>` element that carries the provider's `nonce`; the inline script uses the nonce of the `<script>` it runs from. The package never builds `style="…"` strings and its server render emits no `style` attribute, so it needs nothing from `style-src-attr`.
+
+**Nonce-based policy.** Generate a nonce per request and pass it to the provider:
+
+```ts
+// proxy.ts (middleware.ts before Next.js 16)
+import { NextResponse, type NextRequest } from 'next/server';
+
+export function proxy(request: NextRequest) {
+  const nonce = btoa(crypto.randomUUID());
+  const csp = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `style-src 'self' 'nonce-${nonce}'`,
+    "object-src 'none'",
+    "base-uri 'self'",
+  ].join('; ');
+  const headers = new Headers(request.headers);
+  headers.set('x-nonce', nonce);
+  headers.set('content-security-policy', csp);
+  const response = NextResponse.next({ request: { headers } });
+  response.headers.set('content-security-policy', csp);
+  return response;
+}
+```
+
+```tsx
+// app/layout.tsx
+import { headers } from 'next/headers';
+
+const nonce = (await headers()).get('x-nonce') ?? undefined;
+<ThemeProvider nonce={nonce}>{children}</ThemeProvider>
+```
+
+**Hash-based policy (static pages).** The script text is the same for every configuration (the configuration travels in a `data-teispace-theme` attribute), so one hash allows it everywhere and pages can stay statically rendered:
+
+```ts
+import { getThemeScriptHash } from '@teispace/next-themes/server';
+
+const csp = `script-src 'self' ${getThemeScriptHash()}; style-src 'self'`;
+```
+
+The hash covers the script that the providers and `getThemeScriptProps()` render. It does not cover the legacy `getThemeScript()` string, whose text changes with the options.
+
+**Trusted Types.** Under `require-trusted-types-for 'script'` the package needs no policy: the script reaches the page as server-rendered HTML, hydration does not assign `innerHTML`, and a client-only render does not emit the script at all.
+
+**Cloudflare Rocket Loader.** The script carries `data-cfasync="false"`, so Rocket Loader leaves it alone and it still runs before first paint.
+
+The example app serves every page under the nonce policy above, and its Playwright suite checks Chromium, Firefox and WebKit for zero violations across theme switches, View Transitions and back/forward-cache restores, with constructable stylesheets and without them.
 
 ---
 
@@ -927,15 +987,15 @@ npx jscodeshift --parser=tsx \
 |---|---|---|
 | #397 | React 19.2 *"Encountered a script tag while rendering React component"* when the provider client-remounts (e.g. an `app/[lang]` locale switch) | The Next entry never renders the script into the React tree at all (`useServerInsertedHTML`); the generic entry emits it only while un-hydrated and drops it on the first client commit. |
 | #389 | `localStorage.getItem is not a function` on Node 25 (`window === globalThis`) | Capability probes (`hasLocalStorage()`, `isDom()`, ...) instead of `typeof window` checks. |
-| #387 / #385 | Inline `<script>` warning in React 19 / Next 16 | Script injected via `useServerInsertedHTML`, or out of the React tree via `getThemeScript()` in `<head>`. |
+| #387 / #385 | Inline `<script>` warning in React 19 / Next 16 | Script injected via `useServerInsertedHTML`, or out of the React tree via `getThemeScriptProps()` in `<head>`. |
 | #375 | Stale theme with `cacheComponents` / `Activity` | Store lives outside React via `useSyncExternalStore` — never stale. |
 | #374 | `react-hooks/set-state-in-effect` ESLint warning | We never `setState` in effect; external store updates flow through `useSyncExternalStore`. |
 | #373 | Tailwind v4 toggle failure | First-class v4 preset at `@teispace/next-themes/tailwind.css`. |
 | #371 | `prefers-color-scheme` ignored | Script + store both subscribe to the media query directly. |
-| #370 / #369 / #368 | `__name is not defined` / minification / Cloudflare flash | Inline script body is a raw string literal (not a serialized function); build asserts no `__name(` survives. |
+| #370 / #369 / #368 | `__name is not defined` / minification / Cloudflare flash | Inline script body is a raw string literal (not a serialized function); build asserts no `__name(` survives; the script carries `data-cfasync="false"` so Rocket Loader leaves it alone. |
 | #367 | `children` missing on `ThemeProviderProps` | Props include `children?: ReactNode`. |
-| #351 | Theme class removed on back/forward | `pageshow` re-resolves on bfcache restore (script + store). |
-| #349 | Generate script string at build time | `getThemeScript()` exported from `/server`. |
+| #351 | Theme class removed on back/forward, or by other code | `pageshow` re-resolves on bfcache restore (script + store); a `MutationObserver` restores the theme attribute if something else strips it. |
+| #349 | Generate script string at build time | The script text is a constant (`THEME_SCRIPT` from `/script`); `getThemeScript()` still builds a per-config string. |
 | #345 | LS overrides system after `setTheme` | `followSystem` prop forces system tracking and is honored by the inline script. |
 | #326 / #325 | Suspense / hydration boundary breaks with provider | `useSyncExternalStore` instead of `useState` + effect. |
 | #311 | Image example flickers on initial load | `<ThemedImage>` no longer waits for mount; honors `initialTheme`. |
@@ -943,7 +1003,8 @@ npx jscodeshift --parser=tsx \
 | #295 | Don't store in localStorage | `storage="none"`. |
 | #292 | Multiple classes per theme | `value` map accepts space-separated class strings. |
 | #254 / #215 / #219 | Nested / multi-provider | Per-instance stores; `<ScopedTheme>` for sub-tree overrides. |
-| #242 | Flash with `basePath` | Script doesn't depend on path; pre-paint placement via `getThemeScript()` eliminates flash. |
+| #242 | Flash with `basePath` | Script doesn't depend on path; pre-paint placement via `getThemeScriptProps()` eliminates flash. |
+| #303 | Strict CSP blocks the injected `<style>` | Short-lived styles use constructable stylesheets (outside CSP), with a nonced `<style>` fallback; one published hash for hash-based policies. See [Content Security Policy](#content-security-policy). |
 | #236 | Multiple attributes | `attribute={['class', 'data-theme']}`. |
 | #226 / #187 | Force theme per route (App Router) | Route-group `<ThemeProvider forcedTheme="...">`. |
 | #213 | XSS via cookie / `forcedTheme` value | Inline-script JSON is HTML-safe encoded (`</script>`, U+2028/9 escaped). |
@@ -985,8 +1046,8 @@ Genuine open feature requests not in scope: themes-with-themes (#309, #73), stor
 | `enableColorScheme` | `boolean` | `true` | Sync `style.colorScheme` on the target element. |
 | `themeColor` | `string \| Record<string, string>` | — | Sync `<meta name="theme-color">`. |
 | `initialTheme` | `string` | — | Seed from the server (cookie, DB, session). |
-| `nonce` | `string` | — | CSP nonce for the inline anti-FOUC script. |
-| `noScript` | `boolean` | `false` | Skip the inline script. Use when you have rendered `getThemeScript()` in `<head>` yourself — most flicker-resistant placement. |
+| `nonce` | `string` | — | CSP nonce for the inline script and for the `<style>` fallback where constructable stylesheets are missing. See [Content Security Policy](#content-security-policy). |
+| `noScript` | `boolean` | `false` | Skip the inline script. Use when you have rendered `getThemeScriptProps()` in `<head>` yourself — most flicker-resistant placement. |
 | `transition` | `TransitionConfig` | — | Animate theme changes via View Transitions. |
 | `onChange` | `(theme, resolvedTheme) => void` | — | Fires on every theme change. |
 
@@ -1088,9 +1149,9 @@ Applied only on engines that support `:active-view-transition-type()`
 |---|---|
 | `@teispace/next-themes` | Next.js App Router provider + hooks + components + `createThemes` |
 | `@teispace/next-themes/client` | Same API, generic React (Vite, Remix, CRA) |
-| `@teispace/next-themes/server` | `getTheme`, `getThemeScript`, `setThemeCookie`, `writeThemeCookie`, `readColorSchemeHint`, `acceptClientHintsHeader` |
+| `@teispace/next-themes/server` | `getTheme`, `getThemeScriptProps`, `getThemeScriptHash`, `getThemeScript`, `setThemeCookie`, `writeThemeCookie`, `readColorSchemeHint`, `acceptClientHintsHeader` |
 | `@teispace/next-themes/adapters` | Storage adapter factories + cookie helpers |
-| `@teispace/next-themes/script` | `buildScript({...})` — raw inline script builder |
+| `@teispace/next-themes/script` | `THEME_SCRIPT`, `THEME_SCRIPT_ATTRIBUTE`, `THEME_SCRIPT_HASH`, `getScriptConfig`, `buildScript` — raw script building blocks |
 | `@teispace/next-themes/tailwind` | v3 `darkMode` + `themeVariant(name)` helpers |
 | `@teispace/next-themes/tailwind.css` | v4 CSS preset (import in your global CSS) |
 | `@teispace/next-themes/codemod/from-next-themes` | jscodeshift transform file |
@@ -1102,14 +1163,17 @@ internal chunk, so there is still exactly one store and one context at runtime.
 
 | Import | gzip (transitive) |
 |---|---|
-| `@teispace/next-themes/hooks/use-theme` | 509 B |
-| `@teispace/next-themes/hooks/use-theme-value` | 601 B |
-| `@teispace/next-themes/hooks/use-theme-effect` | 613 B |
-| `@teispace/next-themes/hooks/use-hydrated` | 177 B |
-| `@teispace/next-themes/components/themed-image` | 708 B |
-| `@teispace/next-themes/components/themed-icon` | 693 B |
-| `@teispace/next-themes/components/scoped-theme` | 541 B |
-| *(full `@teispace/next-themes` entry, for comparison)* | 7,797 B |
+| `@teispace/next-themes/hooks/use-theme` | 316 B |
+| `@teispace/next-themes/hooks/use-theme-value` | 387 B |
+| `@teispace/next-themes/hooks/use-theme-effect` | 441 B |
+| `@teispace/next-themes/hooks/use-hydrated` | 139 B |
+| `@teispace/next-themes/components/themed-image` | 462 B |
+| `@teispace/next-themes/components/themed-icon` | 456 B |
+| `@teispace/next-themes/components/scoped-theme` | 567 B |
+| `ThemeProvider` + `useTheme` from `@teispace/next-themes` | 6,950 B |
+| *(every export of `@teispace/next-themes`, for comparison)* | 7,828 B |
+
+Measured by bundling the import with esbuild (`--minify`, React and Next.js external) and compressing with `gzip -9`. About 2.8 KB of the provider figure is the inline script text, which ships once inside the HTML too.
 
 ---
 
@@ -1237,7 +1301,7 @@ Add `suppressHydrationWarning` to your `<html>` tag. The library already does th
 
 Causes, in order of likelihood:
 
-1. **Script runs too late.** `useServerInsertedHTML` places the inline script at the next React flush boundary, which on streamed responses can be inside `<body>` — after some pixels paint. Switch to the [zero-flicker setup](#zero-flicker-setup-recommended-for-production): render `getThemeScript()` directly in `<head>` and pass `noScript` to your provider. This is the most reliable fix.
+1. **Script runs too late.** `useServerInsertedHTML` places the inline script at the next React flush boundary, which on streamed responses can be inside `<body>` — after some pixels paint. Switch to the [zero-flicker setup](#zero-flicker-setup-recommended-for-production): render `<script {...getThemeScriptProps()} />` directly in `<head>` and pass `noScript` to your provider. This is the most reliable fix.
 2. **Storage isn't server-readable.** `storage="local"` and `storage="session"` are client-only. Switch to `'hybrid'` (default) or `'cookie'`.
 3. **`initialTheme` not wired.** Without it, the server renders with `defaultTheme`, which may disagree with the cookie-stored preference and cause a one-frame flip:
    ```tsx
@@ -1278,14 +1342,7 @@ If your code clearly wraps the consumer in `<ThemeProvider>` and you still see t
 
 ### My CSP blocks the inline script
 
-Pass a nonce:
-
-```tsx
-import { headers } from 'next/headers';
-
-const nonce = (await headers()).get('x-nonce') ?? undefined;
-<ThemeProvider nonce={nonce}>{children}</ThemeProvider>
-```
+Pass the request's nonce to the provider (`nonce={nonce}`), or add `getThemeScriptHash()` to `script-src` for a hash-based policy. Full setup in [Content Security Policy](#content-security-policy).
 
 ### I need per-theme images but want zero flash on SSR
 
@@ -1336,7 +1393,7 @@ Shared code (store, DOM, view transitions, cursor tracker) lives in tree-shakeab
 
 **Runtime overhead:**
 - `useSyncExternalStore` is React-native — no polyfill.
-- The inline anti-FOUC script is ~3.5 KB HTML-embedded (runs once per page load).
+- The inline anti-FOUC script is ~2.8 KB HTML-embedded (runs once per page load).
 - Cursor tracker is a single passive `pointerdown` listener on `document`, installed lazily on first provider mount.
 
 ---

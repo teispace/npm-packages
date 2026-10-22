@@ -19,14 +19,20 @@ export function makeUseThemeEffect(useThemeHook: UseThemeHook): UseThemeEffectHo
     deps: DependencyList = [],
   ): void {
     const { theme, resolvedTheme } = useThemeHook<T>();
-    const firstRun = useRef(true);
+    // The theme seen on mount, and whether it has changed since. A plain
+    // "skip the first run" flag fired on mount under StrictMode, which runs
+    // every effect twice: the second run was no longer "first". Comparing
+    // against the mount-time theme skips both runs. Refs are only touched
+    // inside the effect, so this stays clean under React Compiler.
+    const baseline = useRef<string | null>(null);
+    const changed = useRef(false);
     // biome-ignore lint/correctness/useExhaustiveDependencies: user-supplied deps array
     useEffect(() => {
-      // `firstRun.current` is read inside the effect, not during render, so this
-      // stays clean under React Compiler's ref-access validation.
-      if (firstRun.current) {
-        firstRun.current = false;
-        return;
+      if (!changed.current) {
+        const key = `${theme}\u0000${resolvedTheme}`;
+        if (baseline.current === null) baseline.current = key;
+        if (baseline.current === key) return;
+        changed.current = true;
       }
       return effect(theme as T, resolvedTheme as T);
     }, [theme, resolvedTheme, ...deps]);
@@ -41,4 +47,4 @@ export function makeUseThemeEffect(useThemeHook: UseThemeHook): UseThemeEffectHo
  *
  * Return a cleanup function to run on the next change, same as `useEffect`.
  */
-export const useThemeEffect: UseThemeEffectHook = makeUseThemeEffect(useTheme);
+export const useThemeEffect: UseThemeEffectHook = /*#__PURE__*/ makeUseThemeEffect(useTheme);

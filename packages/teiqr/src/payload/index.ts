@@ -3,6 +3,7 @@ import { MESSAGING_TYPES } from './messaging.js';
 import { NETWORK_TYPES } from './network.js';
 import { PAYMENT_TYPES } from './payment.js';
 import { PLACE_TYPES } from './place.js';
+import { SECURITY_TYPES } from './security.js';
 import { SOCIAL_TYPES } from './social.js';
 import type { PayloadGroup, PayloadType, PayloadValues } from './types.js';
 import { val } from './types.js';
@@ -24,6 +25,7 @@ export const PAYLOAD_TYPES: PayloadType[] = [
   ...WEB_TYPES,
   ...CONTACT_TYPES,
   ...NETWORK_TYPES,
+  ...SECURITY_TYPES,
   ...MESSAGING_TYPES,
   ...PLACE_TYPES,
   ...PAYMENT_TYPES,
@@ -89,6 +91,7 @@ export const PAYLOAD_GROUPS: { group: PayloadGroup; types: PayloadType[] }[] = (
     'web',
     'contact',
     'network',
+    'security',
     'messaging',
     'place',
     'payment',
@@ -154,6 +157,27 @@ export const isPayloadComplete = (typeId: string, values: PayloadValues): boolea
   const type = getPayloadType(typeId);
   if (!type) return false;
   return type.fields.every((f) => !f.required || val(values, f.name).length > 0);
+};
+
+/** What {@link redactPayloadValues} puts in place of a sensitive value. */
+export const SECRET_MASK = '••••';
+
+/** The sensitive fields of a type — WiFi password, authenticator secret — that carry a value. */
+export const sensitiveFieldsIn = (typeId: string, values: PayloadValues): string[] =>
+  (getPayloadType(typeId)?.fields ?? [])
+    .filter((field) => field.sensitive && val(values, field.name).length > 0)
+    .map((field) => field.name);
+
+/**
+ * A copy of `values` with every sensitive field replaced by {@link SECRET_MASK},
+ * for logs, previews and anything else a credential should not reach.
+ */
+export const redactPayloadValues = (typeId: string, values: PayloadValues): PayloadValues => {
+  const hidden = sensitiveFieldsIn(typeId, values);
+  if (hidden.length === 0) return values;
+  const out = { ...values };
+  for (const name of hidden) out[name] = SECRET_MASK;
+  return out;
 };
 
 export type { PayloadField, PayloadGroup, PayloadType, PayloadValues } from './types.js';

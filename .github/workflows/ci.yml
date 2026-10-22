@@ -73,7 +73,8 @@ jobs:
             ./packages/env/coverage/lcov.info,
             ./packages/next-maker/coverage/lcov.info,
             ./packages/next-themes/coverage/lcov.info,
-            ./packages/teieditor/coverage/lcov.info
+            ./packages/teieditor/coverage/lcov.info,
+            ./packages/teiqr/coverage/lcov.info
           fail_ci_if_error: false
 
   build:
@@ -200,6 +201,48 @@ jobs:
 
       - name: Run the spawning tests
         run: yarn workspace @teispace/next-maker vitest run __tests__/core/exec.test.ts
+
+  next-themes-e2e:
+    name: next-themes strict-CSP e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [quality]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Install browsers
+        working-directory: examples/next-themes
+        run: yarn playwright install --with-deps chromium firefox webkit
+
+      # The Playwright web server builds the package and the example app, then
+      # serves it under a nonce CSP; every test asserts zero violations.
+      - name: Run Playwright in Chromium, Firefox and WebKit
+        working-directory: examples/next-themes
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+        run: yarn test:e2e
+
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: next-themes-playwright-traces
+          path: examples/next-themes/test-results
+          retention-days: 7
 
   teieditor-e2e:
     name: teieditor strict-CSP e2e

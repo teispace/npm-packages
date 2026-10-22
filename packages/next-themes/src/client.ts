@@ -7,6 +7,8 @@ export type {
   ThemedImageProps,
 } from './components/index';
 export { ScopedTheme, ThemedIcon, ThemedImage } from './components/index';
+export type { ThemeContext } from './core/context';
+export type { ThemeStore } from './core/store';
 export type {
   Attribute,
   CookieOptions,
@@ -14,6 +16,7 @@ export type {
   SetThemeOptions,
   StorageConfig,
   StorageMode,
+  ThemeContract,
   ThemeState,
   TransitionConfig,
   TransitionOptions,
@@ -29,4 +32,4 @@ export { ThemeProvider } from './providers/client';
 export type { ThemeProviderProps } from './providers/props';
 
 /** See {@link createThemes} in the default entry. This variant binds the generic React provider (non-Next). */
-export const createThemes = makeCreateThemes(ClientThemeProvider);
+export const createThemes = /*#__PURE__*/ makeCreateThemes(ClientThemeProvider);

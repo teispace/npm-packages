@@ -24,14 +24,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
+      - uses: actions/checkout@v6
 
       - name: Enable Corepack
         run: corepack enable
+
+      # Same Node as every other workflow, so a fuzz failure reproduces locally.
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
 
       - name: Install
         run: yarn install --immutable
