@@ -108,7 +108,9 @@ export type TeiPlacement =
   /** The toolbar over a selected embed. */
   | 'embedMenu'
   /** The menu from a callout's icon: its kinds, and taking it away. */
-  | 'calloutMenu';
+  | 'calloutMenu'
+  /** The menu from a columns block's control: its layouts, adding and removing columns. */
+  | 'columnsMenu';
 
 /**
  * A UI entry an extension contributes — a toolbar button, a slash-menu row,

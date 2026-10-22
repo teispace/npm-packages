@@ -6,6 +6,7 @@ import { Blocks } from '../../src/extensions/blocks/index';
 import { Callout } from '../../src/extensions/callout/index';
 import { Clipboard } from '../../src/extensions/clipboard/index';
 import { Collapsible } from '../../src/extensions/collapsible/index';
+import { Columns } from '../../src/extensions/columns/index';
 import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
 import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
 import { Html } from '../../src/extensions/html/index';
@@ -136,6 +137,7 @@ function App() {
       ...(params.has('blocks') ? [Blocks] : []),
       // The document's own blocks: pull quotes, callouts, sections, page breaks.
       ...(params.has('extras') ? [PullQuote, Callout, Collapsible, PageBreak] : []),
+      ...(params.has('columns') ? [Columns] : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });
