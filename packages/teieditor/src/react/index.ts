@@ -65,6 +65,8 @@ export { TableControls } from './components/table-controls.js';
 export { InsertTableMenu } from './components/table-insert.js';
 export type { TableOfContentsPanelProps } from './components/table-of-contents.js';
 export { TableOfContentsPanel, useOutline } from './components/table-of-contents.js';
+export type { TreeViewPanelProps } from './components/tree-view.js';
+export { TreeViewPanel } from './components/tree-view.js';
 export type { TypeaheadMenuProps } from './components/typeahead-menu.js';
 export { TypeaheadMenu } from './components/typeahead-menu.js';
 export type { LimitState, WordCountProps, WordCountStat } from './components/word-count.js';

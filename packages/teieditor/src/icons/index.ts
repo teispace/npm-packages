@@ -386,6 +386,13 @@ export const regex = /* @__PURE__ */ p(
   'M9 17a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2z',
 );
 export const clock: TeiIconNode = [circle(12, 12, 10), ['path', { d: 'M12 6v6l4 2' }]];
+// Developer tools: the node tree, and playing its history back.
+export const listTree = /* @__PURE__ */ p(
+  'M21 12h-8M21 6H8M21 18h-8',
+  'M3 6v4c0 1.1.9 2 2 2h3M3 10v6c0 1.1.9 2 2 2h3',
+);
+export const play = /* @__PURE__ */ p('M6 3v18l14-9z');
+export const pause: TeiIconNode = [rect(14, 4, 4, 16, 1), rect(6, 4, 4, 16, 1)];
 
 // Actions and chrome
 export const undo = /* @__PURE__ */ p('M9 14 4 9l5-5', 'M4 9h10.5a5.5 5.5 0 0 1 0 11H11');
