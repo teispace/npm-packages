@@ -21,6 +21,7 @@ import { Columns } from '../../extensions/columns/index.js';
 import { DateTime, type DateTimeStorage } from '../../extensions/date-time/index.js';
 import { Embed, type EmbedStorage } from '../../extensions/embed/index.js';
 import { FileAttachment } from '../../extensions/file/index.js';
+import { FindReplace, type FindReplaceStorage } from '../../extensions/find-replace/index.js';
 import { Image, type ImageStorage } from '../../extensions/image/index.js';
 import { Link, type LinkStorage } from '../../extensions/link/index.js';
 import { PageBreak } from '../../extensions/page-break/index.js';
@@ -81,6 +82,9 @@ const ColumnsMenu = lazy(() =>
 const DateTimePicker = lazy(() =>
   import('./date-time-picker.js').then((module) => ({ default: module.DateTimePicker })),
 );
+const FindReplaceBar = lazy(() =>
+  import('./find-replace-bar.js').then((module) => ({ default: module.FindReplaceBar })),
+);
 const StickyMenu = lazy(() =>
   import('./sticky-menu.js').then((module) => ({ default: module.StickyMenu })),
 );
@@ -90,7 +94,7 @@ const EmbedControls = lazy(() =>
 
 /**
  * Which UI comes with it.
- * - `full`: toolbar, bubble menu, slash menu, link popover, block handles, context menu, code block bar, table, image, file and embed controls, the callout, sticky note and columns menus, the date picker.
+ * - `full`: toolbar, bubble menu, slash menu, link popover, block handles, context menu, code block bar, table, image, file and embed controls, the callout, sticky note and columns menus, the date picker, find and replace.
  * - `notion`: no toolbar; select text for the bubble menu, type `/` or press + for blocks, drag a block by its handle.
  * - `minimal`: a toolbar and links, nothing floating: comment boxes, forms.
  */
@@ -126,6 +130,8 @@ export interface EditorSlots {
   columnsMenu?: EditorSlot;
   /** The picker a date opens: its day, and its time. */
   dateTimePicker?: EditorSlot;
+  /** The find and replace bar, from ⌘F. */
+  findReplace?: EditorSlot;
   /** Below the document, inside the frame: a word count, a status line. */
   footer?: ReactNode;
 }
@@ -147,6 +153,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     stickyMenu: true,
     columnsMenu: true,
     dateTimePicker: true,
+    findReplace: true,
   },
   notion: {
     toolbar: false,
@@ -164,6 +171,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     stickyMenu: true,
     columnsMenu: true,
     dateTimePicker: true,
+    findReplace: true,
   },
   minimal: {
     toolbar: true,
@@ -181,6 +189,7 @@ const PRESETS: Record<EditorPreset, Required<Omit<EditorSlots, 'footer'>>> = {
     stickyMenu: false,
     columnsMenu: false,
     dateTimePicker: false,
+    findReplace: false,
   },
 };
 
@@ -198,6 +207,7 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     StickyNote,
     Poll,
     DateTime,
+    FindReplace,
     PageBreak,
     Table,
     Image,
@@ -216,6 +226,7 @@ const PRESET_EXTENSIONS: Record<EditorPreset, TeiEditorOptions['extensions']> = 
     StickyNote,
     Poll,
     DateTime,
+    FindReplace,
     PageBreak,
     Table,
     Image,
@@ -368,15 +379,19 @@ function EditorFrame({
     parts.dateTimePicker === true
       ? (editor.extension(DateTime)?.output.storage as DateTimeStorage | undefined)?.picker
       : undefined;
+  const findBar =
+    parts.findReplace === true
+      ? (editor.extension(FindReplace)?.output.storage as FindReplaceStorage | undefined)?.ui
+      : undefined;
   useEffect(() => {
     if (ready) return;
-    const releases = [linkEdit, imageInsert, embedInsert, datePick].flatMap((request) =>
+    const releases = [linkEdit, imageInsert, embedInsert, datePick, findBar].flatMap((request) =>
       request ? [holdUi(request)] : [],
     );
     return () => {
       for (const release of releases) release();
     };
-  }, [ready, linkEdit, imageInsert, embedInsert, datePick]);
+  }, [ready, linkEdit, imageInsert, embedInsert, datePick, findBar]);
   // The gutter the handles sit in, from the first render (the server's too).
   const handles = editor.extension(Blocks) !== undefined && slot(parts.blockHandle, true) !== null;
   const change = useRef({ onChange, format });
@@ -437,6 +452,7 @@ function EditorFrame({
               {editor.extension(StickyNote) && slot(parts.stickyMenu, <StickyMenu />)}
               {editor.extension(Columns) && slot(parts.columnsMenu, <ColumnsMenu />)}
               {editor.extension(DateTime) && slot(parts.dateTimePicker, <DateTimePicker />)}
+              {editor.extension(FindReplace) && slot(parts.findReplace, <FindReplaceBar />)}
               <Ready onReady={setReady} />
             </Suspense>
           )}
