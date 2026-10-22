@@ -1,0 +1,149 @@
+/*
+ * The node tree panel (the TreeView extension, `<TreeView>`): a developer
+ * view under the document, with its views as tabs, and time travel's
+ * controls while it plays the document's history back.
+ */
+@layer teieditor {
+  .tei-tree-view {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    border-block-start: 1px solid var(--tei-border);
+    background: var(--tei-bg-subtle);
+    color: var(--tei-fg);
+    font-family: var(--tei-font);
+    font-size: var(--tei-ui-font-size);
+    line-height: var(--tei-ui-line-height);
+  }
+
+  .tei-tree-view[data-travelling] {
+    box-shadow: inset 0 2px 0 var(--tei-warning);
+  }
+
+  .tei-tree-view-bar,
+  .tei-tree-view-travel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tei-space-1);
+    padding: var(--tei-space-1) var(--tei-space-2);
+  }
+
+  .tei-tree-view-bar {
+    border-block-end: 1px solid var(--tei-border);
+  }
+
+  .tei-tree-view-tabs {
+    display: flex;
+    gap: 2px;
+    margin-inline-end: auto;
+  }
+
+  .tei-tree-view-tab {
+    block-size: var(--tei-control-size-sm);
+    padding-inline: var(--tei-space-2);
+    border: 0;
+    border-radius: var(--tei-radius-sm);
+    background: transparent;
+    color: var(--tei-fg-muted);
+    font: inherit;
+    font-size: var(--tei-ui-font-size-sm);
+    cursor: pointer;
+    transition:
+      background-color var(--tei-duration) var(--tei-ease),
+      color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-tree-view-tab:hover {
+    background: var(--tei-bg-hover);
+    color: var(--tei-fg);
+  }
+
+  .tei-tree-view-tab[aria-selected="true"] {
+    background: var(--tei-bg-active);
+    color: var(--tei-fg);
+    font-weight: 500;
+  }
+
+  .tei-tree-view-tab:focus-visible,
+  .tei-tree-view-panel:focus-visible {
+    outline: 2px solid var(--tei-ring);
+    outline-offset: -2px;
+  }
+
+  .tei-tree-view-tools {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .tei-tree-view-travel {
+    margin: 0;
+    border: 0;
+    border-block-end: 1px solid var(--tei-border);
+    background: var(--tei-warning-subtle);
+  }
+
+  .tei-tree-view-slider {
+    flex: 1 1 8rem;
+    min-inline-size: 6rem;
+    accent-color: var(--tei-accent);
+  }
+
+  .tei-tree-view-position {
+    min-inline-size: 7rem;
+    color: var(--tei-fg-muted);
+    font-size: var(--tei-ui-font-size-sm);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .tei-tree-view-panel {
+    max-block-size: min(28rem, 60vh);
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .tei-tree-view-output {
+    margin: 0;
+    padding: var(--tei-space-2) var(--tei-space-3);
+    color: var(--tei-fg);
+    font-family: var(--tei-font-mono);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    tab-size: 2;
+    white-space: pre;
+  }
+
+  .tei-tree-view-output[aria-busy="true"] {
+    color: var(--tei-fg-subtle);
+  }
+
+  .tei-tree-view-note {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tei-space-2);
+    margin: 0;
+    padding: var(--tei-space-3);
+    color: var(--tei-fg-muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tei-tree-view-tab {
+      transition: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .tei-tree-view-tab[aria-selected="true"] {
+      outline: 1px solid CanvasText;
+    }
+  }
+
+  @media print {
+    .tei-tree-view {
+      display: none;
+    }
+  }
+}

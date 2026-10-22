@@ -96,6 +96,8 @@ export {
 } from './components/text-style-controls.js';
 export type { ToolbarSlot } from './components/toolbar-fit.js';
 export { fitToolbar, visibleSlots } from './components/toolbar-fit.js';
+export type { TreeViewPanelProps } from './components/tree-view.js';
+export { TreeViewPanel } from './components/tree-view.js';
 export type { TypeaheadMenuProps } from './components/typeahead-menu.js';
 export { TypeaheadMenu } from './components/typeahead-menu.js';
 export type { VersionsPanelProps } from './components/versions-panel.js';
