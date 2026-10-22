@@ -7,16 +7,16 @@ encoder's output is checked against its own assumptions; these carry Huffman
 tables, quantisation tables, restart intervals and subsampling choices that
 somebody else picked.
 
-| File | Frame | What it covers |
-| --- | --- | --- |
-| `source.png` | — | the exact image the others were encoded from |
-| `qr-444.jpg` | SOF0, 3 components, `1x1,1x1,1x1` | no chroma subsampling, near-lossless |
-| `qr-420.jpg` | SOF0, 3 components, `2x2,1x1,1x1` | 4:2:0, the usual camera and web default |
-| `qr-low.jpg` | SOF0, 3 components, `2x2,1x1,1x1` | 4:2:0 at low quality, heavy ringing |
-| `qr-gray.jpg` | SOF0, 1 component, `1x1` | greyscale, and the non-interleaved scan path |
-| `qr-422.jpg` | SOF0, 3 components, `2x1,1x1,1x1` | 4:2:2 — chroma halved on one axis only |
-| `qr-progressive.jpg` | SOF2, 3 components, `2x2,1x1,1x1` | progressive, ten scans |
-| `qr-progressive-gray.jpg` | SOF2, 1 component, `1x1` | progressive greyscale, six scans |
+| File                      | Frame                             | What it covers                               |
+| ------------------------- | --------------------------------- | -------------------------------------------- |
+| `source.png`              | —                                 | the exact image the others were encoded from |
+| `qr-444.jpg`              | SOF0, 3 components, `1x1,1x1,1x1` | no chroma subsampling, near-lossless         |
+| `qr-420.jpg`              | SOF0, 3 components, `2x2,1x1,1x1` | 4:2:0, the usual camera and web default      |
+| `qr-low.jpg`              | SOF0, 3 components, `2x2,1x1,1x1` | 4:2:0 at low quality, heavy ringing          |
+| `qr-gray.jpg`             | SOF0, 1 component, `1x1`          | greyscale, and the non-interleaved scan path |
+| `qr-422.jpg`              | SOF0, 3 components, `2x1,1x1,1x1` | 4:2:2 — chroma halved on one axis only       |
+| `qr-progressive.jpg`      | SOF2, 3 components, `2x2,1x1,1x1` | progressive, ten scans                       |
+| `qr-progressive-gray.jpg` | SOF2, 1 component, `1x1`          | progressive greyscale, six scans             |
 
 All four carry a `DRI` restart interval, so the restart-marker path is
 exercised by every case rather than by a special one.
@@ -56,7 +56,7 @@ jpegtran -progressive -copy none qr-gray.jpg > qr-progressive-gray.jpg
 **`jpegtran -progressive` is lossless**, and that is the whole point of using
 it here. It rearranges the same quantised coefficients into spectral bands and
 bit planes without going near a pixel, so the progressive files must decode to
-output *byte-identical* to their baseline sources. `jpeg.test.ts` asserts
+output _byte-identical_ to their baseline sources. `jpeg.test.ts` asserts
 exactly that. Re-encoding them instead would only allow a tolerance, and a
 tolerance cannot tell a correct refinement pass from a nearly-correct one.
 
@@ -75,6 +75,6 @@ refused by name, and the tests construct those cases by rewriting a frame
 marker rather than shipping fixtures for formats that are never decoded.
 
 **A photograph.** Every fixture here is a rendered code that has been through a
-real encoder, which exercises the *format* thoroughly and says nothing about
+real encoder, which exercises the _format_ thoroughly and says nothing about
 lens blur, moiré or non-flat paper. That gap belongs to
 `__tests__/fixtures/photos/` and only a camera can close it.

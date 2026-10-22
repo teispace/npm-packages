@@ -28,6 +28,7 @@ export interface ThemedIconProps<T extends string = string> {
  * wrapping element you control in that case.
  */
 export function makeThemedIcon(useThemeHook: UseThemeHook) {
+  // biome-ignore lint/correctness/noComponentHookFactories: built once per createThemes() call, at module level
   return function ThemedIcon<T extends string = string>({
     variants,
     fallback = null,

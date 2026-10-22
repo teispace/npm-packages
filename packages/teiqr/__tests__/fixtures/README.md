@@ -15,10 +15,10 @@ did not write.
 
 ## Provenance
 
-| File | Oracle | Cases |
-| --- | --- | ---: |
-| `micro-qr.json` | segno 1.6.6 | 612 |
-| `rmqr.json` | rmqrcode (MIT) | 507 |
+| File            | Oracle         | Cases |
+| --------------- | -------------- | ----: |
+| `micro-qr.json` | segno 1.6.6    |   612 |
+| `rmqr.json`     | rmqrcode (MIT) |   507 |
 
 Each file carries `_source`, `_segments` and `_excluded` fields recording the
 same details inline.
@@ -91,7 +91,7 @@ or use one mode throughout. Comparing module matrices only means something when
 both sides write the same runs, so each case carries its segmentation and both
 encoders are handed it explicitly.
 
-Mode *selection* is therefore checked separately, and differently: tests assert
+Mode _selection_ is therefore checked separately, and differently: tests assert
 our chosen segmentation is never larger than any single-mode encoding of the
 same text. That is a property, not a comparison, and it does not depend on
 another implementation's choices.
@@ -103,7 +103,7 @@ Every exclusion is a place the reference is wrong, not us.
 **segno — spurious padding byte.** `write_padding_bits` uses
 `8 - (length % 8)`, which is 8 rather than 0 when the bit stream already ends on
 a codeword boundary. ISO/IEC 18004 §7.4.10 — quoted in segno's own docstring for
-that function — adds padding bits only when the stream does *not* end at a
+that function — adds padding bits only when the stream does _not_ end at a
 boundary. The bug also affects its full-QR output. Affected combinations are
 detected using segno's own `Buffer`, `write_segment` and `write_terminator`
 rather than a hardcoded list, and only when pad codewords still follow: when the
