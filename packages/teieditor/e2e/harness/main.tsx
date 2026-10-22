@@ -4,6 +4,7 @@ import { setExtensionOptions } from '../../src/core/define';
 import type { TeiEditor } from '../../src/core/editor';
 import { Blocks } from '../../src/extensions/blocks/index';
 import { Callout } from '../../src/extensions/callout/index';
+import { Card } from '../../src/extensions/card/index';
 import { Clipboard } from '../../src/extensions/clipboard/index';
 import { Collapsible } from '../../src/extensions/collapsible/index';
 import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
@@ -13,6 +14,7 @@ import { Image, type ImageOptions } from '../../src/extensions/image/index';
 import { PageBreak } from '../../src/extensions/page-break/index';
 import { PullQuote } from '../../src/extensions/pull-quote/index';
 import { StarterKit } from '../../src/extensions/starter-kit/index';
+import { StickyNote } from '../../src/extensions/sticky-note/index';
 import { Table } from '../../src/extensions/table/index';
 import { TextStyle } from '../../src/extensions/text-style/index';
 import {
@@ -136,6 +138,7 @@ function App() {
       ...(params.has('blocks') ? [Blocks] : []),
       // The document's own blocks: pull quotes, callouts, sections, page breaks.
       ...(params.has('extras') ? [PullQuote, Callout, Collapsible, PageBreak] : []),
+      ...(params.has('cards') ? [Card, StickyNote] : []),
     ],
     content: params.get('content') ?? '<p>Hello world</p>',
   });

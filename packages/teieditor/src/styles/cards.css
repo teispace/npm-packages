@@ -1,0 +1,229 @@
+/*
+ * Cards and sticky notes. As in content.css, each editor class and the
+ * saved HTML under `.tei-prose` share one rule, so the page before the
+ * editor mounts has the same boxes. Colours are tokens by fixed name: the
+ * document only ever names one (`data-tei-sticky="pink"`), never a value.
+ */
+@layer teieditor {
+  .tei,
+  .tei-prose:where(:not(.tei *)),
+  .tei-portal:where(:not(.tei *)) {
+    /* Card accents */
+    --tei-card-gray: var(--tei-fg-subtle);
+    --tei-card-blue: var(--tei-info);
+    --tei-card-green: var(--tei-success);
+    --tei-card-yellow: var(--tei-warning);
+    --tei-card-red: var(--tei-danger);
+    --tei-card-purple: light-dark(oklch(0.541 0.198 293), oklch(0.702 0.16 293));
+
+    /* Sticky note papers: pale in light, deep in dark, the text colour legible on both */
+    --tei-sticky-yellow: light-dark(oklch(0.955 0.085 100), oklch(0.37 0.07 95));
+    --tei-sticky-pink: light-dark(oklch(0.93 0.05 350), oklch(0.36 0.075 350));
+    --tei-sticky-green: light-dark(oklch(0.94 0.06 150), oklch(0.35 0.06 150));
+    --tei-sticky-blue: light-dark(oklch(0.93 0.045 240), oklch(0.35 0.065 245));
+    --tei-sticky-purple: light-dark(oklch(0.93 0.045 300), oklch(0.36 0.075 300));
+    --tei-sticky-width: 16rem;
+    --tei-sticky-tilt: 0.75deg;
+  }
+
+  /* Saved HTML on its own answers the editor's width queries the same way. */
+  .tei-prose:where(:not(.tei *)) {
+    container: tei / inline-size;
+  }
+
+  /* -- Card ------------------------------------------------------------------ */
+
+  .tei-card,
+  :where(.tei-prose) [data-tei-card] {
+    --tei-card-accent: transparent;
+    display: flow-root;
+    margin: 0 0 0.75em;
+    padding: 1em 1.25em;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius-lg);
+    background: var(--tei-bg);
+    box-shadow: var(--tei-shadow);
+  }
+
+  :is(.tei-card, [data-tei-card]) > :last-child {
+    margin-block-end: 0;
+  }
+
+  .tei-card[data-variant="outlined"],
+  :where(.tei-prose) [data-tei-card="outlined"] {
+    border-color: var(--tei-border-strong);
+    box-shadow: none;
+  }
+
+  .tei-card[data-variant="filled"],
+  :where(.tei-prose) [data-tei-card="filled"] {
+    border-color: transparent;
+    background: color-mix(in oklab, var(--tei-card-accent) 9%, var(--tei-bg-muted));
+    box-shadow: none;
+  }
+
+  /* An accent: a bar at the start edge, as wide in both, so no box moves. */
+  .tei-card[data-accent],
+  :where(.tei-prose) [data-tei-card][data-tei-card-accent] {
+    border-inline-start: 4px solid var(--tei-card-accent);
+  }
+
+  .tei-card[data-accent="gray"],
+  :where(.tei-prose) [data-tei-card-accent="gray"] {
+    --tei-card-accent: var(--tei-card-gray);
+  }
+
+  .tei-card[data-accent="blue"],
+  :where(.tei-prose) [data-tei-card-accent="blue"] {
+    --tei-card-accent: var(--tei-card-blue);
+  }
+
+  .tei-card[data-accent="green"],
+  :where(.tei-prose) [data-tei-card-accent="green"] {
+    --tei-card-accent: var(--tei-card-green);
+  }
+
+  .tei-card[data-accent="yellow"],
+  :where(.tei-prose) [data-tei-card-accent="yellow"] {
+    --tei-card-accent: var(--tei-card-yellow);
+  }
+
+  .tei-card[data-accent="red"],
+  :where(.tei-prose) [data-tei-card-accent="red"] {
+    --tei-card-accent: var(--tei-card-red);
+  }
+
+  .tei-card[data-accent="purple"],
+  :where(.tei-prose) [data-tei-card-accent="purple"] {
+    --tei-card-accent: var(--tei-card-purple);
+  }
+
+  /* -- Sticky note ----------------------------------------------------------- */
+
+  /* Full width on a narrow page; beside the text, at its end, on a wide one. */
+  .tei-sticky,
+  :where(.tei-prose) aside[data-tei-sticky] {
+    --tei-sticky-paper: var(--tei-sticky-yellow);
+    position: relative;
+    display: flow-root;
+    margin: 0 0 0.75em;
+    padding: 0.875em 1em;
+    padding-inline-end: 2.25em;
+    border: 1px solid color-mix(in oklab, var(--tei-sticky-paper), var(--tei-fg) 10%);
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-sticky-paper);
+    box-shadow: var(--tei-shadow);
+    color: var(--tei-fg);
+    font-size: 0.9375em;
+  }
+
+  @container tei (min-width: 40rem) {
+    .tei-sticky,
+    :where(.tei-prose) aside[data-tei-sticky] {
+      float: inline-end;
+      clear: inline-end;
+      inline-size: min(var(--tei-sticky-width), 45%);
+      margin-inline-start: 1.25em;
+      /* A transform: the note looks pinned on, and nothing beside it moves. */
+      rotate: var(--tei-sticky-tilt);
+    }
+
+    :is(.tei-sticky, aside[data-tei-sticky]):dir(rtl) {
+      rotate: calc(var(--tei-sticky-tilt) * -1);
+    }
+  }
+
+  :is(.tei-sticky, aside[data-tei-sticky]) > :last-child {
+    margin-block-end: 0;
+  }
+
+  .tei-sticky[data-color="pink"],
+  :where(.tei-prose) aside[data-tei-sticky="pink"] {
+    --tei-sticky-paper: var(--tei-sticky-pink);
+  }
+
+  .tei-sticky[data-color="green"],
+  :where(.tei-prose) aside[data-tei-sticky="green"] {
+    --tei-sticky-paper: var(--tei-sticky-green);
+  }
+
+  .tei-sticky[data-color="blue"],
+  :where(.tei-prose) aside[data-tei-sticky="blue"] {
+    --tei-sticky-paper: var(--tei-sticky-blue);
+  }
+
+  .tei-sticky[data-color="purple"],
+  :where(.tei-prose) aside[data-tei-sticky="purple"] {
+    --tei-sticky-paper: var(--tei-sticky-purple);
+  }
+
+  /* The colour control: a dot in the end corner, outside the flow, so the
+   * saved note (which has none) has the same box. */
+  .tei-sticky-swatch {
+    position: absolute;
+    inset-block-start: 0.5em;
+    inset-inline-end: 0.5em;
+    display: grid;
+    place-items: center;
+    inline-size: 1.25em;
+    block-size: 1.25em;
+    border-radius: 50%;
+    user-select: none;
+  }
+
+  .tei-sticky-swatch::after {
+    content: "";
+    inline-size: 0.75em;
+    block-size: 0.75em;
+    border: 1.5px solid color-mix(in oklab, var(--tei-fg) 45%, transparent);
+    border-radius: 50%;
+    background: var(--tei-sticky-paper);
+  }
+
+  /* Read-only, the colour is not for changing. */
+  [data-tei-content][data-tei-readonly] .tei-sticky-swatch {
+    display: none;
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-sticky-swatch {
+    cursor: pointer;
+    transition: background-color var(--tei-duration) ease;
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-sticky-swatch:hover {
+    background: color-mix(in oklab, var(--tei-fg) 12%, transparent);
+  }
+
+  /* A colour row's swatch in the note's menu. */
+  .tei-menu-swatch[data-tei-sticky-color="yellow"] {
+    --tei-swatch: var(--tei-sticky-yellow);
+  }
+
+  .tei-menu-swatch[data-tei-sticky-color="pink"] {
+    --tei-swatch: var(--tei-sticky-pink);
+  }
+
+  .tei-menu-swatch[data-tei-sticky-color="green"] {
+    --tei-swatch: var(--tei-sticky-green);
+  }
+
+  .tei-menu-swatch[data-tei-sticky-color="blue"] {
+    --tei-swatch: var(--tei-sticky-blue);
+  }
+
+  .tei-menu-swatch[data-tei-sticky-color="purple"] {
+    --tei-swatch: var(--tei-sticky-purple);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tei-sticky-swatch {
+      transition: none;
+    }
+  }
+
+  @media print {
+    .tei-sticky-swatch {
+      display: none;
+    }
+  }
+}

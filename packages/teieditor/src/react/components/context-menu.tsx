@@ -27,7 +27,8 @@ export interface ContextMenuProps {
   editor?: TeiEditor;
   /**
    * Change the menu as it opens: add, drop, relabel or reorder its sections
-   * (`clipboard`, `link`, `format`, the selected node's, `table`, `calloutMenu`, then the
+   * (`clipboard`, `link`, `format`, the selected node's, `table`, `calloutMenu`, `cardMenu`,
+   * `stickyMenu`, then the
    * block's: `turnInto`, `block`, `delete`).
    */
   groups?: (groups: MenuGroupData[], editor: TeiEditor) => MenuGroupData[];
@@ -40,6 +41,8 @@ const NODE_MENUS: readonly TeiPlacement[] = ['imageMenu', 'fileMenu', 'embedMenu
 const SUBMENUS = [
   { menu: 'tableMenu', id: 'table', label: 'table.menu', icon: 'table' },
   { menu: 'calloutMenu', id: 'calloutMenu', label: 'callout.menu', icon: 'callout' },
+  { menu: 'cardMenu', id: 'cardMenu', label: 'card.menu', icon: 'card' },
+  { menu: 'stickyMenu', id: 'stickyMenu', label: 'sticky.menu', icon: 'stickyNote' },
 ] as const;
 
 /** Items a menu can run as they are: a command or a function, no control of their own. */

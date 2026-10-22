@@ -108,7 +108,11 @@ export type TeiPlacement =
   /** The toolbar over a selected embed. */
   | 'embedMenu'
   /** The menu from a callout's icon: its kinds, and taking it away. */
-  | 'calloutMenu';
+  | 'calloutMenu'
+  /** A card's looks and accents, and taking it away (a submenu of the context menu). */
+  | 'cardMenu'
+  /** The menu from a sticky note's swatch: its colours, and taking it away. */
+  | 'stickyMenu';
 
 /**
  * A UI entry an extension contributes — a toolbar button, a slash-menu row,

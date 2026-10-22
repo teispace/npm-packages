@@ -46,6 +46,8 @@ export { LinkPopover } from './components/link-popover.js';
 export { NodeToolbar, PlacementItems } from './components/node-toolbar.js';
 export type { SlashMenuProps } from './components/slash-menu.js';
 export { rankSlashItem, SlashMenu } from './components/slash-menu.js';
+export type { StickyMenuProps } from './components/sticky-menu.js';
+export { StickyMenu } from './components/sticky-menu.js';
 export type { TableControlsProps } from './components/table-controls.js';
 export { InsertTableMenu, TableControls } from './components/table-controls.js';
 export { TeiEditorContext, useCurrentEditor, useOptionalEditor } from './context.js';
