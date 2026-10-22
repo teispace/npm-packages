@@ -6,7 +6,7 @@
  *
  *   yarn size          (after `yarn build`)
  */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
@@ -32,12 +32,11 @@ const CASES = [
   {
     name: '<Editor> (full preset, StarterKit)',
     code: `import { Editor } from '${dist('react/index.js')}'; use(Editor);`,
-    // Grows with what the full preset installs, each feature on purpose:
-    // tables, images, files (59.6 KB), embeds (+4.8 KB), block moves (+2.9 KB),
-    // clipboard commands (+0.9 KB; the context menu itself loads later),
-    // pull quotes, callouts and page breaks (+3.9 KB). Every M4 block adds
-    // to it; per-entry budgets replace this one case before 5.0.
-    budget: 76 * KB,
+    // The drop-in: every extension the full preset installs, each with a
+    // budget of its own below, plus the UI that loads up front. It grows
+    // only as the preset does; a lighter editor uses `EditorContent` and
+    // the extensions it wants.
+    budget: 96 * KB,
   },
   {
     name: 'headless React (useTeiEditor, EditorContent)',
@@ -115,6 +114,35 @@ for (const { name, code, budget } of CASES) {
     budget ? fmt(budget) : '',
     fails ? 'OVER' : budget ? 'ok' : '',
   ]);
+}
+
+/**
+ * Each extension on its own: what adding it to core + StarterKit costs.
+ * A new extension gets the default budget; one that needs more says why.
+ */
+const EXTENSION_BUDGET = 6 * KB;
+const EXTENSION_BUDGETS = {
+  // Its providers: each one's URL patterns, iframe rules and privacy hosts.
+  embed: 8 * KB,
+  // Upload, resize, captions in a nested editor.
+  image: 9 * KB,
+};
+const BASE = `import { createTeiEditor } from '${dist('index.js')}';
+  import { StarterKit } from '${dist('extensions/starter-kit/index.js')}';`;
+const base = await measure(`${BASE} use(createTeiEditor, StarterKit);`);
+const extensions = readdirSync(dist('extensions'), { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && entry.name !== 'starter-kit')
+  .map((entry) => entry.name)
+  .sort();
+for (const name of extensions) {
+  const { gzip } = await measure(
+    `${BASE} import * as ext from '${dist(`extensions/${name}/index.js`)}'; use(createTeiEditor, StarterKit, ext);`,
+  );
+  const cost = Math.max(0, gzip - base.gzip);
+  const budget = EXTENSION_BUDGETS[name] ?? EXTENSION_BUDGET;
+  const fails = cost > budget;
+  over ||= fails;
+  rows.push([`+ extensions/${name}`, '', `+${fmt(cost)}`, '', fmt(budget), fails ? 'OVER' : 'ok']);
 }
 
 const css = readFileSync(dist('styles.css'));
