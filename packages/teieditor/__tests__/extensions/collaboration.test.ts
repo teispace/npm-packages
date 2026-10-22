@@ -634,6 +634,7 @@ describe('BroadcastProvider', () => {
     await wait(40);
     // Alone: synced after the timeout.
     expect(syncs).toEqual([true]);
+    a.awareness.setLocalStateField('name', 'Ada');
     b.awareness.setLocalStateField('name', 'Bo');
     b.connect();
     await wait(5);
@@ -647,6 +648,11 @@ describe('BroadcastProvider', () => {
     await wait(5);
     expect(a.awareness.getStates().has(docB.clientID)).toBe(false);
     expect(b.connected).toBe(false);
+    // Back again: its presence is taken, though its clock has not moved.
+    b.connect();
+    await wait(5);
+    expect(a.awareness.getStates().get(docB.clientID)?.name).toBe('Bo');
+    expect(b.awareness.getStates().has(docA.clientID)).toBe(true);
     a.destroy();
     b.destroy();
   });

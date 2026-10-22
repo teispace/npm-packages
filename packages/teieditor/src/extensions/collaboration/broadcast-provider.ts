@@ -33,6 +33,15 @@ type Message =
   | { type: 'awareness'; from: number; update: Uint8Array }
   | { type: 'bye'; from: number };
 
+/**
+ * Drop other clients' presence, and its clock: when they come back,
+ * their state (at the same clock) is taken again rather than ignored.
+ */
+function forget(awareness: Awareness, clients: number[], origin: unknown): void {
+  removeAwarenessStates(awareness, clients, origin);
+  for (const id of clients) if (id !== awareness.clientID) awareness.meta.delete(id);
+}
+
 type Status = 'connecting' | 'connected' | 'disconnected';
 type Listener = (arg: never) => void;
 
@@ -117,7 +126,7 @@ export class BroadcastProvider implements Provider {
     this.#channel = null;
     // The others' presence goes with the connection.
     const others = [...this.awareness.getStates().keys()].filter((id) => id !== this.doc.clientID);
-    removeAwarenessStates(this.awareness, others, this);
+    forget(this.awareness, others, this);
     this.#setSynced(false);
     this.#emit('status', { status: 'disconnected' satisfies Status });
   }
@@ -210,7 +219,7 @@ export class BroadcastProvider implements Provider {
         applyAwarenessUpdate(this.awareness, message.update, this);
         break;
       case 'bye':
-        removeAwarenessStates(this.awareness, [message.from], this);
+        forget(this.awareness, [message.from], this);
         break;
     }
   }

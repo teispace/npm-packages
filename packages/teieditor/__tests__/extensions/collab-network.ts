@@ -96,11 +96,14 @@ export class MemoryProvider implements Provider {
 
   disconnect(): void {
     if (!this.connected) return;
-    for (const peer of this.network.reachable(this))
+    for (const peer of this.network.reachable(this)) {
       removeAwarenessStates(peer.awareness, [this.doc.clientID], peer);
+      peer.awareness.meta.delete(this.doc.clientID);
+    }
     this.connected = false;
     const others = [...this.awareness.getStates().keys()].filter((id) => id !== this.doc.clientID);
     removeAwarenessStates(this.awareness, others, this);
+    for (const id of others) this.awareness.meta.delete(id);
     this.emit('sync', false);
     this.emit('status', { status: 'disconnected' });
   }

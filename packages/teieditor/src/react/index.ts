@@ -11,6 +11,8 @@ export { CalloutMenu } from './components/callout-menu.js';
 // Ready-made UI, built from what the installed extensions contribute.
 export type { CodeBlockBarProps } from './components/code-block-bar.js';
 export { CodeBlockBar } from './components/code-block-bar.js';
+export type { CollaborationStatusProps } from './components/collaboration-status.js';
+export { CollaborationStatus } from './components/collaboration-status.js';
 export type { ColumnsMenuProps } from './components/columns-menu.js';
 export { ColumnsMenu } from './components/columns-menu.js';
 export type { ContextMenuProps } from './components/context-menu.js';
@@ -67,6 +69,8 @@ export type { TableOfContentsPanelProps } from './components/table-of-contents.j
 export { TableOfContentsPanel, useOutline } from './components/table-of-contents.js';
 export type { TypeaheadMenuProps } from './components/typeahead-menu.js';
 export { TypeaheadMenu } from './components/typeahead-menu.js';
+export type { VersionsPanelProps } from './components/versions-panel.js';
+export { VersionsPanel } from './components/versions-panel.js';
 export type { LimitState, WordCountProps, WordCountStat } from './components/word-count.js';
 export { limitState, WordCount } from './components/word-count.js';
 export { TeiEditorContext, useCurrentEditor, useOptionalEditor } from './context.js';

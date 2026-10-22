@@ -1,0 +1,316 @@
+/*
+ * Collaboration and versions: the others' cursors and selections (drawn
+ * by @lexical/yjs, positioned through CSSOM with each user's colour in
+ * `--lexical-cursor-color`), the presence line, and the versions panel.
+ */
+@layer teieditor {
+  /* -- Remote cursors ------------------------------------------------------ */
+
+  /* Static on purpose: the carets are placed against its offset parent. */
+  .tei-collab-cursors {
+    pointer-events: none;
+  }
+
+  .tei-collab-caret {
+    background: var(--lexical-cursor-color, var(--tei-accent));
+    pointer-events: none;
+  }
+
+  .tei-collab-name {
+    position: absolute;
+    inset-block-end: 100%;
+    inset-inline-start: -1px;
+    padding: 1px var(--tei-space-1);
+    border-radius: var(--tei-radius-sm) var(--tei-radius-sm) var(--tei-radius-sm) 0;
+    background: var(--lexical-cursor-color, var(--tei-accent));
+    color: #fff;
+    font-family: var(--tei-font);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: nowrap;
+    user-select: none;
+    animation: tei-collab-name-fade 0.2s var(--tei-ease) both;
+  }
+
+  :dir(rtl) .tei-collab-name {
+    border-radius: var(--tei-radius-sm) var(--tei-radius-sm) 0 var(--tei-radius-sm);
+  }
+
+  .tei-collab-selection {
+    pointer-events: none;
+  }
+
+  .tei-collab-selection-bg {
+    background: var(--lexical-cursor-color, var(--tei-accent));
+    opacity: 0.25;
+  }
+
+  @keyframes tei-collab-name-fade {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tei-collab-name {
+      animation: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .tei-collab-caret,
+    .tei-collab-name {
+      background: Highlight;
+      color: HighlightText;
+      forced-color-adjust: none;
+    }
+
+    .tei-collab-selection-bg {
+      background: Highlight;
+    }
+  }
+
+  /* -- Presence ------------------------------------------------------------ */
+
+  .tei-collab-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tei-space-2) var(--tei-space-3);
+    padding: var(--tei-space-1) var(--tei-space-3);
+    color: var(--tei-fg-subtle);
+    font-family: var(--tei-font);
+    font-size: var(--tei-ui-font-size-sm);
+    line-height: var(--tei-ui-line-height);
+  }
+
+  .tei-collab-avatars {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tei-collab-avatar {
+    --tei-peer-color: var(--tei-fg-muted);
+    display: inline-grid;
+    place-items: center;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    border: 2px solid var(--tei-bg);
+    border-radius: 999px;
+    background: var(--tei-peer-color);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .tei-collab-avatar + .tei-collab-avatar {
+    margin-inline-start: -0.4rem;
+  }
+
+  /* In the document right now. */
+  .tei-collab-avatar[data-focusing] {
+    box-shadow: 0 0 0 2px var(--tei-peer-color);
+  }
+
+  .tei-collab-avatar[data-more] {
+    background: var(--tei-bg-muted);
+    color: var(--tei-fg-muted);
+  }
+
+  .tei-collab-state {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tei-space-1);
+  }
+
+  .tei-collab-dot {
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 999px;
+    background: var(--tei-fg-placeholder);
+  }
+
+  .tei-collab-status[data-state="connected"] .tei-collab-dot {
+    background: var(--tei-success);
+  }
+
+  .tei-collab-status:is([data-state="connecting"], [data-state="syncing"]) .tei-collab-dot {
+    background: var(--tei-warning);
+    animation: tei-collab-pulse 1.2s var(--tei-ease) infinite;
+  }
+
+  @keyframes tei-collab-pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tei-collab-status .tei-collab-dot {
+      animation: none;
+    }
+  }
+
+  /* -- Versions ------------------------------------------------------------ */
+
+  .tei-versions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tei-space-3);
+    padding: var(--tei-space-3);
+    color: var(--tei-fg);
+    font-family: var(--tei-font);
+    font-size: var(--tei-ui-font-size);
+    line-height: var(--tei-ui-line-height);
+  }
+
+  .tei-versions-title {
+    margin: 0;
+    font-size: var(--tei-ui-font-size);
+    font-weight: 600;
+  }
+
+  .tei-versions-save {
+    display: flex;
+    gap: var(--tei-space-2);
+  }
+
+  .tei-versions-save .tei-input {
+    flex: 1;
+    min-inline-size: 0;
+  }
+
+  .tei-versions-empty {
+    margin: 0;
+    color: var(--tei-fg-subtle);
+    font-size: var(--tei-ui-font-size-sm);
+  }
+
+  .tei-versions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tei-version {
+    display: flex;
+    align-items: center;
+    gap: var(--tei-space-2);
+    padding: var(--tei-space-1) var(--tei-space-2);
+    border-radius: var(--tei-radius);
+    transition: background-color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-version:hover,
+  .tei-version:focus-within {
+    background: var(--tei-bg-hover);
+  }
+
+  .tei-version[data-current] {
+    background: var(--tei-accent-subtle);
+  }
+
+  .tei-version-meta {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-inline-size: 0;
+  }
+
+  .tei-version-name {
+    overflow: hidden;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tei-version-detail {
+    color: var(--tei-fg-subtle);
+    font-size: var(--tei-ui-font-size-sm);
+  }
+
+  .tei-version-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 2px;
+  }
+
+  .tei-version-preview {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius-lg);
+    background: var(--tei-bg);
+    overflow: hidden;
+  }
+
+  .tei-version-preview-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tei-space-1);
+    padding: var(--tei-space-1) var(--tei-space-2);
+    border-block-end: 1px solid var(--tei-border);
+    background: var(--tei-bg-subtle);
+  }
+
+  .tei-version-preview-bar > :last-child {
+    margin-inline-start: auto;
+  }
+
+  .tei-version-document,
+  .tei-version-diff {
+    max-block-size: 24rem;
+    padding: var(--tei-space-3) var(--tei-space-4);
+    overflow: auto;
+    outline: none;
+  }
+
+  .tei-version-diff-summary {
+    margin: 0 0 var(--tei-space-2);
+    color: var(--tei-fg-subtle);
+    font-size: var(--tei-ui-font-size-sm);
+  }
+
+  .tei-version-diff-block {
+    display: block;
+    margin: 0 0 var(--tei-space-2);
+    white-space: pre-wrap;
+  }
+
+  .tei-version-diff ins {
+    background: var(--tei-success-subtle);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .tei-version-diff del {
+    background: var(--tei-danger-subtle);
+    color: var(--tei-fg-muted);
+    text-decoration: line-through;
+  }
+
+  ins.tei-version-diff-block {
+    border-inline-start: 3px solid var(--tei-success);
+    padding-inline-start: var(--tei-space-2);
+  }
+
+  del.tei-version-diff-block {
+    border-inline-start: 3px solid var(--tei-danger);
+    padding-inline-start: var(--tei-space-2);
+  }
+
+  @media (forced-colors: active) {
+    .tei-version-diff ins {
+      text-decoration: underline;
+    }
+  }
+}
