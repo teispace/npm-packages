@@ -69,7 +69,22 @@ const CASES = [
 ];
 
 /** Peers: the app has them already, whatever editor it uses. */
-const external = ['lexical', '@lexical/*', 'react', 'react-dom', 'react/*', 'prismjs', 'prismjs/*'];
+const external = [
+  'lexical',
+  '@lexical/*',
+  'react',
+  'react-dom',
+  'react/*',
+  'prismjs',
+  'prismjs/*',
+  // Optional peers, for the features that need them.
+  'yjs',
+  'y-protocols/*',
+  'katex',
+  '@excalidraw/*',
+  'shiki',
+  '@shikijs/*',
+]
 
 /**
  * Bundled as an app's bundler does it (Rolldown, Vite's): what loads up
@@ -160,7 +175,8 @@ for (const name of extensions) {
 
 /** Stylesheets: everything in one, and core.css for an editor that imports only what it uses. */
 const STYLES = [
-  ['styles.css', 'styles.css', 14.5 * KB],
+  // Every feature's styles, the optional ones too; core.css is the lean way in.
+  ['styles.css', 'styles.css', 17 * KB],
   ['styles/core.css', 'styles/core.css', 8 * KB],
 ];
 for (const [name, path, budget] of STYLES) {

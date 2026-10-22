@@ -73,3 +73,57 @@ it('Embed from the slash menu before its form has loaded opens it as it loads', 
   ).toBe('Paste a link to the Vimeo video');
   editor.destroy();
 });
+
+it('⌘J before the AI menu has loaded opens it as it loads', async () => {
+  vi.resetModules();
+  const [{ StarterKit }, { Ai }, react] = await Promise.all([
+    import('../../src/extensions/starter-kit/index.js'),
+    import('../../src/extensions/ai/index.js'),
+    import('../../src/react/index.js'),
+  ]);
+  const editor = react.createReactTeiEditor({
+    extensions: [StarterKit, Ai.configure({ handler: async () => 'An answer' })],
+    content: '<p>Hello</p>',
+  });
+  const { container } = render(<react.Editor editor={editor} />);
+  expect(container.querySelector('[data-tei-frame]')?.hasAttribute('data-tei-ready')).toBe(false);
+  act(() => editor.update(() => $getRoot().selectEnd()));
+  // Its place is held, so the item is enabled before the menu's code is in.
+  expect(editor.can().openAiMenu()).toBe(true);
+  let opened = false;
+  act(() => {
+    opened = editor.commands.openAiMenu();
+  });
+  expect(opened).toBe(true);
+  await waitFor(() =>
+    expect(document.querySelector('[data-tei-control="ai-menu"]')).not.toBeNull(),
+  );
+  editor.destroy();
+});
+
+it('the versions panel shows while it is open, from its command', async () => {
+  vi.resetModules();
+  const [{ StarterKit }, { Versions }, react] = await Promise.all([
+    import('../../src/extensions/starter-kit/index.js'),
+    import('../../src/extensions/versions/index.js'),
+    import('../../src/react/index.js'),
+  ]);
+  const editor = react.createReactTeiEditor({
+    extensions: [StarterKit, Versions],
+    content: '<p>Hello</p>',
+  });
+  const { container } = render(<react.Editor editor={editor} />);
+  await waitFor(() =>
+    expect(container.querySelector('[data-tei-frame]')?.hasAttribute('data-tei-ready')).toBe(true),
+  );
+  expect(container.querySelector('.tei-versions-save')).toBeNull();
+  act(() => {
+    editor.commands.toggleVersions();
+  });
+  await waitFor(() => expect(container.querySelector('.tei-versions-save')).not.toBeNull());
+  act(() => {
+    editor.commands.toggleVersions();
+  });
+  await waitFor(() => expect(container.querySelector('.tei-versions-save')).toBeNull());
+  editor.destroy();
+});

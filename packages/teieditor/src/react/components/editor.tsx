@@ -13,6 +13,7 @@ import type { TeiEditorOptions } from '../../core/create.js';
 import type { ContentFormat, TeiEditor } from '../../core/editor.js';
 import type { TeiPreset } from '../../core/preset.js';
 import { holdUi } from '../../core/ui-request.js';
+import type { AiStorage } from '../../extensions/ai/index.js';
 import type { DateTimeStorage } from '../../extensions/date-time/index.js';
 import type { EmbedStorage } from '../../extensions/embed/index.js';
 import type { EmojiStorage } from '../../extensions/emoji/index.js';
@@ -20,8 +21,10 @@ import type { FindReplaceStorage } from '../../extensions/find-replace/index.js'
 import type { ImageStorage } from '../../extensions/image/index.js';
 import type { LinkStorage } from '../../extensions/link/index.js';
 import { StarterKit } from '../../extensions/starter-kit/index.js';
+import type { VersionsStorage } from '../../extensions/versions/index.js';
 import { type ContentEditableProps, EditorContent, EditorProvider } from '../editor-content.js';
 import { cx } from '../ui/context.js';
+import { useSignal } from '../use-signal.js';
 import { useTeiEditor } from '../use-tei-editor.js';
 import { EditorToolbar, type EditorToolbarProps, type ToolbarLayout } from './editor-toolbar.js';
 
@@ -89,6 +92,13 @@ const StickyMenu = lazy(() =>
 const EmbedControls = lazy(() =>
   import('./embed-controls.js').then((module) => ({ default: module.EmbedControls })),
 );
+const AiMenu = lazy(() => import('./ai-menu.js').then((module) => ({ default: module.AiMenu })));
+const CollaborationStatus = lazy(() =>
+  import('./collaboration-status.js').then((module) => ({ default: module.CollaborationStatus })),
+);
+const VersionsPanel = lazy(() =>
+  import('./versions-panel.js').then((module) => ({ default: module.VersionsPanel })),
+);
 const WordCount = lazy(() =>
   import('./word-count.js').then((module) => ({ default: module.WordCount })),
 );
@@ -133,6 +143,12 @@ export interface EditorSlots {
   typeaheadMenu?: EditorSlot;
   /** The emoji picker, from the toolbar or ⌘⌥E. */
   emojiPicker?: EditorSlot;
+  /** The AI prompt and its streaming answer, from ⌘J, `/ai` or the bubble menu. */
+  aiMenu?: EditorSlot;
+  /** Who else is here, and whether the connection is up, under the document. */
+  collaborationStatus?: EditorSlot;
+  /** Saved versions: save, preview, compare, restore. Shown from the document menu's "Version history". */
+  versionsPanel?: EditorSlot;
   /** Below the document, inside the frame: a word count, a status line. */
   footer?: ReactNode;
 }
@@ -292,15 +308,23 @@ function EditorFrame({
     ? storage<FindReplaceStorage>('find-replace')?.ui
     : undefined;
   const emojiPick = builtIn(parts.emojiPicker) ? storage<EmojiStorage>('emoji')?.picker : undefined;
+  const aiAsk = builtIn(parts.aiMenu) ? storage<AiStorage>('ai')?.menu : undefined;
+  const versionsOpen = useSignal(storage<VersionsStorage>('versions')?.panelOpen) ?? false;
   useEffect(() => {
     if (ready) return;
-    const releases = [linkEdit, imageInsert, embedInsert, datePick, findBar, emojiPick].flatMap(
-      (request) => (request ? [holdUi(request)] : []),
-    );
+    const releases = [
+      linkEdit,
+      imageInsert,
+      embedInsert,
+      datePick,
+      findBar,
+      emojiPick,
+      aiAsk,
+    ].flatMap((request) => (request ? [holdUi(request)] : []));
     return () => {
       for (const release of releases) release();
     };
-  }, [ready, linkEdit, imageInsert, embedInsert, datePick, findBar, emojiPick]);
+  }, [ready, linkEdit, imageInsert, embedInsert, datePick, findBar, emojiPick, aiAsk]);
   // The gutter the handles sit in, from the first render (the server's too).
   const handles = has('blocks') && slot(parts.blockHandle, true) !== null;
   const change = useRef({ onChange, format });
@@ -366,11 +390,20 @@ function EditorFrame({
               {has('ruby') && slot(parts.rubyPopover, <RubyPopover />)}
               {has('typeahead') && slot(parts.typeaheadMenu, <TypeaheadMenu />)}
               {has('emoji') && slot(parts.emojiPicker, <EmojiPicker />)}
+              {has('ai') && slot(parts.aiMenu, <AiMenu />)}
               <Ready onReady={setReady} />
             </Suspense>
           )}
           {children}
         </EditorContent>
+        {mounted && has('versions') && versionsOpen && (
+          <Suspense fallback={null}>{slot(parts.versionsPanel, <VersionsPanel />)}</Suspense>
+        )}
+        {mounted && has('collaboration') && (
+          <Suspense fallback={null}>
+            {slot(parts.collaborationStatus, <CollaborationStatus />)}
+          </Suspense>
+        )}
         {has('character-count') &&
           slot(
             parts.wordCount,

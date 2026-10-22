@@ -27,6 +27,7 @@ const COMPONENTS = src('react/components');
 const ENTRIES = [
   ['@teispace/teieditor/react', src('react/index.ts')],
   ['@teispace/teieditor', src('index.ts')],
+  ['@teispace/teieditor/icons', src('icons/index.ts')],
   ...readdirSync(src('extensions'))
     .sort()
     .map((dir) => [`@teispace/teieditor/extensions/${dir}`, src(`extensions/${dir}/index.ts`)]),

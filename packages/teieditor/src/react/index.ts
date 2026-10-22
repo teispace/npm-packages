@@ -137,6 +137,7 @@ export type {
   MenuProps,
 } from './ui/menu.js';
 export { Menu, useMenuNavigation } from './ui/menu.js';
+export { keepFocus } from './ui/pointer.js';
 export type { DismissReason, PopoverProps } from './ui/popover.js';
 export { Popover } from './ui/popover.js';
 export type { ToolbarProps } from './ui/toolbar.js';
