@@ -1,0 +1,14 @@
+{
+  // Declarations for dist: one .d.ts per source file, in the layout the
+  // package exports point at. tsup bundles the JavaScript only; bundling the
+  // types took seven times the memory of this and gained nothing.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declarationMap": false,
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx", "src/cli/**"]
+}

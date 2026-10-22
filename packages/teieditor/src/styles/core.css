@@ -1,0 +1,12 @@
+/*
+ * @teispace/teieditor/styles/core.css: the tokens, the document as
+ * StarterKit writes it, and the editor's UI. Add each feature's own file
+ * for the extensions you install:
+ *
+ *   import '@teispace/teieditor/styles/core.css';
+ *   import '@teispace/teieditor/styles/tables.css';
+ */
+@import "./tokens.css";
+@import "./base.css";
+@import "./content.css";
+@import "./ui.css";

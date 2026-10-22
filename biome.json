@@ -12,6 +12,9 @@
     "includes": [
       "packages/**/src/**",
       "packages/**/__tests__/**",
+      "packages/**/e2e/**",
+      "packages/**/type-tests/**",
+      "!packages/**/e2e/.out",
       "packages/**/vitest.config.ts",
       "packages/**/tsup.config.ts",
       "packages/**/build.ts",

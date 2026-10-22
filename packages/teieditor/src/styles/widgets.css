@@ -1,0 +1,298 @@
+/*
+ * Widgets in the document: polls and dates. The editor's DOM and saved
+ * HTML under `.tei-prose` carry the same data attributes and get the same
+ * boxes, so a server-rendered page does not move as the editor takes over.
+ * Directions are logical, so RTL needs nothing extra.
+ */
+@layer teieditor {
+  /* Polls: the question, an answer per row (a vote toggle, the answer, its
+   * count, a bar under it), and the total. While editing the question and
+   * answers are inputs, as tall as the text they stand for. */
+  :where(.tei, .tei-prose) [data-tei-poll] {
+    --tei-poll-row: 2rem;
+    margin: 0 0 0.75em;
+    padding: var(--tei-space-3) var(--tei-space-4);
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius);
+    background: var(--tei-bg-subtle);
+    color: var(--tei-fg);
+    font-size: var(--tei-font-size);
+    line-height: var(--tei-poll-row);
+  }
+
+  @media (pointer: coarse) {
+    :where(.tei, .tei-prose) [data-tei-poll] {
+      --tei-poll-row: 2.5rem;
+    }
+  }
+
+  :where(.tei, .tei-prose) [data-tei-poll][data-tei-selected] {
+    outline: 2px solid var(--tei-accent);
+    outline-offset: 2px;
+  }
+
+  :where(.tei, .tei-prose) :is([data-tei-poll-question], [data-tei-poll-label]) {
+    display: block;
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-inline-size: 0;
+    block-size: var(--tei-poll-row);
+    margin: 0;
+    padding: 0 var(--tei-space-2);
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--tei-radius-sm);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: var(--tei-poll-row);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :where(.tei, .tei-prose) [data-tei-poll-question] {
+    margin-block-end: var(--tei-space-1);
+    font-weight: 600;
+  }
+
+  :where(.tei, .tei-prose) input:is([data-tei-poll-question], [data-tei-poll-label]) {
+    outline: none;
+    transition: background-color var(--tei-duration) var(--tei-ease);
+  }
+
+  :where(.tei, .tei-prose) input:is([data-tei-poll-question], [data-tei-poll-label])::placeholder {
+    color: var(--tei-fg-placeholder);
+  }
+
+  :where(.tei, .tei-prose) input:is([data-tei-poll-question], [data-tei-poll-label]):hover {
+    background: var(--tei-bg-hover);
+  }
+
+  :where(.tei, .tei-prose) input:is([data-tei-poll-question], [data-tei-poll-label]):focus {
+    background: var(--tei-bg);
+    box-shadow: 0 0 0 2px var(--tei-ring);
+  }
+
+  :where(.tei, .tei-prose) [data-tei-poll-options] {
+    display: grid;
+    gap: var(--tei-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  :where(.tei, .tei-prose) [data-tei-poll-option] {
+    display: grid;
+    grid-template-columns: var(--tei-poll-row) minmax(0, 1fr) auto auto;
+    align-items: center;
+    column-gap: var(--tei-space-1);
+    margin: 0;
+    padding: 0;
+  }
+
+  /* The vote toggle, and the ring that stands for it in saved HTML. */
+  :where(.tei, .tei-prose) :is([data-tei-poll-vote], [data-tei-poll-mark]) {
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    inline-size: var(--tei-poll-row);
+    block-size: var(--tei-poll-row);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--tei-accent-fg);
+  }
+
+  :where(.tei, .tei-prose) :is([data-tei-poll-vote], [data-tei-poll-mark])::before {
+    content: "";
+    grid-area: 1 / 1;
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+    box-sizing: border-box;
+    border: 2px solid var(--tei-border-strong);
+    border-radius: 50%;
+    transition:
+      background-color var(--tei-duration) var(--tei-ease),
+      border-color var(--tei-duration) var(--tei-ease);
+  }
+
+  :where(.tei, .tei-prose) [data-tei-poll-vote] {
+    cursor: pointer;
+  }
+
+  :where(.tei, .tei-prose) :is([data-tei-poll-remove], [data-tei-poll-add]) > svg {
+    flex: none;
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+
+  :where(.tei, .tei-prose) [data-tei-poll-vote] > svg {
+    grid-area: 1 / 1;
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    stroke-width: 3;
+    opacity: 0;
+  }
+
+  :where(.tei, .tei-prose) [data-tei-poll-vote]:hover::before {
+    border-color: var(--tei-accent);
+  }
+
+  :where(.tei, .tei-prose) [data-voted] > :is([data-tei-poll-vote], [data-tei-poll-mark])::before {
+    border-color: var(--tei-accent);
+    background: var(--tei-accent);
+  }
+
+  :where(.tei, .tei-prose) [data-voted] > [data-tei-poll-vote] > svg {
+    opacity: 1;
+  }
+
+  :where(.tei, .tei-prose) [data-tei-poll-count] {
+    color: var(--tei-fg-muted);
+    font-size: 0.8125em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  :where(.tei, .tei-prose) :is([data-tei-poll-remove], [data-tei-poll-add]) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tei-space-1);
+    box-sizing: border-box;
+    min-inline-size: var(--tei-poll-row);
+    block-size: var(--tei-poll-row);
+    margin: 0;
+    padding: 0 var(--tei-space-2);
+    border: 0;
+    border-radius: var(--tei-radius-sm);
+    background: transparent;
+    color: var(--tei-fg-subtle);
+    font: inherit;
+    font-size: var(--tei-ui-font-size);
+    cursor: pointer;
+  }
+
+  :where(.tei, .tei-prose) [data-tei-poll-remove] {
+    padding: 0;
+  }
+
+  :where(.tei, .tei-prose) :is([data-tei-poll-remove], [data-tei-poll-add]):hover {
+    background: var(--tei-bg-hover);
+    color: var(--tei-fg);
+  }
+
+  :where(.tei, .tei-prose) :is([data-tei-poll-remove], [data-tei-poll-add]):disabled {
+    visibility: hidden;
+  }
+
+  :where(.tei, .tei-prose)
+    [data-tei-poll]
+    :is([data-tei-poll-vote], [data-tei-poll-remove], [data-tei-poll-add]):focus-visible {
+    outline: 2px solid var(--tei-accent);
+    outline-offset: -2px;
+  }
+
+  /* The bar: a <meter>, so it needs no style attribute and reads as one. */
+  :where(.tei, .tei-prose) [data-tei-poll-meter] {
+    grid-column: 2 / -1;
+    display: block;
+    inline-size: auto;
+    block-size: 0.375rem;
+    margin: 0 var(--tei-space-2) var(--tei-space-1);
+    overflow: hidden;
+    border: 0;
+    border-radius: 999px;
+    background: var(--tei-bg-active);
+    appearance: none;
+  }
+
+  :where(.tei, .tei-prose) [data-tei-poll-meter]::-webkit-meter-bar {
+    block-size: 0.375rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--tei-bg-active);
+  }
+
+  :where(.tei, .tei-prose) [data-tei-poll-meter]::-webkit-meter-optimum-value {
+    border-radius: 999px;
+    background: var(--tei-fg-subtle);
+  }
+
+  :where(.tei, .tei-prose) [data-tei-poll-meter]::-moz-meter-bar {
+    border-radius: 999px;
+    background: var(--tei-fg-subtle);
+  }
+
+  :where(.tei, .tei-prose) [data-voted] > [data-tei-poll-meter]::-webkit-meter-optimum-value {
+    background: var(--tei-accent);
+  }
+
+  :where(.tei, .tei-prose) [data-voted] > [data-tei-poll-meter]::-moz-meter-bar {
+    background: var(--tei-accent);
+  }
+
+  :where(.tei, .tei-prose) [data-tei-poll-footer] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tei-space-2);
+    min-block-size: var(--tei-poll-row);
+    margin: var(--tei-space-1) 0 0;
+    color: var(--tei-fg-muted);
+    font-size: 0.8125em;
+  }
+
+  /* Dates: a chip in the line. Saved HTML's <time datetime> looks the same. */
+  .tei-date-time,
+  :where(.tei-prose) time[datetime] {
+    padding: 0.0625em 0.375em;
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-accent-subtle);
+    color: var(--tei-accent);
+    font-weight: 500;
+    white-space: nowrap;
+    box-decoration-break: clone;
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-date-time {
+    position: relative;
+    cursor: pointer;
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-date-time:hover {
+    background: var(--tei-selection);
+  }
+
+  .tei-date-time[data-tei-selected] {
+    outline: 2px solid var(--tei-accent);
+    outline-offset: 1px;
+  }
+
+  /* A finger needs more than a line of text to hit: the chip takes taps a
+   * little above and below itself, with no change to the line. */
+  @media (pointer: coarse) {
+    [data-tei-content]:not([data-tei-readonly]) .tei-date-time::after {
+      content: "";
+      position: absolute;
+      inset: calc((100% - 2rem) / 2) 0;
+    }
+  }
+
+  /* The date picker. */
+  .tei-date-time-picker {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tei-space-3);
+    inline-size: min(16rem, calc(100vw - 2rem));
+    padding: var(--tei-space-2);
+  }
+
+  .tei-date-time-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--tei-space-2);
+  }
+}

@@ -1,0 +1,46 @@
+/*
+ * Shiki's colours (the CodeShiki extension). Each token carries its light
+ * and dark colour as custom properties, set through the CSSOM, and the
+ * editor root its themes' background and text colours; `light-dark()`
+ * picks by the editor's colour scheme, so a scheme change re-renders
+ * nothing. Saved HTML has none of them: it shows as a plain code block.
+ */
+@layer teieditor {
+  [data-tei-shiki] .tei-code-block {
+    color: light-dark(
+      var(--tei-shiki-light-fg, var(--tei-code-fg)),
+      var(--tei-shiki-dark-fg, var(--tei-code-fg))
+    );
+  }
+
+  [data-tei-shiki][data-tei-shiki-background] .tei-code-block {
+    border-color: color-mix(in oklab, currentcolor 14%, transparent);
+    background: light-dark(
+      var(--tei-shiki-light-bg, var(--tei-code-block-bg)),
+      var(--tei-shiki-dark-bg, var(--tei-code-block-bg))
+    );
+  }
+
+  /* The line numbers on the theme's own background, in its text colour. */
+  [data-tei-shiki][data-tei-shiki-background] .tei-code-block::before {
+    border-inline-end-color: color-mix(in oklab, currentcolor 14%, transparent);
+    background: inherit;
+    color: color-mix(in oklab, currentcolor 50%, transparent);
+  }
+
+  /* A token's own colour wins over its class's; without one, the block's. */
+  [data-tei-shiki] .tei-code-block span[style] {
+    color: light-dark(var(--tei-shiki-light, currentcolor), var(--tei-shiki-dark, currentcolor));
+    font-style: var(--tei-shiki-font-style, normal);
+    font-weight: var(--tei-shiki-font-weight, normal);
+    text-decoration: var(--tei-shiki-text-decoration, none);
+  }
+
+  @media (forced-colors: active) {
+    [data-tei-shiki] .tei-code-block,
+    [data-tei-shiki] .tei-code-block span[style] {
+      color: CanvasText;
+      background: Canvas;
+    }
+  }
+}

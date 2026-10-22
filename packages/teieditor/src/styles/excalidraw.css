@@ -1,0 +1,160 @@
+/*
+ * Drawings: an <img> of the drawing's SVG, made light. In a dark theme the
+ * picture is inverted and its hues turned back, as Excalidraw's own dark
+ * mode does, so black strokes read white and colours keep their hue. The
+ * editor's are .tei-excalidraw; saved HTML's are [data-tei-excalidraw]
+ * under .tei-prose. Excalidraw's own editor (in the dialog) brings its
+ * stylesheet: import `@excalidraw/excalidraw/index.css`.
+ */
+@layer teieditor {
+  .tei-excalidraw,
+  :where(.tei-prose) [data-tei-excalidraw] {
+    --tei-drawing-filter: none;
+    display: table;
+    position: relative;
+    margin: 0 auto 0.75em;
+  }
+
+  .tei-excalidraw[data-align="start"],
+  :where(.tei-prose) [data-tei-excalidraw][data-align="start"] {
+    margin-inline-start: 0;
+  }
+
+  .tei-excalidraw[data-align="end"],
+  :where(.tei-prose) [data-tei-excalidraw][data-align="end"] {
+    margin-inline-end: 0;
+  }
+
+  :where(.dark, [data-theme="dark"]) :is(.tei-excalidraw, .tei-prose [data-tei-excalidraw]),
+  :is(.tei, .tei-prose):is(.dark, [data-theme="dark"]) :is(.tei-excalidraw, [data-tei-excalidraw]) {
+    --tei-drawing-filter: invert(93%) hue-rotate(180deg);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :is(.tei, .tei-prose)[data-theme="system"] :is(.tei-excalidraw, [data-tei-excalidraw]) {
+      --tei-drawing-filter: invert(93%) hue-rotate(180deg);
+    }
+  }
+
+  /* An explicit light theme inside a dark page stays light. */
+  :is(.tei, .tei-prose)[data-theme="light"] :is(.tei-excalidraw, [data-tei-excalidraw]) {
+    --tei-drawing-filter: none;
+  }
+
+  .tei-excalidraw img,
+  :where(.tei-prose) [data-tei-excalidraw] img {
+    display: block;
+    max-inline-size: 100%;
+    block-size: auto;
+    margin: 0;
+    filter: var(--tei-drawing-filter);
+  }
+
+  .tei-excalidraw {
+    border-radius: var(--tei-radius-sm);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Empty: a box saying how to draw in it. */
+  .tei-excalidraw[data-empty] {
+    display: block;
+    inline-size: 100%;
+    max-inline-size: 32rem;
+  }
+
+  .tei-excalidraw[data-empty]::before {
+    content: attr(data-placeholder);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: 8rem;
+    padding: var(--tei-space-4);
+    border: 1px dashed var(--tei-border-strong);
+    border-radius: var(--tei-radius);
+    background: var(--tei-bg-subtle);
+    color: var(--tei-fg-placeholder);
+    font-size: var(--tei-ui-font-size);
+    text-align: center;
+  }
+
+  /* Drawn, but its picture not yet made: the same box, without the words. */
+  .tei-excalidraw:not([data-empty]):not(:has(img))::before {
+    content: "";
+    display: block;
+    min-block-size: 8rem;
+    min-inline-size: 12rem;
+    border-radius: var(--tei-radius);
+    background: var(--tei-bg-muted);
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-excalidraw {
+    cursor: pointer;
+  }
+
+  [data-tei-content] .tei-excalidraw[data-tei-selected] {
+    outline: 2px solid var(--tei-accent);
+    outline-offset: 2px;
+  }
+
+  /* The dialog: as big as the screen allows, Excalidraw filling its body. */
+  .tei-dialog.tei-excalidraw-dialog {
+    --tei-dialog-width: 72rem;
+    block-size: min(48rem, calc(100dvh - 2rem));
+  }
+
+  .tei-excalidraw-dialog > form {
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
+  }
+
+  .tei-excalidraw-dialog .tei-dialog-body {
+    flex: 1;
+    min-block-size: 0;
+    padding-block: var(--tei-space-3);
+  }
+
+  .tei-excalidraw-canvas {
+    position: relative;
+    flex: 1;
+    min-block-size: 20rem;
+    overflow: hidden;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius);
+  }
+
+  .tei-excalidraw-status {
+    display: grid;
+    place-items: center;
+    block-size: 100%;
+    margin: 0;
+    color: var(--tei-fg-muted);
+    font-size: var(--tei-ui-font-size);
+  }
+
+  .tei-excalidraw-confirm {
+    margin-inline-end: auto;
+    align-self: center;
+    color: var(--tei-fg);
+    font-size: var(--tei-ui-font-size);
+    font-weight: 500;
+  }
+
+  @media (max-width: 640px) {
+    .tei-dialog.tei-excalidraw-dialog {
+      block-size: calc(100dvh - 1rem);
+    }
+  }
+
+  @media print {
+    .tei-excalidraw img,
+    :where(.tei-prose) [data-tei-excalidraw] img {
+      filter: none;
+    }
+
+    .tei-excalidraw[data-empty] {
+      display: none;
+    }
+  }
+}

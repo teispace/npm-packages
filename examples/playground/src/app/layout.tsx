@@ -1,26 +1,27 @@
+import { ThemeProvider } from '@teispace/next-themes';
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { headers } from 'next/headers';
+// Everything the editor needs to look right: one stylesheet, plain CSS.
+import '@teispace/teieditor/styles.css';
 import './globals.css';
 import { Nav } from '@/components/nav';
-import { ThemeToggle } from '@/components/theme-toggle';
-
-const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
-const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'TeiEditor — Examples',
-  description: 'Feature-rich, easy-to-use rich text editor for React and Next.js',
+  title: 'teieditor playground',
+  description: 'A rich text editor on Lexical: every setup, under a strict CSP.',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // The proxy (src/proxy.ts) puts a fresh nonce in each request; reading it
+  // renders per request, so Next.js and the theme script can carry it.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
-        <Nav />
-        <div className="fixed top-3 right-4 z-50">
-          <ThemeToggle />
-        </div>
-        <main className="flex-1">{children}</main>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <ThemeProvider attribute="class" defaultTheme="system" nonce={nonce}>
+          <Nav />
+          <main className="page">{children}</main>
+        </ThemeProvider>
       </body>
     </html>
   );

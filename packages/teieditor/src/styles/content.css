@@ -1,0 +1,574 @@
+/*
+ * Document styles: one rule set per class in `teiTheme`, which also styles
+ * the same elements in saved HTML under `.tei-prose` (the export carries no
+ * classes), so a document looks the same in the editor and on the page. Spacing is in `em`
+ * so a different `--tei-font-size` scales the whole document; physical
+ * directions are logical, so RTL documents need nothing extra.
+ */
+@layer teieditor {
+  /* Blocks */
+  .tei-p,
+  :where(.tei-prose) p {
+    margin: 0 0 0.75em;
+  }
+
+  .tei-h1,
+  .tei-h2,
+  .tei-h3,
+  .tei-h4,
+  .tei-h5,
+  .tei-h6,
+  :where(.tei-prose) :is(h1, h2, h3, h4, h5, h6) {
+    margin: 1.4em 0 0.5em;
+    color: var(--tei-fg);
+    font-weight: 650;
+    letter-spacing: -0.012em;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+
+  .tei-h1,
+  :where(.tei-prose) h1 {
+    font-size: 2.125em;
+    letter-spacing: -0.022em;
+  }
+
+  .tei-h2,
+  :where(.tei-prose) h2 {
+    font-size: 1.625em;
+    letter-spacing: -0.018em;
+  }
+
+  .tei-h3,
+  :where(.tei-prose) h3 {
+    font-size: 1.3125em;
+  }
+
+  .tei-h4,
+  :where(.tei-prose) h4 {
+    font-size: 1.125em;
+  }
+
+  .tei-h5,
+  :where(.tei-prose) h5 {
+    font-size: 1em;
+  }
+
+  .tei-h6,
+  :where(.tei-prose) h6 {
+    font-size: 0.875em;
+    color: var(--tei-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* A floated inline image stays inside the document. */
+  [data-tei-content],
+  .tei-prose {
+    display: flow-root;
+  }
+
+  [data-tei-content] > :first-child,
+  .tei-prose > :first-child {
+    margin-block-start: 0;
+  }
+
+  [data-tei-content] > :last-child,
+  .tei-prose > :last-child {
+    margin-block-end: 0;
+  }
+
+  .tei-quote,
+  :where(.tei-prose) blockquote {
+    margin: 0 0 0.75em;
+    padding-inline-start: 1em;
+    border-inline-start: 3px solid var(--tei-quote-border);
+    color: var(--tei-fg-muted);
+  }
+
+  .tei-hr {
+    position: relative;
+    block-size: 1.5em;
+    margin: 0.5em 0;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .tei-hr::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 50%;
+    border-block-start: 1px solid var(--tei-border-strong);
+  }
+
+  .tei-hr-selected {
+    outline: 2px solid var(--tei-ring);
+    border-radius: var(--tei-radius-sm);
+  }
+
+  /* Inline code and the code block */
+  .tei-code,
+  :where(.tei-prose) :not(pre) > code {
+    padding: 0.125em 0.3em;
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-code-bg);
+    color: var(--tei-code-fg);
+    font-family: var(--tei-font-mono);
+    font-size: 0.875em;
+  }
+
+  /*
+   * Lexical wraps inline code in a <code> around the styled span. The
+   * wrapper takes the paragraph's font, so its monospace metrics do not
+   * stretch the line: a line with code is as tall as one without, and as
+   * in saved HTML. Saved HTML's <code> is the styled one: it keeps its font.
+   */
+  [data-tei-content]:not(.tei-prose) code:not(.tei-code-block) {
+    font: inherit;
+  }
+
+  .tei-code-block,
+  :where(.tei-prose) pre {
+    position: relative;
+    display: block;
+    margin: 0 0 0.75em;
+    padding: 1em 1em 1em 3.75em;
+    overflow-x: auto;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius);
+    background: var(--tei-code-block-bg);
+    color: var(--tei-code-fg);
+    font-family: var(--tei-font-mono);
+    font-size: 0.875em;
+    line-height: 1.6;
+    tab-size: 2;
+    white-space: pre;
+    counter-reset: tei-line;
+  }
+
+  /*
+   * Line numbers come from Lexical's `data-gutter` ("1\n2\n3"). A sticky
+   * float in the start padding: as tall as the lines beside it, and pinned
+   * to the edge while a long line scrolls sideways under it.
+   */
+  .tei-code-block::before {
+    content: attr(data-gutter);
+    position: sticky;
+    /* Sticky pins the margin box, which starts 3.75em inside the border box. */
+    inset-inline-start: -3.75em;
+    z-index: 1;
+    float: inline-start;
+    box-sizing: border-box;
+    inline-size: 2.75em;
+    margin-block: -1em;
+    /* Into the 3.75em padding, with 1em before the code: a margin box of 0. */
+    margin-inline: -3.75em 1em;
+    padding: 1em 0.5em;
+    border-inline-end: 1px solid var(--tei-border);
+    background: var(--tei-bg-subtle);
+    color: var(--tei-fg-subtle);
+    text-align: end;
+    white-space: pre-wrap;
+    user-select: none;
+  }
+
+  .tei-code-block[data-tei-no-gutter] {
+    padding-inline-start: 1em;
+  }
+
+  .tei-code-block[data-tei-no-gutter]::before {
+    content: none;
+  }
+
+  .tei-token-comment {
+    color: var(--tei-token-comment);
+    font-style: italic;
+  }
+
+  .tei-token-punctuation {
+    color: var(--tei-token-punctuation);
+  }
+
+  .tei-token-keyword {
+    color: var(--tei-token-keyword);
+  }
+
+  .tei-token-string,
+  .tei-token-inserted {
+    color: var(--tei-token-string);
+  }
+
+  .tei-token-function,
+  .tei-token-builtin {
+    color: var(--tei-token-function);
+  }
+
+  .tei-token-constant {
+    color: var(--tei-token-constant);
+  }
+
+  .tei-token-property,
+  .tei-token-attr {
+    color: var(--tei-token-property);
+  }
+
+  .tei-token-tag,
+  .tei-token-deleted {
+    color: var(--tei-token-tag);
+  }
+
+  .tei-token-variable {
+    color: var(--tei-token-variable);
+  }
+
+  .tei-token-operator {
+    color: var(--tei-token-operator);
+  }
+
+  /* Lists */
+  .tei-ul,
+  .tei-ol,
+  .tei-checklist,
+  :where(.tei-prose) :is(ul, ol) {
+    margin: 0 0 0.75em;
+    padding: 0;
+    padding-inline-start: 1.625em;
+  }
+
+  .tei-ul-2,
+  :where(.tei-prose) ul ul {
+    list-style-type: circle;
+  }
+
+  .tei-ul-3,
+  :where(.tei-prose) ul ul ul {
+    list-style-type: square;
+  }
+
+  .tei-ol-2,
+  :where(.tei-prose) ol ol {
+    list-style-type: lower-alpha;
+  }
+
+  .tei-ol-3,
+  :where(.tei-prose) ol ol ol {
+    list-style-type: lower-roman;
+  }
+
+  .tei-ol-4,
+  :where(.tei-prose) ol ol ol ol {
+    list-style-type: upper-alpha;
+  }
+
+  .tei-ol-5,
+  :where(.tei-prose) ol ol ol ol ol {
+    list-style-type: upper-roman;
+  }
+
+  .tei-li,
+  :where(.tei-prose) li {
+    margin: 0.2em 0;
+    padding-inline-start: 0.25em;
+  }
+
+  .tei-li::marker,
+  :where(.tei-prose) li::marker {
+    color: var(--tei-fg-muted);
+  }
+
+  .tei-li-nested {
+    list-style-type: none;
+  }
+
+  .tei-li-nested::before,
+  .tei-li-nested::marker {
+    content: none;
+    display: none;
+  }
+
+  .tei-li > :where(.tei-ul, .tei-ol, .tei-checklist),
+  :where(.tei-prose) li > :is(ul, ol) {
+    margin-block-end: 0;
+  }
+
+  /* Check list: the box is drawn on the item and toggled by a click in the
+   * gutter (Lexical's CheckListExtension handles the hit test). */
+  .tei-checklist {
+    padding-inline-start: 0;
+    list-style: none;
+  }
+
+  .tei-li-checked,
+  .tei-li-unchecked,
+  :where(.tei-prose) li.task-list-item {
+    position: relative;
+    padding-inline-start: 1.75em;
+    list-style: none;
+    outline: none;
+  }
+
+  .tei-li-checked::before,
+  .tei-li-unchecked::before,
+  :where(.tei-prose) li.task-list-item::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0.125em;
+    inset-block-start: calc((1lh - 1.05em) / 2);
+    inline-size: 1.05em;
+    block-size: 1.05em;
+    border: 1.5px solid var(--tei-border-strong);
+    border-radius: 0.3em;
+    background: var(--tei-bg);
+    cursor: pointer;
+    transition:
+      background-color var(--tei-duration) var(--tei-ease),
+      border-color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-li-unchecked:hover::before {
+    border-color: var(--tei-accent);
+  }
+
+  .tei-li-checked::before,
+  :where(.tei-prose) li.task-list-item:has(> input:checked)::before {
+    border-color: var(--tei-accent);
+    background: var(--tei-accent);
+  }
+
+  .tei-li-checked::after,
+  :where(.tei-prose) li.task-list-item:has(> input:checked)::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: calc(0.125em + 0.36em);
+    inset-block-start: calc((1lh - 1.05em) / 2 + 0.18em);
+    inline-size: 0.32em;
+    block-size: 0.58em;
+    border: solid var(--tei-accent-fg);
+    border-width: 0 0.13em 0.13em 0;
+    transform: rotate(45deg);
+    pointer-events: none;
+  }
+
+  .tei-li-checked,
+  :where(.tei-prose) li.task-list-item:has(> input:checked) {
+    color: var(--tei-fg-muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--tei-fg-subtle);
+  }
+
+  .tei-li-checked:focus-visible::before,
+  .tei-li-unchecked:focus-visible::before {
+    outline: 2px solid var(--tei-ring);
+    outline-offset: 1px;
+  }
+
+  /* Text formats. Combined decorations share one rule so they never fight. */
+  .tei-bold,
+  :where(.tei-prose) :is(strong, b) {
+    font-weight: 650;
+  }
+
+  .tei-italic {
+    font-style: italic;
+  }
+
+  .tei-underline,
+  :where(.tei-prose) u {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .tei-strike {
+    text-decoration: line-through;
+  }
+
+  .tei-underline-strike {
+    text-decoration: underline line-through;
+    text-underline-offset: 0.15em;
+  }
+
+  .tei-sub,
+  :where(.tei-prose) sub {
+    font-size: 0.75em;
+    vertical-align: sub;
+  }
+
+  .tei-sup,
+  :where(.tei-prose) sup {
+    font-size: 0.75em;
+    vertical-align: super;
+  }
+
+  .tei-highlight,
+  :where(.tei-prose) mark {
+    padding: 0.05em 0;
+    border-radius: 0.15em;
+    background: var(--tei-highlight-bg);
+    color: inherit;
+  }
+
+  .tei-uppercase {
+    text-transform: uppercase;
+  }
+
+  .tei-lowercase {
+    text-transform: lowercase;
+  }
+
+  .tei-capitalize {
+    text-transform: capitalize;
+  }
+
+  .tei-link,
+  :where(.tei-prose) a {
+    color: var(--tei-link);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklch, var(--tei-link) 40%, transparent);
+    text-underline-offset: 0.18em;
+    cursor: pointer;
+    transition: text-decoration-color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-link:hover,
+  :where(.tei-prose) a:hover {
+    text-decoration-color: currentColor;
+  }
+
+  .tei-mark {
+    border-block-end: 2px solid color-mix(in oklch, var(--tei-warning) 70%, transparent);
+    background: var(--tei-mark-bg);
+  }
+
+  .tei-mark-overlap {
+    background: color-mix(in oklch, var(--tei-mark-bg) 100%, var(--tei-warning) 25%);
+  }
+
+  .tei-hashtag {
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-accent-subtle);
+    color: var(--tei-accent);
+  }
+
+  .tei-tab {
+    display: inline-block;
+  }
+
+  .tei-character-limit {
+    background: var(--tei-danger-subtle);
+    text-decoration: underline wavy var(--tei-danger);
+  }
+
+  .tei-block-cursor {
+    display: block;
+    position: absolute;
+    pointer-events: none;
+  }
+
+  .tei-block-cursor::after {
+    content: "";
+    position: absolute;
+    display: block;
+    inset-block-start: -2px;
+    inline-size: 1.25em;
+    border-block-start: 1px solid var(--tei-fg);
+    animation: tei-caret-blink 1.1s steps(2, start) infinite;
+  }
+
+  @keyframes tei-caret-blink {
+    to {
+      visibility: hidden;
+    }
+  }
+
+  /* Saved HTML only: what the export writes differently from the editor. */
+  :where(.tei-prose) pre {
+    padding-inline-start: 1em;
+  }
+
+  :where(.tei-prose) pre > code {
+    font: inherit;
+  }
+
+  /* The editor's divider: a band as tall as a line, the rule through its middle. */
+  :where(.tei-prose) hr {
+    block-size: 1.5em;
+    margin: 0.5em 0;
+    border: 0;
+    background:
+      linear-gradient(var(--tei-border-strong), var(--tei-border-strong)) center / 100% 1px
+      no-repeat;
+  }
+
+  /* Check lists, written as task lists (a disabled checkbox per item). */
+  :where(.tei-prose) ul.contains-task-list {
+    padding-inline-start: 0;
+    list-style: none;
+  }
+
+  :where(.tei-prose) ul.contains-task-list ul.contains-task-list {
+    padding-inline-start: 1.75em;
+  }
+
+  /* The box is drawn as the editor draws it (a disabled checkbox ignores
+   * accent-color); the real one sits on top, unseen, for assistive tech. */
+  :where(.tei-prose) li.task-list-item::before {
+    cursor: default;
+  }
+
+  :where(.tei-prose) li.task-list-item > input[type="checkbox"] {
+    position: absolute;
+    inset-inline-start: 0.125em;
+    inset-block-start: calc((1lh - 1.05em) / 2);
+    inline-size: 1.05em;
+    block-size: 1.05em;
+    margin: 0;
+    opacity: 0;
+  }
+
+  /* Lexical's own block decorators (DecoratorBlockNode), for nodes of yours built on them. */
+  .tei-embed-block {
+    margin: 0 0 0.75em;
+    user-select: none;
+  }
+
+  /* A node is selected, not a place in the text: no caret (Chromium draws
+   * one at the start, though the selection has no range). */
+  [data-tei-content]:has([data-tei-selected]) {
+    caret-color: transparent;
+  }
+
+  .tei-embed-focus,
+  [data-tei-content] [data-tei-selected] {
+    outline: 2px solid var(--tei-accent);
+    outline-offset: 2px;
+    border-radius: var(--tei-radius-sm);
+  }
+
+  /* Blocks being moved, or with their menu open. */
+  [data-tei-content] [data-tei-dragging] {
+    opacity: 0.35;
+  }
+
+  [data-tei-content] [data-tei-block-selected] {
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-selection);
+    box-shadow: 0 0 0 2px var(--tei-selection);
+  }
+
+  /* Print: the document only, in black on white. */
+  @media print {
+    .tei {
+      color-scheme: light;
+    }
+
+    [data-tei-content] {
+      padding: 0;
+    }
+
+    .tei [data-tei-ui],
+    [data-tei-content]::before {
+      display: none;
+    }
+  }
+}

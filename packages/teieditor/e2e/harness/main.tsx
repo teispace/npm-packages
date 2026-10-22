@@ -1,0 +1,320 @@
+import { StrictMode, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { setExtensionOptions } from '../../src/core/define';
+import type { TeiEditor } from '../../src/core/editor';
+import { Autocomplete } from '../../src/extensions/autocomplete/index';
+import { Blocks } from '../../src/extensions/blocks/index';
+import { Callout } from '../../src/extensions/callout/index';
+import { Card } from '../../src/extensions/card/index';
+import { Clipboard } from '../../src/extensions/clipboard/index';
+import { Collapsible } from '../../src/extensions/collapsible/index';
+import { Columns } from '../../src/extensions/columns/index';
+import { DateTime } from '../../src/extensions/date-time/index';
+import { DocumentActions } from '../../src/extensions/document-actions/index';
+import { Embed, type EmbedOptions } from '../../src/extensions/embed/index';
+import { Emoji } from '../../src/extensions/emoji/index';
+import { FileAttachment, type FileOptions } from '../../src/extensions/file/index';
+import { FindReplace } from '../../src/extensions/find-replace/index';
+import { Hashtag } from '../../src/extensions/hashtag/index';
+import { Html } from '../../src/extensions/html/index';
+import { Image, type ImageOptions } from '../../src/extensions/image/index';
+import { Keywords } from '../../src/extensions/keywords/index';
+import { MarkdownSource } from '../../src/extensions/markdown-source/index';
+import { Mention } from '../../src/extensions/mention/index';
+import { PageBreak } from '../../src/extensions/page-break/index';
+import { Pages } from '../../src/extensions/pages/index';
+import { Poll } from '../../src/extensions/poll/index';
+import { PullQuote } from '../../src/extensions/pull-quote/index';
+import { Ruby } from '../../src/extensions/ruby/index';
+import { ShowInvisibles } from '../../src/extensions/show-invisibles/index';
+import { SpecialText } from '../../src/extensions/special-text/index';
+import { StarterKit } from '../../src/extensions/starter-kit/index';
+import { StickyNote } from '../../src/extensions/sticky-note/index';
+import { TabFocus } from '../../src/extensions/tab-focus/index';
+import { Table } from '../../src/extensions/table/index';
+import { TextStyle } from '../../src/extensions/text-style/index';
+import {
+  Button,
+  ColorPicker,
+  Dialog,
+  DocumentMenu,
+  DropdownMenu,
+  Editor,
+  Field,
+  GridPicker,
+  Input,
+  type MenuGroupData,
+  useTeiEditor,
+} from '../../src/react/index';
+import { neutralizeAttributes, restoreStyles } from '../../src/utils/html-attributes';
+import { DocumentTools, documentTools } from './document-tools';
+
+declare global {
+  interface Window {
+    __tei: {
+      editor: TeiEditor;
+      violations: string[];
+      log: string[];
+      setClipSource: (html: string, raw?: boolean) => void;
+      trust: (html: string) => string;
+      /** Change the Image extension's options (an upload handler, limits). */
+      setImageOptions: (options: Partial<ImageOptions>) => void;
+      /** Change the FileAttachment extension's options. */
+      setFileOptions: (options: Partial<FileOptions>) => void;
+      /** Change the Embed extension's options. */
+      setEmbedOptions: (options: Partial<EmbedOptions>) => void;
+      /** What the clipboard reads as for the menu's Paste; `null` as if the browser refused. */
+      setClipboard: (data: { html?: string; text?: string } | null) => void;
+    };
+  }
+}
+
+const violations: string[] = [];
+document.addEventListener('securitypolicyviolation', (event) => {
+  violations.push(
+    `${event.violatedDirective} ${event.blockedURI} ${event.sample} at ${event.sourceFile}:${event.lineNumber}`,
+  );
+});
+const log: string[] = [];
+
+// Tests copy from here and paste into the editor: a real clipboard round trip.
+const e2ePolicy = (
+  window as {
+    trustedTypes?: {
+      createPolicy(
+        name: string,
+        rules: { createHTML(s: string): string },
+      ): {
+        createHTML(s: string): unknown;
+      };
+    };
+  }
+).trustedTypes?.createPolicy('e2e', { createHTML: (html) => html });
+const trust = (html: string) => (e2ePolicy ? e2ePolicy.createHTML(html) : html) as string;
+/** `raw` keeps handlers in the source, for tests of hostile clipboards. */
+function setClipSource(html: string, raw = false) {
+  const source = document.getElementById('clip-source') as HTMLElement;
+  // A strict style-src blocks the markup's styles (Firefox drops their text
+  // too); apply them through the CSSOM, as the editor's own import does.
+  source.innerHTML = trust(raw ? html : neutralizeAttributes(html));
+  restoreStyles(source);
+  const selection = getSelection();
+  selection?.selectAllChildren(source);
+}
+
+const params = new URLSearchParams(location.search);
+
+const GROUPS: MenuGroupData[] = [
+  {
+    id: 'basic',
+    label: 'Basic',
+    items: [
+      { id: 'one', label: 'One', icon: 'bold', shortcut: '⌘B', onSelect: () => log.push('one') },
+      {
+        id: 'two',
+        label: 'Two',
+        description: 'With a description',
+        onSelect: () => log.push('two'),
+      },
+      { id: 'off', label: 'Disabled', disabled: true },
+      {
+        id: 'more',
+        label: 'More',
+        items: [
+          { id: 'sub-a', label: 'Sub A', onSelect: () => log.push('sub-a') },
+          { id: 'sub-b', label: 'Sub B', onSelect: () => log.push('sub-b') },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'danger',
+    items: [
+      { id: 'delete', label: 'Delete', variant: 'danger', onSelect: () => log.push('delete') },
+    ],
+  },
+];
+
+/** People and channels, found after a delay as a server would. */
+const PEOPLE = ['Ada Lovelace', 'Alan Turing', 'Grace Hopper', 'Linus Torvalds'];
+const fakeSearch =
+  (names: string[], prefix: string) =>
+  (query: string, { signal }: { signal: AbortSignal }) =>
+    new Promise<{ id: string; label: string; description?: string }[]>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        log.push(`search ${prefix}${query}`);
+        resolve(
+          names
+            .filter((name) => name.toLowerCase().includes(query.toLowerCase()))
+            .map((name) => ({ id: name.toLowerCase().replace(/\s+/g, '-'), label: name })),
+        );
+      }, 60);
+      signal.addEventListener('abort', () => {
+        clearTimeout(timer);
+        reject(signal.reason);
+      });
+    });
+const TYPEAHEAD = [
+  Emoji,
+  Hashtag.configure({ onClick: (tag) => log.push(`hashtag ${tag}`) }),
+  Mention.configure({
+    search: fakeSearch(PEOPLE, '@'),
+    triggers: [{ trigger: '+', search: fakeSearch(['general', 'random'], '+') }],
+    onClick: (mention) => log.push(`mention ${mention.id}`),
+  }),
+];
+
+const SWATCHES = [
+  { value: '#e03131', label: 'Red' },
+  { value: '#2f9e44', label: 'Green' },
+  { value: '#1971c2', label: 'Blue' },
+  { value: '#f08c00', label: 'Orange' },
+];
+
+function App() {
+  const editor = useTeiEditor({
+    extensions: [
+      StarterKit,
+      // `plain`: no text styles, for a toolbar that fits the frame.
+      ...(params.has('plain') ? [] : [TextStyle]),
+      ...(params.has('raw') ? [Html.configure({ clean: false })] : []),
+      ...(params.has('table') ? [Table] : []),
+      ...(params.has('image') ? [Image] : []),
+      ...(params.has('file') ? [FileAttachment] : []),
+      ...(params.has('embed') ? [Embed] : []),
+      ...(params.has('blocks') ? [Blocks] : []),
+      // The document's own blocks: pull quotes, callouts, sections, page breaks.
+      ...(params.has('extras') ? [PullQuote, Callout, Collapsible, PageBreak] : []),
+      ...(params.has('cards') ? [Card, StickyNote] : []),
+      ...(params.has('columns') ? [Columns] : []),
+      ...(params.has('widgets') ? [Poll, DateTime.configure({ locale: 'en-US' })] : []),
+      ...(params.has('find') ? [FindReplace] : []),
+      ...documentTools(params),
+      // Keywords, autocomplete, typography and ruby.
+      ...(params.has('inline-extras')
+        ? [
+            Keywords.configure({ keywords: ['teieditor'] }),
+            Autocomplete.configure({ debounce: 0 }),
+            SpecialText.configure({ brackets: true }),
+            Ruby,
+          ]
+        : []),
+      // Views and document actions: source, invisibles, pages, Tab focus, import and export.
+      ...(params.has('views')
+        ? [MarkdownSource, ShowInvisibles, Pages, TabFocus, DocumentActions, PageBreak]
+        : []),
+      ...(params.has('typeahead') ? TYPEAHEAD : []),
+    ],
+    content: params.get('content') ?? '<p>Hello world</p>',
+  });
+  const [dialog, setDialog] = useState(false);
+  const [color, setColor] = useState<string | null>(null);
+  window.__tei = {
+    editor,
+    violations,
+    log,
+    setClipSource,
+    trust,
+    setImageOptions: (options) => setExtensionOptions(editor, Image, options),
+    setFileOptions: (options) => setExtensionOptions(editor, FileAttachment, options),
+    setEmbedOptions: (options) => setExtensionOptions(editor, Embed, options),
+    setClipboard: (data) =>
+      setExtensionOptions(editor, Clipboard, {
+        read: async (plain) => {
+          if (!data) return null;
+          const transfer = new DataTransfer();
+          if (data.text) transfer.setData('text/plain', data.text);
+          if (data.html && !plain) transfer.setData('text/html', data.html);
+          return transfer;
+        },
+      }),
+  };
+  return (
+    <main data-testid="root">
+      <Editor
+        editor={editor}
+        placeholder="Write something…"
+        toolbarOverflow={params.has('scroll') ? 'scroll' : params.has('wrap') ? 'wrap' : undefined}
+        frameProps={{ 'data-testid': 'editor', dir: params.has('rtl') ? 'rtl' : undefined }}
+        slots={{
+          ...(params.has('nocontext') ? { contextMenu: false } : {}),
+          ...(params.has('nosticky') ? { stickyMenu: false } : {}),
+        }}
+        contentProps={{ 'data-testid': 'content' }}
+      />
+      {params.has('doctools') && <DocumentTools editor={editor} />}
+      {/* UI outside an editor takes the tokens from .tei-portal. */}
+      <section className="tei-portal gallery" data-testid="gallery">
+        {params.has('views') ? <DocumentMenu editor={editor} data-testid="document-menu" /> : null}
+        <DropdownMenu label="Menu" groups={GROUPS} data-testid="menu-trigger">
+          Menu
+        </DropdownMenu>
+        <DropdownMenu
+          label="Colour"
+          data-testid="color-trigger"
+          content={(close) => (
+            <ColorPicker
+              value={color}
+              swatches={SWATCHES}
+              onChange={(value) => {
+                setColor(value);
+                close();
+              }}
+            />
+          )}
+        >
+          Colour {color ?? 'none'}
+        </DropdownMenu>
+        <DropdownMenu
+          label="Table"
+          data-testid="grid-trigger"
+          content={(close) => (
+            <GridPicker
+              onPick={(rows, columns) => {
+                log.push(`grid ${rows}x${columns}`);
+                close();
+              }}
+            />
+          )}
+        >
+          Table
+        </DropdownMenu>
+        <Button variant="outline" data-testid="dialog-trigger" onClick={() => setDialog(true)}>
+          Open dialog
+        </Button>
+        <Dialog
+          open={dialog}
+          onOpenChange={setDialog}
+          title="Insert link"
+          description="Paste or type a URL."
+          onSubmit={() => {
+            log.push('dialog submit');
+            setDialog(false);
+          }}
+          footer={
+            <Button variant="solid" type="submit" data-testid="dialog-submit">
+              Insert
+            </Button>
+          }
+        >
+          <Field label="URL">
+            {(field) => <Input {...field} data-testid="dialog-input" placeholder="https://" />}
+          </Field>
+        </Dialog>
+      </section>
+      <div className="tei-portal corner">
+        <DropdownMenu label="Corner" groups={GROUPS} data-testid="corner-trigger">
+          Corner
+        </DropdownMenu>
+      </div>
+      <div id="clip-source" data-testid="clip-source" />
+      {params.has('tall') ? <div className="tall" /> : null}
+    </main>
+  );
+}
+
+createRoot(document.getElementById('app') as HTMLElement).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

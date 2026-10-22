@@ -1,0 +1,158 @@
+/*
+ * Equations: MathML from KaTeX, which the browser draws with its own math
+ * font, so no KaTeX stylesheet or font files are needed. The editor's are
+ * .tei-equation; saved HTML's are [data-tei-equation] under .tei-prose.
+ * Until KaTeX loads (or where it is not installed) the TeX shows as code.
+ */
+@layer teieditor {
+  /* The editor's popover: the TeX, its preview, and what is wrong with it. */
+  .tei-equation-form {
+    display: grid;
+    gap: var(--tei-space-2);
+    inline-size: min(28rem, calc(100vw - 2rem));
+  }
+
+  .tei-equation-input {
+    min-block-size: var(--tei-control-size);
+    font-family: var(--tei-font-mono);
+    resize: vertical;
+    field-sizing: content;
+    max-block-size: 12rem;
+  }
+
+  .tei-equation-preview {
+    --tei-math-font: "Latin Modern Math", "STIX Two Math", "Cambria Math", math;
+    min-block-size: 2.5rem;
+    max-block-size: 10rem;
+    overflow: auto;
+    padding: var(--tei-space-2);
+    border: 1px dashed var(--tei-border-strong);
+    border-radius: var(--tei-radius-sm);
+    color: var(--tei-fg);
+    text-align: center;
+  }
+
+  .tei-equation-preview:empty {
+    display: none;
+  }
+
+  .tei-equation-preview math {
+    font-family: var(--tei-math-font);
+    font-size: 1.15em;
+  }
+
+  .tei-equation-preview > code {
+    font-family: var(--tei-font-mono);
+    color: var(--tei-fg-muted);
+  }
+
+  .tei-equation-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tei-space-2);
+  }
+
+  .tei-equation-actions > :first-child {
+    margin-inline-end: auto;
+  }
+
+  .tei-equation,
+  :where(.tei-prose) [data-tei-equation] {
+    --tei-math-font: "Latin Modern Math", "STIX Two Math", "Cambria Math", math;
+  }
+
+  .tei-equation math,
+  :where(.tei-prose) [data-tei-equation] math {
+    font-family: var(--tei-math-font);
+    font-size: 1.1em;
+  }
+
+  /* In a line: sits on the baseline, never breaks across lines. */
+  .tei-equation[data-tei-equation="inline"],
+  :where(.tei-prose) span[data-tei-equation] {
+    display: inline-block;
+    max-inline-size: 100%;
+    vertical-align: baseline;
+    white-space: nowrap;
+  }
+
+  /* A block: centred, scrolling sideways when wider than the column. */
+  .tei-equation[data-tei-equation="block"],
+  :where(.tei-prose) div[data-tei-equation] {
+    display: block;
+    margin-block: 0.75em;
+    padding-block: 0.25em;
+    overflow-x: auto;
+    text-align: center;
+  }
+
+  :where(.tei-prose) div[data-tei-equation] math,
+  .tei-equation[data-tei-equation="block"] math {
+    margin-inline: auto;
+  }
+
+  /* The TeX itself, until (or unless) it is drawn. */
+  .tei-equation > code,
+  :where(.tei-prose) [data-tei-equation] > code {
+    padding: 0.0625em 0.375em;
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-code-bg);
+    color: var(--tei-code-fg);
+    font-family: var(--tei-font-mono);
+    font-size: 0.875em;
+    white-space: pre-wrap;
+  }
+
+  /* A mistake in the TeX: shown, underlined, KaTeX's complaint in the tooltip. */
+  .tei-equation[data-error] > code,
+  .tei-equation-preview[data-error] > code,
+  :where(.tei-prose) [data-tei-equation][data-error] > code {
+    background: var(--tei-danger-subtle);
+    color: var(--tei-danger);
+    text-decoration: wavy underline var(--tei-danger);
+    text-underline-offset: 0.2em;
+  }
+
+  /* Empty: what to do, in the editor's words. */
+  .tei-equation[data-empty]::before {
+    content: attr(data-placeholder);
+    padding: 0.0625em 0.375em;
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-bg-muted);
+    color: var(--tei-fg-placeholder);
+    font-size: 0.875em;
+  }
+
+  .tei-equation {
+    border-radius: var(--tei-radius-sm);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-equation {
+    cursor: pointer;
+    transition: background-color var(--tei-duration) var(--tei-ease);
+  }
+
+  [data-tei-content]:not([data-tei-readonly]) .tei-equation:hover {
+    background: var(--tei-bg-hover);
+  }
+
+  .tei-equation[data-tei-selected] {
+    outline: 2px solid var(--tei-accent);
+    outline-offset: 2px;
+    background: var(--tei-accent-subtle);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-tei-content]:not([data-tei-readonly]) .tei-equation {
+      transition: none;
+    }
+  }
+
+  @media print {
+    .tei-equation[data-empty] {
+      display: none;
+    }
+  }
+}

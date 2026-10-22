@@ -1,165 +1,167 @@
-import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { type CliContext, installCommand, main, peersOf } from '../../src/cli/index.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const CLI_PATH = join(__dirname, '../../src/cli/index.ts');
-const TEMP_DIR = join(__dirname, '../.tmp-cli-test');
+let root: string;
+let app: string;
+let dist: string;
+let lines: string[];
+let runs: { command: string; args: readonly string[] }[];
+let context: CliContext;
 
-function runCli(args: string): string {
-  return execSync(`node --import tsx ${CLI_PATH} ${args}`, {
-    cwd: TEMP_DIR,
-    encoding: 'utf-8',
-    timeout: 15000,
-  });
-}
+const file = (path: string, content: string) => {
+  mkdirSync(join(path, '..'), { recursive: true });
+  writeFileSync(path, content);
+};
+const output = () => lines.join('\n');
 
-describe('CLI', () => {
-  beforeEach(() => {
-    if (existsSync(TEMP_DIR)) rmSync(TEMP_DIR, { recursive: true });
-    mkdirSync(TEMP_DIR, { recursive: true });
-  });
+beforeEach(() => {
+  root = mkdtempSync(join(tmpdir(), 'tei-cli-'));
+  app = join(root, 'app');
+  dist = join(root, 'pkg', 'dist');
+  // A package as built: its manifest, two templates, and a module graph with peers.
+  file(
+    join(root, 'pkg', 'package.json'),
+    JSON.stringify({
+      version: '5.0.0',
+      peerDependencies: { lexical: '*', '@lexical/table': '*', react: '*', '@lexical/link': '*' },
+    }),
+  );
+  file(
+    join(dist, 'templates', 'manifest.json'),
+    JSON.stringify({
+      'bubble-menu': {
+        file: 'bubble-menu.tsx',
+        description: 'The bubble.',
+        dependencies: ['@teispace/teieditor', 'lexical'],
+      },
+      'toolbar-fit': {
+        file: 'toolbar-fit.ts',
+        description: 'Fitting.',
+        dependencies: ['@teispace/teieditor'],
+      },
+    }),
+  );
+  file(join(dist, 'templates', 'bubble-menu.tsx'), 'export const Bubble = 1;\n');
+  file(join(dist, 'templates', 'toolbar-fit.ts'), 'export const fit = 1;\n');
+  file(join(dist, 'react', 'index.js'), 'import{a}from"./a.js";import"react";');
+  file(
+    join(dist, 'react', 'a.js'),
+    'import{b}from"lexical";const c=()=>import("../extensions/link/index.js");',
+  );
+  file(
+    join(dist, 'extensions', 'link', 'index.js'),
+    'import{d}from"@lexical/link/sub";import"left-pad";',
+  );
+  file(
+    join(dist, 'presets', 'full.js'),
+    'import{t}from"@lexical/table";import"../react/index.js";',
+  );
+  file(join(dist, 'presets', 'minimal.js'), 'import"lexical";');
+  file(join(app, 'package.json'), JSON.stringify({ dependencies: { react: '19.0.0' } }));
+  lines = [];
+  runs = [];
+  context = {
+    cwd: app,
+    dist,
+    log: (line) => lines.push(line),
+    run: (command, args) => {
+      runs.push({ command, args });
+      return 0;
+    },
+  };
+});
+afterEach(() => rmSync(root, { recursive: true, force: true }));
 
-  afterEach(() => {
-    if (existsSync(TEMP_DIR)) rmSync(TEMP_DIR, { recursive: true });
-  });
-
-  describe('--help', () => {
-    it('shows help text with all top-level commands', () => {
-      const output = runCli('--help');
-      expect(output).toContain('teieditor');
-      expect(output).toContain('init');
-      expect(output).toContain('update');
-      expect(output).toContain('add');
-      expect(output).toContain('list');
-    });
-  });
-
-  describe('--version', () => {
-    it('shows version', () => {
-      const output = runCli('--version');
-      expect(output.trim()).toMatch(/^\d+\.\d+\.\d+$/);
-    });
-  });
-
-  describe('list', () => {
-    it('lists scaffoldable groups', () => {
-      const output = runCli('list');
-      expect(output).toContain('ui');
-      expect(output).toContain('toolbar');
-      expect(output).toContain('bubble-menu');
-      expect(output).toContain('editor');
-    });
-  });
-
-  describe('init', () => {
-    it('scaffolds the full UI tree (ui + components + editors)', () => {
-      const outDir = join(TEMP_DIR, 'src/components/teieditor');
-      runCli('init');
-
-      // UI primitives
-      expect(existsSync(join(outDir, 'ui/button.tsx'))).toBe(true);
-      expect(existsSync(join(outDir, 'ui/dropdown.tsx'))).toBe(true);
-      expect(existsSync(join(outDir, 'ui/icons.tsx'))).toBe(true);
-      // Floating components
-      expect(existsSync(join(outDir, 'components/toolbar/toolbar.tsx'))).toBe(true);
-      expect(existsSync(join(outDir, 'components/bubble-menu/bubble-menu.tsx'))).toBe(true);
-      expect(existsSync(join(outDir, 'components/slash-menu/slash-menu.tsx'))).toBe(true);
-      expect(existsSync(join(outDir, 'components/link-editor/link-editor.tsx'))).toBe(true);
-      // Editor presets
-      expect(existsSync(join(outDir, 'editors/editor.tsx'))).toBe(true);
-      expect(existsSync(join(outDir, 'editors/editor-notion.tsx'))).toBe(true);
-    });
-
-    it('respects a custom --path', () => {
-      const outDir = join(TEMP_DIR, 'lib/custom-editor');
-      runCli(`init --path lib/custom-editor`);
-      expect(existsSync(join(outDir, 'ui/button.tsx'))).toBe(true);
-      expect(existsSync(join(outDir, 'editors/editor.tsx'))).toBe(true);
-    });
-
-    it('reports "ok" for untouched files on re-run (no duplicate work)', () => {
-      runCli('init');
-      const output = runCli('init');
-      // Files are unchanged between two init runs → "ok"
-      expect(output).toContain('ok');
-    });
-
-    it('does not overwrite user-modified files by default', () => {
-      const outDir = join(TEMP_DIR, 'src/components/teieditor');
-      runCli('init');
-      const target = join(outDir, 'ui/button.tsx');
-      writeFileSync(target, `// my edits\n${readFileSync(target, 'utf-8')}`);
-
-      const output = runCli('init');
-      expect(output).toContain('skipped');
-      expect(readFileSync(target, 'utf-8')).toMatch(/^\/\/ my edits/);
-    });
-
-    it('--force overwrites user-modified files', () => {
-      const outDir = join(TEMP_DIR, 'src/components/teieditor');
-      runCli('init');
-      const target = join(outDir, 'ui/button.tsx');
-      writeFileSync(target, '// my edits');
-
-      runCli('init --force');
-      expect(readFileSync(target, 'utf-8')).not.toBe('// my edits');
-    });
+describe('teieditor CLI', () => {
+  it('prints usage, fails without a command, knows its version', () => {
+    expect(main([], context)).toBe(1);
+    expect(output()).toContain('Usage:');
+    lines = [];
+    expect(main(['--help'], context)).toBe(0);
+    expect(main(['-v'], context)).toBe(0);
+    expect(lines.at(-1)).toBe('5.0.0');
+    expect(main(['fly'], context)).toBe(1);
+    expect(main(['add', '--nope'], context)).toBe(1);
   });
 
-  describe('update', () => {
-    it('errors if no scaffold exists yet', () => {
-      expect(() => runCli('update')).toThrow();
-    });
-
-    it('is a no-op on a clean scaffold (no changes to apply)', () => {
-      runCli('init');
-      const output = runCli('update');
-      expect(output).not.toContain('modified locally');
-    });
-
-    it('reports user-modified files as "modified" without touching them', () => {
-      const outDir = join(TEMP_DIR, 'src/components/teieditor');
-      runCli('init');
-      const target = join(outDir, 'ui/button.tsx');
-      writeFileSync(target, '// my edits');
-
-      const output = runCli('update');
-      expect(output).toContain('modified');
-      expect(readFileSync(target, 'utf-8')).toBe('// my edits');
-    });
+  it('lists the components with their descriptions', () => {
+    expect(main(['list'], context)).toBe(0);
+    expect(output()).toMatch(/bubble-menu\s+The bubble\./);
+    expect(output()).toMatch(/toolbar-fit\s+Fitting\./);
   });
 
-  describe('add', () => {
-    it('scaffolds a single group with its deps', () => {
-      const outDir = join(TEMP_DIR, 'src/components/teieditor');
-      runCli('add toolbar');
-      expect(existsSync(join(outDir, 'components/toolbar/toolbar.tsx'))).toBe(true);
-      // toolbar depends on ui, so ui should be pulled in too
-      expect(existsSync(join(outDir, 'ui/button.tsx'))).toBe(true);
-      // editor is not a dep of toolbar, so it should NOT be scaffolded
-      expect(existsSync(join(outDir, 'editors/editor.tsx'))).toBe(false);
-    });
+  it('adds a component under components/teieditor, src/ when there is one', () => {
+    expect(main(['add', 'bubble-menu'], context)).toBe(0);
+    expect(readFileSync(join(app, 'components/teieditor/bubble-menu.tsx'), 'utf8')).toContain(
+      'Bubble',
+    );
+    mkdirSync(join(app, 'src'));
+    expect(main(['add', 'toolbar-fit'], context)).toBe(0);
+    expect(existsSync(join(app, 'src/components/teieditor/toolbar-fit.ts'))).toBe(true);
+    expect(main(['add', 'toolbar-fit', '--dir', 'ui/editor'], context)).toBe(0);
+    expect(existsSync(join(app, 'ui/editor/toolbar-fit.ts'))).toBe(true);
+  });
 
-    it('scaffolds editor and pulls in every dep transitively', () => {
-      const outDir = join(TEMP_DIR, 'src/components/teieditor');
-      runCli('add editor');
-      expect(existsSync(join(outDir, 'editors/editor.tsx'))).toBe(true);
-      expect(existsSync(join(outDir, 'components/toolbar/toolbar.tsx'))).toBe(true);
-      expect(existsSync(join(outDir, 'components/bubble-menu/bubble-menu.tsx'))).toBe(true);
-      expect(existsSync(join(outDir, 'ui/button.tsx'))).toBe(true);
-    });
+  it('never overwrites without --force, and changes nothing on --dry-run', () => {
+    main(['add', 'bubble-menu'], context);
+    const path = join(app, 'components/teieditor/bubble-menu.tsx');
+    writeFileSync(path, 'mine');
+    lines = [];
+    expect(main(['add', 'bubble-menu'], context)).toBe(1);
+    expect(output()).toContain('Nothing written');
+    expect(readFileSync(path, 'utf8')).toBe('mine');
+    expect(main(['add', 'bubble-menu', '--force', '--dry-run'], context)).toBe(0);
+    expect(readFileSync(path, 'utf8')).toBe('mine');
+    expect(main(['add', 'bubble-menu', '--force'], context)).toBe(0);
+    expect(readFileSync(path, 'utf8')).toContain('Bubble');
+  });
 
-    it('respects a custom --path', () => {
-      runCli('add toolbar --path lib/editor');
-      expect(existsSync(join(TEMP_DIR, 'lib/editor/components/toolbar/toolbar.tsx'))).toBe(true);
-    });
+  it('refuses unknown components, and writes none of a list with one', () => {
+    expect(main(['add', 'bubble-menu', 'nope'], context)).toBe(1);
+    expect(output()).toContain('"nope"');
+    expect(existsSync(join(app, 'components'))).toBe(false);
+    expect(main(['add'], context)).toBe(1);
+  });
 
-    it('exits with error for unknown group', () => {
-      expect(() => runCli('add unknown-thing')).toThrow();
-    });
+  it('init writes an editor with the preset, and lists what to install', () => {
+    file(join(app, 'tsconfig.json'), '{"compilerOptions":{"paths":{"@/*":["./src/*"]}}}');
+    mkdirSync(join(app, 'src'));
+    expect(main(['init', '--preset', 'notion'], context)).toBe(0);
+    const editor = readFileSync(join(app, 'src/components/teieditor/editor.tsx'), 'utf8');
+    expect(editor).toContain("import { notion } from '@teispace/teieditor/presets/notion';");
+    expect(editor).toContain('<Editor preset={notion} {...props} />');
+    expect(editor).toContain("import '@teispace/teieditor/styles.css';");
+    expect(output()).toContain("from '@/components/teieditor/editor'");
+    // Nothing installed without --install.
+    expect(runs).toEqual([]);
+    expect(main(['init', '--preset', 'huge'], context)).toBe(1);
+  });
+
+  it('installs only what is missing, with the app’s package manager', () => {
+    file(join(app, 'yarn.lock'), '');
+    expect(main(['init', '--install'], context)).toBe(0);
+    expect(runs).toEqual([
+      {
+        command: 'yarn',
+        args: ['add', '@lexical/link', '@lexical/table', '@teispace/teieditor', 'lexical'],
+      },
+    ]);
+    // react is there already; left-pad is not a peer.
+  });
+
+  it('follows built modules, lazy ones too, to the peers they import', () => {
+    expect(peersOf(context, ['react/index.js'])).toEqual(['@lexical/link', 'lexical', 'react']);
+    expect(peersOf(context, ['presets/minimal.js'])).toEqual(['lexical']);
+  });
+
+  it('finds the package manager from the nearest lockfile', () => {
+    expect(installCommand(app, ['x'])[0]).toBe('npm');
+    file(join(root, 'pnpm-lock.yaml'), '');
+    expect(installCommand(app, ['x'])).toEqual(['pnpm', 'add', 'x']);
+    file(join(app, 'bun.lock'), '');
+    expect(installCommand(app, ['x'])[0]).toBe('bun');
   });
 });

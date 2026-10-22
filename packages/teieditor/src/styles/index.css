@@ -1,0 +1,29 @@
+/*
+ * @teispace/teieditor/styles.css: everything, in one import. Plain CSS in
+ * `@layer teieditor`: no Tailwind, no preprocessor, and any unlayered app
+ * rule wins over it. For less, import `styles/core.css` and the features'
+ * own files instead (`styles/tables.css`, `styles/media.css`, …).
+ */
+@import "./tokens.css";
+@import "./base.css";
+@import "./content.css";
+@import "./blocks.css";
+@import "./cards.css";
+@import "./columns.css";
+@import "./widgets.css";
+@import "./document-tools.css";
+@import "./inline-extras.css";
+@import "./ui.css";
+@import "./find.css";
+@import "./views.css";
+@import "./typeahead.css";
+@import "./ai.css";
+@import "./collab.css";
+@import "./comments.css";
+@import "./equation.css";
+@import "./excalidraw.css";
+@import "./code-shiki.css";
+@import "./tree-view.css";
+@import "./speech-to-text.css";
+@import "./media.css";
+@import "./tables.css";

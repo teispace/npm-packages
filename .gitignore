@@ -17,3 +17,11 @@ coverage
 packages/teieditor/registry/
 packages/teieditor/r/
 packages/teieditor/registry.json
+
+# e2e harness build output and Playwright artifacts
+packages/teieditor/e2e/.out/
+packages/teieditor/test-results/
+packages/teieditor/playwright-report/
+# Pixel baselines come from the Linux image only (`yarn test:visual`).
+packages/teieditor/e2e/specs/__screenshots__/**/*-darwin.png
+packages/teieditor/e2e/specs/__screenshots__/**/*-win32.png

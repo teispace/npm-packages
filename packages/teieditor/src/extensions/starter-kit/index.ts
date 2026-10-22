@@ -1,119 +1,119 @@
-import type { TeiExtension } from '../../core/types.js';
-import { Alignment } from '../alignment/index.js';
+import type { TeiExtensionInput } from '../../core/create.js';
+import { Indent, TextAlign } from '../alignment/index.js';
 import { Blockquote } from '../blockquote/index.js';
-import { Bold } from '../bold/index.js';
-import { Callout } from '../callout/index.js';
-import { InlineCode } from '../code/index.js';
+import { Clipboard } from '../clipboard/index.js';
 import { CodeBlock } from '../code-block/index.js';
-import { Color } from '../color/index.js';
-import { DateTime } from '../datetime/index.js';
-import { DragDropPaste } from '../drag-drop-paste/index.js';
-import { DragHandle } from '../drag-handle/index.js';
-import { Embed } from '../embed/index.js';
-import { Emoji } from '../emoji/index.js';
-import { Figma } from '../figma/index.js';
-import { File } from '../file/index.js';
-import { FindReplace } from '../find-replace/index.js';
-import { FontFamily } from '../font-family/index.js';
-import { FontSize } from '../font-size/index.js';
-import { Heading } from '../heading/index.js';
-import { Highlight } from '../highlight/index.js';
-import { History } from '../history/index.js';
-import { HorizontalRule } from '../horizontal-rule/index.js';
-import { Image } from '../image/index.js';
-import { Italic } from '../italic/index.js';
-import { Layout } from '../layout/index.js';
-import { Link } from '../link/index.js';
-import { List } from '../list/index.js';
-import { ListMaxIndent } from '../list-max-indent/index.js';
-import { Markdown } from '../markdown/index.js';
-import { Math } from '../math/index.js';
-import { Mention } from '../mention/index.js';
-import { PageBreak } from '../page-break/index.js';
-import { Paragraph } from '../paragraph/index.js';
-import { Placeholder } from '../placeholder/index.js';
-import { SlashCommand } from '../slash-command/index.js';
-import { Strikethrough } from '../strikethrough/index.js';
-import { Subscript } from '../subscript/index.js';
-import { Superscript } from '../superscript/index.js';
-import { Table } from '../table/index.js';
-import { Toggle } from '../toggle/index.js';
-import { TurnInto } from '../turn-into/index.js';
-import { Twitter } from '../twitter/index.js';
-import { Underline } from '../underline/index.js';
-import { WordCount } from '../word-count/index.js';
-import { YouTube } from '../youtube/index.js';
-
-/**
- * Full-featured starter kit with all built-in extensions.
- *
- * Includes: text formatting, headings, lists, links, code blocks,
- * alignment, font controls, colors, slash commands, drag handle,
- * placeholders, turn-into, and history.
- */
-export const StarterKit: TeiExtension[] = [
-  // Block-level
-  Paragraph,
-  Heading,
-  Blockquote,
-  HorizontalRule,
-  List,
-  CodeBlock,
-
-  // Text formatting
+import { CodeHighlight } from '../code-highlight/index.js';
+import {
   Bold,
-  Italic,
-  Underline,
-  Strikethrough,
-  InlineCode,
+  ClearFormatting,
+  Code,
   Highlight,
+  Italic,
+  Strike,
   Subscript,
   Superscript,
+  Underline,
+} from '../formatting/index.js';
+import { Heading } from '../heading/index.js';
+import { History } from '../history/index.js';
+import { HorizontalRule } from '../horizontal-rule/index.js';
+import { AutoLink, Link } from '../link/index.js';
+import { BulletList, CheckList, OrderedList } from '../list/index.js';
+import { Markdown } from '../markdown/index.js';
+import { Placeholder } from '../placeholder/index.js';
+import { RichText } from '../rich-text/index.js';
 
-  // Features
-  Link,
-  Alignment,
-  FontSize,
-  FontFamily,
-  Color,
+/** The parts of the kit, by the key `configure` takes. */
+const PARTS = {
+  richText: RichText,
+  history: History,
+  clipboard: Clipboard,
+  bold: Bold,
+  italic: Italic,
+  underline: Underline,
+  strike: Strike,
+  code: Code,
+  highlight: Highlight,
+  subscript: Subscript,
+  superscript: Superscript,
+  clearFormatting: ClearFormatting,
+  heading: Heading,
+  blockquote: Blockquote,
+  bulletList: BulletList,
+  orderedList: OrderedList,
+  checkList: CheckList,
+  codeBlock: CodeBlock,
+  codeHighlight: CodeHighlight,
+  horizontalRule: HorizontalRule,
+  link: Link,
+  autoLink: AutoLink,
+  textAlign: TextAlign,
+  indent: Indent,
+  placeholder: Placeholder,
+  markdown: Markdown,
+} as const;
 
-  // Notion-like
-  SlashCommand,
-  DragHandle,
-  Placeholder,
-  TurnInto,
+type Parts = typeof PARTS;
+type OptionsOf<E> = E extends { configure: (options: infer O) => unknown } ? O : never;
 
-  // Rich content
-  Image,
-  Table,
-  Embed,
-  Callout,
-  Toggle,
-  File,
+/**
+ * Per part: `false` leaves it out, an object configures it, anything else
+ * keeps the default.
+ */
+export type StarterKitOptions = {
+  [K in keyof Parts]?: false | OptionsOf<Parts[K]>;
+};
 
-  // Media embeds
-  YouTube,
-  Twitter,
-  Figma,
+function build(options: StarterKitOptions = {}): TeiExtensionInput[] {
+  return (Object.keys(PARTS) as Array<keyof Parts>).map((key) => {
+    const choice = options[key];
+    if (choice === false) return null;
+    const part = PARTS[key] as Parts[keyof Parts] & { configure: (o: object) => TeiExtensionInput };
+    return choice ? part.configure(choice) : part;
+  });
+}
 
-  // Layout & structure
-  Layout,
-  PageBreak,
+/**
+ * Everything most documents need: text formats, headings, quotes, lists and
+ * to-dos, code with highlighting, dividers, links, alignment, history,
+ * markdown shortcuts and placeholders. Leave parts out or configure them:
+ *
+ * ```ts
+ * StarterKit.configure({ underline: false, heading: { levels: [1, 2, 3] } })
+ * ```
+ *
+ * Commands, keys and menu items of a part that is left out are gone too.
+ */
+export const StarterKit: readonly TeiExtensionInput[] & {
+  configure: (options: StarterKitOptions) => readonly TeiExtensionInput[];
+} = Object.assign(build(), { configure: build });
 
-  // Advanced
-  Mention,
-  Emoji,
-  Markdown,
-  FindReplace,
-  WordCount,
-  Math,
-  DateTime,
-  DragDropPaste,
-  ListMaxIndent,
+// Every part, from here too. Besides the convenience, this loads each part's
+// types wherever the kit's do, and with them the commands each part adds to
+// `TeiCommands`: without it, `editor.commands.toggleBold` would not type-check
+// for an app that imports only the kit.
+export { Indent, TextAlign } from '../alignment/index.js';
+export { Blockquote } from '../blockquote/index.js';
+export { CodeBlock } from '../code-block/index.js';
+export { CodeHighlight } from '../code-highlight/index.js';
+export {
+  Bold,
+  ClearFormatting,
+  Code,
+  Highlight,
+  Italic,
+  Strike,
+  Subscript,
+  Superscript,
+  Underline,
+} from '../formatting/index.js';
 
-  // Utilities
-  History,
-];
-
-// Re-export commonly needed extensions for editor presets
-export { SlashCommand } from '../slash-command/index.js';
+export { Heading } from '../heading/index.js';
+export { History } from '../history/index.js';
+export { HorizontalRule } from '../horizontal-rule/index.js';
+export { AutoLink, Link } from '../link/index.js';
+export { BulletList, CheckList, OrderedList } from '../list/index.js';
+export { Markdown } from '../markdown/index.js';
+export { Placeholder } from '../placeholder/index.js';
+export { RichText } from '../rich-text/index.js';

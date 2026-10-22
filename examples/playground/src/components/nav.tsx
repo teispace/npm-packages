@@ -1,48 +1,58 @@
 'use client';
 
+import { useTheme } from '@teispace/next-themes';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const LINKS = [
-  { href: '/', label: 'Home' },
-  { href: '/basic', label: 'Basic' },
-  { href: '/notion', label: 'Notion' },
+  { href: '/', label: 'Editor' },
+  { href: '/notion', label: 'Notion-style' },
+  { href: '/comments', label: 'Comment box' },
   { href: '/customize', label: 'Customize' },
-  { href: '/forms', label: 'Forms' },
-  { href: '/themed', label: 'Themed' },
-  { href: '/playground', label: 'Kitchen sink' },
+  { href: '/headless', label: 'Headless' },
+  { href: '/collaboration', label: 'Collaboration' },
+  { href: '/server', label: 'Server render' },
 ];
+
+const THEMES = [
+  { value: 'light', label: 'Light' },
+  { value: 'system', label: 'System' },
+  { value: 'dark', label: 'Dark' },
+] as const;
 
 export function Nav() {
   const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
   return (
-    <nav className="sticky top-0 z-40 border-b border-[hsl(var(--tei-border))] bg-[hsl(var(--tei-bg))]/90 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl items-center gap-1 overflow-x-auto px-4 py-3">
-        <Link
-          href="/"
-          className="mr-3 shrink-0 text-sm font-semibold tracking-tight"
-        >
-          @teispace/teieditor
-        </Link>
-        <div className="flex items-center gap-1">
-          {LINKS.slice(1).map((l) => {
-            const active = pathname === l.href;
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                  active
-                    ? 'bg-[hsl(var(--tei-fg))] text-[hsl(var(--tei-bg))]'
-                    : 'text-[hsl(var(--tei-muted-fg))] hover:bg-[hsl(var(--tei-muted))] hover:text-[hsl(var(--tei-fg))]'
-                }`}
-              >
-                {l.label}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-    </nav>
+    <header className="nav">
+      <Link href="/" className="brand">
+        teieditor
+      </Link>
+      <nav aria-label="Examples" className="links">
+        {LINKS.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            aria-current={pathname === link.href ? 'page' : undefined}
+          >
+            {link.label}
+          </Link>
+        ))}
+      </nav>
+      <fieldset className="segmented">
+        <legend className="visually-hidden">Theme</legend>
+        {THEMES.map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            aria-pressed={theme === t.value}
+            aria-label={`Switch to ${t.value} theme`}
+            onClick={() => setTheme(t.value)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </fieldset>
+    </header>
   );
 }

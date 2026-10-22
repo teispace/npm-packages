@@ -1,0 +1,243 @@
+// @vitest-environment node
+import { Window } from 'happy-dom';
+import { createTeiEditor } from '../../src/core/create.js';
+import { Callout } from '../../src/extensions/callout/index.js';
+import { Collapsible } from '../../src/extensions/collapsible/index.js';
+import { DateTime } from '../../src/extensions/date-time/index.js';
+import { Emoji } from '../../src/extensions/emoji/index.js';
+import { Hashtag } from '../../src/extensions/hashtag/index.js';
+import { Html } from '../../src/extensions/html/index.js';
+import { Mention } from '../../src/extensions/mention/index.js';
+import { PageBreak } from '../../src/extensions/page-break/index.js';
+import { Poll } from '../../src/extensions/poll/index.js';
+import { PullQuote } from '../../src/extensions/pull-quote/index.js';
+import { Ruby } from '../../src/extensions/ruby/index.js';
+import { SpecialText } from '../../src/extensions/special-text/index.js';
+import { StarterKit } from '../../src/extensions/starter-kit/index.js';
+import { Table } from '../../src/extensions/table/index.js';
+import { convert, renderToHTML, toJSON, toMarkdown, toText } from '../../src/server/index.js';
+
+const options = { extensions: [StarterKit] };
+
+// happy-dom's windows share their element classes: a fix left in place by
+// one render would stay for every page after it.
+const REPLACE_WITH = new Window().Element.prototype.replaceWith;
+afterEach(() => {
+  expect(new Window().Element.prototype.replaceWith).toBe(REPLACE_WITH);
+});
+
+const HTML =
+  '<h1>Title</h1><p>Some <strong>bold</strong> and <a href="https://example.com">a link</a>.</p>' +
+  '<ul><li>one</li><li>two</li></ul><pre data-language="ts"><code class="language-ts">let x = 1;\nx++;</code></pre>';
+
+describe('server rendering', () => {
+  it('runs with no DOM, and leaves none behind', () => {
+    expect(typeof document).toBe('undefined');
+    renderToHTML(HTML, options);
+    expect(typeof document).toBe('undefined');
+    expect(typeof window).toBe('undefined');
+  });
+
+  it('renders HTML, Markdown and text from HTML', () => {
+    expect(renderToHTML(HTML, options)).toBe(HTML);
+    expect(toMarkdown(HTML, options)).toBe(
+      '# Title\n\nSome **bold** and [a link](https://example.com).\n\n- one\n- two\n\n```ts\nlet x = 1;\nx++;\n```',
+    );
+    expect(toText(HTML, options)).toBe(
+      'Title\n\nSome bold and a link.\n\none\n\ntwo\n\nlet x = 1;\nx++;',
+    );
+  });
+
+  it('renders saved JSON as the browser editor would', () => {
+    const json = toJSON(HTML, options);
+    expect(renderToHTML(json, options)).toBe(HTML);
+    expect(renderToHTML(JSON.stringify(json), { ...options, from: 'json' })).toBe(HTML);
+  });
+
+  it('reads Markdown', () => {
+    expect(renderToHTML('## Hi\n\n*there*', { ...options, from: 'markdown' })).toBe(
+      '<h2>Hi</h2><p><em>there</em></p>',
+    );
+  });
+
+  it('drops scripts, handlers and unsafe URLs from hostile content', () => {
+    const html = renderToHTML(
+      '<p onclick="alert(1)">x<script>alert(2)</script><a href="javascript:alert(3)">y</a><img src=x onerror="alert(4)"></p>',
+      options,
+    );
+    expect(html).not.toMatch(/script|onclick|onerror|javascript:/i);
+    const json = {
+      root: {
+        type: 'root',
+        version: 1,
+        direction: null,
+        format: '',
+        indent: 0,
+        children: [
+          {
+            type: 'paragraph',
+            version: 1,
+            direction: null,
+            format: '',
+            indent: 0,
+            textFormat: 0,
+            textStyle: '',
+            children: [
+              {
+                type: 'link',
+                version: 1,
+                url: 'javascript:alert(1)',
+                rel: null,
+                target: null,
+                title: null,
+                direction: null,
+                format: '',
+                indent: 0,
+                children: [
+                  {
+                    type: 'text',
+                    version: 1,
+                    text: '<img src=x onerror=alert(1)>',
+                    detail: 0,
+                    format: 0,
+                    mode: 'normal',
+                    style: '',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+    const out = renderToHTML(json, options);
+    expect(out).not.toContain('javascript:');
+    expect(out).toContain('&lt;img src=x onerror=alert(1)&gt;');
+  });
+
+  it('refuses content that does not parse, whole', () => {
+    expect(() => renderToHTML({ root: {} }, options)).toThrow(/root: \{ children/);
+    expect(() => renderToHTML('{"root":', { ...options, from: 'json' })).toThrow();
+    expect(typeof document).toBe('undefined');
+  });
+
+  it('throws in production too, where an editor would only log', () => {
+    const env = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      expect(() => renderToHTML({ root: { children: [{ type: 'nope' }] } }, options)).toThrow();
+    } finally {
+      process.env.NODE_ENV = env;
+    }
+  });
+
+  it('uses only the extensions it is given', () => {
+    // HTML in and out needs the Html extension; without one, it says so.
+    expect(() => convert('<p>Hi</p>', 'html', { extensions: [] })).toThrow(
+      /no "html" content format/,
+    );
+    // Without heading nodes, a heading's text is kept as a paragraph.
+    expect(convert('<h1>Hi</h1>', 'html', { extensions: [Html] })).toBe('<p>Hi</p>');
+  });
+
+  it('matches what an editor gives for the same content', () => {
+    const editor = createTeiEditor({ ...options, content: toJSON(HTML, options) });
+    // The editor itself needs a DOM for HTML; JSON and Markdown need none.
+    expect(editor.getMarkdown()).toBe(toMarkdown(HTML, options));
+    expect(editor.getJSON()).toEqual(toJSON(HTML, options));
+    editor.destroy();
+  });
+
+  it('renders tables, from HTML and from Markdown, and leaves the DOM as it found it', () => {
+    const tables = { extensions: [StarterKit, Table] };
+    const html =
+      '<p>a</p><table><tbody><tr><th><p>A</p></th><th><p>B</p></th></tr>' +
+      '<tr><td colspan="2"><p>wide</p></td></tr></tbody></table><p>b</p>';
+    // happy-dom removed a node replaced with itself, which Lexical's
+    // export does to every table: none reached the page.
+    expect(renderToHTML(html, tables)).toBe(html);
+    expect(
+      renderToHTML('| A | B |\n| --- | --- |\n| 1 | 2 |', { ...tables, from: 'markdown' }),
+    ).toBe(
+      '<table><tbody><tr><th><p>A</p></th><th><p>B</p></th></tr>' +
+        '<tr><td><p>1</p></td><td><p>2</p></td></tr></tbody></table>',
+    );
+    expect(toMarkdown(html, tables)).toBe('a\n\n| A | B |\n| --- | --- |\n| wide |  |\n\nb');
+  });
+
+  it('renders the document’s own blocks: callouts, pull quotes, page breaks, sections', () => {
+    const blocks = { extensions: [StarterKit, PullQuote, Callout, Collapsible, PageBreak] };
+    const html =
+      '<aside data-tei-pull-quote="">Big</aside><hr data-tei-page-break="">' +
+      '<details><summary>Title</summary><div data-tei-collapsible-content=""><p>Body</p></div></details>';
+    expect(renderToHTML(html, blocks)).toBe(html);
+    expect(renderToHTML('<div data-tei-callout="tip"><p>Hi</p></div>', blocks)).toMatch(
+      /^<div data-tei-callout="tip" role="note"><span data-tei-callout-icon=""><svg .*<\/svg><\/span><p>Hi<\/p><\/div>$/,
+    );
+  });
+
+  it('renders polls and dates, from HTML, JSON and Markdown', () => {
+    const widgets = { extensions: [StarterKit, Poll, DateTime.configure({ locale: 'en-US' })] };
+    const poll =
+      '<div data-tei-poll=""><p data-tei-poll-question="">Lunch?</p><ul data-tei-poll-options="">' +
+      '<li data-tei-poll-option="" data-voters="[&quot;a&quot;]"><span data-tei-poll-mark=""></span><span data-tei-poll-label="">Pizza</span><span data-tei-poll-count="">1 · 100%</span><meter data-tei-poll-meter="" min="0" max="1" value="1">100%</meter></li>' +
+      '<li data-tei-poll-option="" data-voters="[]"><span data-tei-poll-mark=""></span><span data-tei-poll-label="">Soup</span><span data-tei-poll-count="">0 · 0%</span><meter data-tei-poll-meter="" min="0" max="1" value="0">0%</meter></li>' +
+      '</ul><p data-tei-poll-footer=""><span data-tei-poll-total="">1 vote</span></p></div>';
+    const html = `${poll}<p>On <time datetime="2026-10-22">Oct 22, 2026</time></p>`;
+    expect(renderToHTML(html, widgets)).toBe(html);
+    expect(renderToHTML(toJSON(html, widgets), widgets)).toBe(html);
+    expect(toMarkdown(html, widgets)).toBe(
+      '**Poll:** Lunch?\n\n- Pizza (1)\n- Soup (0)\n\nOn <time datetime="2026-10-22">Oct 22, 2026</time>',
+    );
+    expect(
+      renderToHTML('On <time datetime="2026-10-22">x</time>', { ...widgets, from: 'markdown' }),
+    ).toBe('<p>On <time datetime="2026-10-22">Oct 22, 2026</time></p>');
+  });
+
+  it('renders ruby annotations and special text, from HTML, JSON and markdown', () => {
+    const inline = { extensions: [StarterKit, Ruby, SpecialText.configure({ brackets: true })] };
+    const html =
+      '<p>a <ruby>漢<rt>kan</rt></ruby><ruby>字<rt>ji</rt></ruby> <span data-tei-special-text="">b</span></p>';
+    expect(
+      renderToHTML(
+        '<p>a <ruby>漢<rp>(</rp><rt>kan</rt><rp>)</rp>字<rt>ji</rt></ruby> <span data-tei-special-text="">b</span></p>',
+        inline,
+      ),
+    ).toBe(html);
+    expect(renderToHTML(toJSON(html, inline), inline)).toBe(html);
+    const md = toMarkdown(html, inline);
+    expect(md).toBe('a <ruby>漢<rt>kan</rt></ruby><ruby>字<rt>ji</rt></ruby> [b]');
+    expect(renderToHTML(md, { ...inline, from: 'markdown' })).toBe(html);
+  });
+
+  it('renders mentions, hashtags and emoji', () => {
+    const chips = { extensions: [StarterKit, Mention, Hashtag, Emoji] };
+    const html =
+      '<p>Hi <span data-tei-mention="u1" data-label="Ada">@Ada</span>, ' +
+      '<a href="https://example.com/alan" data-tei-mention="u2" data-label="Alan">@Alan</a> ' +
+      '<span data-tei-hashtag="">#launch</span> 🎉</p>';
+    expect(renderToHTML(html, chips)).toBe(html);
+    expect(toMarkdown(html, chips)).toBe('Hi @[Ada](mention:u1), @[Alan](mention:u2) #launch 🎉');
+    expect(renderToHTML('Hi @[Ada](mention:u1) #launch', { ...chips, from: 'markdown' })).toBe(
+      '<p>Hi <span data-tei-mention="u1" data-label="Ada">@Ada</span> <span data-tei-hashtag="">#launch</span></p>',
+    );
+    expect(
+      renderToHTML('<p><a href="javascript:alert(1)" data-tei-mention="x">@X</a></p>', chips),
+    ).toBe('<p><span data-tei-mention="x" data-label="X">@X</span></p>');
+  });
+
+  it('fixes the DOM of a page that has its own only for the call', async () => {
+    const page = new Window();
+    const globals = { window: page, document: page.document, DOMParser: page.DOMParser };
+    Object.assign(globalThis, globals);
+    try {
+      expect(
+        renderToHTML('<table><tr><td>x</td></tr></table>', { extensions: [StarterKit, Table] }),
+      ).toContain('<table>');
+      expect(page.Element.prototype.replaceWith).toBe(REPLACE_WITH);
+    } finally {
+      for (const name of Object.keys(globals)) Reflect.deleteProperty(globalThis, name);
+      await page.happyDOM.close();
+    }
+  });
+});

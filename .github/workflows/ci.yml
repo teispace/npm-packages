@@ -102,6 +102,15 @@ jobs:
       - name: Build packages
         run: yarn build
 
+      # What an app ships for each way of using teieditor, against its budget.
+      - name: teieditor size budget
+        run: yarn workspace @teispace/teieditor size
+
+      # The built package as an app sees it, and every component `npx
+      # @teispace/teieditor add` copies, compiled as an app's own code.
+      - name: teieditor type tests
+        run: yarn workspace @teispace/teieditor test:types
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -233,4 +242,100 @@ jobs:
         with:
           name: next-themes-playwright-traces
           path: examples/next-themes/test-results
+          retention-days: 7
+
+  teieditor-e2e:
+    name: teieditor strict-CSP e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [quality]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Install browsers
+        working-directory: examples/playground
+        run: yarn playwright install --with-deps chromium firefox webkit
+
+      # The Playwright web server builds the package and the playground, then
+      # serves it under a nonce CSP; every test asserts zero violations.
+      - name: Run Playwright in Chromium, Firefox and WebKit
+        working-directory: examples/playground
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+        run: yarn test:e2e
+
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: teieditor-playwright-traces
+          path: examples/playground/test-results
+          retention-days: 7
+
+  teieditor-browser:
+    name: teieditor browsers and pixels
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [quality]
+    # The image `yarn test:visual` uses locally, so the pixel baselines match.
+    # Keep its tag on the @playwright/test version in yarn.lock.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
+    env:
+      # Firefox refuses a home directory owned by another user.
+      HOME: /root
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn workspaces focus @teispace/teieditor
+
+      - name: Check the image matches Playwright
+        working-directory: packages/teieditor
+        run: |
+          version=$(node -p "require('@playwright/test/package.json').version")
+          test "$version" = 1.64.1 || { echo "::error::@playwright/test is $version; update the container image tag"; exit 1; }
+
+      # Editor, UI and pixel specs in Chromium, Firefox, WebKit and two phones,
+      # under a strict CSP; every test asserts zero violations.
+      - name: Run Playwright
+        working-directory: packages/teieditor
+        env:
+          TEI_VISUAL: 1
+          # The image's default sans has no bold face; see e2e/fonts.conf.
+          FONTCONFIG_FILE: ${{ github.workspace }}/packages/teieditor/e2e/fonts.conf
+        run: yarn test:e2e
+
+      # Typing latency, measured with nothing else running.
+      - name: Run the performance benchmark
+        working-directory: packages/teieditor
+        run: yarn test:perf
+
+      - name: Upload reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: teieditor-browser-results
+          path: packages/teieditor/test-results
           retention-days: 7

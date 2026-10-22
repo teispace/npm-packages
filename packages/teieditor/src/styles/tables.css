@@ -1,0 +1,226 @@
+/*
+ * Tables: in the document and in saved HTML under `.tei-prose`, and the UI
+ * that edits them (the cell handle, the + bars, the column resizer, the
+ * insert grid).
+ */
+@layer teieditor {
+  /* Tables */
+  .tei-table-scroll {
+    position: relative;
+    margin: 0 0 0.75em;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  /* More table past an edge: that edge fades out. The Table extension sets
+   * the attribute as the table scrolls and resizes. */
+  .tei-table-scroll[data-tei-overflow] {
+    --tei-fade: 1.5rem;
+    mask-image: linear-gradient(
+      to right,
+      var(--tei-fade-start, #000),
+      #000 var(--tei-fade),
+      #000 calc(100% - var(--tei-fade)),
+      var(--tei-fade-end, #000)
+    );
+  }
+
+  .tei-table-scroll[data-tei-overflow~="left"] {
+    --tei-fade-start: transparent;
+  }
+
+  .tei-table-scroll[data-tei-overflow~="right"] {
+    --tei-fade-end: transparent;
+  }
+
+  /* A frozen first column stays put at the start edge: nothing to fade there. */
+  .tei-table-scroll:has(> .tei-table-frozen-column):dir(ltr) {
+    --tei-fade-start: #000;
+  }
+
+  .tei-table-scroll:has(> .tei-table-frozen-column):dir(rtl) {
+    --tei-fade-end: #000;
+  }
+
+  .tei-table,
+  :where(.tei-prose) table {
+    inline-size: max-content;
+    max-inline-size: 100%;
+    margin: 0 0 0.75em;
+    border-collapse: collapse;
+    border-spacing: 0;
+    table-layout: fixed;
+    overflow-y: hidden;
+  }
+
+  .tei-table-scroll > .tei-table {
+    max-inline-size: none;
+    margin: 0;
+  }
+
+  .tei-table-center {
+    margin-inline: auto;
+  }
+
+  .tei-table-right {
+    margin-inline-start: auto;
+  }
+
+  /* Saved HTML has no scroll box: the table scrolls itself. */
+  :where(.tei-prose) table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .tei-td,
+  .tei-th,
+  :where(.tei-prose) :is(td, th) {
+    position: relative;
+    min-inline-size: 4.5rem;
+    padding: 0.4em 0.65em;
+    border: 1px solid var(--tei-border-strong);
+    vertical-align: top;
+    text-align: start;
+    outline: none;
+  }
+
+  .tei-th,
+  :where(.tei-prose) th {
+    background: var(--tei-table-header-bg);
+    font-weight: 600;
+  }
+
+  .tei-td > :last-child,
+  .tei-th > :last-child,
+  .tei-prose :is(td, th) > :last-child {
+    margin-block-end: 0;
+  }
+
+  .tei-table-striped tr:nth-child(even) > .tei-td {
+    background: var(--tei-bg-subtle);
+  }
+
+  /* An overlay rather than a background: a cell's own colour is an inline
+   * style, which only !important could beat. */
+  .tei-td-selected {
+    box-shadow: inset 0 0 0 100vmax var(--tei-table-selected-bg);
+    caret-color: transparent;
+  }
+
+  .tei-table-selection *::selection {
+    background: transparent;
+  }
+
+  .tei-table-selected {
+    outline: 2px solid var(--tei-accent);
+  }
+
+  .tei-table-frozen-row tr:first-child > :is(.tei-td, .tei-th) {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+  }
+
+  .tei-table-frozen-column tr > :is(.tei-td, .tei-th):first-child {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 2;
+    background: var(--tei-table-header-bg);
+  }
+
+  .tei-td-resizer {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: -3px;
+    inline-size: 6px;
+    z-index: 3;
+    cursor: col-resize;
+  }
+
+  .tei-td-resizer:hover,
+  .tei-td-resizer[data-tei-active] {
+    background: var(--tei-accent);
+  }
+
+  .tei-td-actions {
+    position: absolute;
+    inset-block-start: 0.3em;
+    inset-inline-end: 0.3em;
+  }
+
+  .tei-td-action {
+    display: grid;
+    place-items: center;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    padding: 0;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-bg-overlay);
+    color: var(--tei-fg-muted);
+    cursor: pointer;
+  }
+
+  .tei-table-add-columns,
+  .tei-table-add-rows {
+    position: absolute;
+    border: 0;
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-bg-muted);
+    color: var(--tei-fg-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-table-add-columns:hover,
+  .tei-table-add-rows:hover {
+    background: var(--tei-bg-active);
+    opacity: 1;
+  }
+
+  /* Table: the handle on the cell with the caret, the + bars, the column resizer. */
+  .tei-popover[data-tei-control="table-cell-handle"] {
+    padding: 0;
+    border-radius: var(--tei-radius-sm);
+    box-shadow: var(--tei-shadow-sm);
+  }
+
+  .tei-button[data-tei-control="table-cell-menu"] {
+    --tei-control-size: 1.25rem;
+    inline-size: 1.25rem;
+    min-inline-size: 0;
+    padding: 0;
+  }
+
+  /* Grid picker (insert table) */
+  .tei-grid-picker {
+    display: grid;
+    grid-template-columns: repeat(var(--tei-grid-columns, 10), 1.125rem);
+    gap: 3px;
+    padding: var(--tei-space-1);
+  }
+
+  .tei-grid-cell {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+    padding: 0;
+    border: 1px solid var(--tei-border-strong);
+    border-radius: 3px;
+    background: var(--tei-bg);
+    cursor: pointer;
+  }
+
+  .tei-grid-cell[data-active] {
+    border-color: var(--tei-accent);
+    background: var(--tei-accent-subtle);
+  }
+
+  .tei-grid-caption {
+    padding: var(--tei-space-1) var(--tei-space-1) 0;
+    color: var(--tei-fg-muted);
+    font-size: 0.75rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+}

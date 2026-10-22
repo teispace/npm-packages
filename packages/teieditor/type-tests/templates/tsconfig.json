@@ -1,0 +1,7 @@
+{
+  "extends": "../tsconfig.base.json",
+  // `process.env.NODE_ENV`, which bundlers define, typed as apps have it.
+  "compilerOptions": { "jsx": "react-jsx", "noUnusedLocals": true, "types": ["node"] },
+  // The components `npx teieditor add` copies, compiled as an app's own code.
+  "include": ["../../dist/templates/*.ts", "../../dist/templates/*.tsx"]
+}

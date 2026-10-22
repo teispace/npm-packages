@@ -1,0 +1,1080 @@
+/*
+ * The UI primitives: buttons, toolbar, popovers, menus, dialogs, tooltips
+ * and form controls. Each part has a `tei-*` class and a `data-tei-*` hook;
+ * state is in ARIA attributes (`aria-pressed`, `aria-expanded`, …), so the
+ * styles always match what assistive technology is told.
+ */
+/* Animatable lengths for the scrolling toolbar's edge fades. */
+@property --tei-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --tei-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@layer teieditor {
+  .tei-portal {
+    font-family: var(--tei-font);
+    font-size: var(--tei-ui-font-size);
+    line-height: var(--tei-ui-line-height);
+    color: var(--tei-fg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Button. Variants: ghost (default), outline, solid, danger. Sizes: sm, md (default). */
+  .tei-button {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tei-space-1);
+    min-inline-size: var(--tei-control-size);
+    block-size: var(--tei-control-size);
+    margin: 0;
+    padding: 0 var(--tei-space-2);
+    border: 1px solid transparent;
+    border-radius: var(--tei-radius-sm);
+    background: transparent;
+    color: var(--tei-fg-muted);
+    font: inherit;
+    font-size: var(--tei-ui-font-size);
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition:
+      background-color var(--tei-duration) var(--tei-ease),
+      color var(--tei-duration) var(--tei-ease),
+      border-color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-button[data-icon-only] {
+    padding: 0;
+  }
+
+  .tei-button[data-size="sm"] {
+    min-inline-size: var(--tei-control-size-sm);
+    block-size: var(--tei-control-size-sm);
+    font-size: var(--tei-ui-font-size-sm);
+  }
+
+  .tei-button:hover:not(:disabled) {
+    background: var(--tei-bg-hover);
+    color: var(--tei-fg);
+  }
+
+  .tei-button:active:not(:disabled),
+  .tei-button[aria-expanded="true"] {
+    background: var(--tei-bg-active);
+    color: var(--tei-fg);
+  }
+
+  .tei-button[aria-pressed="true"],
+  .tei-button[aria-checked="true"],
+  .tei-button[data-active] {
+    background: var(--tei-accent-subtle);
+    color: var(--tei-accent);
+  }
+
+  .tei-button:disabled,
+  .tei-button[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .tei-button[data-variant="outline"] {
+    border-color: var(--tei-border);
+    background: var(--tei-bg);
+    color: var(--tei-fg);
+    box-shadow: var(--tei-shadow-sm);
+  }
+
+  .tei-button[data-variant="solid"] {
+    padding-inline: var(--tei-space-3);
+    background: var(--tei-accent);
+    color: var(--tei-accent-fg);
+  }
+
+  .tei-button[data-variant="solid"]:hover:not(:disabled) {
+    background: var(--tei-accent-hover);
+    color: var(--tei-accent-fg);
+  }
+
+  .tei-button[data-variant="danger"] {
+    color: var(--tei-danger);
+  }
+
+  .tei-button[data-variant="danger"]:hover:not(:disabled) {
+    background: var(--tei-danger-subtle);
+    color: var(--tei-danger);
+  }
+
+  .tei-icon {
+    flex: none;
+    inline-size: 1rem;
+    block-size: 1rem;
+    stroke-width: 2;
+  }
+
+  [dir="rtl"] .tei-icon[data-flip-rtl] {
+    transform: scaleX(-1);
+  }
+
+  .tei-button > .tei-chevron {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    margin-inline-start: -0.125rem;
+    opacity: 0.6;
+  }
+
+  /* Toolbar. Wraps by default; `data-overflow="scroll"` keeps one line and
+   * scrolls sideways (the default under 40rem, where wrapping eats space). */
+  .tei-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+    padding: var(--tei-space-1);
+    border-block-end: 1px solid var(--tei-border);
+    background: var(--tei-bg);
+  }
+
+  .tei[data-tei-bordered] > .tei-toolbar:first-child {
+    border-start-start-radius: inherit;
+    border-start-end-radius: inherit;
+  }
+
+  .tei-toolbar[data-sticky] {
+    position: sticky;
+    inset-block-start: var(--tei-toolbar-offset, 0);
+    z-index: 3;
+  }
+
+  .tei-toolbar[data-overflow="scroll"] {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+
+  /* One line; what doesn't fit is in the "More" menu. Clipped, so a frame
+   * between a resize and the refit never spills past the edge. */
+  .tei-toolbar[data-overflow="menu"] {
+    flex-wrap: nowrap;
+    overflow-x: clip;
+  }
+
+  /* Each entry's slot takes no box of its own, so the layout is the entries'. */
+  .tei-toolbar-slot {
+    display: contents;
+  }
+
+  .tei-toolbar-slot[hidden] {
+    display: none;
+  }
+
+  /* Everything out for one measurement, within a single synchronous read. */
+  .tei-toolbar[data-measuring] > .tei-toolbar-slot {
+    display: contents;
+  }
+
+  .tei-toolbar[data-overflow="scroll"]::-webkit-scrollbar {
+    display: none;
+  }
+
+  @container tei (max-width: 40rem) {
+    .tei-toolbar:not([data-overflow="wrap"]) {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+  }
+
+  /*
+   * A toolbar that scrolls fades out at each edge with more buttons beyond
+   * it. The fades follow the scroll position through a scroll timeline, with
+   * no listener; a toolbar that fits has no active timeline, so its fades
+   * stay at zero and the mask shows everything.
+   */
+  @supports (animation-timeline: scroll()) {
+    .tei-toolbar {
+      --tei-fade: 1.5rem;
+      mask-image: linear-gradient(
+        var(--tei-fade-angle, 90deg),
+        transparent,
+        #000 var(--tei-fade-start),
+        #000 calc(100% - var(--tei-fade-end)),
+        transparent
+      );
+      animation: tei-toolbar-fade linear both;
+      animation-timeline: scroll(self inline);
+    }
+
+    .tei-toolbar:dir(rtl) {
+      --tei-fade-angle: 270deg;
+    }
+  }
+
+  @keyframes tei-toolbar-fade {
+    from {
+      --tei-fade-start: 0px;
+      --tei-fade-end: var(--tei-fade);
+    }
+    8% {
+      --tei-fade-start: var(--tei-fade);
+    }
+    92% {
+      --tei-fade-end: var(--tei-fade);
+    }
+    to {
+      --tei-fade-start: var(--tei-fade);
+      --tei-fade-end: 0px;
+    }
+  }
+
+  /* The block-type menu's name; a minimum width keeps the toolbar still as it changes. */
+  .tei-control-label {
+    min-inline-size: 5.25em;
+    text-align: start;
+  }
+
+  .tei-separator {
+    flex: none;
+    align-self: stretch;
+    inline-size: 1px;
+    margin: var(--tei-space-1) 3px;
+    background: var(--tei-border);
+  }
+
+  .tei-separator[aria-orientation="horizontal"] {
+    inline-size: auto;
+    block-size: 1px;
+    margin: var(--tei-space-1) calc(var(--tei-space-1) * -1);
+  }
+
+  /* Popover surface: menus, pickers, the link editor, the bubble menu. They
+   * live in the top layer (the `popover` attribute), so no ancestor's
+   * overflow or z-index can clip them. Floating UI sets `translate` from the
+   * physical top-left corner; `transform` stays free for the animation. */
+  .tei-popover {
+    position: fixed;
+    inset: auto;
+    top: 0;
+    left: 0;
+    margin: 0;
+    max-inline-size: min(var(--tei-popover-max-width, 22rem), calc(100vw - 1rem));
+    max-block-size: var(--tei-available-height, 24rem);
+    padding: var(--tei-space-1);
+    overflow: auto;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius);
+    background: var(--tei-bg-overlay);
+    color: var(--tei-fg);
+    box-shadow: var(--tei-shadow-lg);
+    overscroll-behavior: contain;
+    opacity: 1;
+    transform: none;
+    transform-origin: var(--tei-transform-origin, top left);
+    transition:
+      opacity var(--tei-duration) var(--tei-ease),
+      transform var(--tei-duration) var(--tei-ease),
+      overlay var(--tei-duration) allow-discrete,
+      display var(--tei-duration) allow-discrete;
+  }
+
+  .tei-popover:not(:popover-open):not([data-open]) {
+    display: none;
+    opacity: 0;
+  }
+
+  @starting-style {
+    .tei-popover:popover-open,
+    .tei-popover[data-open] {
+      opacity: 0;
+      transform: translateY(var(--tei-enter-offset, -4px)) scale(0.98);
+    }
+  }
+
+  .tei-popover[data-side="top"] {
+    --tei-enter-offset: 4px;
+  }
+
+  .tei-popover[data-variant="bar"] {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    max-inline-size: calc(100vw - 1rem);
+    overflow: visible;
+  }
+
+  .tei-popover[data-variant="bar"]:not(:popover-open):not([data-open]) {
+    display: none;
+  }
+
+  /* Code block bar: in the block's corner, so smaller and quieter than a menu. */
+  .tei-popover[data-tei-control="code-bar"] {
+    padding: 2px;
+    box-shadow: var(--tei-shadow-sm);
+  }
+
+  .tei-popover[data-tei-control="code-bar"] .tei-control-label,
+  .tei-code-language {
+    color: var(--tei-fg-muted);
+    font-size: 0.75rem;
+  }
+
+  .tei-code-language {
+    padding-inline: var(--tei-space-2);
+  }
+
+  /* Block handle: + and the grip, in the gutter level with a block's first
+   * line. Quiet until hovered; the grip takes drags (touch too). */
+  .tei-popover.tei-block-handle {
+    --tei-enter-offset: 0px;
+    gap: 0;
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .tei-block-handle > .tei-button {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    min-inline-size: 0;
+    padding: 0;
+    color: var(--tei-fg-subtle);
+  }
+
+  .tei-block-handle > .tei-button:hover {
+    color: var(--tei-fg);
+  }
+
+  .tei-block-handle > .tei-block-grip {
+    inline-size: 1.125rem;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .tei-block-handle[data-dragging] > .tei-block-grip {
+    cursor: grabbing;
+  }
+
+  /* A finger needs a target of 24px at least; the narrow gutter holds it. */
+  @media (pointer: coarse) {
+    .tei-block-handle > .tei-block-grip {
+      inline-size: 1.5rem;
+      block-size: 1.75rem;
+    }
+  }
+
+  /* No room for + in a narrow editor: the slash menu adds blocks there. */
+  @container tei (max-width: 40rem) {
+    .tei-block-add {
+      display: none;
+    }
+  }
+
+  /* Where a dragged block will land. */
+  .tei-popover.tei-block-drop {
+    block-size: 2px;
+    min-block-size: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 1px;
+    background: var(--tei-accent);
+    box-shadow: none;
+    overflow: visible;
+    pointer-events: none;
+    transition: none;
+  }
+
+  /* A copy of the dragged block under the pointer. */
+  .tei-popover.tei-block-ghost {
+    inline-size: min(var(--tei-ghost-width, 20rem), 28rem);
+    max-inline-size: calc(100vw - 2rem);
+    max-block-size: 9rem;
+    padding: var(--tei-space-2) var(--tei-space-3);
+    overflow: hidden;
+    opacity: 0.85;
+    pointer-events: none;
+    transition: none;
+    mask-image: linear-gradient(to bottom, #000 70%, transparent);
+  }
+
+  .tei-block-ghost > * {
+    margin: 0;
+  }
+
+  .tei-popover.tei-table-add {
+    display: flex;
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  /* The bar is the size; its button fills it. */
+  .tei-popover.tei-table-add[data-kind="row"] {
+    block-size: 1.125rem;
+  }
+
+  .tei-popover.tei-table-add[data-kind="column"] {
+    inline-size: 1.125rem;
+  }
+
+  .tei-popover.tei-table-add:not(:popover-open):not([data-open]) {
+    display: none;
+  }
+
+  .tei-table-add > .tei-button {
+    flex: 1;
+    inline-size: auto;
+    block-size: auto;
+    min-inline-size: 0;
+    min-block-size: 0;
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-bg-subtle);
+    color: var(--tei-fg-subtle);
+    opacity: 0.7;
+    transition:
+      opacity var(--tei-duration) var(--tei-ease),
+      background var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-table-add > .tei-button:hover,
+  .tei-table-add > .tei-button:focus-visible {
+    background: var(--tei-accent-subtle);
+    color: var(--tei-accent);
+    opacity: 1;
+  }
+
+  .tei-table-resizer {
+    position: fixed;
+    inset: 0 auto auto 0;
+    inline-size: 6px;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    cursor: col-resize;
+    touch-action: none;
+  }
+
+  .tei-table-resizer::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 2px;
+    inline-size: 2px;
+    border-radius: 1px;
+    background: var(--tei-accent);
+    opacity: 0.6;
+  }
+
+  .tei-table-resizer[data-active]::after {
+    opacity: 1;
+  }
+
+  /* Link popover: the link under the caret, and the form that edits it. */
+  .tei-link-url {
+    max-inline-size: 16rem;
+    padding-inline: var(--tei-space-2);
+    overflow: hidden;
+    color: var(--tei-accent);
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tei-link-url:hover {
+    text-decoration: underline;
+  }
+
+  /* 21rem: with the popover's padding and border, inside its 22rem. */
+  .tei-link-form {
+    display: flex;
+    align-items: center;
+    gap: var(--tei-space-1);
+    inline-size: min(21rem, calc(100vw - 2rem));
+  }
+
+  .tei-link-form > .tei-input {
+    flex: 1;
+    min-inline-size: 0;
+  }
+
+  [data-tei-control="link-editor"] > .tei-hint {
+    margin: var(--tei-space-1) var(--tei-space-1) 0;
+  }
+
+  /* Menu */
+  .tei-menu {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 12rem;
+    outline: none;
+  }
+
+  .tei-menu-group + .tei-menu-group {
+    margin-block-start: var(--tei-space-1);
+    padding-block-start: var(--tei-space-1);
+    border-block-start: 1px solid var(--tei-border);
+  }
+
+  .tei-menu-label {
+    padding: var(--tei-space-2) var(--tei-space-2) var(--tei-space-1);
+    color: var(--tei-fg-subtle);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1rem;
+  }
+
+  .tei-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--tei-space-2);
+    inline-size: 100%;
+    min-block-size: var(--tei-control-size);
+    padding: var(--tei-space-1) var(--tei-space-2);
+    border: 0;
+    border-radius: var(--tei-radius-sm);
+    background: transparent;
+    color: var(--tei-fg);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+    outline: none;
+    user-select: none;
+    scroll-margin: var(--tei-space-1);
+  }
+
+  .tei-menu-item[data-highlighted],
+  .tei-menu-item:focus-visible {
+    background: var(--tei-bg-hover);
+  }
+
+  .tei-menu-item[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .tei-menu-item[aria-checked="true"],
+  .tei-menu-item[aria-selected="true"] {
+    color: var(--tei-accent);
+  }
+
+  .tei-menu-item[data-variant="danger"] {
+    color: var(--tei-danger);
+  }
+
+  .tei-menu-item[data-variant="danger"][data-highlighted] {
+    background: var(--tei-danger-subtle);
+  }
+
+  .tei-menu-item > .tei-icon {
+    color: var(--tei-fg-muted);
+  }
+
+  .tei-menu-item[aria-checked="true"] > .tei-icon {
+    color: inherit;
+  }
+
+  .tei-menu-item-tile {
+    display: grid;
+    flex: none;
+    place-items: center;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-bg);
+    color: var(--tei-fg-muted);
+  }
+
+  .tei-menu-item-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-inline-size: 0;
+  }
+
+  .tei-menu-item-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tei-menu-item-description {
+    overflow: hidden;
+    color: var(--tei-fg-subtle);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tei-menu-empty {
+    padding: var(--tei-space-3) var(--tei-space-2);
+    color: var(--tei-fg-subtle);
+    text-align: center;
+  }
+
+  .tei-kbd {
+    flex: none;
+    margin-inline-start: auto;
+    padding-inline-start: var(--tei-space-4);
+    /* Small text on a highlighted row: muted, not subtle, keeps 4.5:1. */
+    color: var(--tei-fg-muted);
+    font-family: var(--tei-font);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+  }
+
+  /* Tooltip */
+  .tei-tooltip {
+    position: fixed;
+    inset: auto;
+    top: 0;
+    left: 0;
+    margin: 0;
+    padding: 0.3125rem 0.5rem;
+    border: 0;
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-bg-inverse);
+    color: var(--tei-fg-inverse);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    white-space: nowrap;
+    pointer-events: none;
+    transition:
+      opacity var(--tei-duration) var(--tei-ease),
+      overlay var(--tei-duration) allow-discrete,
+      display var(--tei-duration) allow-discrete;
+  }
+
+  .tei-tooltip:not(:popover-open):not([data-open]) {
+    display: none;
+    opacity: 0;
+  }
+
+  @starting-style {
+    .tei-tooltip:popover-open {
+      opacity: 0;
+    }
+  }
+
+  .tei-tooltip .tei-kbd {
+    padding-inline-start: var(--tei-space-2);
+    color: inherit;
+    opacity: 0.65;
+  }
+
+  /* Dialog: native <dialog>, so focus trapping, Escape and inertness come
+   * from the browser. */
+  .tei-dialog {
+    inline-size: min(var(--tei-dialog-width, 28rem), calc(100vw - 2rem));
+    max-block-size: calc(100dvh - 2rem);
+    margin: auto;
+    padding: 0;
+    overflow: auto;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius-lg);
+    background: var(--tei-bg-overlay);
+    color: var(--tei-fg);
+    box-shadow: var(--tei-shadow-lg);
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity var(--tei-duration-slow) var(--tei-ease),
+      transform var(--tei-duration-slow) var(--tei-ease),
+      overlay var(--tei-duration-slow) allow-discrete,
+      display var(--tei-duration-slow) allow-discrete;
+  }
+
+  .tei-dialog:not([open]) {
+    display: none;
+    opacity: 0;
+    transform: scale(0.97);
+  }
+
+  @starting-style {
+    .tei-dialog[open] {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+
+  .tei-dialog::backdrop {
+    background: oklch(0 0 0 / 0.4);
+    transition:
+      background-color var(--tei-duration-slow) var(--tei-ease),
+      overlay var(--tei-duration-slow) allow-discrete,
+      display var(--tei-duration-slow) allow-discrete;
+  }
+
+  @starting-style {
+    .tei-dialog[open]::backdrop {
+      background: oklch(0 0 0 / 0);
+    }
+  }
+
+  .tei-dialog-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--tei-space-2);
+    padding: var(--tei-space-4) var(--tei-space-4) 0;
+  }
+
+  .tei-dialog-heading {
+    display: grid;
+    gap: var(--tei-space-1);
+    min-inline-size: 0;
+  }
+
+  /* The close button centres on the title's line and sits in the corner. */
+  .tei-dialog-header > .tei-button {
+    flex: none;
+    margin-block: -2px;
+    margin-inline-end: -6px;
+  }
+
+  .tei-dialog-description {
+    margin: 0;
+    color: var(--tei-fg-muted);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  .tei-dialog-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.5rem;
+  }
+
+  .tei-dialog-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tei-space-3);
+    padding: var(--tei-space-4);
+  }
+
+  .tei-dialog-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--tei-space-2);
+    padding: 0 var(--tei-space-4) var(--tei-space-4);
+  }
+
+  /* Bottom sheet on narrow screens. */
+  @media (max-width: 30rem) {
+    .tei-dialog {
+      inline-size: 100vw;
+      max-inline-size: 100vw;
+      margin-block-end: 0;
+      border-end-start-radius: 0;
+      border-end-end-radius: 0;
+      padding-block-end: env(safe-area-inset-bottom);
+    }
+
+    .tei-dialog:not([open]) {
+      transform: translateY(100%);
+    }
+
+    @starting-style {
+      .tei-dialog[open] {
+        transform: translateY(100%);
+      }
+    }
+  }
+
+  /* Form controls */
+  .tei-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .tei-label {
+    color: var(--tei-fg);
+    font-size: var(--tei-ui-font-size-sm);
+    font-weight: 500;
+  }
+
+  .tei-hint {
+    color: var(--tei-fg-subtle);
+    font-size: 0.75rem;
+  }
+
+  .tei-hint[data-error] {
+    color: var(--tei-danger);
+  }
+
+  .tei-input,
+  .tei-select {
+    inline-size: 100%;
+    min-inline-size: 0;
+    block-size: var(--tei-control-size);
+    margin: 0;
+    padding: 0 var(--tei-space-2);
+    border: 1px solid var(--tei-border-strong);
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-bg);
+    color: var(--tei-fg);
+    font: inherit;
+    font-size: var(--tei-ui-font-size);
+    outline: none;
+    transition:
+      border-color var(--tei-duration) var(--tei-ease),
+      box-shadow var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-input::placeholder {
+    color: var(--tei-fg-placeholder);
+  }
+
+  .tei-input:focus,
+  .tei-select:focus {
+    border-color: var(--tei-accent);
+    box-shadow: 0 0 0 3px var(--tei-ring);
+  }
+
+  .tei-input[aria-invalid="true"] {
+    border-color: var(--tei-danger);
+  }
+
+  .tei-select {
+    appearance: none;
+    padding-inline-end: 1.75rem;
+    background-image:
+      linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position:
+      calc(100% - 0.875rem) 52%,
+      calc(100% - 0.5625rem) 52%;
+    background-size: 0.3125rem 0.3125rem;
+    background-repeat: no-repeat;
+    cursor: pointer;
+  }
+
+  [dir="rtl"] .tei-select {
+    background-position:
+      0.5625rem 52%,
+      0.875rem 52%;
+  }
+
+  /* Inline form row: an input with a button beside it (the link editor). */
+  .tei-row {
+    display: flex;
+    align-items: center;
+    gap: var(--tei-space-1);
+  }
+
+  .tei-row > .tei-input {
+    flex: 1 1 auto;
+  }
+
+  /* Switch: a checkbox with role="switch". */
+  .tei-switch {
+    position: relative;
+    flex: none;
+    inline-size: 2.125rem;
+    block-size: 1.25rem;
+    margin: 0;
+    border-radius: 999px;
+    background: var(--tei-border-strong);
+    appearance: none;
+    cursor: pointer;
+    transition: background-color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-switch::after {
+    content: "";
+    position: absolute;
+    inset-block-start: 2px;
+    inset-inline-start: 2px;
+    inline-size: 1rem;
+    block-size: 1rem;
+    border-radius: 50%;
+    background: var(--tei-bg);
+    box-shadow: var(--tei-shadow-sm);
+    transition: transform var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-switch:checked {
+    background: var(--tei-accent);
+  }
+
+  .tei-switch:checked::after {
+    transform: translateX(0.875rem);
+  }
+
+  [dir="rtl"] .tei-switch:checked::after {
+    transform: translateX(-0.875rem);
+  }
+
+  .tei-switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tei-space-3);
+    font-size: var(--tei-ui-font-size);
+    cursor: pointer;
+  }
+
+  /* Number stepper (font size) */
+  .tei-stepper {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+  }
+
+  .tei-stepper > .tei-input {
+    inline-size: 2.75rem;
+    block-size: var(--tei-control-size-sm);
+    padding: 0;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+  }
+
+  .tei-stepper > .tei-input::-webkit-inner-spin-button,
+  .tei-stepper > .tei-input::-webkit-outer-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+  }
+
+  /* Toolbar text-style controls */
+  .tei-font-size {
+    display: contents;
+  }
+
+  .tei-control-label[data-tei-font] {
+    min-inline-size: 6.5em;
+    max-inline-size: 9em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The colour icon draws the current colour as a bar under the glyph. */
+  .tei-color-icon {
+    display: inline-grid;
+    justify-items: center;
+    gap: 1px;
+  }
+
+  .tei-color-icon > :not(.tei-color-bar) {
+    margin-block-end: -2px;
+  }
+
+  .tei-color-bar {
+    inline-size: 1rem;
+    block-size: 3px;
+    border-radius: 1px;
+    background: var(--tei-current-color, transparent);
+  }
+
+  .tei-color-bar[data-empty] {
+    background: currentColor;
+    opacity: 0.3;
+  }
+
+  /* A colour's swatch in a menu row, in the icon's place. */
+  .tei-menu-swatch {
+    flex: none;
+    inline-size: 1rem;
+    block-size: 1rem;
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-swatch, transparent);
+  }
+
+  .tei-menu-swatch[data-empty] {
+    background: linear-gradient(
+      to top right,
+      transparent calc(50% - 0.75px),
+      var(--tei-fg-subtle) calc(50% - 0.75px) calc(50% + 0.75px),
+      transparent calc(50% + 0.75px)
+    );
+  }
+
+  /* Colour picker */
+  .tei-swatches {
+    display: grid;
+    grid-template-columns: repeat(var(--tei-swatch-columns, 8), 1.5rem);
+    gap: var(--tei-space-1);
+    padding: var(--tei-space-1);
+  }
+
+  .tei-swatch {
+    position: relative;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    padding: 0;
+    border: 1px solid oklch(0 0 0 / 0.12);
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-swatch, transparent);
+    cursor: pointer;
+    transition: transform var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-swatch:hover {
+    transform: scale(1.12);
+  }
+
+  .tei-swatch[aria-pressed="true"],
+  .tei-swatch[aria-checked="true"] {
+    outline: 2px solid var(--tei-accent);
+    outline-offset: 1px;
+  }
+
+  .tei-swatch[data-empty]::after {
+    content: "";
+    position: absolute;
+    inset: 50% 2px auto;
+    border-block-start: 1.5px solid var(--tei-danger);
+    transform: rotate(-45deg);
+  }
+
+  /* Status bar (word count, character limit) */
+  .tei-statusbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--tei-space-3);
+    padding: var(--tei-space-1) var(--tei-space-3);
+    border-block-start: 1px solid var(--tei-border);
+    color: var(--tei-fg-subtle);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tei-statusbar [data-over] {
+    color: var(--tei-danger);
+  }
+
+  /* Touch: larger targets where the pointer is coarse. */
+  @media (pointer: coarse) {
+    .tei,
+    .tei-portal:not(.tei *) {
+      --tei-control-size: 2.5rem;
+      --tei-control-size-sm: 2.25rem;
+    }
+  }
+}
