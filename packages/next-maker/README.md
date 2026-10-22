@@ -6,7 +6,7 @@ Create and grow Next.js 16 applications from the [Teispace starter](https://gith
 npx @teispace/next-maker init my-app
 ```
 
-Requires Node 24+. The CLI is pinned to one starter tag (see `src/config/starter.ts`); each major version of the CLI tracks one major line of the starter.
+Requires Node 24+. The CLI is pinned to one starter tag (see `src/config/starter.ts`); each major version of the CLI tracks one major line of the starter. It runs on macOS, Linux and Windows: package managers and Biome are started through their `.cmd` shims where Windows needs them. A project without a lockfile gets Biome pinned to the exact release its `biome.json` schema names, so a new Biome can't reject the starter's configuration.
 
 ## Commands
 
