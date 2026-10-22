@@ -1,0 +1,412 @@
+/*
+ * Comments and review: highlighted comment anchors, suggested insertions
+ * and deletions, the composer, the suggestion bar and the comments panel
+ * (a drawer at the inline end, a bottom sheet on phones, or inline).
+ */
+@layer teieditor {
+  .tei,
+  .tei-prose:where(:not(.tei *)),
+  .tei-portal:where(:not(.tei *)) {
+    --tei-comment-bg: light-dark(oklch(0.93 0.11 95 / 0.45), oklch(0.62 0.11 90 / 0.28));
+    --tei-comment-line: light-dark(oklch(0.78 0.15 85), oklch(0.75 0.14 85));
+    --tei-comment-active-bg: light-dark(oklch(0.87 0.15 90 / 0.75), oklch(0.66 0.13 88 / 0.5));
+    --tei-suggest-insert: light-dark(oklch(0.52 0.14 155), oklch(0.78 0.14 155));
+    --tei-suggest-insert-bg: light-dark(oklch(0.96 0.05 155 / 0.8), oklch(0.4 0.08 155 / 0.35));
+    --tei-suggest-delete: light-dark(oklch(0.55 0.2 27), oklch(0.74 0.16 22));
+    --tei-suggest-delete-bg: light-dark(oklch(0.97 0.03 20 / 0.8), oklch(0.4 0.09 22 / 0.3));
+    --tei-comments-width: 22rem;
+  }
+
+  /* Anchors. A thread's state is on `data-tei-comment`. */
+  .tei mark.tei-comment {
+    padding: 0;
+    border-block-end: 2px solid var(--tei-comment-line);
+    background-color: var(--tei-comment-bg);
+    color: inherit;
+    cursor: pointer;
+    transition: background-color var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei mark.tei-comment-overlap {
+    background-color: var(--tei-comment-active-bg);
+  }
+
+  .tei mark.tei-comment[data-tei-comment="active"] {
+    background-color: var(--tei-comment-active-bg);
+    border-block-end-width: 3px;
+  }
+
+  .tei mark.tei-comment:is([data-tei-comment="resolved"], [data-tei-comment="none"]) {
+    border-block-end: 0;
+    background-color: transparent;
+    cursor: text;
+  }
+
+  ::highlight(tei-comment-pending) {
+    background-color: var(--tei-comment-active-bg, oklch(0.87 0.15 90 / 0.75));
+  }
+
+  /* Suggestions. */
+  .tei .tei-suggestion {
+    border-radius: 2px;
+    text-decoration-thickness: 2px;
+    text-decoration-skip-ink: none;
+  }
+
+  .tei ins.tei-suggestion {
+    background-color: var(--tei-suggest-insert-bg);
+    color: var(--tei-suggest-insert);
+    text-decoration-line: underline;
+  }
+
+  .tei del.tei-suggestion {
+    background-color: var(--tei-suggest-delete-bg);
+    color: var(--tei-suggest-delete);
+    text-decoration-line: line-through;
+  }
+
+  @media (forced-colors: active) {
+    .tei mark.tei-comment {
+      border-block-end-color: Highlight;
+      background-color: Mark;
+      color: MarkText;
+    }
+
+    .tei mark.tei-comment:is([data-tei-comment="resolved"], [data-tei-comment="none"]) {
+      background-color: transparent;
+      color: inherit;
+    }
+
+    ::highlight(tei-comment-pending) {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    .tei .tei-suggestion {
+      background-color: transparent;
+      color: inherit;
+    }
+  }
+
+  /* People. */
+  .tei-avatar {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    border-radius: 50%;
+    background: var(--tei-bg-muted);
+    color: var(--tei-fg-muted);
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+
+  .tei-avatar[data-tinted] {
+    background: var(--tei-avatar-bg);
+    color: oklch(0.99 0 0);
+  }
+
+  @media (forced-colors: active) {
+    .tei-avatar {
+      border: 1px solid CanvasText;
+    }
+  }
+
+  .tei-comment-byline {
+    display: flex;
+    align-items: center;
+    gap: var(--tei-space-2);
+    min-inline-size: 0;
+  }
+
+  .tei-comment-author {
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tei-comment-time {
+    color: var(--tei-fg-subtle);
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .tei-comment-delete {
+    margin-inline-start: auto;
+  }
+
+  .tei-comment-content {
+    margin: var(--tei-space-1) 0 0;
+    padding-inline-start: calc(1.5rem + var(--tei-space-2));
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  .tei-comment-quote,
+  .tei-thread-quote {
+    display: -webkit-box;
+    margin: 0;
+    padding-inline-start: var(--tei-space-2);
+    overflow: hidden;
+    border-inline-start: 3px solid var(--tei-comment-line);
+    color: var(--tei-fg-muted);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow-wrap: anywhere;
+  }
+
+  .tei-textarea {
+    block-size: auto;
+    min-block-size: 4.5rem;
+    padding-block: var(--tei-space-2);
+    line-height: var(--tei-ui-line-height);
+    resize: vertical;
+  }
+
+  /* The composer. */
+  .tei-popover.tei-comment-composer {
+    inline-size: min(22rem, calc(100vw - 1rem));
+  }
+
+  .tei-comment-form,
+  .tei-comment-reply {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tei-space-2);
+  }
+
+  .tei-comment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--tei-space-1);
+  }
+
+  .tei-comment-actions > .tei-hint {
+    flex: 1 1 8rem;
+  }
+
+  /* The suggestion bar. */
+  .tei-popover.tei-suggestion-bar {
+    gap: var(--tei-space-2);
+    padding-inline-start: var(--tei-space-2);
+  }
+
+  .tei-suggestion-who {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tei-suggestion-kind {
+    color: var(--tei-fg-muted);
+  }
+
+  /* The panel. */
+  .tei-comments-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tei-space-3);
+    box-sizing: border-box;
+    padding: var(--tei-space-3);
+    overflow: auto;
+    border: 1px solid var(--tei-border);
+    background: var(--tei-bg-overlay);
+    color: var(--tei-fg);
+    font-size: var(--tei-ui-font-size);
+    line-height: var(--tei-ui-line-height);
+    overscroll-behavior: contain;
+  }
+
+  .tei-comments-panel[hidden] {
+    display: none;
+  }
+
+  .tei-comments-panel[data-placement="inline"] {
+    border-radius: var(--tei-radius);
+  }
+
+  .tei-comments-panel[data-placement="overlay"] {
+    position: fixed;
+    inset-block: 0;
+    inset-inline: auto 0;
+    inline-size: min(var(--tei-comments-width), 100vw);
+    block-size: 100dvh;
+    max-block-size: none;
+    margin: 0;
+    border-block: 0;
+    border-inline-end: 0;
+    box-shadow: var(--tei-shadow-lg);
+    transition:
+      transform var(--tei-duration-slow) var(--tei-ease),
+      overlay var(--tei-duration-slow) allow-discrete,
+      display var(--tei-duration-slow) allow-discrete;
+  }
+
+  @starting-style {
+    .tei-comments-panel[data-placement="overlay"][data-open] {
+      transform: translateX(100%);
+    }
+
+    [dir="rtl"] .tei-comments-panel[data-placement="overlay"][data-open] {
+      transform: translateX(-100%);
+    }
+  }
+
+  /* Phones: a bottom sheet. */
+  @media (max-width: 40rem) {
+    .tei-comments-panel[data-placement="overlay"] {
+      inset: auto 0 0;
+      inline-size: 100vw;
+      block-size: auto;
+      max-block-size: 75dvh;
+      padding-block-end: max(var(--tei-space-3), env(safe-area-inset-bottom));
+      border: 0;
+      border-block-start: 1px solid var(--tei-border);
+      border-start-start-radius: var(--tei-radius-lg);
+      border-start-end-radius: var(--tei-radius-lg);
+    }
+
+    @starting-style {
+      .tei-comments-panel[data-placement="overlay"][data-open],
+      [dir="rtl"] .tei-comments-panel[data-placement="overlay"][data-open] {
+        transform: translateY(100%);
+      }
+    }
+  }
+
+  .tei-comments-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tei-space-2);
+  }
+
+  .tei-comments-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .tei-comments-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tei-space-1);
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .tei-comments-count {
+    min-inline-size: 1.25rem;
+    margin-inline-start: var(--tei-space-1);
+    padding-inline: var(--tei-space-1);
+    border-radius: 999px;
+    background: var(--tei-bg-muted);
+    color: var(--tei-fg-muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tei-comments-empty {
+    margin: 0;
+    padding: var(--tei-space-4) var(--tei-space-2);
+    color: var(--tei-fg-muted);
+    text-align: center;
+  }
+
+  .tei-thread-list,
+  .tei-thread-comments {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tei-thread-list {
+    gap: var(--tei-space-2);
+  }
+
+  .tei-thread-comments {
+    gap: var(--tei-space-3);
+  }
+
+  .tei-thread {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tei-space-2);
+    padding: var(--tei-space-3);
+    border: 1px solid var(--tei-border);
+    border-radius: var(--tei-radius);
+    background: var(--tei-bg);
+    transition:
+      border-color var(--tei-duration) var(--tei-ease),
+      box-shadow var(--tei-duration) var(--tei-ease);
+  }
+
+  .tei-thread[data-active] {
+    border-color: var(--tei-accent);
+    box-shadow: 0 0 0 1px var(--tei-accent);
+  }
+
+  .tei-thread[data-resolved] {
+    background: var(--tei-bg-subtle);
+  }
+
+  button.tei-thread-quote {
+    inline-size: 100%;
+    padding-block: 0;
+    padding-inline-end: 0;
+    border-block: 0;
+    border-inline-end: 0;
+    background: none;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  button.tei-thread-quote:hover {
+    color: var(--tei-fg);
+  }
+
+  button.tei-thread-quote:focus-visible {
+    border-radius: 2px;
+    outline: 2px solid var(--tei-ring);
+    outline-offset: 2px;
+  }
+
+  .tei-thread[data-kind="insert"] .tei-suggestion-quote {
+    border-inline-start-color: var(--tei-suggest-insert);
+  }
+
+  .tei-thread[data-kind="delete"] .tei-suggestion-quote {
+    border-inline-start-color: var(--tei-suggest-delete);
+    text-decoration: line-through;
+  }
+
+  .tei-thread-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--tei-space-1);
+  }
+
+  .tei-thread-actions[data-all] {
+    justify-content: flex-start;
+  }
+
+  @media (forced-colors: active) {
+    .tei-thread[data-active] {
+      outline: 2px solid Highlight;
+    }
+  }
+}
