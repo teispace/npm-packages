@@ -50,6 +50,10 @@ export {
 } from './components/embed-controls.js';
 export type { EmojiPanelProps, EmojiPickerProps } from './components/emoji-picker.js';
 export { EmojiPanel, EmojiPicker } from './components/emoji-picker.js';
+export type { EquationEditorProps } from './components/equation-editor.js';
+export { EquationEditor } from './components/equation-editor.js';
+export type { ExcalidrawControlsProps } from './components/excalidraw-controls.js';
+export { ExcalidrawControls } from './components/excalidraw-controls.js';
 export type { FileControlsProps } from './components/file-controls.js';
 export { FileControls } from './components/file-controls.js';
 export type { FindReplaceBarProps } from './components/find-replace-bar.js';

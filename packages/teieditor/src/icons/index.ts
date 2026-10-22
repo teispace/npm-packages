@@ -213,6 +213,23 @@ export const draw = /* @__PURE__ */ p(
   'M21.17 6.81a1 1 0 0 0-3.98-3.98L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z',
   'm15 5 4 4',
 );
+/** A drawing: shapes on a canvas. */
+export const shapes: TeiIconNode = [
+  [
+    'path',
+    { d: 'M8.3 10a.7.7 0 0 1-.63-1.08L11.4 3a.7.7 0 0 1 1.2-.04L16.3 8.9a.7.7 0 0 1-.57 1.1Z' },
+  ],
+  rect(3, 14, 7, 7, 1),
+  circle(17.5, 17.5, 3.5),
+];
+/** A block equation. */
+export const sigma = /* @__PURE__ */ p(
+  'M18 7V5a1 1 0 0 0-1-1H6.5a.5.5 0 0 0-.4.8l4.5 6a2 2 0 0 1 0 2.4l-4.5 6a.5.5 0 0 0 .4.8H17a1 1 0 0 0 1-1v-2',
+);
+/** An equation in a line of text. */
+export const radical = /* @__PURE__ */ p(
+  'M3 12h3.28a1 1 0 0 1 .95.68l2.3 7.93a.5.5 0 0 0 .96-.04L13.82 4.77A1 1 0 0 1 14.79 4H21',
+);
 export const upload = /* @__PURE__ */ p(
   'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4',
   'm17 8-5-5-5 5M12 3v12',
