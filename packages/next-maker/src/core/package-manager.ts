@@ -1,7 +1,4 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const execFileAsync = promisify(execFile);
+import { exec } from './exec';
 
 export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun';
 
@@ -9,11 +6,11 @@ export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun';
  * Run a package-manager command with argv passed as an array (no shell). Like
  * `git.ts`, this is the security-critical detail: package names flow in from
  * generators/manifests, and a name containing shell metacharacters would, under
- * a string `exec`, be interpreted by the shell. `execFile` never spawns a shell,
- * so every argument is inert data.
+ * a shell string, be interpreted by the shell. {@link exec} never builds one —
+ * on Windows included, where the managers are `.cmd` shims — so every argument
+ * is inert data.
  */
-const run = (bin: string, args: string[], cwd: string) =>
-  execFileAsync(bin, args, { cwd, maxBuffer: 64 * 1024 * 1024 });
+const run = (bin: string, args: string[], cwd: string) => exec(bin, args, { cwd });
 
 /** The last lines a package manager printed, so a failure message says why. */
 const tailOf = (error: unknown): string => {

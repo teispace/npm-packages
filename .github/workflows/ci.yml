@@ -162,3 +162,32 @@ jobs:
           # fetch it without its interactive confirmation on a non-TTY runner.
           COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
         run: yarn smoke
+
+  # next-maker runs package managers and tools that are .cmd shims on Windows.
+  # This exercises that path on a real Windows runner, which act cannot run.
+  next-maker-windows:
+    name: next-maker process spawning (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    needs: [quality]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # Node first, then Corepack on that Node: the runner's global Yarn 1
+      # comes earlier on PATH than a shim enabled before setup-node, and the
+      # action's yarn cache would run it. No cache here for the same reason.
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Run the spawning tests
+        run: yarn workspace @teispace/next-maker vitest run __tests__/core/exec.test.ts
