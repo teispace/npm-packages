@@ -117,6 +117,17 @@ describe('CodeBlockBar', () => {
     expect(screen.getByRole('button', { name: 'Language: elixir' })).toBeTruthy();
   });
 
+  it('names a block by its own id before one that normalizes the same (Shiki’s tsx)', () => {
+    const editor = make({ content: '<pre data-language="tsx"><code>a</code></pre>' });
+    const languages = [
+      ['typescript', 'TypeScript'],
+      ['tsx', 'TSX'],
+    ] as const;
+    render(<CodeBlockBar editor={editor} languages={languages} />);
+    hover(editor);
+    expect(screen.getByRole('button', { name: 'Language: TSX' })).toBeTruthy();
+  });
+
   it('copies the code, and says so for a moment', async () => {
     vi.useFakeTimers();
     const writeText = vi.fn(() => Promise.resolve());

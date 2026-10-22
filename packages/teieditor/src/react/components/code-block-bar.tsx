@@ -102,7 +102,13 @@ export function CodeBlockBar({ editor: editorProp, languages, copyButton }: Code
       key
         ? e.read(() => {
             const code = $getCodeBlock(key);
-            return code ? { key, language: normalizeLanguage(code.getLanguage()) } : null;
+            return code
+              ? {
+                  key,
+                  language: normalizeLanguage(code.getLanguage()),
+                  id: code.getLanguage() ?? null,
+                }
+              : null;
           })
         : null,
     { editor },
@@ -151,12 +157,15 @@ function LanguageMenu({
   onOpenChange,
 }: {
   editor: TeiEditor;
-  block: { key: NodeKey; language: string | null };
+  block: { key: NodeKey; language: string | null; id: string | null };
   languages: readonly CodeLanguage[];
   onOpenChange: (open: boolean) => void;
 }) {
   const plain = editor.t('code.plain');
-  const current = languages.find(([id]) => normalizeLanguage(id) === block.language);
+  // Its own id first: Shiki has both `tsx` and `typescript`, which normalize alike.
+  const current =
+    languages.find(([id]) => id === block.id) ??
+    languages.find(([id]) => normalizeLanguage(id) === block.language);
   // A language the list does not have still shows, by its id.
   const shown = current?.[1] ?? block.language ?? plain;
   const label = editor.t('code.language');
