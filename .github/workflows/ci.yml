@@ -175,14 +175,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Enable Corepack
-        run: corepack enable
-
+      # Node first, then Corepack on that Node: the runner's global Yarn 1
+      # comes earlier on PATH than a shim enabled before setup-node, and the
+      # action's yarn cache would run it. No cache here for the same reason.
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
-          cache: 'yarn'
+
+      - name: Enable Corepack
+        run: corepack enable
 
       - name: Install dependencies
         run: yarn install --immutable
