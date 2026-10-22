@@ -2,6 +2,8 @@
  * @teispace/teieditor/react — hooks and components for React.
  */
 
+export type { AiMenuProps } from './components/ai-menu.js';
+export { AiMenu } from './components/ai-menu.js';
 export type { BlockHandleProps } from './components/block-handle.js';
 export { BlockHandle } from './components/block-handle.js';
 export { useBlockMenu } from './components/block-menu.js';

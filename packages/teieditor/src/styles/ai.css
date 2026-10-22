@@ -1,0 +1,191 @@
+/*
+ * The AI menu: a prompt with the actions under it, then the answer as it
+ * streams in, with Accept, Discard, Try again and Stop. The text an answer
+ * will replace is marked with the CSS Custom Highlight API
+ * (`::highlight(tei-ai-target)`), so the document never changes until the
+ * answer is accepted.
+ */
+@layer teieditor {
+  .tei,
+  .tei-prose:where(:not(.tei *)),
+  .tei-portal:where(:not(.tei *)) {
+    --tei-ai-accent: light-dark(oklch(0.56 0.2 295), oklch(0.72 0.15 295));
+    --tei-ai-target-bg: light-dark(oklch(0.9 0.06 295 / 0.6), oklch(0.5 0.14 295 / 0.45));
+  }
+
+  ::highlight(tei-ai-target) {
+    background-color: var(--tei-ai-target-bg, oklch(0.9 0.06 295 / 0.6));
+  }
+
+  @media (forced-colors: active) {
+    ::highlight(tei-ai-target) {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+  }
+
+  /* Wide enough to read an answer on a desktop; the screen's width less a margin on a phone. */
+  .tei-popover.tei-ai {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tei-space-1);
+    inline-size: min(28rem, calc(100vw - 1rem));
+    max-inline-size: calc(100vw - 1rem);
+    overflow: hidden;
+  }
+
+  .tei-ai-prompt {
+    display: flex;
+    align-items: center;
+    gap: var(--tei-space-2);
+    padding-inline-start: var(--tei-space-2);
+    color: var(--tei-ai-accent);
+  }
+
+  .tei-ai-prompt > .tei-input {
+    flex: 1;
+    min-inline-size: 0;
+  }
+
+  .tei-ai-list {
+    min-inline-size: 0;
+    max-block-size: min(18rem, calc(var(--tei-available-height, 24rem) - 3.5rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .tei-ai-list > .tei-menu-item > .tei-icon:first-child {
+    color: var(--tei-ai-accent);
+  }
+
+  .tei-ai-list > .tei-menu-item > .tei-icon:last-child:not(:first-child) {
+    margin-inline-start: auto;
+    color: var(--tei-fg-subtle);
+  }
+
+  .tei-ai-answer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tei-space-2);
+    padding: var(--tei-space-1);
+    min-block-size: 0;
+  }
+
+  /* The answer as plain text, line breaks kept; long ones scroll. */
+  .tei-ai-preview {
+    max-block-size: min(40vh, calc(var(--tei-available-height, 24rem) - 4rem));
+    padding: var(--tei-space-2) var(--tei-space-3);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-inline-start: 2px solid var(--tei-ai-accent);
+    border-radius: var(--tei-radius-sm);
+    background: var(--tei-bg-subtle);
+    color: var(--tei-fg);
+    font-family: var(--tei-font);
+    font-size: var(--tei-ui-font-size);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .tei-ai-preview:focus-visible {
+    outline: 2px solid var(--tei-ring);
+    outline-offset: 1px;
+  }
+
+  /* New text after the caret reads as a suggestion until it is accepted. */
+  .tei-ai-preview[data-mode="insert"] {
+    color: var(--tei-fg-muted);
+  }
+
+  .tei-ai-preview:empty::before {
+    content: "\2026";
+    color: var(--tei-fg-subtle);
+  }
+
+  /* Where the next words land, while they stream. */
+  .tei-ai-cursor {
+    display: inline-block;
+    inline-size: 0.5em;
+    block-size: 1em;
+    margin-inline-start: 1px;
+    vertical-align: -0.15em;
+    border-radius: 1px;
+    background: var(--tei-ai-accent);
+    animation: tei-ai-pulse 1s ease-in-out infinite;
+  }
+
+  @keyframes tei-ai-pulse {
+    50% {
+      opacity: 0.25;
+    }
+  }
+
+  /* While it streams, a light passes along the menu's top edge. */
+  .tei-popover.tei-ai[data-state="streaming"] {
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--tei-ai-accent) 50%,
+      transparent 100%
+    );
+    background-repeat: no-repeat;
+    background-size: 40% 2px;
+    background-position: -40% 0;
+    animation: tei-ai-shimmer 1.4s linear infinite;
+  }
+
+  @keyframes tei-ai-shimmer {
+    to {
+      background-position: 140% 0;
+    }
+  }
+
+  .tei-ai-status {
+    margin: 0;
+    padding-inline: var(--tei-space-1);
+    color: var(--tei-fg-muted);
+    font-size: var(--tei-ui-font-size-sm);
+  }
+
+  .tei-ai-status[data-error] {
+    color: var(--tei-danger);
+  }
+
+  .tei-ai-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tei-space-1);
+  }
+
+  /* No pulse, no shimmer: the state is still in the words and the buttons. */
+  @media (prefers-reduced-motion: reduce) {
+    .tei-ai-cursor,
+    .tei-popover.tei-ai[data-state="streaming"] {
+      animation: none;
+    }
+
+    .tei-popover.tei-ai[data-state="streaming"] {
+      background-image: none;
+    }
+  }
+
+  /* Fingers: rows and buttons a thumb can hit. */
+  @media (pointer: coarse) {
+    .tei-ai-list > .tei-menu-item {
+      min-block-size: 2.75rem;
+    }
+
+    .tei-ai-buttons > .tei-button {
+      min-block-size: 2.75rem;
+      flex: 1 1 auto;
+    }
+  }
+
+  @media print {
+    .tei-popover.tei-ai {
+      display: none;
+    }
+  }
+}
