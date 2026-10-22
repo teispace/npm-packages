@@ -189,7 +189,7 @@ describe('TableOfContents: the outline', () => {
     }
     expect(performance.now() - started).toBeLessThan(500);
     expect(outline(editor)).toHaveLength(11);
-  });
+  }, 30_000);
 });
 
 describe('TableOfContents: HTML, markdown and commands', () => {

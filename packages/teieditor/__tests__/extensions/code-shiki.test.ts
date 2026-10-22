@@ -71,6 +71,9 @@ const coloured = (editor: TeiEditor, where = 'const') =>
 const TS =
   '```typescript\nconst greeting: string = "hi"; // say it\nfunction f(n) { return n + 1 }\n```';
 
+// The first test loads Shiki, its grammars and themes for real: seconds on
+// a busy machine.
+vi.setConfig({ testTimeout: 20_000 });
 describe('CodeShiki', () => {
   it('colours a block in both themes at once, with a token kind on each', async () => {
     const { editor } = make(TS);

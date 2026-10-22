@@ -340,22 +340,30 @@ describe('FindReplace: keeping up with edits', () => {
   it('stays quick in a 10,000-paragraph document', () => {
     const lines = (count: number) =>
       Array.from({ length: count }, (_, i) => `<p>line ${i} with some words</p>`).join('');
-    /** How long a first search takes in a document of `count` paragraphs. */
+    /**
+     * How long a full search takes in a document of `count` paragraphs: the
+     * best of three queries, so one pause of the machine's doesn't count.
+     * It ends on "some", which the edits below rely on.
+     */
     const search = (count: number) => {
       const made = make(lines(count), { config: { maxMatches: 20_000 } });
-      const started = performance.now();
-      find(made.editor, 'some');
-      return { ...made, ms: performance.now() - started };
+      let ms = Number.POSITIVE_INFINITY;
+      for (const query of ['with', 'words', 'some']) {
+        const started = performance.now();
+        find(made.editor, query);
+        ms = Math.min(ms, performance.now() - started);
+        expect(made.storage.matches.value).toHaveLength(count);
+      }
+      return { ...made, ms };
     };
     // Time depends on the machine; how it grows does not. Five times the
-    // paragraphs is about five times the work, never twenty-five: the bound
-    // leaves room for a busy machine and still catches quadratic growth.
+    // paragraphs is about five times the work, never twenty-five.
     const small = search(2_000);
     expect(small.storage.matches.value).toHaveLength(2_000);
     small.editor.destroy();
     const { editor, storage, ms: first } = search(10_000);
     expect(storage.matches.value).toHaveLength(10_000);
-    expect(first).toBeLessThan(small.ms * 15);
+    expect(first).toBeLessThan(small.ms * 10);
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     // Over `largeDocument`: debounced, and only the changed block is searched
     // again. The best of three edits, so a pause of the machine's (a GC) in

@@ -1,6 +1,11 @@
-import { act, render, waitFor } from '@testing-library/react';
+import { act, configure, render, waitFor } from '@testing-library/react';
 import { $getRoot } from 'lexical';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
+// Each test imports the source afresh, and each part loads for real: on a
+// busy machine (every workspace testing at once) that takes seconds.
+vi.setConfig({ testTimeout: 20_000 });
+configure({ asyncUtilTimeout: 10_000 });
 
 // React keeps a lazy part once loaded, for the module's life: each test
 // loads the modules afresh, so its parts are still to load.
