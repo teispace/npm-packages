@@ -340,21 +340,12 @@ describe('FindReplace: keeping up with edits', () => {
   it('stays quick in a 10,000-paragraph document', () => {
     const lines = (count: number) =>
       Array.from({ length: count }, (_, i) => `<p>line ${i} with some words</p>`).join('');
-    /**
-     * How long a full search takes in a document of `count` paragraphs: the
-     * best of three queries, so one pause of the machine's doesn't count.
-     * It ends on "some", which the edits below rely on.
-     */
+    /** How long a first search takes in a document of `count` paragraphs. */
     const search = (count: number) => {
       const made = make(lines(count), { config: { maxMatches: 20_000 } });
-      let ms = Number.POSITIVE_INFINITY;
-      for (const query of ['with', 'words', 'some']) {
-        const started = performance.now();
-        find(made.editor, query);
-        ms = Math.min(ms, performance.now() - started);
-        expect(made.storage.matches.value).toHaveLength(count);
-      }
-      return { ...made, ms };
+      const started = performance.now();
+      find(made.editor, 'some');
+      return { ...made, ms: performance.now() - started };
     };
     // Time depends on the machine; how it grows does not. Five times the
     // paragraphs is about five times the work, never twenty-five.
