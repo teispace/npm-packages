@@ -10,6 +10,7 @@ A professional Yarn 4 monorepo for Teispace's published npm packages, with autom
 | **[@teispace/next-themes](./packages/next-themes)** | Feature-rich, lightweight theme management for Next.js & React. Zero-flash SSR, hybrid storage, view transitions, typed themes. Zero runtime deps. |
 | **[@teispace/teieditor](./packages/teieditor)** | A feature-rich, fully customizable rich-text editor built on Lexical. shadcn-style — install, use, customize. |
 | **[@teispace/next-maker](./packages/next-maker)** | CLI that composes Next.js projects and pnpm + Turborepo workspaces from the Teispace starter manifest, keeps them aligned (`setup`, `doctor`, `upgrade`), and generates features, pages, slices, and API layers. |
+| **[teiqr](./packages/teiqr)** | The complete QR toolkit — generate, style, validate and scan QR, Micro QR and rMQR codes, with typed payloads, batch export and a CLI. Zero runtime deps. |
 
 ## 🚀 Quick Start
 
@@ -59,6 +60,7 @@ npm install @teispace/env
 npm install @teispace/next-themes
 npm install @teispace/teieditor
 npm install -g @teispace/next-maker   # or: npx @teispace/next-maker
+npm install teiqr
 ```
 
 See **[RELEASING.md](./RELEASING.md)** for the full release process.
@@ -85,13 +87,14 @@ We welcome contributions! Please read the [Contributing Guide](./CONTRIBUTING.md
 
 ```
 npm-packages/
-├── .github/workflows/      # ci.yml (PR + push checks), release-please.yml (release + publish)
+├── .github/workflows/      # ci.yml (PR + push checks), fuzz.yml (nightly decoder fuzzing), release-please.yml (release + publish)
 ├── packages/
 │   ├── env/                # @teispace/env
 │   ├── next-themes/        # @teispace/next-themes
 │   ├── teieditor/          # @teispace/teieditor
-│   └── next-maker/         # @teispace/next-maker
-├── examples/               # Private example apps (next-themes demo, teieditor playground)
+│   ├── next-maker/         # @teispace/next-maker
+│   └── teiqr/              # teiqr
+├── examples/               # Private example apps (next-themes demo, teieditor playground, teiqr scripts)
 ├── biome.json              # Lint + format config
 ├── vitest.coverage.ts      # Shared coverage config
 ├── tsconfig.base.json      # Shared TS config

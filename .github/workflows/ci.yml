@@ -73,7 +73,8 @@ jobs:
             ./packages/env/coverage/lcov.info,
             ./packages/next-maker/coverage/lcov.info,
             ./packages/next-themes/coverage/lcov.info,
-            ./packages/teieditor/coverage/lcov.info
+            ./packages/teieditor/coverage/lcov.info,
+            ./packages/teiqr/coverage/lcov.info
           fail_ci_if_error: false
 
   build:
