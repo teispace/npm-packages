@@ -78,9 +78,6 @@ export function positionFloating(
     noFlip || inside
       ? false
       : flip(flipBoundary ? { padding, boundary: flipBoundary } : { padding }),
-    // Both axes: a submenu with no room on either side (a phone) slides over
-    // its parent instead of off the screen.
-    shift({ padding, crossAxis: true }),
     size({
       padding,
       apply({ availableHeight, availableWidth, rects, elements }) {
@@ -94,6 +91,10 @@ export function positionFloating(
         if (matchHeight) style.minHeight = `${Math.round(rects.reference.height)}px`;
       },
     }),
+    // Both axes: a submenu with no room on either side (a phone) slides over
+    // its parent instead of off the screen. After size, so a list too tall
+    // for either side shrinks to fit first and never slides over its anchor.
+    shift({ padding, crossAxis: true }),
     hide({ padding }),
   ].filter(Boolean) as Middleware[];
 

@@ -737,6 +737,21 @@ test.describe('slash menu', () => {
     expect(await tei.html()).not.toContain('/divider');
   });
 
+  test('too tall for either side, it shrinks and keeps clear of its line', async ({ tei }) => {
+    await tei.page.setViewportSize({ width: 900, height: 420 });
+    await tei.open({ content: `${'<p>Line</p>'.repeat(5)}<p><br></p>` });
+    await tei.caretAtEnd();
+    await tei.page.keyboard.type('/');
+    await expect(slash(tei)).toBeVisible();
+    await tei.page.waitForTimeout(300);
+    const line = await tei.content.locator('p').last().boundingBox();
+    const menu = await slash(tei).boundingBox();
+    if (!line || !menu) throw new Error('nothing to measure');
+    const above = menu.y + menu.height <= line.y + 1;
+    const below = menu.y >= line.y + line.height - 1;
+    expect(above || below).toBe(true);
+  });
+
   test('Escape closes it and leaves the text; it stays closed for that slash', async ({ tei }) => {
     await tei.open({ content: '<p><br></p>' });
     await tei.caretAtEnd();
