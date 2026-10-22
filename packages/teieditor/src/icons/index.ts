@@ -451,3 +451,28 @@ export const eraser = /* @__PURE__ */ p(
   'm7 21-4.3-4.3a1 1 0 0 1 0-1.4l10-10a1 1 0 0 1 1.4 0l5.6 5.6a1 1 0 0 1 0 1.4L11 21',
   'M22 21H7M5 11l9 9',
 );
+
+// Collaboration and versions
+export const users: TeiIconNode = [
+  ['path', { d: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3.13a4 4 0 0 1 0 7.75' }],
+  ['path', { d: 'M22 21v-2a4 4 0 0 0-3-3.87' }],
+  circle(9, 7, 4),
+];
+export const versionHistory = /* @__PURE__ */ p(
+  'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8',
+  'M3 3v5h5M12 7v5l4 2',
+);
+export const saveVersion = /* @__PURE__ */ p(
+  'M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z',
+  'M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7M7 3v4a1 1 0 0 0 1 1h7',
+);
+export const eye: TeiIconNode = [
+  [
+    'path',
+    {
+      d: 'M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0',
+    },
+  ],
+  circle(12, 12, 3),
+];
+export const compare = /* @__PURE__ */ p('M8 3 4 7l4 4M4 7h16', 'm16 21 4-4-4-4M20 17H4');
