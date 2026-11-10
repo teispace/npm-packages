@@ -88,7 +88,7 @@ test.describe('dropdown menu', () => {
     const trigger = tei.page.getByTestId('menu-trigger');
     await trigger.focus();
     await tei.page.keyboard.press('ArrowDown');
-    const highlighted = () => menu(tei.page).locator('[data-highlighted]').innerText();
+    const highlighted = () => menu(tei.page).locator('[data-highlighted]').textContent();
     await expect(menu(tei.page)).toBeVisible();
     expect(await highlighted()).toContain('One');
     await tei.page.keyboard.press('ArrowDown');

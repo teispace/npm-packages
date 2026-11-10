@@ -84,7 +84,14 @@ export function Examples() {
       strike: null,
       wordCount: { id: 'wordCount', label: 'Words', in: ['toolbar'], run: showStats },
     },
-    commands: { toggleBold: { run: ({ next }) => (track('bold'), next()) } },
+    commands: {
+      toggleBold: {
+        run: ({ next }) => {
+          track('bold');
+          return next();
+        },
+      },
+    },
     keymap: { underline: null, bold: { key: 'Mod-Shift-b', command: 'toggleBold' } },
     middleware: [(call, next) => (call.check ? next() : audit(call.name, next))],
   });

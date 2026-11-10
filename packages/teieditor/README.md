@@ -353,7 +353,7 @@ extension, so they win:
 ```ts
 useTeiEditor({
   extensions,
-  commands: { toggleBold: { run: ({ next }) => (track('bold'), next()) } }, // wrap
+  commands: { toggleBold: { run: ({ next }) => { track('bold'); return next(); } } }, // wrap
   keymap: { underline: null, bold: { key: 'Mod-Shift-b', command: 'toggleBold' } },
   middleware: [(call, next) => (call.check ? next() : audit(call.name, next))],
 });

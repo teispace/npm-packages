@@ -66,6 +66,28 @@ function installStoragePolyfill(): void {
 }
 installStoragePolyfill();
 
+/**
+ * The engine the tests start from: no constructable stylesheets and no
+ * view-transition types, so the `<style nonce>` and level-1 paths are what
+ * runs. jsdom 31 has both; a test that covers them opts in (`installAdoptedStyleSheets`
+ * in csp.test.tsx, a `CSS.supports` spy in view-transition.test.ts), so both
+ * paths stay tested whatever the jsdom version.
+ */
+function pinBaselineEngine(): void {
+  if (typeof Document === 'undefined') return;
+  delete (Document.prototype as { adoptedStyleSheets?: unknown }).adoptedStyleSheets;
+  if (typeof CSS !== 'undefined' && typeof CSS.supports === 'function') {
+    const supports = CSS.supports.bind(CSS) as (...args: string[]) => boolean;
+    Object.defineProperty(CSS, 'supports', {
+      configurable: true,
+      writable: true,
+      value: (...args: string[]) =>
+        args.join(' ').includes('view-transition-type') ? false : supports(...args),
+    });
+  }
+}
+pinBaselineEngine();
+
 beforeEach(() => {
   if (typeof document !== 'undefined') {
     document.documentElement.className = '';
