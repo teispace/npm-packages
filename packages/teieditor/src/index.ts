@@ -24,11 +24,13 @@ export {
 } from './core/define.js';
 export type {
   ContentFormat,
+  ContentValue,
   FocusPosition,
   TeiCan,
   TeiCanChain,
   TeiChain,
   TeiCommandRunner,
+  TeiContentFormats,
 } from './core/editor.js';
 export { TeiEditor } from './core/editor.js';
 export { jsonFormat, textFormat } from './core/formats.js';

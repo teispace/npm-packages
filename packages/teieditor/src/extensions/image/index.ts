@@ -135,16 +135,23 @@ export type ImageUploadHandler = (
 /** Why a file did not become an image. */
 export class ImageUploadError extends Error {
   constructor(
-    readonly code: 'size' | 'upload' | 'unsafe',
+    /**
+     * `size`: over `maxFileSize`; `upload`: the handler failed; `unsafe`:
+     * it resolved with a URL that cannot be used; `no-upload`: no handler,
+     * and `dataUrls` is off.
+     */
+    readonly code: 'size' | 'upload' | 'unsafe' | 'no-upload',
     readonly file: File,
     options?: { cause?: unknown },
   ) {
     super(
       code === 'size'
         ? `${file.name} is too large`
-        : code === 'unsafe'
-          ? `${file.name} came back with a URL that is not an image's`
-          : `${file.name} could not be uploaded`,
+        : code === 'no-upload'
+          ? `${file.name} cannot be added: there is nowhere to upload it`
+          : code === 'unsafe'
+            ? `${file.name} came back with a URL that is not an image's`
+            : `${file.name} could not be uploaded`,
       options,
     );
     this.name = 'ImageUploadError';
@@ -166,6 +173,12 @@ export interface ImageOptions {
   accept: string;
   /** The largest file accepted, in bytes. Default 10 MB. */
   maxFileSize: number;
+  /**
+   * Without `upload`, keep files in the document as `data:` URLs. Default
+   * true; `false` refuses them instead (`onUploadError` with code
+   * `no-upload`), for an app whose documents must only point at its storage.
+   */
+  dataUrls: boolean;
   /** A file was refused or its upload failed; the image is taken out again. */
   onUploadError: ((error: ImageUploadError) => void) | null;
   /** Images can have captions. Default true. */
@@ -311,10 +324,21 @@ function $convertImage(node: BaseImageNode, inline: boolean): BaseImageNode {
 function sortFiles(ctx: Ctx, files: readonly File[]): File[] {
   return files.filter((file) => {
     if (!acceptsFile(file, ctx.options.accept)) return false;
-    if (file.size <= ctx.options.maxFileSize) return true;
-    ctx.options.onUploadError?.(new ImageUploadError('size', file));
+    const refused = refusal(ctx.options, file);
+    if (!refused) return true;
+    ctx.options.onUploadError?.(new ImageUploadError(refused, file));
     return false;
   });
+}
+
+/** Why `file` cannot be added, if it cannot: too large, or nowhere to put it. */
+function refusal(
+  options: { upload: unknown; dataUrls: boolean; maxFileSize: number },
+  file: File,
+): 'size' | 'no-upload' | null {
+  if (file.size > options.maxFileSize) return 'size';
+  if (!options.upload && !options.dataUrls) return 'no-upload';
+  return null;
 }
 
 /** Upload `file` for the image with `key`, which shows `preview` meanwhile. */
@@ -608,6 +632,7 @@ export const Image = defineTeiExtension({
     accept: 'image/*',
     maxFileSize: 10 * 1024 * 1024,
     onUploadError: null,
+    dataUrls: true,
     captions: true,
     resizable: true,
     minWidth: 64,

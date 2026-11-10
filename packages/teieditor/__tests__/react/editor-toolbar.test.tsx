@@ -23,7 +23,7 @@ function make(options: Partial<TeiEditorOptions> = {}): TeiEditor {
 
 /** What the toolbar shows, in order: entry ids, `|` for separators. */
 const ids = (toolbar: HTMLElement) =>
-  Array.from(toolbar.querySelectorAll(':scope > [data-tei-slot]:not([hidden]) > *'))
+  Array.from(toolbar.querySelectorAll(':scope > [data-tei-slot]:not([data-tei-hidden]) > *'))
     .filter((el) => !el.matches('[popover]'))
     .map((el) =>
       el.getAttribute('role') === 'separator'
@@ -120,6 +120,15 @@ describe('EditorToolbar', () => {
     expect((screen.getByRole('button', { name: 'Undo' }) as HTMLButtonElement).disabled).toBe(
       false,
     );
+  });
+
+  it('follows a language switch without a remount', () => {
+    const editor = make();
+    render(<EditorToolbar editor={editor} />);
+    expect(screen.getByRole('button', { name: /^Bold/ })).toBeTruthy();
+    act(() => editor.setMessages({ 'toolbar.label': 'Formatierung', 'format.bold': 'Fett' }, 'de'));
+    expect(screen.getByRole('toolbar', { name: 'Formatierung' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Fett/ })).toBeTruthy();
   });
 
   it('disables everything while read-only', () => {

@@ -84,7 +84,14 @@ export function Examples() {
       strike: null,
       wordCount: { id: 'wordCount', label: 'Words', in: ['toolbar'], run: showStats },
     },
-    commands: { toggleBold: { run: ({ next }) => (track('bold'), next()) } },
+    commands: {
+      toggleBold: {
+        run: ({ next }) => {
+          track('bold');
+          return next();
+        },
+      },
+    },
     keymap: { underline: null, bold: { key: 'Mod-Shift-b', command: 'toggleBold' } },
     middleware: [(call, next) => (call.check ? next() : audit(call.name, next))],
   });
@@ -157,3 +164,9 @@ export const review = [
   Review.configure({ user: me }),
 ];
 export const serverEquations = Equation.configure({ katex });
+
+// `onChange` gets the format's type: Lexical JSON by default, a string for HTML.
+export const typedJson = <Editor onChange={(value) => value.root} />;
+export const typedHtml = <Editor format="html" onChange={(value) => value.toUpperCase()} />;
+// @ts-expect-error: HTML is a string, not JSON
+export const wrongHtml = <Editor format="html" onChange={(value) => value.root} />;

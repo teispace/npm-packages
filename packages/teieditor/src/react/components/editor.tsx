@@ -10,7 +10,7 @@ import {
   useState,
 } from 'react';
 import type { TeiEditorOptions } from '../../core/create.js';
-import type { ContentFormat, TeiEditor } from '../../core/editor.js';
+import type { ContentFormat, ContentValue, TeiEditor } from '../../core/editor.js';
 import type { TeiPreset } from '../../core/preset.js';
 import { holdUi } from '../../core/ui-request.js';
 import type { AiStorage } from '../../extensions/ai/index.js';
@@ -26,6 +26,7 @@ import { StarterKit } from '../../extensions/starter-kit/index.js';
 import type { VersionsStorage } from '../../extensions/versions/index.js';
 import { type ContentEditableProps, EditorContent, EditorProvider } from '../editor-content.js';
 import { cx } from '../ui/context.js';
+import { useEditorMessages } from '../use-editor-messages.js';
 import { useSignal } from '../use-signal.js';
 import { useTeiEditor } from '../use-tei-editor.js';
 import { EditorToolbar, type EditorToolbarProps, type ToolbarLayout } from './editor-toolbar.js';
@@ -194,7 +195,8 @@ const NAME = (feature: string) => `@teispace/teieditor/${feature}`;
 /** `data-*` attributes, which TypeScript only accepts in JSX otherwise. */
 type DataAttributes = { [key: `data-${string}`]: string | undefined };
 
-export interface EditorProps extends Partial<Omit<TeiEditorOptions, 'editable'>> {
+export interface EditorProps<F extends ContentFormat = 'json'>
+  extends Partial<Omit<TeiEditorOptions, 'editable'>> {
   /**
    * An editor from `useTeiEditor`, to drive from outside. Without one,
    * `<Editor>` makes its own from the other options (StarterKit by
@@ -217,10 +219,13 @@ export interface EditorProps extends Partial<Omit<TeiEditorOptions, 'editable'>>
   toolbarOverflow?: EditorToolbarProps['overflow'];
   /** Read-only with `false`. This one may change after mount. */
   editable?: boolean;
-  /** Called after each change to the document, with it in `format`. */
-  onChange?: (value: unknown, editor: TeiEditor) => void;
+  /**
+   * Called after each change to the document, with it in `format`: Lexical
+   * JSON by default, a string for `html`, `markdown` and `text`.
+   */
+  onChange?: (value: ContentValue<F>, editor: TeiEditor) => void;
   /** What `onChange` gets. Default `json`. */
-  format?: ContentFormat;
+  format?: F;
   /** Shown while the document is empty. */
   placeholder?: string;
   /**
@@ -260,11 +265,13 @@ export interface EditorProps extends Partial<Omit<TeiEditorOptions, 'editable'>>
  * shows (they appear only once there is one to act on); the frame gets
  * `data-tei-ready` when they are in.
  */
-export function Editor(props: EditorProps) {
-  return props.editor ? <EditorFrame {...props} editor={props.editor} /> : <OwnEditor {...props} />;
+export function Editor<F extends ContentFormat = 'json'>(props: EditorProps<F>) {
+  // Inside, the value's type no longer matters: it is passed through.
+  const all = props as unknown as EditorProps<ContentFormat>;
+  return all.editor ? <EditorFrame {...all} editor={all.editor} /> : <OwnEditor {...all} />;
 }
 
-function OwnEditor(props: EditorProps) {
+function OwnEditor(props: EditorProps<ContentFormat>) {
   const {
     preset,
     slots,
@@ -307,8 +314,10 @@ function EditorFrame({
   colorScheme,
   className,
   children,
-}: EditorProps & { editor: TeiEditor }) {
+}: EditorProps<ContentFormat> & { editor: TeiEditor }) {
   const parts: EditorSlots = { ...preset?.ui, ...slots };
+  // A language switch (`editor.setMessages`) re-renders every part's words.
+  useEditorMessages(editor);
   const has = (feature: string) => editor.extension(NAME(feature)) !== undefined;
   const storage = <S,>(feature: string) =>
     (editor.extension(NAME(feature))?.output as { storage?: S } | undefined)?.storage;

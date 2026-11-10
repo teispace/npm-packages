@@ -224,6 +224,47 @@ describe('createTeiEditor', () => {
     expect(editor.t('Hello {name}', { name: 'Ada' })).toBe('Hello Ada');
   });
 
+  it('picks the plural form for the locale from a numeric count', () => {
+    const editor = make({
+      extensions: [Bold],
+      locale: 'pl',
+      messages: {
+        files: 'files',
+        'files.one': '{count} plik',
+        'files.few': '{count} pliki',
+        'files.other': '{count} plików',
+        'rows.other': '{count} rows',
+      },
+    });
+    expect(editor.t('files', { count: 1 })).toBe('1 plik');
+    expect(editor.t('files', { count: 3 })).toBe('3 pliki');
+    expect(editor.t('files', { count: 5 })).toBe('5 plików');
+    // No form for the category: `other`; no count: the plain message.
+    expect(editor.t('rows', { count: 1 })).toBe('1 rows');
+    expect(editor.t('files')).toBe('files');
+    // A string count is a value, not a plural.
+    expect(editor.t('files', { count: '1' })).toBe('files');
+  });
+
+  it('changes messages and locale while running, and tells listeners', () => {
+    const onMessagesChange = vi.fn();
+    const editor = make({ extensions: [Bold], onMessagesChange });
+    const heard = vi.fn();
+    editor.on('onMessagesChange', heard);
+    expect(editor.locale).toBeUndefined();
+    editor.setMessages({ Bold: 'Fett', 'n.one': 'ein', 'n.other': '{count}' }, 'de');
+    expect(editor.t('Bold')).toBe('Fett');
+    expect(editor.t('n', { count: 1 })).toBe('ein');
+    expect(editor.locale).toBe('de');
+    expect(editor.messages['toolbar.label']).toBe('Formatting');
+    expect(onMessagesChange).toHaveBeenCalledTimes(1);
+    expect(heard).toHaveBeenCalledWith({ editor, lexical: editor.lexical });
+    // Another call keeps what the first set.
+    editor.setMessages({ 'toolbar.label': 'Format' });
+    expect(editor.t('Bold')).toBe('Fett');
+    expect(editor.locale).toBe('de');
+  });
+
   it('fires events to extension handlers, option handlers and on() listeners', () => {
     const order: string[] = [];
     const Watch = defineTeiExtension({

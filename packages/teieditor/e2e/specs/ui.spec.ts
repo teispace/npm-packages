@@ -88,7 +88,7 @@ test.describe('dropdown menu', () => {
     const trigger = tei.page.getByTestId('menu-trigger');
     await trigger.focus();
     await tei.page.keyboard.press('ArrowDown');
-    const highlighted = () => menu(tei.page).locator('[data-highlighted]').innerText();
+    const highlighted = () => menu(tei.page).locator('[data-highlighted]').textContent();
     await expect(menu(tei.page)).toBeVisible();
     expect(await highlighted()).toContain('One');
     await tei.page.keyboard.press('ArrowDown');
@@ -336,7 +336,7 @@ test.describe('toolbar overflow', () => {
       const shown: Element[] = [];
       const visit = (parent: Element) => {
         for (const child of Array.from(parent.children)) {
-          if (child.matches('[popover], [hidden]')) continue;
+          if (child.matches('[popover], [hidden], [data-tei-hidden]')) continue;
           if (getComputedStyle(child).display === 'contents') visit(child);
           else shown.push(child);
         }
@@ -355,9 +355,9 @@ test.describe('toolbar overflow', () => {
           ),
         ],
         boxes: shown.map((c) => c.getBoundingClientRect()).map((r) => [r.left, r.right]),
-        moved: [...el.querySelectorAll(':scope > [data-tei-slot][hidden] [data-item]')].map((c) =>
-          c.getAttribute('data-item'),
-        ),
+        moved: [
+          ...el.querySelectorAll(':scope > [data-tei-slot][data-tei-hidden] [data-item]'),
+        ].map((c) => c.getAttribute('data-item')),
       };
     });
 
@@ -395,6 +395,36 @@ test.describe('toolbar overflow', () => {
         await expect(
           menu.locator('[role^="menuitem"]').filter({ hasText: name }).first(),
         ).toBeVisible();
+      }
+      expect(await tei.problems()).toEqual([]);
+    });
+  }
+
+  // Tailwind 4's preflight hides `[hidden]` with !important: the toolbar
+  // measured what had moved as 0px wide, and the fit flipped between "all"
+  // and "some" until React gave up (Maximum update depth exceeded).
+  for (const width of [320, 375, 768, 1280]) {
+    test(`under a page that hides [hidden] with !important, at ${width}px: it settles and types`, async ({
+      tei,
+    }) => {
+      await tei.page.setViewportSize({ width, height: 800 });
+      await tei.open({
+        content: '<p>word</p>',
+        flags: ['preflight', 'table', 'image', 'extras', 'blocks'],
+      });
+      await tei.caretAtEnd();
+      await tei.page.keyboard.type(' more');
+      await expect.poll(() => tei.text()).toBe('word more');
+      const { left, right, rows, boxes, moved } = await layout(tei);
+      expect(rows).toHaveLength(1);
+      for (const [start, end] of boxes) {
+        expect(start).toBeGreaterThanOrEqual(left - 0.5);
+        expect(end).toBeLessThanOrEqual(right + 0.5);
+      }
+      if (width < 1280) {
+        expect(moved.length).toBeGreaterThan(0);
+        await more(tei).click();
+        await expect(tei.page.getByRole('menu', { name: 'More' })).toBeVisible();
       }
       expect(await tei.problems()).toEqual([]);
     });

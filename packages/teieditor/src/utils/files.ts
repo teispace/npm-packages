@@ -45,6 +45,9 @@ export function readAsDataURL(
  * when cancelled, where the browser says so). Call it from a click: browsers
  * open choosers only for a user's gesture.
  */
+/** How long a `cancel` waits for a `change` that may follow it. */
+const CANCEL_GRACE_MS = 100;
+
 export function chooseFiles(
   doc: Document,
   { accept = '', multiple = false }: { accept?: string; multiple?: boolean } = {},
@@ -54,8 +57,11 @@ export function chooseFiles(
     input.type = 'file';
     input.accept = accept;
     input.multiple = multiple;
-    input.addEventListener('change', () => resolve(Array.from(input.files ?? [])), { once: true });
-    input.addEventListener('cancel', () => resolve([]), { once: true });
+    const picked = () => resolve(Array.from(input.files ?? []));
+    input.addEventListener('change', picked, { once: true });
+    // Firefox can fire `cancel` and then `change` with the file: a cancel
+    // waits a moment for a change that may follow before meaning "nothing".
+    input.addEventListener('cancel', () => setTimeout(picked, CANCEL_GRACE_MS), { once: true });
     input.click();
   });
 }

@@ -64,16 +64,23 @@ export type FileUploadHandler = (
 /** Why a file was not attached. */
 export class FileUploadError extends Error {
   constructor(
-    readonly code: 'size' | 'upload' | 'unsafe',
+    /**
+     * `size`: over `maxFileSize`; `upload`: the handler failed; `unsafe`:
+     * it resolved with a URL that cannot be used; `no-upload`: no handler,
+     * and `dataUrls` is off.
+     */
+    readonly code: 'size' | 'upload' | 'unsafe' | 'no-upload',
     readonly file: File,
     options?: { cause?: unknown },
   ) {
     super(
       code === 'size'
         ? `${file.name} is too large`
-        : code === 'unsafe'
-          ? `${file.name} came back with a URL that cannot be linked to`
-          : `${file.name} could not be uploaded`,
+        : code === 'no-upload'
+          ? `${file.name} cannot be added: there is nowhere to upload it`
+          : code === 'unsafe'
+            ? `${file.name} came back with a URL that cannot be linked to`
+            : `${file.name} could not be uploaded`,
       options,
     );
     this.name = 'FileUploadError';
@@ -94,6 +101,12 @@ export interface FileOptions {
   accept: string;
   /** The largest file accepted, in bytes. Default 25 MB. */
   maxFileSize: number;
+  /**
+   * Without `upload`, keep files in the document as `data:` URLs. Default
+   * true; `false` refuses them instead (`onUploadError` with code
+   * `no-upload`), for an app whose documents must only point at its storage.
+   */
+  dataUrls: boolean;
   /** A file was refused or its upload failed; it is taken out again. */
   onUploadError: ((error: FileUploadError) => void) | null;
 }
@@ -157,10 +170,21 @@ function sortFiles(ctx: Ctx, files: readonly File[], images = true): File[] {
   return files.filter((file) => {
     if (!images && isImageFile(ctx.lexical, file)) return false;
     if (!acceptsFile(file, ctx.options.accept)) return false;
-    if (file.size <= ctx.options.maxFileSize) return true;
-    ctx.options.onUploadError?.(new FileUploadError('size', file));
+    const refused = refusal(ctx.options, file);
+    if (!refused) return true;
+    ctx.options.onUploadError?.(new FileUploadError(refused, file));
     return false;
   });
+}
+
+/** Why `file` cannot be added, if it cannot: too large, or nowhere to put it. */
+function refusal(
+  options: { upload: unknown; dataUrls: boolean; maxFileSize: number },
+  file: File,
+): 'size' | 'no-upload' | null {
+  if (file.size > options.maxFileSize) return 'size';
+  if (!options.upload && !options.dataUrls) return 'no-upload';
+  return null;
 }
 
 function uploadFile(ctx: Ctx, key: NodeKey, file: File): void {
@@ -263,6 +287,7 @@ export const FileAttachment = defineTeiExtension({
     accept: '',
     maxFileSize: 25 * 1024 * 1024,
     onUploadError: null,
+    dataUrls: true,
   } as FileOptions,
   nodes: [FileNode],
   dependencies: [RichText, configExtension(DOMImportExtension, { rules: [FILE_RULE] })],
@@ -334,8 +359,9 @@ export const FileAttachment = defineTeiExtension({
         const node = $getFile(key);
         if (!node || !file) return false;
         if (!acceptsFile(file, ctx.options.accept)) return false;
-        if (file.size > ctx.options.maxFileSize) {
-          ctx.options.onUploadError?.(new FileUploadError('size', file));
+        const refused = refusal(ctx.options, file);
+        if (refused) {
+          ctx.options.onUploadError?.(new FileUploadError(refused, file));
           return false;
         }
         node.setSrc('').setName(file.name).setSize(file.size).setMimeType(file.type);

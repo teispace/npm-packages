@@ -8,7 +8,12 @@ import {
   ListNode,
   type ListType,
 } from '@lexical/list';
-import { CHECK_LIST, ORDERED_LIST, UNORDERED_LIST } from '@lexical/markdown';
+import {
+  CHECK_LIST,
+  type ElementTransformer,
+  ORDERED_LIST,
+  UNORDERED_LIST,
+} from '@lexical/markdown';
 import { $findMatchingParent } from '@lexical/utils';
 import {
   $getNodeByKey,
@@ -179,6 +184,12 @@ export const OrderedList = defineTeiExtension({
   ],
 });
 
+/** Lexical's bullet rule, for any line but one that starts with a checkbox. */
+const BULLET_UNLESS_CHECKBOX: ElementTransformer = {
+  ...UNORDERED_LIST,
+  regExp: /^(\s*)[-*+]\s(?!\s?\[(?:\s|x)?\]\s)/i,
+};
+
 /** To-do lists with checkboxes. Markdown `[ ] ` / `[x] `; ⌘⇧9. */
 export const CheckList = defineTeiExtension({
   name: '@teispace/teieditor/check-list',
@@ -207,7 +218,10 @@ export const CheckList = defineTeiExtension({
   keymap: {
     checkList: { key: 'Mod-Shift-9', command: 'toggleCheckList', description: 'To-do list' },
   },
-  markdown: { checkList: CHECK_LIST },
+  // The bullet rule is tried first and also matches `- [ ] task`: with
+  // to-do lists installed it steps aside for a checkbox, which would
+  // otherwise come in as a bullet reading "[ ] task".
+  markdown: { unorderedList: BULLET_UNLESS_CHECKBOX, checkList: CHECK_LIST },
   icons: { checkList },
   messages: { 'block.checkList': 'To-do list', 'block.checkList.description': 'Track tasks' },
   items: [

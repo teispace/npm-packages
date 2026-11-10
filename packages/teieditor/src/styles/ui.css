@@ -177,7 +177,9 @@
     display: contents;
   }
 
-  .tei-toolbar-slot[hidden] {
+  /* An attribute of our own, not `hidden`: base styles such as Tailwind's
+   * hide `[hidden]` with !important, and the measurement must show it. */
+  .tei-toolbar-slot[data-tei-hidden] {
     display: none;
   }
 
@@ -191,7 +193,7 @@
   }
 
   @container tei (max-width: 40rem) {
-    .tei-toolbar:not([data-overflow="wrap"]) {
+    .tei-toolbar:not([data-overflow="wrap"], [data-overflow="menu"]) {
       flex-wrap: nowrap;
       overflow-x: auto;
       scrollbar-width: none;
@@ -508,15 +510,6 @@
     align-items: center;
     gap: var(--tei-space-1);
     inline-size: min(21rem, calc(100vw - 2rem));
-  }
-
-  .tei-link-form > .tei-input {
-    flex: 1;
-    min-inline-size: 0;
-  }
-
-  [data-tei-control="link-editor"] > .tei-hint {
-    margin: var(--tei-space-1) var(--tei-space-1) 0;
   }
 
   /* Menu */
@@ -882,6 +875,16 @@
     display: flex;
     align-items: center;
     gap: var(--tei-space-1);
+  }
+
+  /* The link popover's field and hint, after the controls' own rules. */
+  .tei-link-form > .tei-input {
+    flex: 1;
+    min-inline-size: 0;
+  }
+
+  [data-tei-control="link-editor"] > .tei-hint {
+    margin: var(--tei-space-1) var(--tei-space-1) 0;
   }
 
   .tei-row > .tei-input {

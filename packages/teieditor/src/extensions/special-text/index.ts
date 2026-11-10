@@ -351,7 +351,8 @@ function register({ lexical, options }: Ctx): () => void {
           current.replace(
             $createTextNode(original).setFormat(current.getFormat()).setStyle(current.getStyle()),
           );
-          $getNodeByKey<TextNode>(at.key)?.select(at.offset, at.offset);
+          const restored = $getNodeByKey(at.key);
+          if ($isTextNode(restored)) restored.select(at.offset, at.offset);
         },
       };
       return;

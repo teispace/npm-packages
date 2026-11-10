@@ -39,6 +39,7 @@ on the machines that matter. Convert before committing.
 
 Aim for the cases the simulation cannot reach, and for ones expected to _fail_ —
 a scanner that never says no is not a scanner.
+
 - Printed on paper, flat, good light. The baseline; if this fails nothing else matters.
 - The same code at 20, 40 and 60 degrees off-axis.
 - On a phone or monitor screen, which brings moiré and backlight.

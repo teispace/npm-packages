@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetCursorTracker } from '../src/core/cursor-tracker';
-import { resolveTransition, startViewTransition } from '../src/core/view-transition';
+import {
+  resetTransitionSupportCache,
+  resolveTransition,
+  startViewTransition,
+} from '../src/core/view-transition';
 
 beforeEach(() => {
   resetCursorTracker();
@@ -74,6 +78,31 @@ describe('startViewTransition', () => {
   afterEach(() => {
     const d = document as unknown as { startViewTransition?: unknown };
     d.startViewTransition = undefined;
+  });
+
+  it('passes types to an engine that understands them (level 2)', async () => {
+    vi.spyOn(CSS, 'supports').mockReturnValue(true);
+    resetTransitionSupportCache();
+    const applied: string[] = [];
+    let options: { update: () => void; types: string[] } | undefined;
+    (
+      document as unknown as { startViewTransition: (o: typeof options) => unknown }
+    ).startViewTransition = (o) => {
+      options = o;
+      return { finished: Promise.resolve() };
+    };
+    try {
+      startViewTransition(() => applied.push('yes'), { css: 'a{}', duration: 1, typeName: 'dark' });
+      expect(options?.types).toEqual(['theme', 'dark']);
+      options?.update();
+      expect(applied).toEqual(['yes']);
+      // The transition's stylesheet goes once it has finished.
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(document.head.querySelector('style[data-teispace-themes]')).toBeNull();
+    } finally {
+      resetTransitionSupportCache();
+    }
   });
 
   it('applies synchronously when startViewTransition is unsupported', () => {

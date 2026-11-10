@@ -47,24 +47,24 @@
     "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
-    "commander": "^15.0.0",
+    "commander": "^15.1.0",
     "cross-spawn": "^7.0.6",
     "degit": "^3.10.1",
     "enquirer": "^2.4.1",
-    "ora": "^9.4.1",
+    "ora": "^10.0.0",
     "picocolors": "^1.1.1",
     "png-to-ico": "^3.0.2",
     "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",
-    "@types/degit": "^2.8.6",
-    "@types/node": "^26.6.5",
+    "@types/degit": "^3.10.0",
+    "@types/node": "^26.6.6",
     "esbuild": "^0.28.2",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
-    "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "vite": "^8.3.7",
+    "vitest": "^5.1.0"
   },
   "engines": {
     "node": ">=24.0.0"

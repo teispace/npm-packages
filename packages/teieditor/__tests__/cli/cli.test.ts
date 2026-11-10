@@ -132,7 +132,7 @@ describe('teieditor CLI', () => {
     expect(main(['init', '--preset', 'notion'], context)).toBe(0);
     const editor = readFileSync(join(app, 'src/components/teieditor/editor.tsx'), 'utf8');
     expect(editor).toContain("import { notion } from '@teispace/teieditor/presets/notion';");
-    expect(editor).toContain('<Editor preset={notion} {...props} />');
+    expect(editor).toContain('<Editor<F> preset={notion} {...props} />');
     expect(editor).toContain("import '@teispace/teieditor/styles.css';");
     expect(output()).toContain("from '@/components/teieditor/editor'");
     // Nothing installed without --install.

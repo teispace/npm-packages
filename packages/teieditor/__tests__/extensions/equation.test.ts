@@ -311,7 +311,8 @@ describe('Equation: HTML', () => {
     const editor = make(INLINE_JSON('x < y & "z"'));
     const html = editor.getHTML();
     expect(html).toBe(
-      '<p>E = <span data-tei-equation="inline" data-tex="x < y &amp; &quot;z&quot;" role="math" aria-label="x < y &amp; &quot;z&quot;"><code>x &lt; y &amp; "z"</code></span></p>',
+      // Serializers now escape < in attributes too (HTML spec, 2025); older ones keep it raw.
+      '<p>E = <span data-tei-equation="inline" data-tex="x &lt; y &amp; &quot;z&quot;" role="math" aria-label="x &lt; y &amp; &quot;z&quot;"><code>x &lt; y &amp; "z"</code></span></p>',
     );
     expect(equations(make(html))).toMatchObject([{ equation: 'x < y & "z"', inline: true }]);
   });

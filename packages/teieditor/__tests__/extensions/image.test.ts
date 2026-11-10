@@ -619,6 +619,19 @@ describe('image: uploads', () => {
     expect(images(editor)).toHaveLength(2);
   });
 
+  it('with dataUrls off and no upload, refuses files rather than keep data: URLs', () => {
+    const editor = make();
+    const onUploadError = vi.fn();
+    setExtensionOptions(editor, Image, { dataUrls: false, onUploadError });
+    endOf(editor);
+    expect(editor.commands.insertImageFiles([png('a.png')])).toBe(false);
+    expect(images(editor)).toHaveLength(0);
+    expect(onUploadError).toHaveBeenCalledWith(expect.objectContaining({ code: 'no-upload' }));
+    // With a handler, the option changes nothing.
+    setExtensionOptions(editor, Image, { upload: () => new Promise(() => {}) });
+    expect(editor.commands.insertImageFiles([png('a.png')])).toBe(true);
+  });
+
   it('replaceImageFile uploads in place, the image keeping its place and caption', async () => {
     const editor = make(`<figure>${PHOTO}<figcaption>Kept</figcaption></figure>`);
     setExtensionOptions(editor, Image, { upload: async () => 'https://cdn.test/new.png' });

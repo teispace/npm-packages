@@ -16,7 +16,7 @@ const ITEMS = 'button,input,select,[data-tei-roving]';
 function itemsOf(toolbar: HTMLElement): HTMLElement[] {
   return Array.from(toolbar.querySelectorAll<HTMLElement>(ITEMS)).filter(
     (el) =>
-      !el.closest('.tei-popover, [popover], dialog, [hidden]') &&
+      !el.closest('.tei-popover, [popover], dialog, [hidden], [data-tei-hidden]') &&
       !(el as HTMLButtonElement).disabled &&
       el.closest('[role="toolbar"]') === toolbar,
   );
@@ -61,7 +61,8 @@ export const Toolbar = forwardRef<HTMLDivElement, ToolbarProps>(function Toolbar
     const items = itemsOf(toolbar);
     const current = Math.min(active.current, items.length - 1);
     items.forEach((el, i) => {
-      el.tabIndex = i === current ? 0 : -1;
+      const index = i === current ? 0 : -1;
+      if (el.tabIndex !== index) el.tabIndex = index;
     });
   });
 

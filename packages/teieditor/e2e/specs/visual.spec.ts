@@ -204,6 +204,11 @@ for (const scheme of ['light', 'dark'] as const) {
       await tei.content.getByText('Starter').hover();
       await expect(tei.page.getByRole('button', { name: 'Add a row' })).toBeVisible();
       await expect(tei.page.getByRole('button', { name: 'Cell options' }).first()).toBeVisible();
+      // The caret must stay for the handle, but not in the shot: Playwright hides
+      // it with an inline <style> the harness's CSP refuses, so it would blink in.
+      await tei.content.evaluate((el: HTMLElement) => {
+        el.style.caretColor = 'transparent';
+      });
       await settled(tei.page);
       const box = await tei.content.locator('table').boundingBox();
       if (!box) throw new Error('no table');

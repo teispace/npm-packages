@@ -272,6 +272,23 @@ describe('file: uploads', () => {
     expect(errors.map((e) => [e.code, e.file.name])).toEqual([['size', 'big.pdf']]);
   });
 
+  it('with dataUrls off and no upload, refuses files, inserted or replaced', () => {
+    const errors: FileUploadError[] = [];
+    const editor = make(PDF);
+    setExtensionOptions(editor, FileAttachment, {
+      dataUrls: false,
+      onUploadError: (error) => errors.push(error),
+    });
+    endOf(editor);
+    expect(editor.commands.insertFiles([blob('a.pdf', 1)])).toBe(false);
+    selectFile(editor);
+    expect(editor.commands.replaceFile(blob('b.pdf', 1))).toBe(false);
+    expect(errors.map((e) => [e.code, e.file.name])).toEqual([
+      ['no-upload', 'a.pdf'],
+      ['no-upload', 'b.pdf'],
+    ]);
+  });
+
   it('replaceFile uploads in place; removing the file aborts its upload', async () => {
     const signals: AbortSignal[] = [];
     const editor = make(PDF);

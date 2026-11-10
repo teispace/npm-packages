@@ -575,7 +575,8 @@ export const Collapsible = defineTeiExtension({
         if (hidden === null) return;
         lexical.update(() => {
           const section = $getNodeByKey(hidden);
-          if ($isCollapsibleNode(section)) section.getFirstChild<ElementNode>()?.selectEnd();
+          const summary = $isCollapsibleNode(section) ? section.getFirstChild() : null;
+          if ($isElementNode(summary)) summary.selectEnd();
         });
       }),
       lexical.registerCommand(KEY_BACKSPACE_COMMAND, $backspace, COMMAND_PRIORITY_LOW),
