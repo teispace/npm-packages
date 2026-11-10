@@ -1,4 +1,5 @@
 import { $isLinkNode } from '@lexical/link';
+import { $isListNode } from '@lexical/list';
 import {
   $createNodeSelection,
   $createTextNode,
@@ -477,6 +478,14 @@ describe('content formats', () => {
       'horizontalrule',
       'paragraph',
     ]);
+    // `- [ ] todo` is a to-do list, not a bullet reading "[ ] todo".
+    const lists = editor.read(() =>
+      $getRoot()
+        .getChildren()
+        .flatMap((n) => ($isListNode(n) ? [n.getListType()] : [])),
+    );
+    expect(lists).toEqual(['bullet', 'number', 'check']);
+    expect(editor.getText()).not.toContain('[');
     expect(editor.getMarkdown()).toBe(md);
   });
 
