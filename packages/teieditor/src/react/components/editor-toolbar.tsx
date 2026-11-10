@@ -19,6 +19,7 @@ import type { TeiIconLike } from '../ui/context.js';
 import { DropdownMenu } from '../ui/dropdown.js';
 import type { MenuGroupData, MenuItemData } from '../ui/menu.js';
 import { Separator, Toolbar, type ToolbarProps } from '../ui/toolbar.js';
+import { useEditorMessages } from '../use-editor-messages.js';
 import { DocumentMenu } from './document-menu.js';
 import { InsertImageMenu } from './image-insert.js';
 import { InsertTableMenu } from './table-insert.js';
@@ -115,11 +116,14 @@ export function EditorToolbar({
   if (!editor) {
     throw new Error('teieditor: <EditorToolbar> needs an `editor` prop or a provider');
   }
+  // Labels (and so widths) follow a language switch.
+  const messages = useEditorMessages(editor);
   const all = useMemo(() => editor.items('toolbar'), [editor]);
   const groups = useMemo(() => layout ?? defaultLayout(editor, all), [layout, editor, all]);
   const named = useMemo(() => ({ ...BUILT_IN_CONTROLS, ...controls }), [controls]);
 
   // The entries, by group, with what each becomes in the "More" menu.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `messages` renews the submenus' labels, read through editor.t
   const entries = useMemo(() => {
     const byId = new Map(all.map((item) => [item.id, item]));
     return groups
@@ -168,7 +172,7 @@ export function EditorToolbar({
         }),
       )
       .filter((group) => group.length > 0);
-  }, [groups, named, all, editor, priorities]);
+  }, [groups, named, all, editor, priorities, messages]);
 
   // Every item button shares one subscription.
   const buttons = useMemo(

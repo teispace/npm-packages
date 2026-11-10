@@ -26,6 +26,41 @@ test.describe('typing', () => {
     }
   });
 
+  test('types Devanagari, conjuncts and marks included, and formats it', async ({ tei }) => {
+    await tei.open({ content: '' });
+    await tei.content.click();
+    // A Preeti-style or phonetic layout sends each character as typed text.
+    await tei.page.keyboard.type('नमस्ते संसार');
+    await tei.page.keyboard.press('Enter');
+    await tei.page.keyboard.type('क्षत्रिय ज्ञान');
+    expect(await tei.text()).toBe('नमस्ते संसार\n\nक्षत्रिय ज्ञान');
+    await tei.selectAll();
+    await tei.page.keyboard.press('ControlOrMeta+b');
+    expect(await tei.html()).toBe(
+      '<p><strong>नमस्ते संसार</strong></p><p><strong>क्षत्रिय ज्ञान</strong></p>',
+    );
+  });
+
+  test('takes Devanagari from an input method (composition)', async ({ tei, browserName }) => {
+    test.skip(browserName !== 'chromium', 'Composition events are driven through CDP');
+    await tei.open({ content: '<p>नेपाल</p>' });
+    await tei.caretAtEnd();
+    await tei.page.keyboard.type(' ');
+    const cdp = await tei.page.context().newCDPSession(tei.page);
+    // A Nepali IME composes a word key by key, then commits it.
+    for (const text of ['क', 'का', 'काठ', 'काठमा', 'काठमाडौं']) {
+      await cdp.send('Input.imeSetComposition', {
+        text,
+        selectionStart: text.length,
+        selectionEnd: text.length,
+      });
+    }
+    await cdp.send('Input.insertText', { text: 'काठमाडौं' });
+    await expect.poll(() => tei.text()).toBe('नेपाल काठमाडौं');
+    await tei.page.keyboard.type(' ठीक');
+    await expect.poll(() => tei.text()).toBe('नेपाल काठमाडौं ठीक');
+  });
+
   test('keeps runs of spaces as typed', async ({ tei }) => {
     await tei.open({ content: '' });
     await tei.content.click();

@@ -57,6 +57,8 @@ export interface TeiCoreConfig {
   active: Readonly<Record<string, TeiActiveCheck | null>>;
   items: Readonly<Record<string, TeiItem | null>>;
   messages: Readonly<Record<string, string>>;
+  /** For plural forms and numbers: a BCP 47 tag. Default: the runtime's. */
+  locale?: string;
   icons: Readonly<Record<string, TeiIconNode>>;
   /** Markdown transformers by name: shortcuts while typing, and the `markdown` format. */
   markdown: Readonly<Record<string, Transformer | null>>;

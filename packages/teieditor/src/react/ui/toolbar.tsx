@@ -61,7 +61,8 @@ export const Toolbar = forwardRef<HTMLDivElement, ToolbarProps>(function Toolbar
     const items = itemsOf(toolbar);
     const current = Math.min(active.current, items.length - 1);
     items.forEach((el, i) => {
-      el.tabIndex = i === current ? 0 : -1;
+      const index = i === current ? 0 : -1;
+      if (el.tabIndex !== index) el.tabIndex = index;
     });
   });
 

@@ -56,6 +56,12 @@ export interface TeiEditorOptions extends TeiEvents {
   items?: Record<string, TeiItem | null>;
   /** Replace any UI string by id: translations, wording. */
   messages?: Record<string, string>;
+  /**
+   * The messages' locale (a BCP 47 tag), for plural forms: with `{count}`,
+   * `id.one`, `id.few`, … `id.other` are tried before `id`. Change both
+   * later with `editor.setMessages`.
+   */
+  locale?: string;
   /** Replace any icon by name. */
   icons?: Record<string, TeiIconNode>;
   /** Add, replace or remove (`null`) markdown transformers by name. */
@@ -123,12 +129,21 @@ export function createTeiEditor(options: TeiEditorOptions): TeiEditor {
     keymap,
     items,
     messages,
+    locale,
     icons,
     markdown,
     middleware,
   } = options;
 
-  const app: Partial<TeiCoreConfig> = { commands, items, messages, icons, markdown, middleware };
+  const app: Partial<TeiCoreConfig> = {
+    commands,
+    items,
+    messages,
+    icons,
+    markdown,
+    middleware,
+    ...(locale ? { locale } : {}),
+  };
   const events: Record<string, unknown[]> = {};
   for (const name of [
     'onCreate',
@@ -137,6 +152,7 @@ export function createTeiEditor(options: TeiEditorOptions): TeiEditor {
     'onFocus',
     'onBlur',
     'onDestroy',
+    'onMessagesChange',
   ] as const) {
     if (options[name]) events[name] = [options[name]];
   }

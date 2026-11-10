@@ -166,6 +166,7 @@ export type { ToolbarProps } from './ui/toolbar.js';
 export { Separator, Toolbar } from './ui/toolbar.js';
 export { hideTooltip, showTooltip } from './ui/tooltip.js';
 export { useEditorFocus } from './use-editor-focus.js';
+export { useEditorMessages } from './use-editor-messages.js';
 export type { UseEditorStateOptions } from './use-editor-state.js';
 export { shallowEqual, useEditorState } from './use-editor-state.js';
 export { useHover, useRootListener } from './use-hover.js';

@@ -167,14 +167,15 @@ function init(preset: PresetName, options: Options, context: CliContext): number
 
 import '@teispace/teieditor/styles.css';
 import { ${preset} } from '@teispace/teieditor/presets/${preset}';
+import type { ContentFormat } from '@teispace/teieditor';
 import { Editor, type EditorProps } from '@teispace/teieditor/react';
 
 /**
  * The editor, with the ${preset} preset. Takes every \`<Editor>\` prop:
  * \`content\`, \`onChange\`, \`placeholder\`, \`slots\`…
  */
-export function TeiEditor(props: EditorProps) {
-  return <Editor preset={${preset}} {...props} />;
+export function TeiEditor<F extends ContentFormat = 'json'>(props: EditorProps<F>) {
+  return <Editor<F> preset={${preset}} {...props} />;
 }
 `;
   if (!write([{ path: join(dir, 'editor.tsx'), content }], options, context)) return 1;

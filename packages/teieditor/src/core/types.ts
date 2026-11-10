@@ -209,6 +209,8 @@ export interface TeiEvents {
   onFocus?: (ctx: TeiContext & { event: FocusEvent }) => void;
   onBlur?: (ctx: TeiContext & { event: FocusEvent }) => void;
   onDestroy?: (ctx: TeiContext) => void;
+  /** The messages or the locale changed (`setMessages`): UI re-renders its words. */
+  onMessagesChange?: (ctx: TeiContext) => void;
 }
 
 export type TeiEventName = keyof TeiEvents;

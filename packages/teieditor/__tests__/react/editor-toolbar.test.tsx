@@ -122,6 +122,15 @@ describe('EditorToolbar', () => {
     );
   });
 
+  it('follows a language switch without a remount', () => {
+    const editor = make();
+    render(<EditorToolbar editor={editor} />);
+    expect(screen.getByRole('button', { name: /^Bold/ })).toBeTruthy();
+    act(() => editor.setMessages({ 'toolbar.label': 'Formatierung', 'format.bold': 'Fett' }, 'de'));
+    expect(screen.getByRole('toolbar', { name: 'Formatierung' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Fett/ })).toBeTruthy();
+  });
+
   it('disables everything while read-only', () => {
     const editor = make({ editable: false });
     render(<EditorToolbar editor={editor} />);

@@ -177,6 +177,17 @@ Or set any of them yourself:
 **Dark mode** follows the page: a `.dark` class or `data-theme="dark"` on an
 ancestor, or the system setting. `<Editor colorScheme="dark">` forces one.
 
+**Cascade layers.** The styles live in `@layer teieditor`. A layer declared
+later wins, so with Tailwind put it before `components` and `utilities`,
+first thing in your CSS, and your utility classes can restyle any part:
+
+```css
+@layer theme, base, teieditor, components, utilities;
+```
+
+Base styles that hide `[hidden]` with `!important` (Tailwind's preflight)
+are fine: the editor never needs to show a `hidden` element.
+
 **Saved HTML** looks the same as the editor under a `tei-prose` class:
 `<article className="tei-prose" dangerouslySetInnerHTML={{ __html: html }} />`.
 Columns and cards size themselves to that element, so give it a width.
@@ -186,9 +197,11 @@ Columns and cards size themselves to that element, so give it a width.
 `content` takes HTML, a Markdown string with `contentFormat="markdown"`, or
 Lexical JSON. `onChange` reports each document change (not selection moves)
 in `format`: `json` (the default, lossless), `html`, `markdown` or `text`.
+The value is typed by the format: Lexical's `SerializedEditorState` for
+`json`, a string for the others.
 
 ```tsx
-<Editor content={saved} onChange={(value) => save(value)} format="html" />
+<Editor content={saved} onChange={(html) => save(html)} format="html" />
 ```
 
 Outside `onChange`, read and write through the editor:
@@ -268,7 +281,16 @@ useTeiEditor({
 ```
 
 **Words and icons.** `messages` replaces any string by id (translations,
-wording); `icons` replaces any icon by name.
+wording); `icons` replaces any icon by name. `editor.messages` lists every
+id with its current text, the catalogue to translate. With a `{count}`,
+plural forms are picked for `locale`: `id.one`, `id.few`, … `id.other`
+win over `id`. Switch language without a remount with `setMessages`;
+`<Editor>` re-renders, and UI of your own follows with `useEditorMessages(editor)`.
+
+```ts
+const editor = useTeiEditor({ extensions, locale: 'ne', messages: nepali });
+editor.setMessages(english, 'en');
+```
 
 **Classes.** Every part has a stable `tei-*` class and a `data-tei-part`
 attribute. Wrap the editor in `TeiUIContext` to add classes by part, swap
@@ -527,6 +549,12 @@ const html = renderToHTML(saved, { extensions: full.extensions });
 between formats with the same extensions. The server entry needs
 `@lexical/headless`.
 
+It runs on Node.js. For the length of each (synchronous) call it puts
+happy-dom's `window` on `globalThis`, then restores what was there. happy-dom
+imports Node built-ins (`fs`, `net`, `child_process`), so the server entry
+does not run on edge runtimes: in Next.js, keep `export const runtime = 'nodejs'`
+(the default) for routes that call it.
+
 `<Editor>` is a client component (`'use client'`); in the Next.js app router,
 render it from a server component and pass `initialHTML`.
 
@@ -560,6 +588,12 @@ from your docs site, as the playground does at `/r/<item>.json`.
   pasted HTML (`isSafeUrl`, `isSafeImageSrc` and the rest are exported).
 - **Saved HTML is the editor's own export**, built from the document, never
   pasted markup passed through.
+- **Uploads.** Without an `upload` handler, images and files stay in the
+  document as `data:` URLs. `Image.configure({ dataUrls: false })` (and the
+  same on `FileAttachment`) refuses them instead, reporting `no-upload` to
+  `onUploadError`, so documents only ever point at your storage. Errors
+  carry a `code` (`size`, `upload`, `unsafe`, `no-upload`) and the
+  `file`, for your own wording.
 - **Strict CSP.** The editor never writes a `style` attribute or a `<style>`
   element. A policy like this one, with a nonce per request, works as is:
 

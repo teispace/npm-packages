@@ -84,6 +84,23 @@ export type FocusPosition = 'start' | 'end' | 'all' | null;
 /** Content as stored or exchanged: a format name and its value. */
 export type ContentFormat = 'json' | 'html' | 'markdown' | 'text' | (string & {});
 
+/**
+ * What each format's content is. A format of your own adds itself here
+ * (`declare module '@teispace/teieditor' { interface TeiContentFormats { csv: string } }`);
+ * an unknown one is `unknown`.
+ */
+export interface TeiContentFormats {
+  json: SerializedEditorState;
+  html: string;
+  markdown: string;
+  text: string;
+}
+
+/** The content of format `F`. */
+export type ContentValue<F extends ContentFormat> = F extends keyof TeiContentFormats
+  ? TeiContentFormats[F]
+  : unknown;
+
 const handles = new WeakMap<LexicalEditor, TeiEditor>();
 
 /**
@@ -383,9 +400,9 @@ export class TeiEditor {
   // -- Content --------------------------------------------------------------
 
   /** Content in any registered format (`'json'`, `'text'`, and those extensions add). */
-  getContent(format: ContentFormat = 'json'): unknown {
-    const codec = this.#format(format);
-    return this.read(() => codec.serialize(this.#ctx()));
+  getContent<F extends ContentFormat = 'json'>(format?: F): ContentValue<F> {
+    const codec = this.#format(format ?? 'json');
+    return this.read(() => codec.serialize(this.#ctx())) as ContentValue<F>;
   }
 
   /** Replace the document. Strings default to HTML, objects to JSON. */
@@ -547,9 +564,48 @@ export class TeiEditor {
       );
   }
 
-  /** Look up a message by id, falling back to the id itself. */
+  #messages?: Readonly<Record<string, string>>;
+  #locale?: string;
+
+  /** Every message by id, as the UI reads them now: a catalogue to translate. */
+  get messages(): Readonly<Record<string, string>> {
+    return this.#messages ?? this.#config.messages;
+  }
+
+  /** The messages' locale; `undefined` is the runtime's. */
+  get locale(): string | undefined {
+    return this.#locale ?? this.#config.locale;
+  }
+
+  /**
+   * Replace messages by id, and the locale with it, while the editor runs:
+   * a language switch without a remount. `<Editor>` and its parts re-render;
+   * UI of your own listens with `on('onMessagesChange')` or `useEditorMessages`.
+   */
+  setMessages(messages: Readonly<Record<string, string>>, locale?: string): void {
+    this.#messages = { ...this.messages, ...messages };
+    if (locale !== undefined) this.#locale = locale;
+    const ctx = { editor: this, lexical: this.lexical };
+    for (const handler of this.#config.events.onMessagesChange ?? []) handler(ctx);
+    this.emit('onMessagesChange', ctx);
+  }
+
+  /**
+   * Look up a message by id, falling back to the id itself, and fill in
+   * `{name}`. With a numeric `count`, the plural form for the locale
+   * (`id.one`, `id.other`, …) wins over `id` when there is one.
+   */
   t(id: string, values?: Record<string, string | number>): string {
-    const message = this.#config.messages[id] ?? id;
+    const catalogue = this.messages;
+    let message = catalogue[id];
+    const count = values?.count;
+    if (typeof count === 'number') {
+      message =
+        catalogue[`${id}.${pluralRules(this.locale).select(count)}`] ??
+        catalogue[`${id}.other`] ??
+        message;
+    }
+    message ??= id;
     return values
       ? message.replace(/\{(\w+)\}/g, (m, k: string) => String(values[k] ?? m))
       : message;
@@ -624,6 +680,19 @@ export class TeiEditor {
     disposable.dispose?.();
     this.#listeners.clear();
   }
+}
+
+const plurals = new Map<string, Intl.PluralRules>();
+
+/** One `Intl.PluralRules` per locale: building one is slow. */
+function pluralRules(locale: string | undefined): Intl.PluralRules {
+  const key = locale ?? '';
+  let rules = plurals.get(key);
+  if (!rules) {
+    rules = new Intl.PluralRules(locale);
+    plurals.set(key, rules);
+  }
+  return rules;
 }
 
 /** A collapsed selection at the end of the document, as `root.selectEnd()` would make. */

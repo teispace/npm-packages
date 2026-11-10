@@ -157,3 +157,9 @@ export const review = [
   Review.configure({ user: me }),
 ];
 export const serverEquations = Equation.configure({ katex });
+
+// `onChange` gets the format's type: Lexical JSON by default, a string for HTML.
+export const typedJson = <Editor onChange={(value) => value.root} />;
+export const typedHtml = <Editor format="html" onChange={(value) => value.toUpperCase()} />;
+// @ts-expect-error: HTML is a string, not JSON
+export const wrongHtml = <Editor format="html" onChange={(value) => value.root} />;
