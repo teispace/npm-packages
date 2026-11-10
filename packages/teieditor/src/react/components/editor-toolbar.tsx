@@ -208,32 +208,78 @@ export function EditorToolbar({
   const [keep, setKeep] = useState(Number.POSITIVE_INFINITY);
   const shown = useMemo(() => visibleSlots(slots, Math.min(keep, movable)), [slots, keep, movable]);
   const toolbar = useRef<HTMLDivElement | null>(null);
+  // Each slot's last width while laid out, by key: what a slot counts as when
+  // the page's own styles keep it from showing for the measurement.
+  const known = useRef(new Map<string, number>());
 
   // Lay every slot out on one line, read the widths, and keep what fits.
   // The attribute shows them all for the one synchronous read, so nothing
-  // paints in between.
+  // paints in between. The result depends only on the widths, never on
+  // what shows now, so a fit always settles.
   const refit = useCallback(() => {
     const el = toolbar.current;
     if (!menu || !el) return;
     el.setAttribute('data-measuring', '');
-    const widths = Array.from(el.querySelectorAll<HTMLElement>(':scope > [data-tei-slot]'), extent);
+    const measured = Array.from(
+      el.querySelectorAll<HTMLElement>(':scope > [data-tei-slot]'),
+      extent,
+    );
     el.removeAttribute('data-measuring');
+    const widths = slots.map((slot, i) => {
+      const width = measured[i] ?? 0;
+      if (width > 0) known.current.set(slot.key, width);
+      return width > 0 ? width : (known.current.get(slot.key) ?? 0);
+    });
     const style = getComputedStyle(el);
     const available = el.clientWidth - px(style.paddingLeft) - px(style.paddingRight);
     setKeep(fitToolbar(slots, widths, available, px(style.columnGap)));
   }, [menu, slots]);
 
-  // After every render: labels change width (the block type's name).
-  useLayoutEffect(refit);
+  // Measure when the entries change and whenever a box resizes (the
+  // toolbar, or a control whose label changed width), never on every render:
+  // the render that follows each keystroke must not lay the toolbar out again.
+  useLayoutEffect(() => {
+    refit();
+  }, [refit]);
+  const observer = useRef<ResizeObserver | null>(null);
+  const observed = useRef(new Set<Element>());
+  // Watch the controls now in the toolbar (a lazy part, a control that
+  // remounted): reads no layout, so it is cheap on every render.
+  const watchControls = useCallback(() => {
+    const el = toolbar.current;
+    const watch = observer.current;
+    if (!el || !watch) return;
+    const now = new Set(el.querySelectorAll(':scope > [data-tei-slot] > *'));
+    for (const child of observed.current) {
+      if (now.has(child)) continue;
+      watch.unobserve(child);
+      observed.current.delete(child);
+    }
+    for (const child of now) {
+      if (observed.current.has(child)) continue;
+      watch.observe(child);
+      observed.current.add(child);
+    }
+  }, []);
   useEffect(() => {
     const el = toolbar.current;
     if (!menu || !el || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(() => refit());
-    observer.observe(el);
+    const watch = new ResizeObserver(() => refit());
+    const seen = observed.current;
+    observer.current = watch;
+    watch.observe(el);
+    watchControls();
     // Widths change again once web fonts arrive.
-    document.fonts?.ready.then(() => refit());
-    return () => observer.disconnect();
-  }, [menu, refit]);
+    let live = true;
+    document.fonts?.ready.then(() => live && refit());
+    return () => {
+      live = false;
+      watch.disconnect();
+      seen.clear();
+      observer.current = null;
+    };
+  }, [menu, refit, watchControls]);
+  useLayoutEffect(watchControls);
 
   const hidden = useMemo(() => {
     const moved: { group: number; movable: Movable; key: string }[] = [];
@@ -254,7 +300,9 @@ export function EditorToolbar({
             key={slot.key}
             className="tei-toolbar-slot"
             data-tei-slot={slot.kind}
-            hidden={!shown[i]}
+            // Not `hidden`: base styles such as Tailwind's hide that with
+            // !important, which no measurement can undo.
+            data-tei-hidden={shown[i] ? undefined : ''}
           >
             {slot.kind === 'separator' ? (
               <Separator />
@@ -347,6 +395,8 @@ function MoreMenu({
       menuLabel={label}
       chevron={false}
       placement="bottom-end"
+      // Read-only, or nothing in it can run: a menu of greyed rows helps no one.
+      disabled={groups.every((group) => group.items.every((entry) => entry.disabled))}
       groups={groups}
     />
   );

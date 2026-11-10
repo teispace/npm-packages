@@ -99,6 +99,16 @@ test.describe('invisibles', () => {
     await caretAtEndOf(tei, 'p:last-child');
     await tei.page.keyboard.type(' a b');
     await expect(spaces).toHaveCount(4);
+    // Marks no longer needed are put away, and stay off the screen (the
+    // mark's own `display` used to beat the browser's `[hidden]` rule).
+    for (let i = 0; i < 4; i++) await tei.page.keyboard.press('Backspace');
+    await expect(spaces).toHaveCount(2);
+    expect(
+      await tei.page
+        .locator('.tei-invisible[hidden]')
+        .evaluateAll((marks) => marks.filter((m) => getComputedStyle(m).display !== 'none').length),
+    ).toBe(0);
+    expect(await tei.page.locator('.tei-invisible[hidden]').count()).toBeGreaterThan(0);
     await tei.page.evaluate(() => window.__tei.editor.commands.toggleInvisibles());
     await expect(tei.page.locator('.tei-invisible')).toHaveCount(0);
   });

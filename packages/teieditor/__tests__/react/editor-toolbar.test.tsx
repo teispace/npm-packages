@@ -23,7 +23,7 @@ function make(options: Partial<TeiEditorOptions> = {}): TeiEditor {
 
 /** What the toolbar shows, in order: entry ids, `|` for separators. */
 const ids = (toolbar: HTMLElement) =>
-  Array.from(toolbar.querySelectorAll(':scope > [data-tei-slot]:not([hidden]) > *'))
+  Array.from(toolbar.querySelectorAll(':scope > [data-tei-slot]:not([data-tei-hidden]) > *'))
     .filter((el) => !el.matches('[popover]'))
     .map((el) =>
       el.getAttribute('role') === 'separator'

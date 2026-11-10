@@ -103,6 +103,8 @@ function setClipSource(html: string, raw = false) {
 }
 
 const params = new URLSearchParams(location.search);
+// `preflight`: a page whose base styles hide `[hidden]` with !important, as Tailwind 4's do.
+if (params.has('preflight')) document.documentElement.dataset.preflight = '';
 
 const GROUPS: MenuGroupData[] = [
   {

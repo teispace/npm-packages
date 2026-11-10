@@ -177,7 +177,9 @@
     display: contents;
   }
 
-  .tei-toolbar-slot[hidden] {
+  /* An attribute of our own, not `hidden`: base styles such as Tailwind's
+   * hide `[hidden]` with !important, and the measurement must show it. */
+  .tei-toolbar-slot[data-tei-hidden] {
     display: none;
   }
 
@@ -191,7 +193,7 @@
   }
 
   @container tei (max-width: 40rem) {
-    .tei-toolbar:not([data-overflow="wrap"]) {
+    .tei-toolbar:not([data-overflow="wrap"], [data-overflow="menu"]) {
       flex-wrap: nowrap;
       overflow-x: auto;
       scrollbar-width: none;

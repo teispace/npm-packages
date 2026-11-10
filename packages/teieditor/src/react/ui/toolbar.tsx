@@ -16,7 +16,7 @@ const ITEMS = 'button,input,select,[data-tei-roving]';
 function itemsOf(toolbar: HTMLElement): HTMLElement[] {
   return Array.from(toolbar.querySelectorAll<HTMLElement>(ITEMS)).filter(
     (el) =>
-      !el.closest('.tei-popover, [popover], dialog, [hidden]') &&
+      !el.closest('.tei-popover, [popover], dialog, [hidden], [data-tei-hidden]') &&
       !(el as HTMLButtonElement).disabled &&
       el.closest('[role="toolbar"]') === toolbar,
   );

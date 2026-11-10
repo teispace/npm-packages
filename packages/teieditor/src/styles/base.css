@@ -122,6 +122,15 @@
     content: none;
   }
 
+  /* `hidden` means hidden. A part's own `display` (a mark, a frame, a
+   * shortcut) would otherwise beat the browser's `[hidden]` rule and show
+   * what the editor put away. `until-found` (a closed section) keeps the
+   * browser's own handling, so find-in-page can open it. */
+  :where(.tei, .tei-portal, .tei-prose) [hidden]:not([hidden="until-found"]) {
+    /* biome-ignore lint/complexity/noImportantStyles: a page rule must not show what the editor hid */
+    display: none !important;
+  }
+
   /* One pseudo-class of weight, so any part can restyle or drop its own ring. */
   :where(.tei, .tei-portal) :focus-visible {
     outline: 2px solid var(--tei-ring);

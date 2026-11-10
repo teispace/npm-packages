@@ -40,3 +40,15 @@ main {
   position: fixed;
   inset-block-start: -9999px;
 }
+
+/*
+ * `preflight`: what Tailwind 4's base layer does to `[hidden]`. An important
+ * declaration beats every normal one in any layer, so the editor must not
+ * rely on showing a `hidden` element.
+ */
+@layer base {
+  html[data-preflight] [hidden]:where(:not([hidden="until-found"])) {
+    /* biome-ignore lint/complexity/noImportantStyles: the point: Tailwind's own rule */
+    display: none !important;
+  }
+}
