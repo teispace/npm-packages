@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.1](https://github.com/teispace/npm-packages/compare/teieditor-v5.0.0...teieditor-v5.0.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* **teieditor:** stop the toolbar's More mode looping at phone width; update dependencies ([#193](https://github.com/teispace/npm-packages/issues/193)) ([463d72d](https://github.com/teispace/npm-packages/commit/463d72da14a1102e308f7e33daca1d26e45b9605))
+
 ## [5.0.0](https://github.com/teispace/npm-packages/compare/teieditor-v4.0.1...teieditor-v5.0.0) (2026-10-22)
 
 

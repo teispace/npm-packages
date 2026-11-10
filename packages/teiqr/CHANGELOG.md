@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/teispace/npm-packages/compare/teiqr-v0.4.0...teiqr-v0.4.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* **teieditor:** stop the toolbar's More mode looping at phone width; update dependencies ([#193](https://github.com/teispace/npm-packages/issues/193)) ([463d72d](https://github.com/teispace/npm-packages/commit/463d72da14a1102e308f7e33daca1d26e45b9605))
+
 ## [0.4.0](https://github.com/teispace/npm-packages/compare/teiqr-v0.3.7...teiqr-v0.4.0) (2026-10-22)
 
 
