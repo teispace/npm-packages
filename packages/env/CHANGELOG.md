@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/teispace/npm-packages/compare/env-v1.0.2...env-v1.0.3) (2026-11-10)
+
+
+### Bug Fixes
+
+* **teieditor:** stop the toolbar's More mode looping at phone width; update dependencies ([#193](https://github.com/teispace/npm-packages/issues/193)) ([463d72d](https://github.com/teispace/npm-packages/commit/463d72da14a1102e308f7e33daca1d26e45b9605))
+
 ## [1.0.2](https://github.com/teispace/npm-packages/compare/env-v1.0.1...env-v1.0.2) (2026-10-22)
 
 
