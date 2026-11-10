@@ -39,7 +39,8 @@ const script = [
   'mkdir -p /work',
   "tar -C /src --exclude=node_modules --exclude=.git --exclude='*/dist' --exclude='*/.out' --exclude='*/test-results' -cf - . | tar -C /work -xf -",
   'cd /work',
-  'corepack enable',
+  // The image's Node 26 has no Corepack and a global Yarn 1: swap them.
+  'npm uninstall --global yarn > /dev/null 2>&1; npm install --global corepack@latest > /dev/null 2>&1 && corepack enable',
   'yarn workspaces focus @teispace/teieditor > /tmp/install.log 2>&1 || { cat /tmp/install.log; exit 1; }',
   `cd ${quote(inRepo)}`,
   'status=0',

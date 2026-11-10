@@ -211,7 +211,7 @@ jobs:
     # with apt stalled for minutes at a time on a slow Ubuntu mirror. Keep its
     # tag on the @playwright/test version in yarn.lock.
     container:
-      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
       options: --ipc=host
     env:
       # Firefox refuses a home directory owned by another user.
@@ -222,8 +222,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      # The image's Node 26 has no Corepack and a global Yarn 1: swap them.
       - name: Enable Corepack
-        run: corepack enable
+        run: npm uninstall --global yarn && npm install --global corepack@latest && corepack enable
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -232,7 +233,7 @@ jobs:
         working-directory: examples/next-themes
         run: |
           version=$(node -p "require('@playwright/test/package.json').version")
-          test "$version" = 1.64.1 || { echo "::error::@playwright/test is $version; update the container image tag"; exit 1; }
+          test "$version" = 1.65.0 || { echo "::error::@playwright/test is $version; update the container image tag"; exit 1; }
 
       # The Playwright web server builds the package and the example app, then
       # serves it under a nonce CSP; every test asserts zero violations.
@@ -259,7 +260,7 @@ jobs:
     # with apt stalled for minutes at a time on a slow Ubuntu mirror. Keep its
     # tag on the @playwright/test version in yarn.lock.
     container:
-      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
       options: --ipc=host
     env:
       # Firefox refuses a home directory owned by another user.
@@ -270,8 +271,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      # The image's Node 26 has no Corepack and a global Yarn 1: swap them.
       - name: Enable Corepack
-        run: corepack enable
+        run: npm uninstall --global yarn && npm install --global corepack@latest && corepack enable
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -280,7 +282,7 @@ jobs:
         working-directory: examples/playground
         run: |
           version=$(node -p "require('@playwright/test/package.json').version")
-          test "$version" = 1.64.1 || { echo "::error::@playwright/test is $version; update the container image tag"; exit 1; }
+          test "$version" = 1.65.0 || { echo "::error::@playwright/test is $version; update the container image tag"; exit 1; }
 
       # The Playwright web server builds the package and the playground, then
       # serves it under a nonce CSP; every test asserts zero violations.
@@ -306,7 +308,7 @@ jobs:
     # The image `yarn test:visual` uses locally, so the pixel baselines match.
     # Keep its tag on the @playwright/test version in yarn.lock.
     container:
-      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
       options: --ipc=host
     env:
       # Firefox refuses a home directory owned by another user.
@@ -317,8 +319,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      # The image's Node 26 has no Corepack and a global Yarn 1: swap them.
       - name: Enable Corepack
-        run: corepack enable
+        run: npm uninstall --global yarn && npm install --global corepack@latest && corepack enable
 
       - name: Install dependencies
         run: yarn workspaces focus @teispace/teieditor
@@ -327,7 +330,7 @@ jobs:
         working-directory: packages/teieditor
         run: |
           version=$(node -p "require('@playwright/test/package.json').version")
-          test "$version" = 1.64.1 || { echo "::error::@playwright/test is $version; update the container image tag"; exit 1; }
+          test "$version" = 1.65.0 || { echo "::error::@playwright/test is $version; update the container image tag"; exit 1; }
 
       # Editor, UI and pixel specs in Chromium, Firefox, WebKit and two phones,
       # under a strict CSP; every test asserts zero violations.
