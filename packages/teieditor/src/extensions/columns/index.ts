@@ -295,6 +295,18 @@ export function $isColumnsNode(node: LexicalNode | null | undefined): node is Co
   return node instanceof ColumnsNode;
 }
 
+/** A columns node's first column, if it has one. */
+const firstColumn = (node: ElementNode): ColumnNode | null => {
+  const first = node.getFirstChild();
+  return $isColumnNode(first) ? first : null;
+};
+
+/** A columns node's last column, if it has one. */
+const lastColumn = (node: ElementNode): ColumnNode | null => {
+  const last = node.getLastChild();
+  return $isColumnNode(last) ? last : null;
+};
+
 export function $isColumnNode(node: LexicalNode | null | undefined): node is ColumnNode {
   return node instanceof ColumnNode;
 }
@@ -426,7 +438,7 @@ const COLUMNS_RULE = defineImportRule({
     };
     for (const child of Array.from(el.childNodes)) {
       if (isElement(child) && child.hasAttribute(item)) {
-        flush(node.getLastChild<ColumnNode>());
+        flush(lastColumn(node));
         const index = node.getChildrenSize();
         const own = Number(child.getAttribute(item));
         const width = ours && own > 0 ? own : (template[index] ?? 1);
@@ -436,7 +448,7 @@ const COLUMNS_RULE = defineImportRule({
         loose.append(child.cloneNode(true));
       }
     }
-    flush(node.getLastChild<ColumnNode>());
+    flush(lastColumn(node));
     return node.isEmpty() ? [] : [node];
   },
 });
@@ -797,7 +809,7 @@ export const Columns = defineTeiExtension({
         const widths = layout === undefined ? [1, 1] : $layoutOrNull(layout);
         if (!widths || !$canInsertBlock() || $getColumn()) return false;
         const node = $insertBlockAtSelection($createColumns(widths));
-        const first = node.getFirstChild<ColumnNode>()?.getFirstChild();
+        const first = firstColumn(node)?.getFirstChild();
         if ($isElementNode(first)) first.selectStart();
       },
       can: (_ctx, layout?: ColumnsLayoutInput) =>
@@ -871,7 +883,7 @@ export const Columns = defineTeiExtension({
         if (!node || !hasUi(storage.menu)) return false;
         // Its items act on the block the caret is in: put it there.
         if (!node.is($getColumns())) {
-          const first = node.getFirstChild<ColumnNode>()?.getFirstChild();
+          const first = firstColumn(node)?.getFirstChild();
           if ($isElementNode(first)) first.selectStart();
         }
         storage.menuFor.value = node.getKey();

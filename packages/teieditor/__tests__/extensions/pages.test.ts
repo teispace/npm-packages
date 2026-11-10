@@ -90,10 +90,16 @@ const editors: TeiEditor[] = [];
 beforeEach(() => {
   FakeObserver.all = [];
   vi.stubGlobal('ResizeObserver', FakeObserver);
+  // jsdom 31 applies the browser's 1em paragraph margins; the sums below
+  // count the blocks' heights alone.
+  const style = document.createElement('style');
+  style.textContent = 'p { margin: 0 }';
+  document.head.append(style);
 });
 afterEach(() => {
   for (const editor of editors.splice(0)) editor.destroy();
   document.body.replaceChildren();
+  document.head.replaceChildren();
   vi.unstubAllGlobals();
 });
 
